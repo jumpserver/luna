@@ -10,10 +10,6 @@ type BusEvents = {
   loaded: undefined;
   loading: undefined;
   refresh: undefined;
-  versionAlert: {
-    type: string;
-    version?: string;
-  };
   assetRenamed: {
     assetId: string;
     name: string;

@@ -1,5 +1,7 @@
 import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import type {
   ConnectionInfo,
   ConnectionPreferenceInfo,
@@ -8,6 +10,7 @@ import type {
   PermOrgItem,
   RdpGraphics,
   RoleType,
+  UserData,
   UserIntiInfo
 } from "~/types";
 import { getUserPermissions } from "~/composables/useApiRequest";
@@ -31,12 +34,13 @@ interface BootstrapResponse {
   data: string;
   status?: number;
 }
-type LoginPayload = UserIntiInfo & {
-  bearer: string;
-  profile: BootstrapResponse;
-  current_org: BootstrapResponse;
-  permission_orgs: BootstrapResponse;
-};
+type LoginPayload = UserIntiInfo &
+  DesktopConnectionResult & {
+    bearer: string;
+    profile: BootstrapResponse;
+    current_org: BootstrapResponse;
+    permission_orgs: BootstrapResponse;
+  };
 interface PersistedUserSnapshot {
   loggedIn?: boolean;
   currentAccountId?: string;
@@ -141,7 +145,7 @@ export const useAuthSession = () => {
     );
     const currentOrg: CurrentOrg | null = selectedOrg ? { ...selectedOrg, comment: selectedOrg.comment || "" } : null;
 
-    userInfoStore.setUserData(accountId, {
+    const userData: UserData = {
       accountId,
       userId,
       siteName,
@@ -164,13 +168,35 @@ export const useAuthSession = () => {
         protocol: "",
         username: ""
       }
-    });
+    };
 
-    userInfoStore.setOrganizations(availableOrgs);
-    if (currentOrg?.id) {
-      userInfoStore.setCurrentOrg(currentOrg);
+    const publishSession = () => {
+      userInfoStore.setUserData(accountId, userData);
+
+      userInfoStore.setOrganizations(availableOrgs);
+      if (currentOrg?.id) {
+        userInfoStore.setCurrentOrg(currentOrg);
+      }
+      userInfoStore.setUserLoggedIn(true);
+    };
+
+    if (isDesktopRuntime()) {
+      if (Number(profile.status) < 200 || Number(profile.status) >= 300) return false;
+      const applied = await userInfoStore.withSessionActivation(async () => {
+        const activation = await desktopInvoke<DesktopConnectionResult>("set_api_session", {
+          sessionKey: accountId,
+          origin: resolvedSite,
+          connectionId: payload.connection_id,
+          orgId: existingUser?.org?.id || ""
+        });
+        if (activation?.status !== "success") return false;
+        publishSession();
+        return true;
+      });
+      if (!applied) return false;
+    } else {
+      publishSession();
     }
-    userInfoStore.setUserLoggedIn(true);
 
     if (options.showToast !== false) {
       toast.add({
@@ -231,7 +257,7 @@ export const useAuthSession = () => {
         currentConnectionPreferenceMap: parsed.currentConnectionPreferenceMap || {}
       });
 
-      userInfoStore.setCurrentAccount(snapshotAccountId);
+      if (!isDesktopRuntime()) void userInfoStore.setCurrentAccount(snapshotAccountId);
       userInfoStore.setUserLoggedIn(false);
       console.info("restore persisted userInfo success", {
         snapshotAccountId,
@@ -399,6 +425,11 @@ export const useAuthSession = () => {
           site,
           sessionId: accountId
         });
+        if (payload?.status === "stale") return false;
+        if (payload?.status === "blocked" && payload.compatibility) {
+          useClientCompatibility().show(payload.compatibility, bootstrapPersistedSession);
+          return false;
+        }
         const failure = classifyBootstrapFailure(payload);
 
         if (failure === "auth") {
@@ -449,7 +480,7 @@ export const useAuthSession = () => {
 
   const authReady = useState("auth-bootstrap-ready", () => false);
 
-  const bootstrapPersistedSession = () => {
+  function bootstrapPersistedSession() {
     if (!bootstrapPromise) {
       bootstrapPromise = bootstrapSession().finally(() => {
         authReady.value = true;
@@ -458,7 +489,7 @@ export const useAuthSession = () => {
     }
 
     return bootstrapPromise;
-  };
+  }
 
   const handleDesktopAuthExpired = async (sessionId: string) => {
     if (!sessionId || sessionId !== currentAccountId.value) return false;

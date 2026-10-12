@@ -27,6 +27,7 @@ import { ApplicationConfigService } from "../apps/application-config";
 import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
+import { clientDownloadUrl } from "../auth/compatibility";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
 import { FaceEngineManager } from "../face/manager";
 import { isFaceLiveWebSocket } from "../face/socket-policy";
@@ -1203,7 +1204,7 @@ async function handleInvoke(event, request) {
 
   if (command === "set_api_session") return authService.setSession(args);
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "get_version_message") return authService.getVersionMessage();
+  if (command === "open_client_download") return shell.openExternal(clientDownloadUrl(args.site));
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));

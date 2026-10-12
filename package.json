@@ -1,7 +1,7 @@
 {
   "name": "jumpserver-web",
   "type": "module",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
   "packageManager": "pnpm@11.4.0",
   "description": "JumpServer web application",

@@ -9,6 +9,7 @@ import { CLIENT_AUTH_CALLBACK } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
 import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
+import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -18,7 +19,6 @@ const USER_PROFILE = "/api/v1/users/profile/";
 const USER_PERMISSIONS = "/api/v1/users/profile/permissions/";
 const CURRENT_ORG = "/api/v1/orgs/orgs/current/";
 const PUBLIC_SETTINGS = "/api/v1/settings/public/";
-const CLIENT_VERSIONS = "/api/v1/settings/client/versions/";
 const DEV_CALLBACK = "http://127.0.0.1:14876/auth/callback";
 const DEEP_LINK_CALLBACK = CLIENT_AUTH_CALLBACK;
 
@@ -109,6 +109,8 @@ export class DesktopAuthService {
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
     this.trustedHosts = new Set();
+    this.connectionGeneration = 0;
+    this.pendingConnection = null;
   }
 
   trustSite(site) {
@@ -154,13 +156,26 @@ export class DesktopAuthService {
     await rename(tempFile, this.tokenFile);
   }
 
-  setSession({ sessionKey, origin, bearerToken = "", orgId = "" }) {
+  setSession({ sessionKey, origin, connectionId, orgId = "" }) {
     if (!sessionKey || !origin) throw new Error("session key and origin are required");
-    const parsed = parseUrl(origin);
-    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("site must use HTTP or HTTPS");
+    origin = normalizeCompatibilitySite(origin);
+    const current = this.sessions.get(this.currentSessionKey);
+    const pending = this.pendingConnection;
+    const approved =
+      pending &&
+      pending.generation === this.connectionGeneration &&
+      pending.generation === connectionId &&
+      pending.site === origin &&
+      pending.sessionId === sessionKey;
+    if (connectionId !== undefined && !approved) return { status: "stale" };
+    // A renderer can update the active organization, but cannot approve a new connection.
+    if (!approved && (current?.sessionKey !== sessionKey || current?.origin !== origin)) return { status: "stale" };
+    const bearerToken = approved ? pending.bearer : current.bearerToken;
     this.currentSessionKey = sessionKey;
-    this.sessions.set(sessionKey, { sessionKey, origin: origin.replace(/\/+$/, ""), bearerToken, orgId });
-    electronLog.info(`auth session ${parsed.origin}`);
+    this.sessions.set(sessionKey, { sessionKey, origin, bearerToken, orgId });
+    if (approved) this.pendingConnection = null;
+    electronLog.info(`auth session ${parseUrl(origin).origin}`);
+    return { status: "success" };
   }
 
   setCurrentOrg(orgId) {
@@ -235,6 +250,8 @@ export class DesktopAuthService {
   }
 
   cancelAuth() {
+    this.connectionGeneration += 1;
+    this.pendingConnection = null;
     if (!this.pendingAuth) return;
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -255,8 +272,31 @@ export class DesktopAuthService {
     }
   }
 
-  async getVersionMessage() {
-    return this.requestApiResponse(this.currentSession().origin, CLIENT_VERSIONS, { timeout: 10_000 });
+  checkCompatibility({ site }) {
+    return checkSiteCompatibility(site, app.getVersion());
+  }
+
+  async prepareConnection(site) {
+    this.cancelAuth();
+    const generation = this.connectionGeneration;
+    const compatibility = await this.checkCompatibility({ site });
+    if (generation !== this.connectionGeneration) return { status: "stale" };
+    if (compatibility.status !== "compatible") return { status: "blocked", compatibility };
+    return { status: "ready", generation, site: compatibility.site };
+  }
+
+  approveConnection(attempt, sessionId, payload) {
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+    if (!payload.profile?.success) return payload;
+    let profile;
+    try {
+      profile = JSON.parse(payload.profile.data);
+    } catch {
+      return { ...payload, status: "failure" };
+    }
+    if (!profile || typeof profile.id !== "string" || !profile.id.trim()) return { ...payload, status: "failure" };
+    this.pendingConnection = { generation: attempt.generation, site: attempt.site, sessionId, bearer: payload.bearer };
+    return { ...payload, connection_id: attempt.generation };
   }
 
   async syncBackendLanguage({ language }) {
@@ -278,8 +318,12 @@ export class DesktopAuthService {
   }
 
   async authLogin({ site, sessionId }) {
+    const attempt = await this.prepareConnection(site);
+    if (attempt.status !== "ready") return attempt;
+    site = attempt.site;
     electronLog.info(`auth login start ${site}`);
     await this.startCallbackServer();
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
     let oauthConfig: { client_id?: string };
     try {
       const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
@@ -292,6 +336,7 @@ export class DesktopAuthService {
         );
       oauthConfig = JSON.parse(text);
     } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const message = `Failed to fetch OAuth config: ${error}`;
       this.emitEvent("login-failed-detected", {
         status: "failure",
@@ -301,6 +346,8 @@ export class DesktopAuthService {
       });
       throw new Error(message);
     }
+
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
 
     const clientId = String(oauthConfig.client_id || "");
     if (!clientId) throw new Error("OAuth config did not provide client_id");
@@ -317,27 +364,39 @@ export class DesktopAuthService {
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("scope", "write read");
 
-    this.cancelAuth();
     const callback = new Promise<ReturnType<typeof parseOAuthCallback>>((resolve) => {
       this.pendingAuth = { state, resolve };
     });
     this.emitEvent("auth_url", authorizeUrl.toString());
     const result = await callback;
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
     if (!result) return null;
     if (result.state !== state) throw new Error("OAuth state mismatch");
     if (result.error) throw new Error(`OAuth authorization failed: ${result.error}`);
 
-    const token = await this.exchangeToken(site, {
-      grant_type: "authorization_code",
-      code: result.code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      code_verifier: verifier
-    });
-    this.tokens[sessionId] = { ...token, client_id: clientId };
-    await this.persistTokens();
-    electronLog.info(`auth login success ${site}`);
-    return this.buildLoginPayload(site, token.access_token);
+    try {
+      const token = await this.exchangeToken(site, {
+        grant_type: "authorization_code",
+        code: result.code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: verifier
+      });
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const payload = await this.buildLoginPayload(site, token.access_token);
+      const approved = this.approveConnection(attempt, sessionId, payload);
+      if (!approved.connection_id) {
+        return approved.status === "success" ? { ...approved, status: "failure" } : approved;
+      }
+      this.tokens[sessionId] = { ...token, client_id: clientId };
+      await this.persistTokens();
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      electronLog.info(`auth login success ${site}`);
+      return approved;
+    } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      throw error;
+    }
   }
 
   async exchangeToken(site, parameters) {
@@ -418,8 +477,18 @@ export class DesktopAuthService {
   }
 
   async bootstrapAuthSession({ site, sessionId }) {
-    const bearer = await this.freshToken(site, sessionId);
-    return this.buildLoginPayload(site, bearer);
+    const attempt = await this.prepareConnection(site);
+    if (attempt.status !== "ready") return attempt;
+    site = attempt.site;
+    try {
+      const bearer = await this.freshToken(site, sessionId);
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const payload = await this.buildLoginPayload(site, bearer);
+      return this.approveConnection(attempt, sessionId, payload);
+    } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      throw error;
+    }
   }
 
   async buildLoginPayload(site, bearer) {

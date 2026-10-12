@@ -4,6 +4,7 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "vue";
 import { useUserInfoStore } from "./userInfo";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 
 const { desktopInvoke, runtime, storage } = vi.hoisted(() => {
   const memory = new Map<string, string>();
@@ -49,6 +50,11 @@ const siteUser = (accountId: string, site: string): SiteUserData => ({
   protocolConnectionPreferenceMap: {},
   rdpClientOption: {}
 });
+
+const connectionResponse = (command: string, args: any) =>
+  command === "bootstrap_auth_session"
+    ? { status: "success", connection_id: 1, bearer: `token-${args.sessionId}`, profile: { status: 200 } }
+    : { status: "success" };
 
 describe.each([true, false])("saved RDP resolution (desktop: %s)", (desktop) => {
   const selection = () => ({
@@ -127,12 +133,52 @@ describe.each([true, false])("saved RDP resolution (desktop: %s)", (desktop) => 
 
 describe("setCurrentAccount session order", () => {
   beforeEach(() => {
+    runtime.desktop = true;
     setActivePinia(createPinia());
     desktopInvoke.mockReset();
-    desktopInvoke.mockResolvedValue(undefined);
+    desktopInvoke.mockImplementation(async (command, args) => connectionResponse(command, args));
+    useClientCompatibility().dismiss();
   });
 
-  it("does not change the current account until set_api_session resolves", async () => {
+  afterEach(() => {
+    runtime.desktop = true;
+  });
+
+  it("keeps web account selection free of desktop checks and preserves its validated login state", async () => {
+    runtime.desktop = false;
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    expect(store.loggedIn).toBe(false);
+    store.setUserLoggedIn(true);
+    await store.setCurrentAccount("b");
+    expect(store.loggedIn).toBe(true);
+    expect(desktopInvoke).not.toHaveBeenCalled();
+  });
+
+  it("does not queue or cancel web account selections behind another pending switch", async () => {
+    runtime.desktop = false;
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    const cleanup = Promise.withResolvers<void>();
+    const beforeSwitch = vi.fn(() => cleanup.promise);
+    const firstSwitch = store.setCurrentAccount("a", { beforeSwitch });
+    await vi.waitFor(() => expect(beforeSwitch).toHaveBeenCalledOnce());
+
+    const secondSwitch = store.setCurrentAccount("b");
+    try {
+      await vi.waitFor(() => expect(store.currentAccountId).toBe("b"));
+    } finally {
+      cleanup.resolve();
+    }
+
+    await expect(secondSwitch).resolves.toBe(true);
+    await expect(firstSwitch).resolves.toBe(true);
+    expect(store.currentAccountId).toBe("a");
+    expect(desktopInvoke).not.toHaveBeenCalled();
+  });
+
+  it("does not change the current account until authentication and set_api_session resolve", async () => {
     const store = useUserInfoStore();
     const siteA = siteUser("account-a", "https://a.example");
     const siteB = siteUser("account-b", "https://b.example");
@@ -140,12 +186,22 @@ describe("setCurrentAccount session order", () => {
     await store.setCurrentAccount("account-a");
     expect(store.currentAccountId).toBe("account-a");
 
-    const pendingSession = Promise.withResolvers<void>();
-    desktopInvoke.mockImplementationOnce(() => pendingSession.promise);
+    const pendingSession = Promise.withResolvers<{ status: string }>();
+    desktopInvoke.mockImplementation((command, args) =>
+      command === "set_api_session" && args.sessionKey === "account-b"
+        ? pendingSession.promise
+        : Promise.resolve(connectionResponse(command, args))
+    );
     const pending = store.setCurrentAccount("account-b");
 
     expect(store.currentAccountId).toBe("account-a");
     expect(store.currentSite).toBe("https://a.example");
+    await vi.waitFor(() =>
+      expect(desktopInvoke).toHaveBeenCalledWith(
+        "set_api_session",
+        expect.objectContaining({ sessionKey: "account-b" })
+      )
+    );
     expect(desktopInvoke).toHaveBeenCalledWith(
       "set_api_session",
       expect.objectContaining({
@@ -156,11 +212,221 @@ describe("setCurrentAccount session order", () => {
       })
     );
 
-    pendingSession.resolve();
+    pendingSession.resolve({ status: "success" });
     await pending;
 
     expect(store.currentAccountId).toBe("account-b");
     expect(store.currentSite).toBe("https://b.example");
+  });
+
+  it.each(["unknown", "incompatible"] as const)(
+    "preserves A and its sessions when B is %s, then supports retry",
+    async (status) => {
+      const store = useUserInfoStore();
+      store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+      await store.setCurrentAccount("a");
+      const before = JSON.stringify(store.$state);
+      const beforeSwitch = vi.fn(async () => {});
+      desktopInvoke.mockImplementation(async (command, args) =>
+        command === "bootstrap_auth_session"
+          ? {
+              status: "blocked",
+              compatibility: {
+                status,
+                site: args.site,
+                clientVersion: "5.1.0",
+                minCoreVersion: "5.1.0",
+                failures: [],
+                reason: "network"
+              }
+            }
+          : { status: "success" }
+      );
+      await expect(store.setCurrentAccount("b", { beforeSwitch })).resolves.toBe(false);
+      expect(JSON.stringify(store.$state)).toBe(before);
+      expect(beforeSwitch).not.toHaveBeenCalled();
+      expect(useClientCompatibility().blocked.value?.status).toBe(status);
+
+      desktopInvoke.mockImplementation(async (command, args) => connectionResponse(command, args));
+      await useClientCompatibility().retry();
+      expect(store.currentAccountId).toBe("b");
+      expect(beforeSwitch).toHaveBeenCalledOnce();
+    }
+  );
+
+  it("ignores an old switch while a newer account is authenticated", async () => {
+    const store = useUserInfoStore();
+    store.userMap = {
+      a: siteUser("a", "https://a.test"),
+      b: siteUser("b", "https://b.test"),
+      c: siteUser("c", "https://c.test")
+    };
+    await store.setCurrentAccount("a");
+    const slow = Promise.withResolvers<any>();
+    desktopInvoke.mockImplementation((command, args) =>
+      command === "bootstrap_auth_session" && args.sessionId === "b"
+        ? slow.promise
+        : Promise.resolve(connectionResponse(command, args))
+    );
+    const closeB = vi.fn(async () => {});
+    const pending = store.setCurrentAccount("b", { beforeSwitch: closeB });
+    await expect(store.setCurrentAccount("c")).resolves.toBe(true);
+    slow.resolve(connectionResponse("bootstrap_auth_session", { sessionId: "b" }));
+    await expect(pending).resolves.toBe(false);
+    expect(store.currentAccountId).toBe("c");
+    expect(closeB).not.toHaveBeenCalled();
+  });
+
+  it.each(["unknown", "incompatible"] as const)(
+    "publishes an accepted B session when a newer C check is %s before the IPC reply",
+    async (status) => {
+      const store = useUserInfoStore();
+      store.userMap = {
+        a: siteUser("a", "https://a.test"),
+        b: siteUser("b", "https://b.test"),
+        c: siteUser("c", "https://c.test")
+      };
+      await store.setCurrentAccount("a");
+      let mainAccount = "a";
+      const acceptedB = Promise.withResolvers<void>();
+      const replyB = Promise.withResolvers<{ status: string }>();
+      desktopInvoke.mockImplementation(async (command, args) => {
+        if (command === "bootstrap_auth_session" && args.sessionId === "c") {
+          return {
+            status: "blocked",
+            compatibility: {
+              status,
+              site: args.site,
+              clientVersion: "5.1.0",
+              minCoreVersion: "5.1.0",
+              failures: status === "incompatible" ? ["core-too-old"] : [],
+              reason: "network"
+            }
+          };
+        }
+        if (command === "set_api_session") {
+          mainAccount = args.sessionKey;
+          if (args.sessionKey === "b" && args.connectionId !== undefined) {
+            acceptedB.resolve();
+            return replyB.promise;
+          }
+        }
+        return connectionResponse(command, args);
+      });
+      const switchB = store.setCurrentAccount("b");
+      await acceptedB.promise;
+      expect(mainAccount).toBe("b");
+      expect(store.currentAccountId).toBe("a");
+
+      await expect(store.setCurrentAccount("c")).resolves.toBe(false);
+      replyB.resolve({ status: "success" });
+      await expect(switchB).resolves.toBe(true);
+      expect(store.currentAccountId).toBe(mainAccount);
+      expect(store.currentSite).toBe("https://b.test");
+      expect(useClientCompatibility().blocked.value?.site).toBe("https://c.test");
+    }
+  );
+
+  it.each(["saved-account", "login"] as const)(
+    "waits for the accepted %s session to be published before activating the next account",
+    async (entry) => {
+      const store = useUserInfoStore();
+      store.userMap = {
+        a: siteUser("a", "https://a.test"),
+        b: siteUser("b", "https://b.test"),
+        c: siteUser("c", "https://c.test")
+      };
+      await store.setCurrentAccount("a");
+      let mainAccount = "a";
+      let rendererAtCActivation = "";
+      const acceptedB = Promise.withResolvers<void>();
+      const checkedC = Promise.withResolvers<void>();
+      const replyB = Promise.withResolvers<{ status: string }>();
+      desktopInvoke.mockImplementation(async (command, args) => {
+        if (command === "bootstrap_auth_session" && args.sessionId === "c") checkedC.resolve();
+        if (command === "set_api_session") {
+          mainAccount = args.sessionKey;
+          if (args.connectionId !== undefined) {
+            if (args.sessionKey === "b") {
+              acceptedB.resolve();
+              return replyB.promise;
+            }
+            if (args.sessionKey === "c") rendererAtCActivation = store.currentAccountId;
+          }
+        }
+        return connectionResponse(command, args);
+      });
+      const switchB =
+        entry === "saved-account"
+          ? store.setCurrentAccount("b")
+          : store.withSessionActivation(async () => {
+              const result = await desktopInvoke("set_api_session", {
+                sessionKey: "b",
+                origin: "https://b.test",
+                connectionId: 1
+              });
+              if (result.status !== "success") return false;
+              store.setUserData("b", store.userMap.b!);
+              return true;
+            });
+      await acceptedB.promise;
+      const switchC = store.setCurrentAccount("c");
+      await checkedC.promise;
+      expect(mainAccount).toBe("b");
+      expect(rendererAtCActivation).toBe("");
+
+      replyB.resolve({ status: "success" });
+      await expect(switchB).resolves.toBe(true);
+      await expect(switchC).resolves.toBe(true);
+      expect(rendererAtCActivation).toBe("b");
+      expect(store.currentAccountId).toBe(mainAccount);
+      expect(store.currentSite).toBe("https://c.test");
+    }
+  );
+
+  it("allows a later activation after workspace cleanup fails", async () => {
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    await expect(
+      store.setCurrentAccount("b", {
+        beforeSwitch: async () => {
+          throw new Error("workspace cleanup failed");
+        }
+      })
+    ).rejects.toThrow("workspace cleanup failed");
+    expect(store.currentAccountId).toBe("a");
+    await expect(store.setCurrentAccount("b")).resolves.toBe(true);
+    expect(store.currentAccountId).toBe("b");
+  });
+
+  it("checks the existing automatic restore of the next saved account after logout", async () => {
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    desktopInvoke.mockClear();
+    desktopInvoke.mockImplementation(async (command, args) =>
+      command === "bootstrap_auth_session"
+        ? {
+            status: "blocked",
+            compatibility: {
+              status: "unknown",
+              site: args.site,
+              clientVersion: "5.1.0",
+              minCoreVersion: "5.1.0",
+              failures: [],
+              reason: "endpoint-missing"
+            }
+          }
+        : { status: "success" }
+    );
+
+    await store.deleteUserData("a");
+    expect(store.loggedIn).toBe(false);
+    expect(store.currentAccountId).toBe("");
+    expect(store.userMap.b?.bearerToken).toBe("token-b");
+    expect(desktopInvoke.mock.calls.map(([command]) => command)).toEqual(["logout", "bootstrap_auth_session"]);
+    expect(useClientCompatibility().blocked.value?.site).toBe("https://b.test");
   });
 });
 
@@ -172,7 +438,7 @@ describe.each([true, false])("organization license (desktop: %s)", (desktop) => 
     setActivePinia(createPinia());
     runtime.desktop = desktop;
     desktopInvoke.mockReset();
-    desktopInvoke.mockResolvedValue(undefined);
+    desktopInvoke.mockImplementation(async (command, args) => connectionResponse(command, args));
     setWebOrgId.mockReset();
     vi.stubGlobal("setWebOrgId", setWebOrgId);
   });

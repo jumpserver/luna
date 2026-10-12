@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "Échec de la connexion : certificat invalide ou bloqué par la sécurité du système (WebView macOS). Installez un certificat valide ou ouvrez le site dans le navigateur système.",
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
-    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
-    "VersionIncompatible": "Cette version du client est incompatible avec les versions de JumpServer antérieures à v4.10.12-lts. Téléchargez et utilisez le client v3.0.7.",
-    "VersionNoMatch": "La version du client ne correspond pas à celle de JumpServer. Téléchargez et utilisez le client v{version} ou mettez JumpServer à jour vers la dernière version."
+    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard."
   },
   "Asset": {
     "GetAssetFailed": "Impossible de récupérer l’actif. Actualisez et réessayez"
@@ -2609,5 +2607,23 @@
     "CopyOperationFailedDescription": "Impossible de copier les données sélectionnées.",
     "TableWithoutPrimaryKeyNotEditable": "Cette table n’a pas de clé primaire ; l’ajout, la modification et la suppression de données ne sont donc pas encore pris en charge.",
     "ClickHouseDataViewReadOnly": "Les vues de données ClickHouse sont actuellement en lecture seule. L’ajout, la modification et la suppression de données ne sont pas pris en charge ; les requêtes, les filtres et les exports restent disponibles."
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "Vérification de compatibilité indisponible",
+    "IncompatibleTitle": "Versions incompatibles",
+    "ConnectionPaused": "Cette connexion est suspendue. Réessayez après avoir résolu le problème.",
+    "client-too-old": "Le client {client} est trop ancien. Ce site exige {minClient} ou une version ultérieure.",
+    "core-too-old": "Core {core} est trop ancien. Demandez à votre administrateur de passer à {minCore} ou une version ultérieure.",
+    "endpoint-missing": "Ce Core ne fournit pas le point de terminaison de compatibilité. Contactez votre administrateur ; la compatibilité ne peut pas être déterminée.",
+    "timeout": "La vérification a expiré. Vérifiez votre connexion et réessayez.",
+    "tls": "Le certificat du site ne peut pas être vérifié. Demandez à votre administrateur de corriger HTTPS, puis réessayez.",
+    "network": "Le site est inaccessible. Vérifiez votre connexion et réessayez.",
+    "http": "Le site ne peut pas fournir les informations de compatibilité. Réessayez ou contactez votre administrateur.",
+    "invalid-response": "Les informations de compatibilité sont invalides. Réessayez ou contactez votre administrateur.",
+    "invalid-site": "URL du site invalide. Saisissez une URL HTTP ou HTTPS sans identifiants, paramètres ni fragment.",
+    "invalid-client-version": "La version du client est invalide. Utilisez un client compilé avec sa version de publication.",
+    "Download": "Télécharger un client compatible",
+    "DownloadFailed": "Impossible d’ouvrir la page de téléchargement.",
+    "Retry": "Réessayer"
   }
 }

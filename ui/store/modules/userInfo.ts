@@ -8,6 +8,8 @@ import type {
   UserData
 } from "~/types/index";
 import { defineStore } from "pinia";
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
@@ -93,6 +95,14 @@ export const useUserInfoStore = defineStore(
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
     const currentConnectionPreferenceMap = ref<Record<string, ConnectionPreferenceInfo>>({});
+    let accountSwitchGeneration = 0;
+    let sessionActivation = Promise.resolve(true);
+
+    // Keep main-process activation and renderer publication together, including login/restoration.
+    const withSessionActivation = (activate: () => Promise<boolean>) => {
+      sessionActivation = sessionActivation.then(activate, activate);
+      return sessionActivation;
+    };
 
     const hasUser = computed(() => Object.keys(userMap.value).length > 0);
     const orgId = computed(() => currentUser.value?.org?.id || "");
@@ -102,26 +112,29 @@ export const useUserInfoStore = defineStore(
      * @param accountId
      * @param userData
      */
-    const syncApiSession = async (accountId: string, userData: UserData) => {
-      if (!isDesktopRuntime()) return;
-      if (!accountId || !userData.bearerToken || !userData.org?.id) return;
+    const syncApiSession = async (accountId: string, userData: UserData, connectionId?: number) => {
+      if (!isDesktopRuntime()) return true;
+      if (!accountId || !userData.bearerToken) return false;
 
       try {
-        await desktopInvoke("set_api_session", {
+        const result = await desktopInvoke<DesktopConnectionResult>("set_api_session", {
           sessionKey: accountId,
           origin: userData.site,
           bearerToken: userData.bearerToken,
-          orgId: userData.org.id
+          orgId: userData.org?.id || "",
+          connectionId
         });
+        return result?.status === "success";
       } catch (error) {
         console.error("sync api session failed", error);
+        return false;
       }
     };
 
     watch(
       [currentAccountId, currentUser],
       ([accountId, userData]) => {
-        if (accountId && userData) syncApiSession(accountId, userData);
+        if (loggedIn.value && accountId && userData) void syncApiSession(accountId, userData);
       },
       { immediate: true }
     );
@@ -211,20 +224,17 @@ export const useUserInfoStore = defineStore(
         const nextEntry = Object.entries(userMap.value)[0] as [string, SiteUserData] | undefined;
 
         if (nextEntry) {
-          const [nextAccountId, nextUser] = nextEntry;
-          enforceOrganizationLicense(nextUser);
-          await syncApiSession(nextAccountId, nextUser);
-          currentUser.value = nextUser;
-          currentAccountId.value = nextAccountId;
-          currentSite.value = nextUser.site;
-
-          // 同步连接信息映射、偏好映射以及 RDP 客户端选项
-          currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
-          currentConnectionPreferenceMap.value = nextUser.connectionPreferenceMap || {};
-          currentRdpClientOption.value = nextUser.rdpClientOption || {};
-          currentOrganizations.value = nextUser.availableOrgs || [];
-
-          loggedIn.value = true;
+          if (isDesktopRuntime()) {
+            currentAccountId.value = "";
+            currentSite.value = "";
+            currentUser.value = null;
+            loggedIn.value = false;
+            currentOrganizations.value = [];
+            currentConnectionInfoMap.value = {};
+            currentConnectionPreferenceMap.value = {};
+            currentRdpClientOption.value = {};
+          }
+          if (await setCurrentAccount(nextEntry[0])) loggedIn.value = true;
         }
       } else {
         currentAccountId.value = "";
@@ -248,28 +258,70 @@ export const useUserInfoStore = defineStore(
      * @description 设置当前账号
      * @param accountId
      */
-    const setCurrentAccount = async (accountId: string) => {
+    async function setCurrentAccount(accountId: string, options: { beforeSwitch?: () => Promise<void> } = {}) {
+      const desktop = isDesktopRuntime();
+      const generation = desktop ? ++accountSwitchGeneration : 0;
       const userData = getUserData(accountId);
 
       if (!userData) {
         currentConnectionInfoMap.value = {};
         currentConnectionPreferenceMap.value = {};
         currentRdpClientOption.value = {};
-        return;
+        return false;
       }
 
-      enforceOrganizationLicense(userData);
-      await syncApiSession(accountId, userData);
-      currentAccountId.value = accountId;
-      currentSite.value = userData.site;
-      currentUser.value = userData as SiteUserData;
-      currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
+      let connectionId: number | undefined;
+      let nextUser = { ...userData };
+      if (desktop) {
+        useClientCompatibility().dismiss();
+        const result = await desktopInvoke<DesktopConnectionResult & { bearer?: string; profile?: { status: number } }>(
+          "bootstrap_auth_session",
+          { site: userData.site, sessionId: accountId }
+        );
+        if (generation !== accountSwitchGeneration || result?.status === "stale") return false;
+        if (result?.status === "blocked" && result.compatibility) {
+          useClientCompatibility().show(result.compatibility, () => setCurrentAccount(accountId, options));
+          return false;
+        }
+        if (
+          result?.status !== "success" ||
+          !result.connection_id ||
+          !result.bearer ||
+          !result.profile ||
+          result.profile.status < 200 ||
+          result.profile.status >= 300
+        ) {
+          return false;
+        }
+        connectionId = result.connection_id;
+        nextUser = { ...nextUser, bearerToken: result.bearer };
+      }
+      enforceOrganizationLicense(nextUser);
+      const activate = async () => {
+        if (desktop && generation !== accountSwitchGeneration) return false;
+        await options.beforeSwitch?.();
+        if (
+          desktop &&
+          (generation !== accountSwitchGeneration || !(await syncApiSession(accountId, nextUser, connectionId)))
+        )
+          return false;
+        // Once main accepts this session, publish it even if another preflight has started.
+        // Its activation must wait for this publication, so a failed newer check keeps both sides aligned.
+        userMap.value[accountId] = nextUser;
+        currentAccountId.value = accountId;
+        currentSite.value = nextUser.site;
+        currentUser.value = nextUser;
+        currentOrganizations.value = nextUser.availableOrgs || [];
 
-      // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
-      currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
-      currentConnectionPreferenceMap.value = (userData as SiteUserData).connectionPreferenceMap || {};
-      currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
-    };
+        // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
+        currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
+        currentConnectionPreferenceMap.value = nextUser.connectionPreferenceMap || {};
+        currentRdpClientOption.value = nextUser.rdpClientOption || {};
+        if (desktop) loggedIn.value = true;
+        return true;
+      };
+      return desktop ? withSessionActivation(activate) : activate();
+    }
 
     /**
      * @description 设置当前组织
@@ -511,6 +563,7 @@ export const useUserInfoStore = defineStore(
       getUserData,
       setCurrentOrg,
       setCurrentAccount,
+      withSessionActivation,
       deleteUserData,
       setUserLoggedIn,
       setCommandExecutionEnabled,

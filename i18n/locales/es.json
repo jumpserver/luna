@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "Error de inicio de sesión: certificado no válido o bloqueado por la seguridad del sistema (WebView de macOS). Instale un certificado válido o abra el sitio en el navegador del sistema.",
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
-    "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
-    "VersionIncompatible": "La versión del cliente no es compatible con versiones de JumpServer anteriores a v4.10.12-lts. Descargue y use el cliente v3.0.7.",
-    "VersionNoMatch": "La versión del cliente no coincide con la de JumpServer. Descargue y use el cliente v{version}, o actualice JumpServer a la última versión."
+    "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde."
   },
   "Asset": {
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
@@ -2609,5 +2607,23 @@
     "Description": "Lo sentimos, no hemos encontrado la página que buscas.",
     "RequestedPath": "Ruta solicitada",
     "GoHome": "Ir al inicio"
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "Comprobación de compatibilidad no disponible",
+    "IncompatibleTitle": "Versiones incompatibles",
+    "ConnectionPaused": "Esta conexión está pausada. Reintente después de resolver el problema.",
+    "client-too-old": "El cliente {client} es demasiado antiguo. Este sitio requiere {minClient} o posterior.",
+    "core-too-old": "Core {core} es demasiado antiguo. Contacte con su administrador para actualizar a {minCore} o posterior.",
+    "endpoint-missing": "Este Core no ofrece el endpoint de compatibilidad. Contacte con su administrador; no se puede determinar la compatibilidad.",
+    "timeout": "La comprobación agotó el tiempo de espera. Revise la conexión y reintente.",
+    "tls": "No se pudo verificar el certificado del sitio. Contacte con su administrador para corregir HTTPS y reintente.",
+    "network": "No se pudo acceder al sitio. Revise la conexión y reintente.",
+    "http": "El sitio no pudo devolver información de compatibilidad. Reintente o contacte con su administrador.",
+    "invalid-response": "El sitio devolvió información de compatibilidad inválida. Reintente o contacte con su administrador.",
+    "invalid-site": "URL del sitio inválida. Introduzca una URL HTTP o HTTPS sin credenciales, consulta ni fragmento.",
+    "invalid-client-version": "La versión del cliente es inválida. Use un cliente compilado con su versión de publicación.",
+    "Download": "Descargar cliente compatible",
+    "DownloadFailed": "No se pudo abrir la página de descarga.",
+    "Retry": "Reintentar"
   }
 }

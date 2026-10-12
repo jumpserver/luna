@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
-    "ServerError": "The server is temporarily unavailable. Please try again later.",
-    "VersionIncompatible": "The client version is incompatible with JumpServer versions earlier than v4.10.12-lts. Please download and use the v3.0.7 client.",
-    "VersionNoMatch": "The client version does not match the JumpServer version. Please download and use the v{version} client, or upgrade JumpServer to the latest version."
+    "ServerError": "The server is temporarily unavailable. Please try again later."
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"
@@ -2609,5 +2607,23 @@
     "CopyOperationFailedDescription": "The selected data could not be copied.",
     "TableWithoutPrimaryKeyNotEditable": "This table has no primary key, so adding, updating, or deleting data is not supported yet.",
     "ClickHouseDataViewReadOnly": "ClickHouse data views are currently read-only. Adding, updating, and deleting data is not supported; queries, filters, and exports are still available."
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "Compatibility check unavailable",
+    "IncompatibleTitle": "Versions are incompatible",
+    "ConnectionPaused": "This connection is paused. Retry after resolving the issue.",
+    "client-too-old": "Client {client} is too old. This site requires {minClient} or later.",
+    "core-too-old": "Core {core} is too old. Contact your administrator to upgrade to {minCore} or later.",
+    "endpoint-missing": "This Core does not provide the compatibility endpoint. Contact your administrator; compatibility cannot be determined.",
+    "timeout": "The compatibility request timed out. Check your connection and retry.",
+    "tls": "The site certificate could not be verified. Contact your administrator to fix HTTPS, then retry.",
+    "network": "The site could not be reached. Check your connection and retry.",
+    "http": "The site could not return compatibility information. Retry or contact your administrator.",
+    "invalid-response": "The site returned invalid compatibility information. Retry or contact your administrator.",
+    "invalid-site": "The site URL is invalid. Enter an HTTP or HTTPS URL without credentials, a query, or a fragment.",
+    "invalid-client-version": "The running client version is invalid. Use a client built with its release version.",
+    "Download": "Download compatible client",
+    "DownloadFailed": "Could not open the download page.",
+    "Retry": "Retry"
   }
 }

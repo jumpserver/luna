@@ -2,23 +2,13 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { closeCurrentSiteWorkspace, confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
-import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
-
-interface VersionAlertPayload {
-  type: string;
-  version?: string;
-}
-
-interface VersionMessageResponse {
-  status: number;
-  data: string;
-  success: boolean;
-}
 
 const recentSiteLimit = 5;
 const loginFailureToastId = "login-failed";
@@ -82,6 +72,8 @@ const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 let desktopListenersActive = true;
+let loginRequestGeneration = 0;
+let loginInFlight = false;
 
 const retainDesktopListener = (target: typeof unlistenAuthUrlRef, unlisten: DesktopUnlistenFn) => {
   if (!desktopListenersActive) {
@@ -131,6 +123,15 @@ const clearLoginBtnUnlockTimer = () => {
     loginBtnUnlockTimer = null;
   }
 };
+
+watch(normalizedInputSite, () => {
+  loginRequestGeneration += 1;
+  if (!loginInFlight) return;
+  loginInFlight = false;
+  loginBtn.value = false;
+  clearLoginBtnUnlockTimer();
+  void desktopInvoke("auth_cancel").catch((error) => console.debug("auth_cancel failed", error));
+});
 
 const enableLoginBtnAfter = (ms: number) => {
   clearLoginBtnUnlockTimer();
@@ -478,106 +479,6 @@ const handleClearInput = () => {
   recentSitesDismissed.value = false;
 };
 
-function normalizeVersionMessage(response: VersionMessageResponse) {
-  if (response.status === 404) {
-    return { status: "incompatible" as const, versions: [] as string[] };
-  }
-
-  if (!response.data) {
-    return { status: "list" as const, versions: [] as string[] };
-  }
-
-  try {
-    const parsed = JSON.parse(response.data);
-    const versions = Array.isArray(parsed)
-      ? parsed.map((item) => (item == null ? "" : String(item))).filter((v) => v.length > 0)
-      : [];
-    return { status: "list" as const, versions };
-  } catch {
-    return { status: "list" as const, versions: [] as string[] };
-  }
-}
-
-function normalizeMajorMinor(version: string) {
-  const cleaned = (version || "").trim();
-  if (!cleaned) return "";
-
-  const parts = cleaned.split(".");
-  const major = (parts[0] || "").replace(/\D/g, "");
-  if (!major) return "";
-
-  const minor = (parts[1] || "").replace(/\D/g, "");
-  return minor ? `${major}.${minor}` : major;
-}
-
-function normalizeMajorMinorList(versions: string[]) {
-  const normalized: string[] = [];
-  const seen = new Set<string>();
-
-  for (const version of versions) {
-    const value = normalizeMajorMinor(version);
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    normalized.push(value);
-  }
-
-  return normalized;
-}
-
-const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
-  openModal.value = false;
-  loginBtn.value = false;
-  useEventBus().emit("versionAlert", payload);
-};
-
-const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
-  if (!isDesktopRuntime()) return true;
-
-  await desktopInvoke("set_api_session", {
-    sessionKey: accountId,
-    origin: site,
-    bearerToken: "",
-    orgId: ""
-  });
-
-  const [versionResponse, appVersion] = await Promise.all([
-    desktopInvoke<VersionMessageResponse>("get_version_message").catch(() => {
-      return null;
-    }),
-    desktopApp.getVersion().catch(() => "")
-  ]);
-
-  if (!versionResponse || versionResponse.status === 0) {
-    console.warn("Skip version precheck before OAuth because version endpoint is unavailable", {
-      site,
-      versionResponse
-    });
-    return true;
-  }
-
-  const { status: versionStatus, versions } = normalizeVersionMessage(versionResponse);
-
-  if (versionStatus === "incompatible") {
-    emitVersionAlertAndCloseModal({ type: "incompatible" });
-    return false;
-  }
-
-  const normalizedAppVersion = normalizeMajorMinor(appVersion);
-  const normalizedVersions = normalizeMajorMinorList(versions);
-
-  if (normalizedAppVersion && normalizedVersions.length > 0) {
-    if (!normalizedVersions.includes(normalizedAppVersion)) {
-      emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
-      return false;
-    }
-  } else if (appVersion && versions.length > 0 && !versions.includes(appVersion)) {
-    emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
-    return false;
-  }
-
-  return true;
-};
-
 /**
  * @description 打开登录页面
  */
@@ -634,8 +535,8 @@ async function handleSwitchAccount(accountId: string) {
   if (accountId === currentAccountId.value) return;
 
   profileOpen.value = false;
-  if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
-  await userInfoStore.setCurrentAccount(accountId);
+  if (!(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) return;
+  await userInfoStore.setCurrentAccount(accountId, { beforeSwitch: closeCurrentSiteWorkspace });
 }
 
 function openAddSite() {
@@ -789,27 +690,43 @@ const handleConfirm = async () => {
 
   const isReauth = Boolean(editingAccountId.value && editingAccountId.value === currentAccountId.value);
   const leavingCurrentSite = loggedIn.value && !isReauth;
+  const generation = ++loginRequestGeneration;
   if (leavingCurrentSite && !(await confirmLeaveCurrentSiteSessions("login", { close: false }))) return;
+  if (generation !== loginRequestGeneration) return;
 
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
+    loginInFlight = true;
     const accountId = editingAccountId.value || globalThis.crypto.randomUUID();
-    const ok = await checkVersionBeforeOAuth(accountId, normalizedSite);
-    if (!ok) return;
-
+    useClientCompatibility().dismiss();
     const payload = await desktopInvoke<any>("auth_login", {
       site: normalizedSite,
       sessionId: accountId
     });
+    if (generation !== loginRequestGeneration) return;
+    if (payload?.status === "blocked" && payload.compatibility) {
+      openModal.value = false;
+      loginBtn.value = false;
+      useClientCompatibility().show(payload.compatibility, async () => {
+        openModal.value = true;
+        await handleConfirm();
+      });
+      return;
+    }
     if (!payload || payload.status !== "success") {
       loginBtn.value = false;
       return;
     }
     if (leavingCurrentSite) await closeCurrentSiteWorkspace();
-    await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName });
+    if (generation !== loginRequestGeneration) return;
+    if (!(await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName }))) {
+      loginBtn.value = false;
+      return;
+    }
     void saveRecentSite(normalizedSite);
   } catch (e: any) {
+    if (generation !== loginRequestGeneration) return;
     const raw = (e?.message || e || "").toString();
     const looksLikeSiteIssue = [
       "Failed to fetch OAuth config",
@@ -837,6 +754,8 @@ const handleConfirm = async () => {
     nextTick(() => {
       inputRef.value?.$el?.querySelector("input")?.focus();
     });
+  } finally {
+    if (generation === loginRequestGeneration) loginInFlight = false;
   }
 };
 
