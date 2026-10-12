@@ -194,6 +194,8 @@ export class WebProxyInteraction {
   private submitted = false;
   private autoSubmitted = false;
   private disposal: Promise<void> | null = null;
+  private focusEmulated = false;
+  private focusUpdate = Promise.resolve();
 
   constructor(
     private contents,
@@ -211,10 +213,30 @@ export class WebProxyInteraction {
     return this.contents.executeJavaScriptInIsolatedWorld(INTERACTION_WORLD, [{ code }]);
   }
 
+  private setFocusEmulation(enabled: boolean) {
+    if (this.focusEmulated === enabled) return this.focusUpdate;
+    this.focusEmulated = enabled;
+    // Serialize activation and cleanup so closing during capture cannot leave
+    // focus emulation enabled. Share the theme debugger session; never detach it.
+    this.focusUpdate = this.focusUpdate
+      .catch(() => {})
+      .then(async () => {
+        if (this.contents.isDestroyed()) return;
+        const session = this.contents.debugger;
+        if (!session.isAttached()) {
+          if (!enabled) return;
+          session.attach("1.3");
+        }
+        await session.sendCommand("Emulation.setFocusEmulationEnabled", { enabled });
+      });
+    return this.focusUpdate;
+  }
+
   invalidate() {
     this.generation += 1;
     this.snapshot = "";
     this.cancelPointer();
+    void this.setFocusEmulation(false).catch(() => {});
     this.emit(null);
   }
 
@@ -251,6 +273,10 @@ export class WebProxyInteraction {
         if (this.snapshot) this.invalidate();
         return;
       }
+      if (generation !== this.generation || !this.available()) return;
+      // The shell's hidden textarea keeps real keyboard/IME focus. Emulate page
+      // focus so Chromium paints the target input's native caret in our frames.
+      await this.setFocusEmulation(true);
       const { documentId: _documentId, ...rect } = before;
       const image = await this.contents.capturePage(rect, { stayHidden: true });
       const after = await this.run("globalThis.__jmsVerification?.snapshot()");
@@ -345,14 +371,16 @@ export class WebProxyInteraction {
         if (!allowed || !this.available() || generation !== this.generation || snapshot !== this.snapshot) return false;
         if (action.type === "text") await this.contents.insertText(action.text);
         else if (action.type === "key") {
+          // DOM uses ArrowLeft, etc.; Electron expects accelerator names (Left).
+          const keyCode = action.key.replace(/^Arrow/, "");
           this.contents.sendInputEvent({
             type: "keyDown",
-            keyCode: action.key,
+            keyCode,
             modifiers: action.shift ? ["shift"] : []
           });
           this.contents.sendInputEvent({
             type: "keyUp",
-            keyCode: action.key,
+            keyCode,
             modifiers: action.shift ? ["shift"] : []
           });
         } else {
@@ -437,8 +465,10 @@ export class WebProxyInteraction {
     // Automatic success and manual completion can finish at the same time. Both
     // must await the same teardown before the full page becomes visible.
     this.disposal = this.queue.then(async () => {
-      if (!this.contents.isDestroyed())
-        await this.run("globalThis.__jmsVerification?.dispose()").catch(() => undefined);
+      await Promise.all([
+        this.setFocusEmulation(false).catch(() => {}),
+        !this.contents.isDestroyed() && this.run("globalThis.__jmsVerification?.dispose()").catch(() => undefined)
+      ]);
     });
     return this.disposal;
   }
