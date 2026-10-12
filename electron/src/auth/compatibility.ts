@@ -2,7 +2,7 @@ import type { SiteCompatibility } from "../../../ui/types/clientCompatibility";
 import { parseUrl } from "../shared/url";
 
 // Raise only when the client starts depending on a breaking server change.
-export const MIN_CORE_VERSION = "5.1.0";
+export const MIN_CORE_VERSION = "v5.1.0";
 const COMPATIBILITY_PATH = "/api/v1/settings/client/compatibility/";
 
 function parseVersion(value: unknown) {

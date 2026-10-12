@@ -8,6 +8,10 @@ const open = computed({
     if (!value) dismiss();
   }
 });
+const formatVersion = (value?: string) => {
+  const version = value?.trim();
+  return version ? `v${version.replace(/^v/, "")}` : "";
+};
 const description = computed(() => {
   const result = blocked.value;
   if (!result) return "";
@@ -15,10 +19,10 @@ const description = computed(() => {
   return result.failures
     .map((failure) =>
       t(`ClientCompatibility.${failure}`, {
-        client: result.clientVersion,
-        minClient: result.minClientVersion,
-        core: result.coreVersion,
-        minCore: result.minCoreVersion
+        client: formatVersion(result.clientVersion),
+        minClient: formatVersion(result.minClientVersion),
+        core: formatVersion(result.coreVersion),
+        minCore: formatVersion(result.minCoreVersion)
       })
     )
     .join("\n");

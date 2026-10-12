@@ -16,6 +16,9 @@ test("compares patch versions, release candidates, v prefixes, metadata and the 
     ["5.1.0", "5.1.1", -1],
     ["5.10.0", "5.2.0", 1],
     ["v5.1.0", "5.1.0", 0],
+    ["v5.1.1", "v5.1.0", 1],
+    ["v5.1.0-rc1", "v5.1.0", -1],
+    ["v5.1.0-lts", "v5.1.0", 0],
     ["5.1.0-rc1", "5.1.0", -1],
     ["5.1.0-lts", "5.1.0", 0],
     ["v5.1.0-lts+build.1", "5.1.0", 0],
@@ -48,7 +51,7 @@ test("compares patch versions, release candidates, v prefixes, metadata and the 
   }
 });
 
-const metadata = (core = "5.1.0", minimum = "5.1.0") => ({
+const metadata = (core = "v5.1.0", minimum = "v5.1.0") => ({
   schema_version: 1,
   core_version: core,
   min_client_version: minimum
@@ -59,14 +62,19 @@ const fetchJson =
     new Response(JSON.stringify(data), { status });
 
 test("requires both minimums and reports simultaneous failures", async () => {
+  assert.equal(MIN_CORE_VERSION, "v5.1.0");
   for (const [client, core, minimum, failures] of [
     ["5.1.0", "5.1.0", "5.1.0", []],
+    ["5.1.0", "v5.1.0", "v5.1.0", []],
+    ["5.1.0-rc1", "v5.1.0", "v5.1.0", ["client-too-old"]],
+    ["5.1.0", "v5.1.0-rc1", "v5.1.0", ["core-too-old"]],
+    ["5.1.0", "v5.1.1", "v5.1.1", ["client-too-old"]],
     ["5.1.1", "5.2.0", "5.1.0", []],
     ["5.1.0-rc1", "5.1.0", "5.1.0", ["client-too-old"]],
     ["5.1.0", "5.1.0-rc1", "5.1.0", ["core-too-old"]],
     ["5.1.0", "5.1.0", "5.1.1", ["client-too-old"]],
     ["5.0.9", "5.0.9", "5.1.0", ["client-too-old", "core-too-old"]],
-    ["v5.1.0-lts", "v5.1.0-lts", "5.1.0", []]
+    ["v5.1.0-lts", "v5.1.0-lts", "v5.1.0", []]
   ] as const) {
     const result = await checkSiteCompatibility(
       "https://site.test/prefix/",
@@ -188,9 +196,9 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
       response.writeHead(404).end();
       return;
     }
-    const minimum = request.url?.startsWith("/new/") ? "5.1.1" : "5.1.0";
+    const minimum = request.url?.startsWith("/new/") ? "v5.1.1" : "v5.1.0";
     response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    response.end(JSON.stringify(metadata("5.1.0", minimum)));
+    response.end(JSON.stringify(metadata("v5.1.0", minimum)));
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");

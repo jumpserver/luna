@@ -6,16 +6,17 @@ Desktop connections first check anonymous
 `GET /api/v1/settings/client/compatibility/` in the main process. Both
 `app.getVersion() >= Core.MIN_CLIENT_VERSION` and
 `Core.VERSION >= MIN_CORE_VERSION` must hold. The client's minimum lives in
-`src/auth/compatibility.ts` and starts at `5.1.0`. Core represents the whole
+`src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
 server release, including Koko, Chen and Kael. Developers decide whether a
 contract change breaks old clients; reviewers check that decision. Compatible
 releases leave the minimums unchanged. There is no component version matrix,
 automatic updater or automated compatibility gate.
 
 Release builds already run `scripts/set-version.js` to inject the complete
-version into the Electron package. Core and Luna development versions default to
-`5.1.0`; release builds still inject their actual versions. Do not reuse an
-existing release number for new capabilities.
+version into the Electron package. Core's development version defaults to
+`v5.1.0`; Luna's package versions remain `5.1.0`. Compatibility API values and
+client version labels use a single `v` prefix. Release builds still inject their
+actual versions. Do not reuse an existing release number for new capabilities.
 Comparisons follow SemVer, including patch, prerelease and metadata. A lowercase
 `X.Y.Z-lts` stable channel label (also before `+metadata`) equals `X.Y.Z`;
 other suffixes remain prereleases. A leading `v` is accepted.
