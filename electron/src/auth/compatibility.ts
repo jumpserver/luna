@@ -66,7 +66,7 @@ export function clientDownloadUrl(site: unknown): string {
 export async function checkSiteCompatibility(
   site: unknown,
   clientVersion: string,
-  fetchResponse: typeof fetch = globalThis.fetch,
+  fetchResponse: typeof fetch,
   timeout = 10_000
 ): Promise<SiteCompatibility> {
   const result: SiteCompatibility = {
@@ -86,12 +86,11 @@ export async function checkSiteCompatibility(
   let response: Response;
   let body: string;
   try {
-    // Node's fetch has no Electron cookies or certificate trust overrides.
-    // Never use authService.fetchSite here: it permanently trusts entered hosts.
+    // Use the caller's network adapter while keeping the preflight anonymous.
     response = await fetchResponse(`${result.site}${COMPATIBILITY_PATH}`, {
       headers: { Accept: "application/json", "Cache-Control": "no-cache" },
       credentials: "omit",
-      redirect: "error",
+      redirect: "follow",
       cache: "no-store",
       signal: AbortSignal.timeout(timeout)
     });
@@ -119,10 +118,10 @@ export async function checkSiteCompatibility(
       }
     }
   } catch (error) {
-    const failure = error as { name?: string; cause?: { code?: string } };
+    const failure = error as { name?: string; code?: string; message?: string; cause?: { code?: string } };
     const reason = ["TimeoutError", "AbortError"].includes(failure?.name || "")
       ? "timeout"
-      : /CERT|TLS|SELF_SIGNED/.test(failure?.cause?.code || "")
+      : /CERT|TLS|SELF_SIGNED/.test(failure?.cause?.code || failure?.code || failure?.message || "")
         ? "tls"
         : "network";
     return { ...result, reason };

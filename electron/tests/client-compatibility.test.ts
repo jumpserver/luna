@@ -126,6 +126,8 @@ test("timeouts, TLS and network errors are unknown and do not fall back to the o
   for (const [error, reason] of [
     [new DOMException("timeout", "TimeoutError"), "timeout"],
     [new TypeError("fetch failed", { cause: { code: "DEPTH_ZERO_SELF_SIGNED_CERT" } }), "tls"],
+    [new Error("net::ERR_CERT_AUTHORITY_INVALID"), "tls"],
+    [new Error("net::ERR_PROXY_CONNECTION_FAILED"), "network"],
     [new Error("unreachable"), "network"]
   ] as const) {
     let requests = 0;
@@ -172,7 +174,7 @@ test("uses an anonymous, uncached request to the exact private-site endpoint", a
     assert.equal(url, "https://private.test/team/api/v1/settings/client/compatibility/");
     assert.equal(init?.credentials, "omit");
     assert.equal(init?.cache, "no-store");
-    assert.equal(init?.redirect, "error");
+    assert.equal(init?.redirect, "follow");
     assert.ok(init?.signal instanceof AbortSignal);
     assert.deepEqual(Object.keys(init.headers).sort(), ["Accept", "Cache-Control"]);
     return new Response(JSON.stringify(metadata()));
@@ -189,7 +191,19 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
     assert.equal(request.headers["x-jms-org"], undefined);
     if (request.url?.startsWith("/timeout/")) return;
     if (request.url?.startsWith("/redirect/")) {
-      response.writeHead(302, { Location: "/old/" }).end();
+      response.writeHead(302, { Location: "/current/api/v1/settings/client/compatibility/" }).end();
+      return;
+    }
+    if (request.url?.startsWith("/login-redirect/")) {
+      response.writeHead(302, { Location: "/login/api/v1/settings/client/compatibility/" }).end();
+      return;
+    }
+    if (request.url?.startsWith("/login/")) {
+      response.writeHead(200, { "Content-Type": "text/html" }).end("<html>login</html>");
+      return;
+    }
+    if (request.url?.startsWith("/redirect-loop/")) {
+      response.writeHead(302, { Location: request.url }).end();
       return;
     }
     if (request.url?.startsWith("/old/")) {
@@ -204,11 +218,13 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
   await once(server, "listening");
   const site = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   try {
-    assert.equal((await checkSiteCompatibility(site, "5.1.0")).status, "compatible");
-    assert.deepEqual((await checkSiteCompatibility(`${site}/new`, "5.1.0")).failures, ["client-too-old"]);
-    assert.equal((await checkSiteCompatibility(`${site}/old`, "5.1.0")).reason, "endpoint-missing");
+    assert.equal((await checkSiteCompatibility(site, "5.1.0", fetch)).status, "compatible");
+    assert.deepEqual((await checkSiteCompatibility(`${site}/new`, "5.1.0", fetch)).failures, ["client-too-old"]);
+    assert.equal((await checkSiteCompatibility(`${site}/old`, "5.1.0", fetch)).reason, "endpoint-missing");
     assert.equal((await checkSiteCompatibility(`${site}/timeout`, "5.1.0", fetch, 30)).reason, "timeout");
-    assert.equal((await checkSiteCompatibility(`${site}/redirect`, "5.1.0")).status, "unknown");
+    assert.equal((await checkSiteCompatibility(`${site}/redirect`, "5.1.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/login-redirect`, "5.1.0", fetch)).reason, "invalid-response");
+    assert.equal((await checkSiteCompatibility(`${site}/redirect-loop`, "5.1.0", fetch)).status, "unknown");
     assert.ok(requests.every((url) => url.endsWith("/api/v1/settings/client/compatibility/")));
   } finally {
     server.closeAllConnections();

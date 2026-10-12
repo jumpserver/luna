@@ -22,6 +22,10 @@ Comparisons follow SemVer, including patch, prerelease and metadata. A lowercase
 other suffixes remain prereleases. A leading `v` is accepted.
 
 Login, saved-account restoration and site switching share the same preflight.
+It uses the same Electron network adapter, proxy configuration and user-entered
+site certificate trust as login. Requests remain anonymous and uncached, and
+normal redirects follow the existing network policy. The final response must
+contain valid compatibility JSON; redirecting to an HTML login page cannot pass.
 Failed or obsolete checks cannot activate a session. Missing endpoints, invalid
 responses, timeouts and TLS failures pause the new connection and offer retry.
 They never fall back to the legacy version array. Old clients get a button that
