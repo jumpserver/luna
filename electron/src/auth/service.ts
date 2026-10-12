@@ -273,7 +273,7 @@ export class DesktopAuthService {
   }
 
   checkCompatibility({ site }) {
-    return checkSiteCompatibility(site, app.getVersion());
+    return checkSiteCompatibility(site, app.getVersion(), (url, init) => this.fetchSite(url, init));
   }
 
   async prepareConnection(site) {

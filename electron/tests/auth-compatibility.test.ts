@@ -142,28 +142,41 @@ test("both login and restoration stop before any authentication side effect on a
   }
 });
 
-test("the runtime version comes from Electron and the probe never calls fetchSite or trusts a new certificate", async () => {
+test("the probe uses Electron's runtime version and existing site network adapter without changing the active session", async () => {
   const { auth } = setup();
-  const before = snapshot(auth);
-  const result = await auth.checkCompatibility({ site: "https://b.test", clientVersion: "999.0.0" });
-  assert.equal(result.clientVersion, "5.1.0");
-  assert.equal(snapshot(auth), before);
-  // Exercise the actual method with a local fetch adapter instead of the setup probe.
+  const before = JSON.parse(snapshot(auth));
+  const requests: [string, RequestInit][] = [];
   const actualScript = stripTypeScriptTypes(
-    `${body.replace("export class DesktopAuthService", "class DesktopAuthService")}\nDesktopAuthService.prototype.checkCompatibility`
+    `${body.replace("export class DesktopAuthService", "class DesktopAuthService")}\n` +
+      `({ checkCompatibility: DesktopAuthService.prototype.checkCompatibility, fetchSite: DesktopAuthService.prototype.fetchSite })`
   );
-  let observedVersion = "";
-  const method = runInNewContext(actualScript, {
+  const methods = runInNewContext(actualScript, {
     app: { getVersion: () => "5.1.2-rc1" },
     CLIENT_AUTH_CALLBACK: "callback",
-    checkSiteCompatibility: async (_site: string, version: string) => {
-      observedVersion = version;
-      return compatible("https://b.test");
+    checkSiteCompatibility,
+    net: {
+      fetch: async (url: string, init: RequestInit) => {
+        requests.push([url, init]);
+        return new Response('{"schema_version":1,"core_version":"v5.1.0","min_client_version":"v5.1.0"}');
+      }
     }
   });
-  await method.call(auth, { site: "https://b.test", clientVersion: "999.0.0" });
-  assert.equal(observedVersion, "5.1.2-rc1");
-  assert.equal(snapshot(auth), before);
+  auth.fetchSite = methods.fetchSite.bind(auth);
+  const result = await methods.checkCompatibility.call(auth, {
+    site: "https://b.test",
+    clientVersion: "999.0.0"
+  });
+  assert.equal(result.clientVersion, "5.1.2-rc1");
+  assert.equal(result.status, "compatible");
+  assert.equal(requests.length, 1);
+  const [url, init] = requests[0]!;
+  assert.equal(url, "https://b.test/api/v1/settings/client/compatibility/");
+  assert.equal(init.credentials, "omit");
+  assert.equal(init.redirect, "follow");
+  assert.equal(init.cache, "no-store");
+  assert.deepEqual(Object.keys(init.headers).sort(), ["Accept", "Cache-Control"]);
+  assert.equal(snapshot(auth), JSON.stringify({ ...before, trustedHosts: ["a.test", "b.test"] }));
+  assert.equal(auth.isTrustedSiteHost("unrelated.test"), false);
 });
 
 test("login authenticates after checking and activates only with the main process approval", async () => {
