@@ -387,17 +387,15 @@ export const useKokoTerminalSocket = () => {
         lastSendTime: lastSendTime.value.toISOString(),
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
-      const message = resolveKokoTerminalCloseMessage(
-        normalizeConnectionFailure(startupOutput.take()),
-        t(detail.messageKey, {
-          code: event.code,
-          reason: detail.reasonKey ? t(detail.reasonKey) : ""
-        })
-      );
+      const closeMessage = t(detail.messageKey, {
+        code: event.code,
+        reason: detail.reasonKey ? t(detail.reasonKey) : ""
+      });
+      const message = resolveKokoTerminalCloseMessage(normalizeConnectionFailure(startupOutput.take()), closeMessage);
       if (paneId) hostAdapter.markSessionDisconnected(paneId, message, { dismissible: socketOpened });
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
-      terminalRef.value.write(`\x1B[31m${message}\x1B[0m`);
+      terminalRef.value.write(`\x1B[31m${closeMessage}\x1B[0m`);
     };
 
     const handleSocketMessage = async (message: MessageEvent) => {
