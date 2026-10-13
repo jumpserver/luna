@@ -4,7 +4,6 @@ import type { WorkspaceSessionTab, WorkspaceTabGroup } from "~/composables/useWo
 import { useResizeObserver } from "@vueuse/core";
 import { sessionGroupSaveError } from "~/composables/useSavedSessionGroups";
 
-import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
@@ -217,13 +216,6 @@ function openGroupContextMenu(group: WorkspaceTabGroup, event: MouseEvent) {
 
 const closeTab = async (tab: WorkspaceSessionTab) => {
   await closeSession(tab.id).catch(() => undefined);
-  if (!props.standalone) return;
-
-  if (isDesktopRuntime()) {
-    await desktopInvoke("close_window");
-  } else {
-    window.close();
-  }
 };
 
 function openRenameModal(tab: WorkspaceSessionTab) {
