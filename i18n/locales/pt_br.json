@@ -2538,6 +2538,7 @@
       "CapturingSamples": "Capturando amostras faciais {accepted}/{required}",
       "Completed": "Verificação facial concluída",
       "Failed": "Falha na verificação facial",
+      "LivenessTimedOut": "O tempo para a ação de prova de vida expirou. Tente novamente.",
       "Present": "Presente",
       "Away": "Ausente",
       "AwayWarning": "A pessoa-alvo saiu da área da câmera; a sessão será pausada em {seconds}s",

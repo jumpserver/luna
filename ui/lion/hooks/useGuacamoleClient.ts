@@ -579,12 +579,12 @@ export function useGuacamoleClient(
     switch (event) {
       case "session_pause": {
         const msg = `${dataObj.user} ${t("PauseSession")}`;
-        message.info(msg);
+        toast.add({ id: "session-state", title: msg, color: "info" });
         break;
       }
       case "session_resume": {
         const msg = `${dataObj.user} ${t("ResumeSession")}`;
-        message.info(msg);
+        toast.add({ id: "session-state", title: msg, color: "info" });
         break;
       }
       case "session": {

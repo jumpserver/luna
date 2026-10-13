@@ -2538,6 +2538,7 @@
       "CapturingSamples": "正在採集人臉樣本 {accepted}/{required}",
       "Completed": "人臉驗證已完成",
       "Failed": "人臉驗證失敗",
+      "LivenessTimedOut": "未在規定時間內完成活體動作，請重試。",
       "Present": "在監測區域",
       "Away": "已離開",
       "AwayWarning": "目標人員已離開採集區域，{seconds} 秒後暫停會話",

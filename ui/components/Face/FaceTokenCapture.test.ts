@@ -2,9 +2,10 @@ import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
+import { localizeFaceLiveDetail } from "~/utils/faceLive";
 import source from "./FaceTokenCapture.vue?raw";
 
-function mountCapture(width: number, height: number) {
+function mountCapture(width: number, height: number, flow: unknown = null) {
   const { descriptor } = parse(source);
   const script = compileScript(descriptor, { id: "face-capture-test", inlineTemplate: true });
   const { outputText } = ts.transpileModule(script.content, {
@@ -14,7 +15,7 @@ function mountCapture(width: number, height: number) {
     video: Vue.shallowRef(null),
     overlay: Vue.ref(null),
     cameras: Vue.ref([]),
-    latest: Vue.ref(null),
+    latest: Vue.ref(flow ? { flow } : null),
     serverMode: Vue.ref("auth"),
     clientState: Vue.ref("idle"),
     errorCode: Vue.ref(""),
@@ -31,7 +32,7 @@ function mountCapture(width: number, height: number) {
     "require",
     ...Object.keys(scope),
     `const exports = {};\n${outputText}\nreturn exports.default;`
-  )(() => Vue, ...Object.values(scope));
+  )((name: string) => (name === "vue" ? Vue : { localizeFaceLiveDetail }), ...Object.values(scope));
   const host = document.createElement("div");
   host.style.cssText = `width:${width}px;height:${height}px;overflow:auto`;
   const style = document.createElement("style");
@@ -73,3 +74,22 @@ it.skipIf(typeof document === "undefined").each([
     cleanup();
   }
 });
+
+it.skipIf(typeof document === "undefined")(
+  "shows the translated terminal error instead of requesting an expired action",
+  async () => {
+    const { host, cleanup } = mountCapture(570, 480, {
+      mode: "auth",
+      status: "auth_failed",
+      detail: "The liveness action was not completed in time",
+      finished: true,
+      challenge: { type: "open_mouth", passed: false, calibrated: true, score: 0 }
+    });
+    try {
+      await Vue.nextTick();
+      expect(host.querySelector(".face-token-capture__message")!.textContent).toBe("Face.Remote.LivenessTimedOut");
+    } finally {
+      cleanup();
+    }
+  }
+);

@@ -2538,6 +2538,7 @@
       "CapturingSamples": "Đang thu thập mẫu khuôn mặt {accepted}/{required}",
       "Completed": "Đã xác minh khuôn mặt",
       "Failed": "Xác minh khuôn mặt thất bại",
+      "LivenessTimedOut": "Thao tác kiểm tra người thật đã hết thời gian. Vui lòng thử lại.",
       "Present": "Có mặt",
       "Away": "Vắng mặt",
       "AwayWarning": "Người được giám sát đã rời vùng camera; phiên sẽ tạm dừng sau {seconds} giây",

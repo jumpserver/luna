@@ -266,7 +266,7 @@ export const useKokoTerminalSocket = () => {
 
   const showInfoOnce = (content: string) => {
     if (lastMessage === content) return;
-    toast.add({ title: content, color: "info" });
+    toast.add({ id: "session-state", title: content, color: "info" });
     lastMessage = content;
   };
 

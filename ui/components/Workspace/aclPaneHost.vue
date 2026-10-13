@@ -82,7 +82,12 @@ onBeforeUnmount(() => {
       <UButton v-if="isActionable && !group.submitted" :loading="isBusy" @click="handleSubmit">
         {{ t("Common.Confirm") }}
       </UButton>
-      <UButton v-else-if="hasFaceFailure" icon="i-lucide-refresh-cw" :disabled="isBusy" @click="retryFace(group)">
+      <UButton
+        v-else-if="isActionable && hasFaceFailure"
+        icon="i-lucide-refresh-cw"
+        :disabled="isBusy"
+        @click="retryFace(group)"
+      >
         {{ t("Face.Remote.Retry") }}
       </UButton>
     </template>

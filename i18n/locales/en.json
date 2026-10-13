@@ -1643,6 +1643,7 @@
       "CapturingSamples": "Capturing face samples {accepted}/{required}",
       "Completed": "Face verification completed",
       "Failed": "Face verification failed",
+      "LivenessTimedOut": "The liveness action timed out. Please retry.",
       "Present": "Present",
       "Away": "Away",
       "AwayWarning": "Target left the camera area; session pause in {seconds}s",
