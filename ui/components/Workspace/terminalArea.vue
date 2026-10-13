@@ -7,7 +7,7 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
-  () => authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
+  () => isDesktopRuntime() && authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
 );
 const { t } = useI18n();
 const shortcutRows = computed(() => [
