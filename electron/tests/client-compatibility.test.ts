@@ -61,17 +61,28 @@ const fetchJson =
   async () =>
     new Response(JSON.stringify(data), { status });
 
-test("requires both minimums and reports simultaneous failures", async () => {
+test("checks both minimums, exempting only dev Core from its minimum", async () => {
   assert.equal(MIN_CORE_VERSION, "v5.1.0");
   for (const [client, core, minimum, failures] of [
     ["5.1.0", "5.1.0", "5.1.0", []],
     ["5.1.0", "v5.1.0", "v5.1.0", []],
+    ["5.1.0", "dev", "5.1.0", []],
+    ["5.0.9", "dev", "5.1.0", ["client-too-old"]],
+    ["5.1.0", "dev", "5.1.1", ["client-too-old"]],
     ["5.1.0-rc1", "v5.1.0", "v5.1.0", ["client-too-old"]],
-    ["5.1.0", "v5.1.0-rc1", "v5.1.0", ["core-too-old"]],
+    ["5.1.0", "v5.1.0-rc1", "v5.1.0", []],
     ["5.1.0", "v5.1.1", "v5.1.1", ["client-too-old"]],
     ["5.1.1", "5.2.0", "5.1.0", []],
     ["5.1.0-rc1", "5.1.0", "5.1.0", ["client-too-old"]],
-    ["5.1.0", "5.1.0-rc1", "5.1.0", ["core-too-old"]],
+    ["5.1.0", "5.1.0-rc1", "5.1.0", []],
+    ["5.1.0", "5.1.0-rc2", "5.1.0", []],
+    ["5.1.0", "5.1.0-rc0", "5.1.0", []],
+    ["5.1.0", "5.1.0-beta8", "5.1.0", []],
+    ["5.1.0", "v5.1.0-adasda", "5.1.0", []],
+    ["5.1.0", "v5.1.0-rc.1+build.9", "5.1.0", []],
+    ["5.1.0", "5.0.9-rc1", "5.1.0", ["core-too-old"]],
+    ["5.1.0-rc1", "5.1.0-rc1", "5.1.0", ["client-too-old"]],
+    ["5.1.0", "5.1.1-rc1", "5.1.1", ["client-too-old"]],
     ["5.1.0", "5.1.0", "5.1.1", ["client-too-old"]],
     ["5.0.9", "5.0.9", "5.1.0", ["client-too-old", "core-too-old"]],
     ["v5.1.0-lts", "v5.1.0-lts", "v5.1.0", []]
@@ -83,6 +94,9 @@ test("requires both minimums and reports simultaneous failures", async () => {
     );
     assert.equal(result.status, failures.length ? "incompatible" : "compatible");
     assert.deepEqual(result.failures, failures);
+    assert.equal(result.coreVersion, core);
+    assert.equal(result.clientVersion, client);
+    assert.equal(result.minClientVersion, minimum);
     assert.equal(result.minCoreVersion, MIN_CORE_VERSION);
   }
 });
@@ -95,7 +109,11 @@ test("missing, unsupported, malformed and unsuccessful responses remain unknown"
     {},
     { ...metadata(), schema_version: "1" },
     { ...metadata(), schema_version: 2 },
-    { ...metadata(), core_version: "dev" },
+    { ...metadata("dev"), schema_version: 2 },
+    metadata("dev", "dev"),
+    { ...metadata(), core_version: "dev-test" },
+    { ...metadata(), core_version: "5.1.0_rc1" },
+    { ...metadata(), core_version: "5.1.0-01" },
     { ...metadata(), min_client_version: 510 },
     { ...metadata(), min_client_version: "5.1" }
   ]) {
@@ -212,13 +230,20 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
     }
     const minimum = request.url?.startsWith("/new/") ? "v5.1.1" : "v5.1.0";
     response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    response.end(JSON.stringify(metadata("v5.1.0", minimum)));
+    let core = "v5.1.0";
+    if (request.url?.startsWith("/rc/")) core = "v5.1.0-rc1";
+    if (request.url?.startsWith("/dev/")) core = "dev";
+    response.end(JSON.stringify(metadata(core, minimum)));
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const site = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   try {
     assert.equal((await checkSiteCompatibility(site, "5.1.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/rc`, "5.1.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/dev`, "5.1.0", fetch)).status, "compatible");
+    assert.deepEqual((await checkSiteCompatibility(`${site}/dev`, "5.0.9", fetch)).failures, ["client-too-old"]);
+    assert.equal((await checkSiteCompatibility(`${site}/dev`, "dev", fetch)).reason, "invalid-client-version");
     assert.deepEqual((await checkSiteCompatibility(`${site}/new`, "5.1.0", fetch)).failures, ["client-too-old"]);
     assert.equal((await checkSiteCompatibility(`${site}/old`, "5.1.0", fetch)).reason, "endpoint-missing");
     assert.equal((await checkSiteCompatibility(`${site}/timeout`, "5.1.0", fetch, 30)).reason, "timeout");
