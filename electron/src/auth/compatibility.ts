@@ -129,18 +129,17 @@ export async function checkSiteCompatibility(
 
   try {
     const data = JSON.parse(body);
-    if (
-      !data ||
-      data.schema_version !== 1 ||
-      !parseVersion(data.core_version) ||
-      !parseVersion(data.min_client_version)
-    ) {
+    const coreVersion = parseVersion(data?.core_version);
+    const isDevCore = data?.core_version === "dev";
+    if (!data || data.schema_version !== 1 || (!coreVersion && !isDevCore) || !parseVersion(data.min_client_version)) {
       throw new Error("Invalid compatibility response");
     }
     result.coreVersion = data.core_version;
     result.minClientVersion = data.min_client_version;
     if (compareVersions(clientVersion, data.min_client_version)! < 0) result.failures.push("client-too-old");
-    if (compareVersions(data.core_version, MIN_CORE_VERSION)! < 0) result.failures.push("core-too-old");
+    // Core uses the base release; dev skips this minimum check. Retain the full version above.
+    if (coreVersion && compareVersions(coreVersion.release.join("."), MIN_CORE_VERSION)! < 0)
+      result.failures.push("core-too-old");
     return { ...result, status: result.failures.length ? "incompatible" : "compatible" };
   } catch {
     return { ...result, reason: "invalid-response" };

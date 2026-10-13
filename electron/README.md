@@ -5,7 +5,8 @@ This directory contains the JumpServer desktop runtime.
 Desktop connections first check anonymous
 `GET /api/v1/settings/client/compatibility/` in the main process. Both
 `app.getVersion() >= Core.MIN_CLIENT_VERSION` and
-`Core.VERSION >= MIN_CORE_VERSION` must hold. The client's minimum lives in
+`base(Core.VERSION) >= MIN_CORE_VERSION` must hold, except that Core's exact
+`dev` version skips the Core minimum check. The client's minimum lives in
 `src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
 server release, including Koko, Chen and Kael. Developers decide whether a
 contract change breaks old clients; reviewers check that decision. Compatible
@@ -17,9 +18,13 @@ version into the Electron package. Core's development version defaults to
 `v5.1.0`; Luna's package versions remain `5.1.0`. Compatibility API values and
 client version labels use a single `v` prefix. Release builds still inject their
 actual versions. Do not reuse an existing release number for new capabilities.
-Comparisons follow SemVer, including patch, prerelease and metadata. A lowercase
+Client minimum comparisons follow SemVer, including patch, prerelease and
+metadata. A lowercase
 `X.Y.Z-lts` stable channel label (also before `+metadata`) equals `X.Y.Z`;
 other suffixes remain prereleases. A leading `v` is accepted.
+Core's minimum check uses the validated base `X.Y.Z`, so `5.1.0-rc1`,
+`5.1.0-beta8` and other valid suffixes share the `5.1.0` baseline.
+Compatibility results retain the complete versions returned by Core.
 
 Login, saved-account restoration and site switching share the same preflight.
 It uses the same Electron network adapter, proxy configuration and user-entered
