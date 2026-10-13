@@ -9,7 +9,7 @@ definePageMeta({ layout: "connect" });
 const route = useRoute();
 const { t } = useI18n();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
-const { closeSession, registerSessionDisposer, activeTab } = useWorkspaceTabs();
+const { closeSession, registerSessionDisposer, activeTab, tabs } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { ensureConnected, error, assetName } = useSessionWindowConnect();
 const { authReady } = useAuthSession();
@@ -47,9 +47,20 @@ const adminConnectedAt = computed(() => {
 
 const closeAdminSession = async () => {
   if (activeTab.value) await closeSession(activeTab.value.id).catch(() => undefined);
-  if (isDesktopRuntime()) await desktopInvoke("close_window");
-  else window.close();
 };
+
+watch(
+  () => tabs.value.length,
+  async (count, previousCount) => {
+    if (count || !previousCount) return;
+    if (isDesktopRuntime()) {
+      await desktopInvoke("close_window");
+    } else {
+      window.close();
+      if (!window.closed) await navigateTo("/");
+    }
+  }
+);
 
 useHead(() => ({ title: assetName.value || "JumpServer" }));
 
