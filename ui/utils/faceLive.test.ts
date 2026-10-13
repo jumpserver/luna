@@ -8,8 +8,36 @@ import {
   createFaceMonitorToken,
   isFaceCaptureToken,
   isFaceLiveHostMessage,
+  localizeFaceLiveDetail,
   resolveJumpServerPrefix
 } from "./faceLive";
+
+describe("face verification details", () => {
+  const translate = (key: string) => `translated:${key}`;
+
+  it("localizes shared flow and ACL timeout errors while retaining unknown error details", () => {
+    expect(localizeFaceLiveDetail("The liveness action was not completed in time", translate)).toBe(
+      "translated:Face.Remote.LivenessTimedOut"
+    );
+    expect(localizeFaceLiveDetail("Face verification timed out", translate)).toBe(
+      "translated:AclDialog.FaceVerificationTimedOut"
+    );
+    expect(localizeFaceLiveDetail("AclDialog.FacePageUnavailable", translate)).toBe(
+      "translated:AclDialog.FacePageUnavailable"
+    );
+    expect(localizeFaceLiveDetail("Unexpected service error", translate)).toBe("Unexpected service error");
+  });
+
+  it("provides liveness timeout text in every shipped locale", () => {
+    const locales = import.meta.glob<{ Face: { Remote: { LivenessTimedOut: string } } }>("../../i18n/locales/*.json", {
+      eager: true,
+      import: "default"
+    });
+    for (const locale of Object.values(locales)) {
+      expect(locale.Face.Remote.LivenessTimedOut).toBeTruthy();
+    }
+  });
+});
 
 describe("face live routing", () => {
   it("keeps a deployment prefix for Luna pages and WebSocket routes", () => {

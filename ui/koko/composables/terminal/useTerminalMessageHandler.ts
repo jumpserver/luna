@@ -119,6 +119,7 @@ export function createKokoTerminalMessageHandlers(options: {
     tabId?: string;
     tokenId?: string;
     terminalThemeName?: string;
+    wsQuery?: { type?: string };
   } | null>;
   t: ReturnType<typeof useI18n>["t"];
   toast: ReturnType<typeof useToast>;
@@ -133,6 +134,7 @@ export function createKokoTerminalMessageHandlers(options: {
   showInfoOnce: (content: string) => void;
   onConnected: (terminalId: string, socket: WebSocket, terminal: Terminal) => void;
   onTerminalReady?: () => void;
+  onMonitorResize?: () => void;
   onZmodemEnd: () => void;
   onZmodemAbort: () => void;
   onServerClose?: (reason: string) => void;
@@ -181,6 +183,25 @@ export function createKokoTerminalMessageHandlers(options: {
   };
 
   return {
+    TERMINAL_RESIZE: (message) => {
+      if (options.sessionCtxRef.value?.wsQuery?.type !== "monitor") return;
+      const { Width: width, Height: height } = parseJson<{ Width?: number; Height?: number }>(message.data, {});
+      if (
+        typeof width !== "number" ||
+        typeof height !== "number" ||
+        !Number.isInteger(width) ||
+        !Number.isInteger(height) ||
+        width < 1 ||
+        width > 4096 ||
+        height < 1 ||
+        height > 4096
+      )
+        return;
+      // Readline cursor movements use the source PTY's column count. Fitting a
+      // monitor to its own width changes wrapping and duplicates redraws.
+      options.onMonitorResize?.();
+      options.terminalRef.value?.resize(width, height);
+    },
     [MESSAGE_TYPE.CLOSE]: (message) => {
       if (message.terminalId && options.terminalId.value && message.terminalId !== Number(options.terminalId.value))
         return;

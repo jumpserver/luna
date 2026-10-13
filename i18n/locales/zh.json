@@ -1643,6 +1643,7 @@
       "CapturingSamples": "正在采集人脸样本 {accepted}/{required}",
       "Completed": "人脸验证已完成",
       "Failed": "人脸验证失败",
+      "LivenessTimedOut": "未在规定时间内完成活体动作，请重试。",
       "Present": "在监测区域",
       "Away": "已离开",
       "AwayWarning": "目标人员已离开采集区域，{seconds} 秒后暂停会话",

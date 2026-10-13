@@ -110,7 +110,12 @@ watch(
       <UButton v-if="isActionable && !globalGroup?.submitted" :loading="isBusy" @click="handleSubmit">
         {{ isBatch && isReview ? t("AclDialog.SubmitAll") : t("Common.Confirm") }}
       </UButton>
-      <UButton v-else-if="hasFaceFailure" icon="i-lucide-refresh-cw" :disabled="isBusy" @click="retryFace(globalGroup)">
+      <UButton
+        v-else-if="isActionable && hasFaceFailure"
+        icon="i-lucide-refresh-cw"
+        :disabled="isBusy"
+        @click="retryFace(globalGroup)"
+      >
         {{ t("Face.Remote.Retry") }}
       </UButton>
     </template>

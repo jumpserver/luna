@@ -1643,6 +1643,7 @@
       "CapturingSamples": "Capture des échantillons faciaux {accepted}/{required}",
       "Completed": "Vérification faciale terminée",
       "Failed": "Échec de la vérification faciale",
+      "LivenessTimedOut": "Le délai pour le geste de détection de présence est dépassé. Réessayez.",
       "Present": "Présent",
       "Away": "Absent",
       "AwayWarning": "La personne a quitté le champ de la caméra ; suspension de la session dans {seconds} s",

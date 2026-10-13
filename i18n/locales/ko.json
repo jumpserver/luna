@@ -2538,6 +2538,7 @@
       "CapturingSamples": "얼굴 샘플 캡처 중 {accepted}/{required}",
       "Completed": "얼굴 검증 완료",
       "Failed": "얼굴 검증 실패",
+      "LivenessTimedOut": "생체 확인 동작 시간이 초과되었습니다. 다시 시도하세요.",
       "Present": "재실",
       "Away": "부재",
       "AwayWarning": "대상이 카메라 영역을 벗어났습니다. {seconds}초 후 세션이 일시 중지됩니다",

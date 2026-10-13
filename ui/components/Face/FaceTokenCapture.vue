@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FaceLiveHostMessage, FaceLivePageMode } from "~/types/face";
+import { localizeFaceLiveDetail } from "~/utils/faceLive";
 
 const props = withDefaults(
   defineProps<{
@@ -61,7 +62,14 @@ const instruction = computed(() => {
   if (capture.clientState.value === "preparing") return t("Face.Remote.AllowCamera");
   if (capture.clientState.value === "connecting") return t("Face.Remote.ConnectingHint");
   if (capture.clientState.value === "error" && !flow.value) {
-    return capture.errorMessage.value || t(`Face.Remote.ErrorHint.${capture.errorCode.value || "server_error"}`);
+    return (
+      localizeFaceLiveDetail(capture.errorMessage.value, t) ||
+      t(`Face.Remote.ErrorHint.${capture.errorCode.value || "server_error"}`)
+    );
+  }
+  if (flow.value?.finished) {
+    if (["auth_success", "enrollment_complete"].includes(flow.value.status)) return t("Face.Remote.Completed");
+    return localizeFaceLiveDetail(flow.value.detail, t) || t("Face.Remote.Failed");
   }
   if (flow.value?.guidance && flow.value.guidance !== "look_straight") {
     return t(`Face.Remote.Guidance.${flow.value.guidance}`);
@@ -81,10 +89,6 @@ const instruction = computed(() => {
       required: flow.value.required_samples
     });
   }
-  if (flow.value?.status === "auth_success" || flow.value?.status === "enrollment_complete") {
-    return t("Face.Remote.Completed");
-  }
-  if (flow.value?.finished) return flow.value.detail || t("Face.Remote.Failed");
   return t("Face.Remote.LookStraight");
 });
 const progress = computed(() => {
@@ -188,7 +192,7 @@ watch(
             <div class="h-full bg-primary transition-[width] duration-200" :style="{ width: `${progress}%` }" />
           </div>
           <p v-if="capture.errorMessage.value && flow" class="mt-1 line-clamp-2 text-xs text-error">
-            {{ capture.errorMessage.value }}
+            {{ localizeFaceLiveDetail(capture.errorMessage.value, t) }}
           </p>
         </div>
       </div>
@@ -209,6 +213,7 @@ watch(
   grid-template-rows: auto minmax(260px, 1fr) auto;
   gap: 10px;
   width: 100%;
+  height: 100%;
   min-height: 100%;
   padding: 12px;
   color: var(--app-fg);
@@ -259,7 +264,8 @@ watch(
   top: 48%;
   left: 50%;
   width: min(46%, 230px);
-  aspect-ratio: 0.78;
+  height: 72%;
+  max-height: 295px;
   border: 2px solid rgb(255 255 255 / 78%);
   border-radius: 48%;
   box-shadow: 0 0 0 999px rgb(0 0 0 / 16%);

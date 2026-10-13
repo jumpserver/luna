@@ -2538,6 +2538,7 @@
       "CapturingSamples": "顔サンプルを取得中 {accepted}/{required}",
       "Completed": "顔検証が完了しました",
       "Failed": "顔検証に失敗しました",
+      "LivenessTimedOut": "生体認証の動作がタイムアウトしました。再試行してください。",
       "Present": "在席",
       "Away": "離席",
       "AwayWarning": "対象者がカメラ領域から離れました。{seconds} 秒後にセッションを一時停止します",
