@@ -244,6 +244,7 @@ interface AssetTreeNodeData {
   is_active?: boolean;
   permedProtocols?: PermedProtocol[];
   permed_protocols?: PermedProtocol[];
+  sftp?: boolean;
   permedAccounts?: PermedAccount[];
   permed_accounts?: PermedAccount[];
   is_root?: boolean;
