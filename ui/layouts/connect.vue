@@ -9,7 +9,7 @@ useWorkspaceFullscreenShortcuts();
 const isSessionWindow = computed(() => route.path.startsWith("/session/"));
 const showSessionTabs = computed(() => shouldShowSessionTabStrip(route.path, route.query));
 const showSessionTabChrome = computed(() => showSessionTabs.value && !focusMode.value);
-const macTrafficLightInset = computed(() => isMacOS.value && !nativeFullscreen.value);
+const macTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value && !nativeFullscreen.value);
 </script>
 
 <template>
