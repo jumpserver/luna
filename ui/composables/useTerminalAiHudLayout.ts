@@ -83,7 +83,6 @@ export function useTerminalAiHudLayout(options: {
   const liveRef = shallowRef<HTMLElement | null>(null);
   const activeXterm = shallowRef<HTMLElement | null>(null);
   const anchorRect = shallowRef<TerminalCursorAnchor | null>(null);
-  const hintAnchor = shallowRef<TerminalCursorAnchor | null>(null);
   const hintVisible = ref(false);
   const hintIdle = ref(true);
   const panelPosition = ref({ left: 8, top: 8, width: 520, maxHeight: 260, height: 0 });
@@ -274,7 +273,7 @@ export function useTerminalAiHudLayout(options: {
     if (hintVisible.value) hintVisible.value = false;
   }
 
-  async function positionHint(anchor = hintAnchor.value) {
+  async function positionHint() {
     if (options.open.value || !hintIdle.value) {
       hideHint();
       return;
@@ -285,6 +284,7 @@ export function useTerminalAiHudLayout(options: {
       return;
     }
     const host = hostRef.value;
+    const anchor = getKokoTerminalCursorAnchor(options.paneId());
     // Full-screen terminal apps own the content around their cursor.
     if (!host || !anchor || anchor.bufferType === "alternate") {
       hideHint();
@@ -379,8 +379,6 @@ export function useTerminalAiHudLayout(options: {
     hintIdleTimer = window.setTimeout(() => {
       hintIdleTimer = 0;
       hintIdle.value = true;
-      const latest = getKokoTerminalCursorAnchor(options.paneId());
-      if (latest) hintAnchor.value = latest;
       void positionHint();
     }, TERMINAL_AI_HINT_IDLE_MS);
   }
@@ -390,13 +388,10 @@ export function useTerminalAiHudLayout(options: {
     stopUserInputSubscription();
     clearHintIdleTimer();
     hintIdle.value = true;
-    stopCursorSubscription = subscribeKokoTerminalCursorAnchor(options.paneId(), (anchor) => {
-      hintAnchor.value = anchor;
-      if (hintIdle.value && !options.open.value && options.sessionInfoReady()) void positionHint(anchor);
+    stopCursorSubscription = subscribeKokoTerminalCursorAnchor(options.paneId(), () => {
+      if (hintIdle.value && !options.open.value && options.sessionInfoReady()) void positionHint();
     });
     stopUserInputSubscription = subscribeKokoTerminalUserInput(options.paneId(), noteTypingActivity);
-    const initialAnchor = getKokoTerminalCursorAnchor(options.paneId());
-    if (initialAnchor) hintAnchor.value = initialAnchor;
     void positionHint();
   }
 

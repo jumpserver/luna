@@ -5,7 +5,7 @@ import { useTerminalAiHudLayout } from "./useTerminalAiHudLayout";
 import { TERMINAL_AI_HINT_IDLE_MS } from "~/utils/terminalAiCommand";
 
 const terminal = vi.hoisted(() => ({
-  anchor: { left: 140, top: 100, width: 8, height: 18, bufferType: "normal" } as TerminalCursorAnchor,
+  anchor: null as TerminalCursorAnchor | null,
   element: null as HTMLElement | null,
   cursorListener: (_anchor: TerminalCursorAnchor | null) => {},
   inputListener: () => {}
@@ -120,7 +120,7 @@ async function setup(sessionInfoReady = false) {
   return { area, measured, handle, open, layout, dispatch, dispatchResize, position, size };
 }
 
-it("hides the caret hint in alternate screens, keeps it hidden after idle, and restores it on exit", async () => {
+it("reads the current buffer to hide alternate-screen hints after idle and allow manual opening", async () => {
   vi.useFakeTimers();
   if (!window.setTimeout) {
     window.setTimeout = globalThis.setTimeout as unknown as typeof window.setTimeout;
@@ -133,9 +133,9 @@ it("hides the caret hint in alternate screens, keeps it hidden after idle, and r
   await nextTick();
   expect(layout.hintVisible.value).toBe(true);
 
-  terminal.anchor = { ...terminal.anchor, bufferType: "alternate" };
-  terminal.cursorListener(terminal.anchor);
-  await nextTick();
+  const pending = layout.positionHint();
+  terminal.anchor = { ...terminal.anchor!, bufferType: "alternate" };
+  await pending;
   expect(layout.hintVisible.value).toBe(false);
 
   terminal.inputListener();
@@ -147,9 +147,13 @@ it("hides the caret hint in alternate screens, keeps it hidden after idle, and r
   await nextTick();
   expect(layout.hintVisible.value).toBe(true);
 
-  terminal.anchor = { ...terminal.anchor, bufferType: "alternate" };
-  terminal.cursorListener(terminal.anchor);
-  await nextTick();
+  terminal.inputListener();
+  const anchor = terminal.anchor;
+  terminal.anchor = null;
+  await vi.advanceTimersByTimeAsync(TERMINAL_AI_HINT_IDLE_MS);
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.anchor = { ...anchor, bufferType: "alternate" };
   await layout.reveal(terminal.element!);
   expect(open.value).toBe(true);
   expect(layout.hintVisible.value).toBe(false);
@@ -167,7 +171,7 @@ it("moves from the original pointer position without drift and stays moved when 
   expect(position()).toEqual({ left: "140px", top: "126px" });
   await dispatch("pointermove", { clientX: 260, clientY: 240 });
   await dispatch("pointerup");
-  terminal.anchor.top = 500;
+  terminal.anchor!.top = 500;
   measured.height = measured.scrollHeight = 250;
   await layout.positionPanel();
   expect(position()).toEqual({ left: "240px", top: "226px" });
