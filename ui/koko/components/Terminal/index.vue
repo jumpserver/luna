@@ -123,7 +123,12 @@ const onUploadChange = (event: Event) => {
   </UModal>
 
   <div class="relative h-full w-full min-h-0">
-    <div id="terminal-container" ref="containerRef" class="h-full w-full min-h-0" />
+    <div
+      id="terminal-container"
+      ref="containerRef"
+      class="h-full w-full min-h-0"
+      :class="{ 'overflow-x-auto': unref(sessionContext)?.wsQuery?.type === 'monitor' }"
+    />
     <div
       v-if="commandSuggestions.open.value"
       ref="suggestionListRef"

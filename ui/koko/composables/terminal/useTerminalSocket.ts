@@ -139,6 +139,7 @@ export const useKokoTerminalSocket = () => {
   const startupOutput = createKokoStartupOutputCapture();
   let disposeSocketEvents: (() => void) | undefined;
   let hasPendingContainerFit = false;
+  let monitorSizeReceived = false;
 
   const reportInitialConnectionFailure = () => {
     if (sessionReady || connectionError.value) return;
@@ -151,6 +152,7 @@ export const useKokoTerminalSocket = () => {
   };
 
   const fitToContainer = () => {
+    if (monitorSizeReceived) return;
     const container = containerRef.value;
     if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
     fitAddon?.fit();
@@ -177,6 +179,7 @@ export const useKokoTerminalSocket = () => {
   };
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
+    if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return;
     if (!socketRef.value || !isSocketOpen(socketRef.value)) return;
     socketRef.value.send(
       formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_RESIZE, JSON.stringify({ cols, rows }))
@@ -296,6 +299,9 @@ export const useKokoTerminalSocket = () => {
       serverCloseReason = reason;
     },
     onTerminalReady: startupOutput.markReady,
+    onMonitorResize: () => {
+      monitorSizeReceived = true;
+    },
     onZmodemEnd: zmodem.finishDraining,
     onZmodemAbort: () => {
       zmodem.abortActiveSession();
