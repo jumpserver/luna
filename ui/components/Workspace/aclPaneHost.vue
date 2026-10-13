@@ -56,10 +56,10 @@ onBeforeUnmount(() => {
     :ui="{
       overlay: '!absolute z-20 !bg-[var(--workspace-surface-background)] backdrop-blur-none',
       content:
-        '!absolute z-20 w-[calc(100%-3rem)] max-w-[640px] bg-[var(--workspace-surface-panel)] divide-[var(--app-border)] ring-[var(--app-border)]',
+        '!absolute z-20 w-[calc(100%-3rem)] max-w-[640px] !max-h-[calc(100%-2rem)] bg-[var(--workspace-surface-panel)] divide-[var(--app-border)] ring-[var(--app-border)]',
       header: 'h-11 min-h-11 bg-[var(--workspace-surface-header)] px-4 py-0 sm:px-4 sm:py-0',
       title: 'text-sm leading-5',
-      body: 'bg-[var(--app-surface-panel-strong)] px-6 py-4 sm:px-6 sm:py-4',
+      body: 'min-h-0 overflow-y-auto bg-[var(--app-surface-panel-strong)] px-6 py-4 sm:px-6 sm:py-4',
       footer: 'justify-end gap-2 bg-[var(--workspace-surface-footer)] px-5 py-3 sm:px-5 sm:py-3'
     }"
   >

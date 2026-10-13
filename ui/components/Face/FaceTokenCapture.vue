@@ -209,6 +209,7 @@ watch(
   grid-template-rows: auto minmax(260px, 1fr) auto;
   gap: 10px;
   width: 100%;
+  height: 100%;
   min-height: 100%;
   padding: 12px;
   color: var(--app-fg);
@@ -259,7 +260,8 @@ watch(
   top: 48%;
   left: 50%;
   width: min(46%, 230px);
-  aspect-ratio: 0.78;
+  height: 72%;
+  max-height: 295px;
   border: 2px solid rgb(255 255 255 / 78%);
   border-radius: 48%;
   box-shadow: 0 0 0 999px rgb(0 0 0 / 16%);
