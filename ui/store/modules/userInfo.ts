@@ -580,7 +580,7 @@ export const useUserInfoStore = defineStore(
     };
   },
   {
-    persist: {
+    persist: typeof localStorage !== "undefined" && {
       key: "userInfoV2",
       storage: localStorage,
       afterHydrate: ({ store }) => {
