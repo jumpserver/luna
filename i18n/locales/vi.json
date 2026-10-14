@@ -2618,9 +2618,8 @@
     "GoHome": "Về trang chủ"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "Không thể kiểm tra tính tương thích",
-    "IncompatibleTitle": "Các phiên bản không tương thích",
-    "ConnectionPaused": "Kết nối này đã tạm dừng. Thử lại sau khi giải quyết vấn đề.",
+    "Title": "Thông báo tương thích",
+    "ContinuePrompt": "Tiếp tục kết nối đến {site}?",
     "client-too-old": "Máy khách {client} quá cũ. Trang này yêu cầu {minClient} trở lên.",
     "core-too-old": "Core {core} quá cũ. Liên hệ quản trị viên để nâng cấp lên {minCore} trở lên.",
     "endpoint-missing": "Core này không cung cấp điểm cuối kiểm tra tương thích. Liên hệ quản trị viên; không thể xác định tính tương thích.",
@@ -2631,8 +2630,6 @@
     "invalid-response": "Trang trả về thông tin tương thích không hợp lệ. Thử lại hoặc liên hệ quản trị viên.",
     "invalid-site": "URL của trang không hợp lệ. Nhập URL HTTP hoặc HTTPS không có thông tin đăng nhập, truy vấn hoặc phân đoạn.",
     "invalid-client-version": "Phiên bản máy khách đang chạy không hợp lệ. Dùng máy khách được xây dựng với phiên bản phát hành.",
-    "Download": "Tải máy khách tương thích",
-    "DownloadFailed": "Không thể mở trang tải xuống.",
-    "Retry": "Thử lại"
+    "Continue": "Tiếp tục kết nối"
   }
 }

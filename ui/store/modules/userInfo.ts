@@ -1,3 +1,4 @@
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import type {
   ConnectionInfo,
   ConnectionPreferenceInfo,
@@ -8,7 +9,6 @@ import type {
   UserData
 } from "~/types/index";
 import { defineStore } from "pinia";
-import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getDefaultOrganization } from "~/utils/organization";
@@ -286,8 +286,12 @@ export const useUserInfoStore = defineStore(
      */
     async function setCurrentAccount(
       accountId: string,
-      options: { beforeSwitch?: () => Promise<void>; onAuthRequired?: () => void } = {}
-    ) {
+      options: {
+        beforeSwitch?: () => Promise<void>;
+        onAuthRequired?: () => void;
+        compatibilityConfirmationId?: number;
+      } = {}
+    ): Promise<boolean | undefined> {
       const desktop = isDesktopRuntime();
       const generation = desktop ? ++accountSwitchGeneration : 0;
       const userData = getUserData(accountId);
@@ -305,12 +309,21 @@ export const useUserInfoStore = defineStore(
         useClientCompatibility().dismiss();
         const result = await desktopInvoke<DesktopConnectionResult & { bearer?: string; profile?: { status: number } }>(
           "bootstrap_auth_session",
-          { site: userData.site, sessionId: accountId }
+          {
+            site: userData.site,
+            sessionId: accountId,
+            compatibilityConfirmationId: options.compatibilityConfirmationId
+          }
         );
         if (generation !== accountSwitchGeneration || result?.status === "stale") return false;
-        if (result?.status === "blocked" && result.compatibility) {
-          useClientCompatibility().show(result.compatibility, () => setCurrentAccount(accountId, options));
-          return false;
+        if (result?.status === "confirmation-required" && result.compatibility) {
+          // Cancellation is distinct from a failed switch so the caller can finish quietly.
+          if (!(await useClientCompatibility().show(result.compatibility))) return;
+          if (generation !== accountSwitchGeneration) return false;
+          return setCurrentAccount(accountId, {
+            ...options,
+            compatibilityConfirmationId: result.compatibility_confirmation_id
+          });
         }
         if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
           markSessionExpired(accountId);

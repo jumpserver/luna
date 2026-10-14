@@ -59,10 +59,6 @@ export function normalizeCompatibilitySite(value: unknown): string {
   return url.toString().replace(/\/+$/, "");
 }
 
-export function clientDownloadUrl(site: unknown): string {
-  return `${normalizeCompatibilitySite(site)}/core/download/`;
-}
-
 export async function checkSiteCompatibility(
   site: unknown,
   clientVersion: string,

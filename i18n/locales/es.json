@@ -2618,9 +2618,8 @@
     "GoHome": "Ir al inicio"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "Comprobación de compatibilidad no disponible",
-    "IncompatibleTitle": "Versiones incompatibles",
-    "ConnectionPaused": "Esta conexión está pausada. Reintente después de resolver el problema.",
+    "Title": "Aviso de compatibilidad",
+    "ContinuePrompt": "¿Continuar conectando a {site}?",
     "client-too-old": "El cliente {client} es demasiado antiguo. Este sitio requiere {minClient} o posterior.",
     "core-too-old": "Core {core} es demasiado antiguo. Contacte con su administrador para actualizar a {minCore} o posterior.",
     "endpoint-missing": "Este Core no ofrece el endpoint de compatibilidad. Contacte con su administrador; no se puede determinar la compatibilidad.",
@@ -2631,8 +2630,6 @@
     "invalid-response": "El sitio devolvió información de compatibilidad inválida. Reintente o contacte con su administrador.",
     "invalid-site": "URL del sitio inválida. Introduzca una URL HTTP o HTTPS sin credenciales, consulta ni fragmento.",
     "invalid-client-version": "La versión del cliente es inválida. Use un cliente compilado con su versión de publicación.",
-    "Download": "Descargar cliente compatible",
-    "DownloadFailed": "No se pudo abrir la página de descarga.",
-    "Retry": "Reintentar"
+    "Continue": "Continuar conexión"
   }
 }

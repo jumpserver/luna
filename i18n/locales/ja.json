@@ -2618,9 +2618,8 @@
     "GoHome": "ホームへ"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "互換性を確認できません",
-    "IncompatibleTitle": "バージョンに互換性がありません",
-    "ConnectionPaused": "この接続は一時停止されています。問題を解決してから再試行してください。",
+    "Title": "互換性の確認",
+    "ContinuePrompt": "{site}への接続を続行しますか？",
     "client-too-old": "クライアント {client} は古すぎます。このサイトには {minClient} 以降が必要です。",
     "core-too-old": "Core {core} は古すぎます。管理者に {minCore} 以降への更新を依頼してください。",
     "endpoint-missing": "この Core は互換性確認用のエンドポイントを提供していません。互換性を判断できないため、管理者に連絡してください。",
@@ -2631,8 +2630,6 @@
     "invalid-response": "サイトの互換性情報が無効です。再試行するか管理者に連絡してください。",
     "invalid-site": "サイト URL が無効です。認証情報、クエリ、フラグメントを含まない HTTP または HTTPS URL を入力してください。",
     "invalid-client-version": "実行中のクライアントのバージョンが無効です。リリースバージョンを注入してビルドしたクライアントを使用してください。",
-    "Download": "互換クライアントをダウンロード",
-    "DownloadFailed": "ダウンロードページを開けませんでした。",
-    "Retry": "再試行"
+    "Continue": "接続を続行"
   }
 }

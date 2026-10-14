@@ -385,7 +385,7 @@ export const useAuthSession = () => {
     useEventBus().emit("login", undefined);
   };
 
-  const bootstrapSession = async () => {
+  const bootstrapSession = async (compatibilityConfirmationId?: number) => {
     if (bootstrapRetryTimer) {
       clearTimeout(bootstrapRetryTimer);
       bootstrapRetryTimer = null;
@@ -423,11 +423,14 @@ export const useAuthSession = () => {
 
         const payload = await desktopInvoke<LoginPayload>("bootstrap_auth_session", {
           site,
-          sessionId: accountId
+          sessionId: accountId,
+          compatibilityConfirmationId
         });
         if (payload?.status === "stale") return false;
-        if (payload?.status === "blocked" && payload.compatibility) {
-          useClientCompatibility().show(payload.compatibility, bootstrapPersistedSession);
+        if (payload?.status === "confirmation-required" && payload.compatibility) {
+          useClientCompatibility().show(payload.compatibility, () =>
+            bootstrapPersistedSession(payload.compatibility_confirmation_id)
+          );
           return false;
         }
         const failure = classifyBootstrapFailure(payload);
@@ -467,7 +470,7 @@ export const useAuthSession = () => {
       userInfoStore.setUserLoggedIn(false);
       bootstrapRetryTimer = setTimeout(() => {
         bootstrapRetryTimer = null;
-        bootstrapPromise = bootstrapSession();
+        bootstrapPromise = bootstrapSession(compatibilityConfirmationId);
       }, 5000);
       return false;
     } catch (error) {
@@ -480,9 +483,9 @@ export const useAuthSession = () => {
 
   const authReady = useState("auth-bootstrap-ready", () => false);
 
-  function bootstrapPersistedSession() {
+  function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
     if (!bootstrapPromise) {
-      bootstrapPromise = bootstrapSession().finally(() => {
+      bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
         authReady.value = true;
         bootstrapPromise = null;
       });

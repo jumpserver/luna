@@ -2,7 +2,6 @@ import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
 import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
-import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
@@ -89,7 +88,6 @@ export const useSiteAccountSwitch = () => {
     const toast = useToast();
     const { $i18n } = useNuxtApp();
     const bus = useEventBus();
-    const compatibility = useClientCompatibility();
     switchingAccountId.value = accountId;
     try {
       if (user.userMap[accountId]?.sessionExpired) {
@@ -101,10 +99,10 @@ export const useSiteAccountSwitch = () => {
         beforeSwitch: closeCurrentSiteWorkspace,
         onAuthRequired: () => bus.emit("login", { accountId })
       });
-      if (!switched && !user.userMap[accountId]?.sessionExpired && !compatibility.blocked.value) {
+      if (switched === false && !user.userMap[accountId]?.sessionExpired) {
         toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
       }
-      return switched;
+      return switched === true;
     } catch {
       toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
       return false;

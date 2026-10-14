@@ -2618,9 +2618,8 @@
     "GoHome": "홈으로"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "호환성을 확인할 수 없음",
-    "IncompatibleTitle": "호환되지 않는 버전",
-    "ConnectionPaused": "이 연결은 일시 중지되었습니다. 문제를 해결한 후 다시 시도하세요.",
+    "Title": "호환성 안내",
+    "ContinuePrompt": "{site}에 계속 연결하시겠습니까?",
     "client-too-old": "클라이언트 {client} 버전이 너무 오래되었습니다. 이 사이트에는 {minClient} 이상이 필요합니다.",
     "core-too-old": "Core {core} 버전이 너무 오래되었습니다. 관리자에게 {minCore} 이상으로 업그레이드하도록 요청하세요.",
     "endpoint-missing": "이 Core는 호환성 확인 엔드포인트를 제공하지 않습니다. 호환성을 판단할 수 없으므로 관리자에게 문의하세요.",
@@ -2631,8 +2630,6 @@
     "invalid-response": "사이트에서 잘못된 호환성 정보를 반환했습니다. 다시 시도하거나 관리자에게 문의하세요.",
     "invalid-site": "사이트 URL이 잘못되었습니다. 자격 증명, 쿼리 또는 프래그먼트가 없는 HTTP 또는 HTTPS URL을 입력하세요.",
     "invalid-client-version": "실행 중인 클라이언트 버전이 잘못되었습니다. 릴리스 버전이 주입된 클라이언트를 사용하세요.",
-    "Download": "호환 클라이언트 다운로드",
-    "DownloadFailed": "다운로드 페이지를 열 수 없습니다.",
-    "Retry": "다시 시도"
+    "Continue": "연결 계속"
   }
 }

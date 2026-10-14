@@ -2618,9 +2618,8 @@
     "GoHome": "返回首页"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "兼容检查未能完成",
-    "IncompatibleTitle": "版本不兼容",
-    "ConnectionPaused": "本次连接已暂停，请解决问题后重试。",
+    "Title": "兼容性提示",
+    "ContinuePrompt": "是否继续连接 {site}？",
     "client-too-old": "客户端 {client} 版本过旧，本站要求 {minClient} 或更高版本。",
     "core-too-old": "Core {core} 版本过旧，请联系管理员升级至 {minCore} 或更高版本。",
     "endpoint-missing": "此 Core 未提供兼容检查接口，无法确定兼容性，请联系管理员。",
@@ -2631,8 +2630,6 @@
     "invalid-response": "站点返回的兼容信息无效，请重试或联系管理员。",
     "invalid-site": "站点地址无效，请输入不含凭据、查询参数或片段的 HTTP 或 HTTPS 地址。",
     "invalid-client-version": "运行中的客户端版本无效，请使用已注入发布版本的客户端。",
-    "Download": "下载兼容客户端",
-    "DownloadFailed": "无法打开下载页面。",
-    "Retry": "重试"
+    "Continue": "继续连接"
   }
 }

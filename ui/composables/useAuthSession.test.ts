@@ -141,7 +141,7 @@ describe("desktop compatibility during startup", () => {
   });
 
   it.each(["unknown", "incompatible"] as const)(
-    "pauses a remembered account when compatibility is %s and resumes only on retry",
+    "asks for confirmation when compatibility is %s and resumes the remembered account",
     async (status) => {
       const { useClientCompatibility } = await import("./useClientCompatibility");
       const compatibility = {
@@ -152,7 +152,11 @@ describe("desktop compatibility during startup", () => {
         failures: status === "incompatible" ? ["core-too-old"] : [],
         reason: status === "unknown" ? "endpoint-missing" : undefined
       };
-      mocks.desktopInvoke.mockResolvedValue({ status: "blocked", compatibility });
+      mocks.desktopInvoke.mockResolvedValue({
+        status: "confirmation-required",
+        compatibility,
+        compatibility_confirmation_id: 1
+      });
       const auth = useAuthSession();
 
       await expect(auth.bootstrapPersistedSession()).resolves.toBe(false);
@@ -161,12 +165,17 @@ describe("desktop compatibility during startup", () => {
       ]);
       expect(mocks.store.setUserData).not.toHaveBeenCalled();
       expect(mocks.store.loggedIn).toBe(false);
-      expect(useClientCompatibility().blocked.value).toEqual(compatibility);
+      expect(useClientCompatibility().pending.value).toEqual(compatibility);
 
       mocks.desktopInvoke.mockImplementation(async (command) =>
         command === "bootstrap_auth_session" ? loginPayload : { status: "success" }
       );
-      await useClientCompatibility().retry();
+      await useClientCompatibility().confirm();
+      expect(mocks.desktopInvoke).toHaveBeenCalledWith("bootstrap_auth_session", {
+        site: "https://site.test/prefix",
+        sessionId: "account-1",
+        compatibilityConfirmationId: 1
+      });
       expect(mocks.desktopInvoke.mock.calls.map(([command]) => command)).toEqual([
         "bootstrap_auth_session",
         "bootstrap_auth_session",

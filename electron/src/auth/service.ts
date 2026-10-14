@@ -111,6 +111,7 @@ export class DesktopAuthService {
     this.trustedHosts = new Set();
     this.connectionGeneration = 0;
     this.pendingConnection = null;
+    this.pendingCompatibility = null;
   }
 
   trustSite(site) {
@@ -173,7 +174,10 @@ export class DesktopAuthService {
     const bearerToken = approved ? pending.bearer : current.bearerToken;
     this.currentSessionKey = sessionKey;
     this.sessions.set(sessionKey, { sessionKey, origin, bearerToken, orgId });
-    if (approved) this.pendingConnection = null;
+    if (approved) {
+      this.pendingConnection = null;
+      this.pendingCompatibility = null;
+    }
     electronLog.info(`auth session ${parseUrl(origin).origin}`);
     return { status: "success" };
   }
@@ -252,6 +256,7 @@ export class DesktopAuthService {
   cancelAuth() {
     this.connectionGeneration += 1;
     this.pendingConnection = null;
+    this.pendingCompatibility = null;
     if (!this.pendingAuth) return;
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -276,12 +281,35 @@ export class DesktopAuthService {
     return checkSiteCompatibility(site, app.getVersion(), (url, init) => this.fetchSite(url, init));
   }
 
-  async prepareConnection(site) {
+  async prepareConnection(site, sessionId, compatibilityConfirmationId?: number, restoreActiveSession = false) {
+    site = normalizeCompatibilitySite(site);
+    if (compatibilityConfirmationId !== undefined) {
+      const pending = this.pendingCompatibility;
+      if (
+        !pending ||
+        pending.generation !== this.connectionGeneration ||
+        pending.generation !== compatibilityConfirmationId ||
+        pending.site !== site ||
+        pending.sessionId !== sessionId
+      ) {
+        return { status: "stale" };
+      }
+      // Keep confirmation scoped to this connection, including restoration retries.
+      return { status: "ready", generation: pending.generation, site };
+    }
     this.cancelAuth();
     const generation = this.connectionGeneration;
+    const current = restoreActiveSession ? this.sessions.get(this.currentSessionKey) : null;
+    // The active connection already passed or confirmed its compatibility check.
+    if (current?.sessionKey === sessionId && current.origin === site && this.tokens[sessionId]) {
+      return { status: "ready", generation, site };
+    }
     const compatibility = await this.checkCompatibility({ site });
     if (generation !== this.connectionGeneration) return { status: "stale" };
-    if (compatibility.status !== "compatible") return { status: "blocked", compatibility };
+    if (compatibility.status !== "compatible") {
+      this.pendingCompatibility = { generation, site, sessionId };
+      return { status: "confirmation-required", compatibility, compatibility_confirmation_id: generation };
+    }
     return { status: "ready", generation, site: compatibility.site };
   }
 
@@ -317,8 +345,8 @@ export class DesktopAuthService {
     }
   }
 
-  async authLogin({ site, sessionId }) {
-    const attempt = await this.prepareConnection(site);
+  async authLogin({ site, sessionId, compatibilityConfirmationId = undefined }) {
+    const attempt = await this.prepareConnection(site, sessionId, compatibilityConfirmationId);
     if (attempt.status !== "ready") return attempt;
     site = attempt.site;
     electronLog.info(`auth login start ${site}`);
@@ -486,8 +514,8 @@ export class DesktopAuthService {
     }
   }
 
-  async bootstrapAuthSession({ site, sessionId }) {
-    const attempt = await this.prepareConnection(site);
+  async bootstrapAuthSession({ site, sessionId, compatibilityConfirmationId = undefined }) {
+    const attempt = await this.prepareConnection(site, sessionId, compatibilityConfirmationId, true);
     if (attempt.status !== "ready") return attempt;
     site = attempt.site;
     try {

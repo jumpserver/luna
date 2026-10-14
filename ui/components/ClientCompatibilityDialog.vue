@@ -1,65 +1,73 @@
 <script setup lang="ts">
+import { desktopOpener } from "~/shared/desktop/bridge";
+
 const { t } = useI18n();
 const toast = useToast();
-const { blocked, dismiss, retry, download } = useClientCompatibility();
+const { pending, dismiss, confirm } = useClientCompatibility();
 const open = computed({
-  get: () => blocked.value !== null,
+  get: () => pending.value !== null,
   set: (value) => {
     if (!value) dismiss();
   }
 });
+const downloadUrl = computed(() => {
+  const site = pending.value?.site;
+  return site ? `${site.replace(/\/+$/, "")}/core/download/` : "";
+});
+const openDownload = async () => {
+  if (!downloadUrl.value) return;
+  try {
+    await desktopOpener.openUrl(downloadUrl.value);
+  } catch {
+    toast.add({ title: t("Common.OperationFailed"), color: "error" });
+  }
+};
 const formatVersion = (value?: string) => {
   const version = value?.trim();
   return version ? `v${version.replace(/^v/, "")}` : "";
 };
 const description = computed(() => {
-  const result = blocked.value;
+  const result = pending.value;
   if (!result) return "";
-  if (result.status === "unknown") return t(`ClientCompatibility.${result.reason || "network"}`);
-  return result.failures
-    .map((failure) =>
-      t(`ClientCompatibility.${failure}`, {
-        client: formatVersion(result.clientVersion),
-        minClient: formatVersion(result.minClientVersion),
-        core: formatVersion(result.coreVersion),
-        minCore: formatVersion(result.minCoreVersion)
-      })
-    )
-    .join("\n");
+  const reason =
+    result.status === "unknown"
+      ? t(`ClientCompatibility.${result.reason || "network"}`)
+      : result.failures
+          .map((failure) =>
+            t(`ClientCompatibility.${failure}`, {
+              client: formatVersion(result.clientVersion),
+              minClient: formatVersion(result.minClientVersion),
+              core: formatVersion(result.coreVersion),
+              minCore: formatVersion(result.minCoreVersion)
+            })
+          )
+          .join(" ");
+  return `${reason} ${t("ClientCompatibility.ContinuePrompt", { site: result.site })}`;
 });
-const canDownload = computed(
-  () => blocked.value?.status === "incompatible" && blocked.value.failures.includes("client-too-old")
-);
-const openDownload = async () => {
-  try {
-    await download();
-  } catch {
-    toast.add({ title: t("ClientCompatibility.DownloadFailed"), color: "error" });
-  }
-};
 </script>
 
 <template>
-  <UModal
+  <ModalAlertDialog
     v-model:open="open"
-    :title="
-      t(blocked?.status === 'unknown' ? 'ClientCompatibility.UnknownTitle' : 'ClientCompatibility.IncompatibleTitle')
-    "
-    :description="description"
-    :ui="{ content: 'max-w-md', description: 'whitespace-pre-line', footer: 'justify-end gap-2' }"
+    :title="t('ClientCompatibility.Title')"
+    :confirm-label="t('ClientCompatibility.Continue')"
+    @confirm="confirm"
   >
     <template #body>
-      <p class="break-all text-sm text-muted">{{ blocked?.site }}</p>
-      <p class="mt-2 text-sm text-muted">{{ t("ClientCompatibility.ConnectionPaused") }}</p>
+      <div class="space-y-3 text-sm break-words">
+        <p>{{ description }}</p>
+        <ULink
+          v-if="downloadUrl"
+          :to="downloadUrl"
+          external
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary hover:underline"
+          @click.prevent="openDownload"
+        >
+          {{ t("Setting.DownloadClient") }}
+        </ULink>
+      </div>
     </template>
-    <template #footer>
-      <UButton color="neutral" variant="ghost" @click="dismiss">{{ t("Common.Close") }}</UButton>
-      <UButton v-if="canDownload" icon="i-lucide-external-link" @click="openDownload">
-        {{ t("ClientCompatibility.Download") }}
-      </UButton>
-      <UButton v-else color="primary" icon="i-lucide-refresh-cw" @click="retry">
-        {{ t("ClientCompatibility.Retry") }}
-      </UButton>
-    </template>
-  </UModal>
+  </ModalAlertDialog>
 </template>
