@@ -5,6 +5,7 @@
     "terminal:telnet": "windows.putty",
     "remotedesktop:rdp": "windows.mstsc",
     "databases:mysql": "windows.dbx",
+    "databases:oceanbase": "windows.obclient",
     "databases:mariadb": "windows.dbx",
     "databases:postgresql": "windows.dbx",
     "databases:oracle": "windows.dbx",

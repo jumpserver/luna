@@ -1,6 +1,10 @@
 // Client-facing only: retain the original asset/token protocol for backend routing.
-export function getGuideClientProtocol(protocol: string) {
+const shellArg = (value: string) =>
+  /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
+
+export function getGuideClientProtocol(protocol: string, assetType = "") {
   const normalized = protocol.trim().toLowerCase();
+  if (normalized === "mysql" && assetType.trim().toLowerCase() === "oceanbase") return "oceanbase";
   return normalized === "mariadb" ? "mysql" : normalized;
 }
 
@@ -11,17 +15,20 @@ export function getGuideConnectCommand(input: {
   host: string;
   port: string;
   database: string;
+  assetType?: string;
   redisAuth?: string;
 }) {
   const { protocol, id, secret, host, port, database } = input;
 
-  switch (getGuideClientProtocol(protocol)) {
+  switch (getGuideClientProtocol(protocol, input.assetType)) {
     case "ssh":
       return `ssh JMS-${id}@${host}${port === "22" ? "" : ` -p ${port}`}`;
     case "vnc":
       return `vncviewer -UserName=${id} ${host}:${port || "5900"}`;
     case "mysql":
       return `mysql -u ${id} -p${secret} -h ${host} -P ${port} ${database}`;
+    case "oceanbase":
+      return `obclient -u ${shellArg(id)} -p${shellArg(secret)} -h ${shellArg(host)} -P ${shellArg(port)}${database ? ` ${shellArg(database)}` : ""}`;
     case "postgresql":
       return `psql "user=${id} password=${secret} host=${host} dbname=${database} port=${port}"`;
     case "redis":

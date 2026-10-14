@@ -10,6 +10,10 @@ const database = {
 };
 
 describe("connection guide client protocol", () => {
+  it("uses the OceanBase client only for OceanBase assets on the shared MySQL port", () => {
+    expect(getGuideClientProtocol("mysql", "oceanbase")).toBe("oceanbase");
+    expect(getGuideClientProtocol("mysql", "mysql")).toBe("mysql");
+  });
   it.each(["mariadb", "MariaDB", " MARIADB "])("presents %s as mysql", (protocol) => {
     expect(getGuideClientProtocol(protocol)).toBe("mysql");
   });
@@ -23,6 +27,17 @@ describe("connection guide client protocol", () => {
 });
 
 describe("connection guide CLI", () => {
+  it("offers obclient for either OceanBase tenant mode", () => {
+    expect(getGuideConnectCommand({ ...database, protocol: "mysql", assetType: "oceanbase" })).toBe(
+      "obclient -u token-id -ps3cret -h gateway.example.com -P 33060 app"
+    );
+  });
+
+  it("quotes special characters in copied OceanBase credentials", () => {
+    expect(getGuideConnectCommand({ ...database, protocol: "mysql", assetType: "oceanbase", secret: "p'a&b" })).toBe(
+      "obclient -u token-id -p'p'\\''a&b' -h gateway.example.com -P 33060 app"
+    );
+  });
   it.each(["mariadb", "MariaDB", " MARIADB "])(
     "uses the MySQL client for %s without changing connection details",
     (protocol) => {

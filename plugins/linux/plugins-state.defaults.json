@@ -6,6 +6,7 @@
     "remotedesktop:vnc": "linux.tigervnc",
     "databases:oracle": "linux.dbx",
     "databases:mysql": "linux.dbx",
+    "databases:oceanbase": "linux.terminal-db",
     "databases:postgresql": "linux.dbx",
     "databases:mariadb": "linux.dbx",
     "databases:redis": "linux.dbx",
