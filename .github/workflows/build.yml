@@ -258,7 +258,7 @@ jobs:
             release/electron/make/**/*.rpm
 
   release:
-    name: create draft release
+    name: publish client prerelease
     needs: build
     if: >-
       startsWith(github.ref, 'refs/tags/')
@@ -290,5 +290,5 @@ jobs:
           tag_name: ${{ env.VERSION }}
           files: release-assets/**/*
           fail_on_unmatched_files: true
-          draft: true
-          prerelease: ${{ contains(env.VERSION, '-') }}
+          draft: false
+          prerelease: true

@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, synchronize, closed]
   release:
-    types: [created, published]
+    types: [created, published, released]
 
 name: JumpServer repos generic handler
 
@@ -27,7 +27,7 @@ jobs:
           I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
 
   handle_release:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' && github.event.action != 'released'
     runs-on: ubuntu-latest
     steps:
       - uses: jumpserver/action-generic-handler@master
@@ -36,7 +36,8 @@ jobs:
           I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
 
   sync_release_downloads:
-    if: github.event_name == 'release' && github.event.action == 'published'
+    # Promotion from prerelease to stable also emits the released event.
+    if: github.event_name == 'release' && github.event.action == 'released'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -102,7 +103,7 @@ jobs:
 
   notify_client_release:
     needs: sync_release_downloads
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'released'
     runs-on: ubuntu-latest
     steps:
       - name: Notify docker-web
