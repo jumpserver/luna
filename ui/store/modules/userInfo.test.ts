@@ -3,8 +3,9 @@ import { createPinia, setActivePinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "vue";
-import { useUserInfoStore } from "./userInfo";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
+import { useUserInfoStore } from "./userInfo";
 
 const { desktopInvoke, runtime, storage } = vi.hoisted(() => {
   const memory = new Map<string, string>();
@@ -220,7 +221,7 @@ describe("setCurrentAccount session order", () => {
   });
 
   it.each(["unknown", "incompatible"] as const)(
-    "preserves A and its sessions when B is %s, then supports retry",
+    "preserves A and its sessions when B is %s, then continues after confirmation",
     async (status) => {
       const store = useUserInfoStore();
       store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
@@ -230,7 +231,8 @@ describe("setCurrentAccount session order", () => {
       desktopInvoke.mockImplementation(async (command, args) =>
         command === "bootstrap_auth_session"
           ? {
-              status: "blocked",
+              status: "confirmation-required",
+              compatibility_confirmation_id: 2,
               compatibility: {
                 status,
                 site: args.site,
@@ -242,13 +244,19 @@ describe("setCurrentAccount session order", () => {
             }
           : { status: "success" }
       );
-      await expect(store.setCurrentAccount("b", { beforeSwitch })).resolves.toBe(false);
+      const switching = store.setCurrentAccount("b", { beforeSwitch });
+      await vi.waitFor(() => expect(useClientCompatibility().pending.value?.status).toBe(status));
       expect(JSON.stringify(store.$state)).toBe(before);
       expect(beforeSwitch).not.toHaveBeenCalled();
-      expect(useClientCompatibility().blocked.value?.status).toBe(status);
 
       desktopInvoke.mockImplementation(async (command, args) => connectionResponse(command, args));
-      await useClientCompatibility().retry();
+      await useClientCompatibility().confirm();
+      await expect(switching).resolves.toBe(true);
+      expect(desktopInvoke).toHaveBeenCalledWith("bootstrap_auth_session", {
+        site: "https://b.test",
+        sessionId: "b",
+        compatibilityConfirmationId: 2
+      });
       expect(store.currentAccountId).toBe("b");
       expect(beforeSwitch).toHaveBeenCalledOnce();
     }
@@ -293,7 +301,8 @@ describe("setCurrentAccount session order", () => {
       desktopInvoke.mockImplementation(async (command, args) => {
         if (command === "bootstrap_auth_session" && args.sessionId === "c") {
           return {
-            status: "blocked",
+            status: "confirmation-required",
+            compatibility_confirmation_id: 3,
             compatibility: {
               status,
               site: args.site,
@@ -318,12 +327,15 @@ describe("setCurrentAccount session order", () => {
       expect(mainAccount).toBe("b");
       expect(store.currentAccountId).toBe("a");
 
-      await expect(store.setCurrentAccount("c")).resolves.toBe(false);
+      const switchC = store.setCurrentAccount("c");
+      await vi.waitFor(() => expect(useClientCompatibility().pending.value?.site).toBe("https://c.test"));
       replyB.resolve({ status: "success" });
       await expect(switchB).resolves.toBe(true);
       expect(store.currentAccountId).toBe(mainAccount);
       expect(store.currentSite).toBe("https://b.test");
-      expect(useClientCompatibility().blocked.value?.site).toBe("https://c.test");
+      expect(useClientCompatibility().pending.value?.site).toBe("https://c.test");
+      useClientCompatibility().dismiss();
+      await expect(switchC).resolves.toBeUndefined();
     }
   );
 
@@ -408,7 +420,8 @@ describe("setCurrentAccount session order", () => {
     desktopInvoke.mockImplementation(async (command, args) =>
       command === "bootstrap_auth_session"
         ? {
-            status: "blocked",
+            status: "confirmation-required",
+            compatibility_confirmation_id: 2,
             compatibility: {
               status: "unknown",
               site: args.site,
@@ -421,12 +434,73 @@ describe("setCurrentAccount session order", () => {
         : { status: "success" }
     );
 
-    await store.deleteUserData("a");
+    const deleting = store.deleteUserData("a");
+    await vi.waitFor(() => expect(useClientCompatibility().pending.value?.site).toBe("https://b.test"));
     expect(store.loggedIn).toBe(false);
     expect(store.currentAccountId).toBe("");
     expect(store.userMap.b?.bearerToken).toBe("token-b");
     expect(desktopInvoke.mock.calls.map(([command]) => command)).toEqual(["logout", "bootstrap_auth_session"]);
-    expect(useClientCompatibility().blocked.value?.site).toBe("https://b.test");
+    useClientCompatibility().dismiss();
+    await deleting;
+  });
+
+  describe("confirmed saved-site switch completion", () => {
+    const addToast = vi.fn();
+
+    beforeEach(() => {
+      addToast.mockReset();
+      vi.stubGlobal("useToast", () => ({ add: addToast }));
+      vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: (key: string) => key } }));
+      vi.stubGlobal("useEventBus", () => ({ emit: vi.fn() }));
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it.each(["success", "failure", "error", "cancel"] as const)(
+      "returns the final %s result to the caller and releases the busy state",
+      async (outcome) => {
+        const store = useUserInfoStore();
+        store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+        await store.setCurrentAccount("a");
+        desktopInvoke.mockImplementation(async (command, args) => {
+          if (command !== "bootstrap_auth_session") return { status: "success" };
+          if (args.compatibilityConfirmationId !== undefined) {
+            if (outcome === "error") throw new Error("network");
+            return outcome === "failure" ? { status: "failure" } : connectionResponse(command, args);
+          }
+          return {
+            status: "confirmation-required",
+            compatibility_confirmation_id: 2,
+            compatibility: {
+              status: "unknown",
+              site: args.site,
+              clientVersion: "5.1.0",
+              minCoreVersion: "5.1.0",
+              failures: [],
+              reason: "network"
+            }
+          };
+        });
+        const { switchAccount, switchingAccountId } = useSiteAccountSwitch();
+        const switching = switchAccount("b");
+        const compatibility = useClientCompatibility();
+        await vi.waitFor(() => expect(compatibility.pending.value?.site).toBe("https://b.test"));
+        expect(switchingAccountId.value).toBe("b");
+        expect(store.currentAccountId).toBe("a");
+
+        if (outcome === "cancel") compatibility.dismiss();
+        else await expect(compatibility.confirm()).resolves.toBeUndefined();
+
+        await expect(switching).resolves.toBe(outcome === "success");
+        expect(store.currentAccountId).toBe(outcome === "success" ? "b" : "a");
+        expect(switchingAccountId.value).toBe("");
+        if (outcome === "failure" || outcome === "error") {
+          expect(addToast).toHaveBeenCalledExactlyOnceWith({ title: "Login.SwitchFailed", color: "error" });
+        } else {
+          expect(addToast).not.toHaveBeenCalled();
+        }
+      }
+    );
   });
 
   it.each(["missing token", "profile unauthorized", "profile forbidden"])(

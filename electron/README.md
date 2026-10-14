@@ -5,7 +5,7 @@ This directory contains the JumpServer desktop runtime.
 Desktop connections first check anonymous
 `GET /api/v1/settings/client/compatibility/` in the main process. Both
 `app.getVersion() >= Core.MIN_CLIENT_VERSION` and
-`base(Core.VERSION) >= MIN_CORE_VERSION` must hold, except that Core's exact
+`base(Core.VERSION) >= MIN_CORE_VERSION` determine compatibility, except that Core's exact
 `dev` version skips the Core minimum check. The client's minimum lives in
 `src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
 server release, including Koko, Chen and Kael. Developers decide whether a
@@ -30,19 +30,25 @@ Login, saved-account restoration and site switching share the same preflight.
 It uses the same Electron network adapter, proxy configuration and user-entered
 site certificate trust as login. Requests remain anonymous and uncached, and
 normal redirects follow the existing network policy. The final response must
-contain valid compatibility JSON; redirecting to an HTML login page cannot pass.
-Failed or obsolete checks cannot activate a session. Missing endpoints, invalid
-responses, timeouts and TLS failures pause the new connection and offer retry.
-They never fall back to the legacy version array. Old clients get a button that
-opens the selected site's `/core/download/` in the system browser, retaining the
-deployment prefix. Old Core versions require an administrator upgrade.
+contain valid compatibility JSON to pass the check. Incompatible versions,
+missing endpoints, invalid responses, timeouts and TLS failures show the shared
+confirmation dialog. Continuing skips the preflight for that connection,
+including restoration retries; cancellation leaves the active session unchanged.
+Confirmation is bound to the site, account and current connection generation.
+A new connection, main-process cancellation or session activation expires it.
+Authentication and profile validation still precede session activation. Checks
+never fall back to the legacy version array.
+After activation, restoration of the same active site and account reuses its
+compatibility decision while still refreshing credentials and validating the
+profile. A new login, site/account switch, logout or client restart requires
+a new check.
 
 Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
 For desktop review, use local test servers and release-versioned test builds:
 check both minimum boundaries, each single failure and both failures, an old Core
-returning 404, retry after a network failure, and a prefixed download URL. Keep A
-connected while B fails a check, then rapidly switch B/C and verify only the
-latest result can activate. These checks must not access production accounts.
+returning 404, continuing or cancelling a failed check, and restoration retries.
+Keep A connected while B awaits confirmation, then rapidly switch B/C and verify
+only the latest confirmation can activate. These checks must not access production accounts.
 
 Run the current development shell with:
 

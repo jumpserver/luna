@@ -4,9 +4,9 @@ import { once } from "node:events";
 import test from "node:test";
 import {
   checkSiteCompatibility,
-  clientDownloadUrl,
   compareVersions,
-  MIN_CORE_VERSION
+  MIN_CORE_VERSION,
+  normalizeCompatibilitySite
 } from "../src/auth/compatibility.ts";
 
 test("compares patch versions, release candidates, v prefixes, metadata and the stable LTS channel", () => {
@@ -159,14 +159,14 @@ test("timeouts, TLS and network errors are unknown and do not fall back to the o
   }
 });
 
-test("validates site and download URLs and preserves a legal deployment prefix", async () => {
+test("normalizes site URLs and preserves a legal deployment prefix", async () => {
   for (const [site, expected] of [
-    ["https://private.test", "https://private.test/core/download/"],
-    ["https://private.test/team/jumpserver/", "https://private.test/team/jumpserver/core/download/"],
-    ["http://127.0.0.1:8080/prefix", "http://127.0.0.1:8080/prefix/core/download/"],
-    ["https://[::1]:8080/prefix/", "https://[::1]:8080/prefix/core/download/"]
+    ["https://private.test", "https://private.test"],
+    ["https://private.test/team/jumpserver/", "https://private.test/team/jumpserver"],
+    ["http://127.0.0.1:8080/prefix", "http://127.0.0.1:8080/prefix"],
+    ["https://[::1]:8080/prefix/", "https://[::1]:8080/prefix"]
   ])
-    assert.equal(clientDownloadUrl(site), expected);
+    assert.equal(normalizeCompatibilitySite(site), expected);
   for (const invalid of [
     "https://user:secret@site.test",
     "https://site.test/?x=1",
@@ -179,7 +179,7 @@ test("validates site and download URLs and preserves a legal deployment prefix",
     "https://site.test\n",
     undefined
   ]) {
-    assert.throws(() => clientDownloadUrl(invalid));
+    assert.throws(() => normalizeCompatibilitySite(invalid));
     const result = await checkSiteCompatibility(invalid, "5.1.0", async () => {
       throw new Error("must not fetch");
     });

@@ -2618,9 +2618,8 @@
     "GoHome": "返回首頁"
   },
   "ClientCompatibility": {
-    "UnknownTitle": "相容檢查未能完成",
-    "IncompatibleTitle": "版本不相容",
-    "ConnectionPaused": "本次連線已暫停，請解決問題後重試。",
+    "Title": "相容性提示",
+    "ContinuePrompt": "是否繼續連線至 {site}？",
     "client-too-old": "客戶端 {client} 版本過舊，本站要求 {minClient} 或更新版本。",
     "core-too-old": "Core {core} 版本過舊，請聯絡管理員升級至 {minCore} 或更新版本。",
     "endpoint-missing": "此 Core 未提供相容檢查介面，無法確定相容性，請聯絡管理員。",
@@ -2631,8 +2630,6 @@
     "invalid-response": "站點傳回的相容資訊無效，請重試或聯絡管理員。",
     "invalid-site": "站點位址無效，請輸入不含憑據、查詢參數或片段的 HTTP 或 HTTPS 位址。",
     "invalid-client-version": "執行中的客戶端版本無效，請使用已注入發行版本的客戶端。",
-    "Download": "下載相容客戶端",
-    "DownloadFailed": "無法開啟下載頁面。",
-    "Retry": "重試"
+    "Continue": "繼續連線"
   }
 }

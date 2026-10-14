@@ -2618,9 +2618,8 @@
     "ClickHouseDataViewReadOnly": "Les vues de données ClickHouse sont actuellement en lecture seule. L’ajout, la modification et la suppression de données ne sont pas pris en charge ; les requêtes, les filtres et les exports restent disponibles."
   },
   "ClientCompatibility": {
-    "UnknownTitle": "Vérification de compatibilité indisponible",
-    "IncompatibleTitle": "Versions incompatibles",
-    "ConnectionPaused": "Cette connexion est suspendue. Réessayez après avoir résolu le problème.",
+    "Title": "Avis de compatibilité",
+    "ContinuePrompt": "Continuer la connexion à {site} ?",
     "client-too-old": "Le client {client} est trop ancien. Ce site exige {minClient} ou une version ultérieure.",
     "core-too-old": "Core {core} est trop ancien. Demandez à votre administrateur de passer à {minCore} ou une version ultérieure.",
     "endpoint-missing": "Ce Core ne fournit pas le point de terminaison de compatibilité. Contactez votre administrateur ; la compatibilité ne peut pas être déterminée.",
@@ -2631,8 +2630,6 @@
     "invalid-response": "Les informations de compatibilité sont invalides. Réessayez ou contactez votre administrateur.",
     "invalid-site": "URL du site invalide. Saisissez une URL HTTP ou HTTPS sans identifiants, paramètres ni fragment.",
     "invalid-client-version": "La version du client est invalide. Utilisez un client compilé avec sa version de publication.",
-    "Download": "Télécharger un client compatible",
-    "DownloadFailed": "Impossible d’ouvrir la page de téléchargement.",
-    "Retry": "Réessayer"
+    "Continue": "Continuer la connexion"
   }
 }

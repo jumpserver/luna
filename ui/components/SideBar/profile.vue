@@ -612,8 +612,8 @@ const handleClipboard = (value: string) => {
 /**
  * @description 处理确认输入
  */
-const handleConfirm = async () => {
-  if (loginBtn.value) return;
+const handleConfirm = async (confirmation?: { id: number; accountId: string; generation: number }) => {
+  if (loginBtn.value || (confirmation && confirmation.generation !== loginRequestGeneration)) return;
 
   errorMessage.value = "";
   hasValidationError.value = false;
@@ -679,27 +679,30 @@ const handleConfirm = async () => {
 
   const isReauth = Boolean(editingAccountId.value && editingAccountId.value === currentAccountId.value);
   const leavingCurrentSite = loggedIn.value && !isReauth;
-  const generation = ++loginRequestGeneration;
-  if (leavingCurrentSite && !(await confirmLeaveCurrentSiteSessions("login", { close: false }))) return;
+  const generation = confirmation?.generation ?? ++loginRequestGeneration;
+  if (leavingCurrentSite && !confirmation && !(await confirmLeaveCurrentSiteSessions("login", { close: false })))
+    return;
   if (generation !== loginRequestGeneration) return;
 
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
     loginInFlight = true;
-    const accountId = editingAccountId.value || globalThis.crypto.randomUUID();
+    const accountId = confirmation?.accountId || editingAccountId.value || globalThis.crypto.randomUUID();
     useClientCompatibility().dismiss();
     const payload = await desktopInvoke<any>("auth_login", {
       site: normalizedSite,
-      sessionId: accountId
+      sessionId: accountId,
+      compatibilityConfirmationId: confirmation?.id
     });
     if (generation !== loginRequestGeneration) return;
-    if (payload?.status === "blocked" && payload.compatibility) {
+    if (payload?.status === "confirmation-required" && payload.compatibility) {
       openModal.value = false;
       loginBtn.value = false;
       useClientCompatibility().show(payload.compatibility, async () => {
+        if (generation !== loginRequestGeneration) return;
         openModal.value = true;
-        await handleConfirm();
+        await handleConfirm({ id: payload.compatibility_confirmation_id, accountId, generation });
       });
       return;
     }

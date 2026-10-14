@@ -158,7 +158,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-test("both login and restoration stop before any authentication side effect on a failed preflight", async () => {
+test("login and restoration confirm once and reuse compatibility after session activation", async () => {
   for (const status of ["incompatible", "unknown"] as const) {
     for (const method of ["authLogin", "bootstrapAuthSession"]) {
       const { auth, calls, events } = setup(async (site) => ({
@@ -167,6 +167,7 @@ test("both login and restoration stop before any authentication side effect on a
         failures: status === "incompatible" ? ["client-too-old"] : [],
         reason: status === "unknown" ? "endpoint-missing" : undefined
       }));
+      auth.tokens.b = { access_token: "token-b" };
       const before = snapshot(auth);
       const result = await auth[method]({
         site: "https://b.test",
@@ -174,13 +175,86 @@ test("both login and restoration stop before any authentication side effect on a
         clientVersion: "999.0.0",
         compatible: true
       });
-      assert.equal(result.status, "blocked");
+      assert.equal(result.status, "confirmation-required");
       assert.equal(result.compatibility.status, status);
       assert.equal(snapshot(auth), before);
       assert.deepEqual(calls, ["check:https://b.test"]);
       assert.deepEqual(events, []);
+      const confirmed = await auth[method]({
+        site: "https://b.test",
+        sessionId: "b",
+        compatibilityConfirmationId: result.compatibility_confirmation_id
+      });
+      assert.equal(confirmed.status, "success");
+      assert.equal(auth.currentSessionKey, "a");
+      assert.equal(
+        auth.setSession({ sessionKey: "b", origin: "https://b.test", connectionId: confirmed.connection_id }).status,
+        "success"
+      );
+      calls.length = 0;
+      const restored = await auth.bootstrapAuthSession({ site: "https://b.test", sessionId: "b" });
+      assert.equal(restored.status, "success");
+      assert.deepEqual(calls, ["fresh-token", "profile"]);
+      assert.equal((await auth.authLogin({ site: "https://b.test", sessionId: "b" })).status, "confirmation-required");
     }
   }
+});
+
+test("confirmation cannot be used for another site, account or obsolete connection", async () => {
+  const { auth, calls } = setup(async (site) => ({
+    ...compatible(site),
+    status: "unknown",
+    reason: "invalid-response"
+  }));
+  const args = { site: "https://b.test", sessionId: "b" };
+  const warning = await auth.bootstrapAuthSession(args);
+  const confirmation = { ...args, compatibilityConfirmationId: warning.compatibility_confirmation_id };
+  for (const changed of [{ site: "https://c.test" }, { sessionId: "c" }]) {
+    assert.equal((await auth.bootstrapAuthSession({ ...confirmation, ...changed })).status, "stale");
+  }
+  await auth.bootstrapAuthSession({ site: "https://c.test", sessionId: "c" });
+  assert.equal((await auth.bootstrapAuthSession(confirmation)).status, "stale");
+  const next = await auth.bootstrapAuthSession(args);
+  auth.cancelAuth();
+  assert.equal(
+    (await auth.bootstrapAuthSession({ ...args, compatibilityConfirmationId: next.compatibility_confirmation_id }))
+      .status,
+    "stale"
+  );
+  assert.deepEqual(calls, ["check:https://b.test", "check:https://c.test", "check:https://b.test"]);
+  assert.equal(auth.currentSessionKey, "a");
+});
+
+test("restoration retries retain confirmation until the authenticated session is activated", async () => {
+  const { auth, calls } = setup(async (site) => ({ ...compatible(site), status: "unknown", reason: "timeout" }));
+  const args = { site: "https://b.test", sessionId: "b" };
+  const warning = await auth.bootstrapAuthSession(args);
+  const confirmation = { ...args, compatibilityConfirmationId: warning.compatibility_confirmation_id };
+  auth.buildLoginPayload = async () => ({ ...payload(), profile: { status: 503, success: false, data: "{}" } });
+  assert.equal((await auth.bootstrapAuthSession(confirmation)).profile.status, 503);
+  auth.buildLoginPayload = async () => payload();
+  const result = await auth.bootstrapAuthSession(confirmation);
+  assert.equal(calls.filter((call) => call.startsWith("check:")).length, 1);
+  assert.equal(
+    auth.setSession({ sessionKey: "b", origin: "https://b.test", connectionId: result.connection_id }).status,
+    "success"
+  );
+  assert.equal((await auth.bootstrapAuthSession(confirmation)).status, "stale");
+});
+
+test("active-session restoration still checks compatibility for other accounts, sites and logged-out accounts", async () => {
+  const { auth } = setup(async (site) => ({ ...compatible(site), status: "unknown", reason: "endpoint-missing" }));
+  for (const args of [
+    { site: siteA.origin, sessionId: "other" },
+    { site: "https://other.test", sessionId: "a" }
+  ]) {
+    assert.equal((await auth.bootstrapAuthSession(args)).status, "confirmation-required");
+  }
+  await auth.logout({ site: siteA.origin, sessionId: "a" });
+  assert.equal(
+    (await auth.bootstrapAuthSession({ site: siteA.origin, sessionId: "a" })).status,
+    "confirmation-required"
+  );
 });
 
 test("the probe uses Electron's runtime version and existing site network adapter without changing the active session", async () => {

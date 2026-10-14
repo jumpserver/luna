@@ -1,28 +1,36 @@
 import type { SiteCompatibility } from "~/types/clientCompatibility";
 import { readonly, shallowRef } from "vue";
-import { desktopInvoke } from "~/shared/desktop/bridge";
 
 // Desktop connection prompts are shared across the workspace and settings layouts.
-const blocked = shallowRef<SiteCompatibility | null>(null);
-let retryConnection: (() => Promise<unknown>) | null = null;
+const pending = shallowRef<SiteCompatibility | null>(null);
+let continueConnection: (() => Promise<unknown>) | null = null;
+let resolveConfirmation: ((confirmed: boolean) => void) | null = null;
 
 export const useClientCompatibility = () => {
   const dismiss = () => {
-    blocked.value = null;
-    retryConnection = null;
+    pending.value = null;
+    continueConnection = null;
+    resolveConfirmation?.(false);
+    resolveConfirmation = null;
   };
   return {
-    blocked: readonly(blocked),
+    pending: readonly(pending),
     dismiss,
-    show: (result: SiteCompatibility, retry: () => Promise<unknown>) => {
-      blocked.value = result;
-      retryConnection = retry;
-    },
-    retry: async () => {
-      const action = retryConnection;
+    show: (result: SiteCompatibility, confirm?: () => Promise<unknown>) => {
       dismiss();
-      await action?.();
+      pending.value = result;
+      continueConnection = confirm || null;
+      return new Promise<boolean>((resolve) => {
+        resolveConfirmation = resolve;
+      });
     },
-    download: () => desktopInvoke("open_client_download", { site: blocked.value?.site })
+    confirm: async () => {
+      const action = continueConnection;
+      const resolve = resolveConfirmation;
+      resolveConfirmation = null;
+      dismiss();
+      resolve?.(true);
+      await action?.();
+    }
   };
 };

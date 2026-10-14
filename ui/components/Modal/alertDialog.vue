@@ -39,10 +39,13 @@ function submit() {
     :close="false"
     :ui="{
       content: 'max-w-md',
-      header: 'min-h-0 px-5 py-3 sm:px-5 sm:py-3',
-      footer: 'justify-end gap-2 px-5 py-2.5 sm:px-5 sm:py-2.5'
+      header: $slots.body ? undefined : 'min-h-0 px-5 py-3 sm:px-5 sm:py-3',
+      footer: $slots.body ? 'justify-end gap-2' : 'justify-end gap-2 px-5 py-2.5 sm:px-5 sm:py-2.5'
     }"
   >
+    <template v-if="$slots.body" #body>
+      <slot name="body" />
+    </template>
     <template #footer>
       <UButton color="neutral" variant="ghost" :disabled="loading" @click="open = false">
         {{ t("Common.Cancel") }}
