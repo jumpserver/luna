@@ -6,6 +6,9 @@ import { useSidebarAssetActions } from "./useSidebarAssetActions";
 
 const openSetupSession = vi.fn();
 const getAssetDetailRequest = vi.fn();
+const getConnectionInfoForAsset = vi.fn();
+const confirmConnection = vi.fn();
+const openSession = vi.fn();
 
 vi.mock("~/composables/useApiRequest", () => ({
   favoriteAssetsToFolder: vi.fn(),
@@ -15,7 +18,7 @@ vi.mock("~/composables/useAssetTree", () => ({ isAssetNameTaken: () => false }))
 vi.mock("~/composables/useConnectMethods", () => ({
   isExternalClientConnectMethod: () => false,
   pickConnectMethod: () => "",
-  useConnectMethods: () => ({ getMethodsForProtocol: async () => [] }),
+  useConnectMethods: () => ({ getMethodsForProtocol: async () => [{ value: "web_proxy" }] }),
   WEB_PROXY_NATIVE_VALUE: "web_proxy"
 }));
 vi.mock("~/composables/useFavoriteFolders", () => ({
@@ -26,14 +29,10 @@ vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: () => ({
     currentUser: ref({ org: { id: "org" } }),
     loggedIn: ref(false),
-    getConnectionInfoForAsset: vi.fn(),
+    getConnectionInfoForAsset,
     getConnectionPreferenceForAsset: vi.fn(),
     getConnectionPreferenceForProtocol: vi.fn()
   })
-}));
-vi.mock("~/utils/connection", () => ({
-  hasReusableSavedConnection: () => false,
-  isSavedConnectionAvailable: () => false
 }));
 vi.mock("~/utils/itemName", () => ({
   hasItemName: () => false,
@@ -52,9 +51,34 @@ const asset: AssetItem = {
   isActive: true
 };
 
+const webAccount = {
+  id: "web-account",
+  name: "admin",
+  username: "admin",
+  alias: "admin",
+  has_secret: true,
+  has_username: true,
+  secret_type: "password",
+  actions: [],
+  date_expired: ""
+};
+const webAsset: AssetItem = { ...asset, category: "web", type: "website" };
+const savedWebConnection = {
+  protocol: "https",
+  username: "admin",
+  accountId: "web-account",
+  accountMode: "hosted" as const,
+  connectMethod: "web_proxy",
+  connectOptions: { resolution: "1920x1080" }
+};
+
 describe("workspaceConnectAsset bus", () => {
   beforeEach(() => {
     openSetupSession.mockReset();
+    getConnectionInfoForAsset.mockReset();
+    confirmConnection.mockReset();
+    openSession.mockReset().mockReturnValue({ id: "session-1" });
+    vi.stubGlobal("isDesktopRuntime", () => false);
     getAssetDetailRequest.mockReset();
     getAssetDetailRequest.mockResolvedValue({ permed_accounts: [], permed_protocols: [] });
     vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
@@ -63,12 +87,12 @@ describe("workspaceConnectAsset bus", () => {
     vi.stubGlobal("useErrorToast", () => ({ addErrorToast: vi.fn() }));
     vi.stubGlobal("useSettingManager", () => ({ appConfig: ref(null), setCollapse: vi.fn() }));
     vi.stubGlobal("useSidebarLayout", () => ({ closeHoverPreview: vi.fn() }));
-    vi.stubGlobal("useAssetConnection", () => ({ confirmConnection: vi.fn() }));
+    vi.stubGlobal("useAssetConnection", () => ({ confirmConnection }));
     vi.stubGlobal("useConnectionLauncher", () => ({ configure: vi.fn(), launchWithInfo: vi.fn() }));
     vi.stubGlobal("useWorkspaceTabs", () => ({
       activeTab: ref(null),
       canSplitWorkspace: () => false,
-      openSession: vi.fn(),
+      openSession,
       openSetupSession,
       splitWorkspace: vi.fn()
     }));
@@ -103,5 +127,56 @@ describe("workspaceConnectAsset bus", () => {
     expect(openSetupSession).toHaveBeenCalledTimes(1);
     expect(openSetupSession).toHaveBeenCalledWith(asset);
     expect(getAssetDetailRequest).not.toHaveBeenCalled();
+  });
+
+  describe.each([false, true])("Web asset connections (desktop=%s)", (desktop) => {
+    beforeEach(() => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      getAssetDetailRequest.mockResolvedValue({
+        permed_accounts: [webAccount],
+        permed_protocols: [{ name: "https", port: 443, public: true }]
+      });
+    });
+
+    it("opens account selection without a remembered connection, even with one account", async () => {
+      await useSidebarAssetActions().handleAssetConnect(webAsset);
+      expect(openSetupSession).toHaveBeenCalledWith(expect.objectContaining({ id: webAsset.id }));
+      expect(confirmConnection).not.toHaveBeenCalled();
+      expect(openSession).not.toHaveBeenCalled();
+      expect(getAssetDetailRequest).not.toHaveBeenCalled();
+    });
+
+    it("reuses the store selection when the asset tree has no saved connection", async () => {
+      getConnectionInfoForAsset.mockReturnValue(savedWebConnection);
+      await useSidebarAssetActions().handleAssetConnect(webAsset);
+      expect(openSetupSession).not.toHaveBeenCalled();
+      expect(confirmConnection).toHaveBeenCalledWith(
+        expect.objectContaining({ id: webAsset.id }),
+        expect.objectContaining({
+          protocol: "https",
+          account: "admin",
+          accountId: "web-account",
+          connectMethod: "web_proxy",
+          connectOptions: savedWebConnection.connectOptions,
+          rememberSelection: true,
+          tabId: "session-1"
+        })
+      );
+    });
+
+    it("returns to selection when the remembered account is no longer authorized", async () => {
+      getConnectionInfoForAsset.mockReturnValue({ ...savedWebConnection, username: "removed", accountId: "removed" });
+      await useSidebarAssetActions().handleAssetConnect(webAsset);
+      expect(openSetupSession).toHaveBeenCalledTimes(1);
+      expect(confirmConnection).not.toHaveBeenCalled();
+    });
+
+    it("allows explicit account selection even with a remembered connection", () => {
+      getConnectionInfoForAsset.mockReturnValue(savedWebConnection);
+      useSidebarAssetActions();
+      useEventBus().emit("workspaceConnectAsset", webAsset);
+      expect(openSetupSession).toHaveBeenCalledWith(webAsset);
+      expect(confirmConnection).not.toHaveBeenCalled();
+    });
   });
 });
