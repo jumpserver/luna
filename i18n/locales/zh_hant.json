@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "為各連線協議選擇桌面應用程式。",
     "AboutDescription": "版本、產品與授權資訊。",
     "Product": "產品",
+    "ServerVersion": "伺服器版本",
+    "ClientVersion": "用戶端版本",
     "EnterpriseEdition": "企業版",
     "CommunityEdition": "社群版",
     "LicenseCompany": "授權公司",

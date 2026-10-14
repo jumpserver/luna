@@ -1311,6 +1311,8 @@
     "ApplicationDescription": "Choisir les applications de bureau pour chaque protocole de connexion.",
     "AboutDescription": "Informations de version, de produit et de licence.",
     "Product": "Produit",
+    "ServerVersion": "Version du serveur",
+    "ClientVersion": "Version du client",
     "EnterpriseEdition": "Édition Entreprise",
     "CommunityEdition": "Édition Communauté",
     "LicenseCompany": "Entreprise titulaire de la licence",

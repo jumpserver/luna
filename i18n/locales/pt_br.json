@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "Escolha os aplicativos de desktop para cada protocolo de conexão.",
     "AboutDescription": "Informações de versão, produto e licença.",
     "Product": "Produto",
+    "ServerVersion": "Versão do servidor",
+    "ClientVersion": "Versão do cliente",
     "EnterpriseEdition": "Edição Enterprise",
     "CommunityEdition": "Edição Community",
     "LicenseCompany": "Empresa licenciada",

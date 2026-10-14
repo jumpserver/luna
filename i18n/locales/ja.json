@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "接続プロトコルごとにデスクトップアプリケーションを選択します。",
     "AboutDescription": "バージョン、製品、ライセンス情報。",
     "Product": "製品",
+    "ServerVersion": "サーバーバージョン",
+    "ClientVersion": "クライアントバージョン",
     "EnterpriseEdition": "エンタープライズ版",
     "CommunityEdition": "コミュニティ版",
     "LicenseCompany": "ライセンス会社",

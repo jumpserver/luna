@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "Выберите настольные приложения для каждого протокола подключения.",
     "AboutDescription": "Сведения о версии, продукте и лицензии.",
     "Product": "Продукт",
+    "ServerVersion": "Версия сервера",
+    "ClientVersion": "Версия клиента",
     "EnterpriseEdition": "Корпоративная редакция",
     "CommunityEdition": "Редакция Community",
     "LicenseCompany": "Лицензиат",

@@ -11,6 +11,7 @@ const isDefaultProduct = computed(() => isDefaultAppName(appName.value));
 const website = "https://jumpserver.org";
 
 const productVersion = ref("");
+const clientVersion = ref("");
 const licenseCompany = ref("");
 const isEnterpriseEdition = ref(false);
 const showCommunityLinks = ref(false);
@@ -24,8 +25,12 @@ const productInfo = computed(() => [
     label: t("Setting.Product"),
     value: t(isEnterpriseEdition.value ? "Setting.EnterpriseEdition" : "Setting.CommunityEdition")
   },
-  { label: t("Common.Version"), value: productVersion.value || "—" },
-  { label: t("Setting.LicenseCompany"), value: licenseCompany.value || "—" }
+  {
+    label: t(isWebRuntime.value ? "Common.Version" : "Setting.ServerVersion"),
+    value: productVersion.value || "—"
+  },
+  { label: t("Setting.LicenseCompany"), value: licenseCompany.value || "—" },
+  ...(!isWebRuntime.value ? [{ label: t("Setting.ClientVersion"), value: clientVersion.value || "—" }] : [])
 ]);
 const links = computed(() => [
   {
@@ -64,13 +69,14 @@ function onLogoError() {
 }
 
 onMounted(async () => {
-  try {
-    // 运行时读取 Electron productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
-    const runtimeAppName = (await desktopApp.getName()).trim();
-    if (runtimeAppName) {
-      appName.value = normalizeAppName(runtimeAppName);
-    }
-  } catch {}
+  if (isDesktopRuntime()) {
+    try {
+      // 运行时读取 Electron 产品信息，避免定制构建依赖静态配置。
+      const [runtimeAppName, runtimeClientVersion] = await Promise.all([desktopApp.getName(), desktopApp.getVersion()]);
+      if (runtimeAppName.trim()) appName.value = normalizeAppName(runtimeAppName);
+      clientVersion.value = runtimeClientVersion.trim();
+    } catch {}
+  }
 
   try {
     const settings = await getPublicSettings();

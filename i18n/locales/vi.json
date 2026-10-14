@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "Chọn ứng dụng máy tính cho từng giao thức kết nối.",
     "AboutDescription": "Thông tin phiên bản, sản phẩm và giấy phép.",
     "Product": "Sản phẩm",
+    "ServerVersion": "Phiên bản máy chủ",
+    "ClientVersion": "Phiên bản máy khách",
     "EnterpriseEdition": "Phiên bản Doanh nghiệp",
     "CommunityEdition": "Phiên bản Cộng đồng",
     "LicenseCompany": "Công ty được cấp phép",

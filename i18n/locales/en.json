@@ -1311,6 +1311,8 @@
     "ApplicationDescription": "Choose desktop applications for each connection protocol.",
     "AboutDescription": "Version, product, and license information.",
     "Product": "Product",
+    "ServerVersion": "Server version",
+    "ClientVersion": "Client version",
     "EnterpriseEdition": "Enterprise Edition",
     "CommunityEdition": "Community Edition",
     "LicenseCompany": "License Company",
