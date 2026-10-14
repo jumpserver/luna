@@ -59,8 +59,8 @@ pnpm electron:dev
 Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
 On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
 
-The native Face Center has its own uv-managed Python sidecar. Prepare it once,
-then open **My Tools > Face Center** in the desktop client:
+The native face engine has its own uv-managed Python sidecar. For local engine
+checks, prepare it once and open `/face` in the development renderer:
 
 ```sh
 pnpm face:setup
