@@ -19,7 +19,6 @@ import { desktopWindow } from "~/shared/desktop/bridge";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "disconnected" | "failed";
-export type { WorkspaceConnectionProgressStage };
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
 export type WorkspacePaneDropPlacement = "center" | "left" | "right" | "top" | "bottom";
 export type WorkspacePaneMode = "empty" | "setup" | "session";

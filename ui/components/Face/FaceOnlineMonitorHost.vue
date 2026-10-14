@@ -11,9 +11,9 @@ const minimized = ref(false);
 const alarm = ref<"normal" | "warning" | "paused">("normal");
 const entries = computed(() => collectActiveFaceMonitorTokens(tabs.value));
 const active = computed(() => entries.value[0] || null);
-const area = ref<HTMLElement | null>(null);
-const panel = ref<HTMLElement | null>(null);
-const dragHandle = ref<HTMLElement | null>(null);
+const area = shallowRef<HTMLElement | null>(null);
+const panel = shallowRef<HTMLElement | null>(null);
+const dragHandle = shallowRef<HTMLElement | null>(null);
 const drag = useConnectionSetupDrag(area, panel, dragHandle);
 const monitorToastId = "face-monitor-state";
 

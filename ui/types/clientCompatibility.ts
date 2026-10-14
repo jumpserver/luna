@@ -21,7 +21,7 @@ export interface SiteCompatibility {
 }
 
 export interface DesktopConnectionResult {
-  status: "success" | "blocked" | "stale" | "failure";
+  status: "success" | "blocked" | "stale" | "failure" | "auth-required";
   compatibility?: SiteCompatibility;
   connection_id?: number;
 }

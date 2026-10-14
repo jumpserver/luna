@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WorkspaceConnectionProgressStage } from "~/composables/useWorkspaceTabs";
+import type { WorkspaceConnectionProgressStage } from "~/composables/workspaceConnectionProgress";
 import { isFaceLiveHostMessage } from "~/utils/faceLive";
 
 const props = defineProps<{

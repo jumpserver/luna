@@ -84,7 +84,7 @@ const retainDesktopListener = (target: typeof unlistenAuthUrlRef, unlisten: Desk
   return true;
 };
 
-useEventBus().on("login", openLoginPage);
+useEventBus().on("login", (request) => openLoginPage(request?.accountId));
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 const normalizedInputSiteName = computed(() => inputSiteName.value.trim());
@@ -149,7 +149,6 @@ const accountTooltip = computed(() => {
 });
 
 const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
-const siteAccounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
 
 const languageItems = computed(() =>
   ((locales.value as Array<{ code?: string; name?: string } | string>) || []).map((item) => {
@@ -362,11 +361,6 @@ const applyPalettePreset = (id: ThemePresetId) => {
   } catch {}
 };
 
-const accountInitial = (name?: string) => {
-  const trimmed = (name || "").trim();
-  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
-};
-
 watch(
   () => userTheme.value,
   () => {
@@ -482,7 +476,7 @@ const handleClearInput = () => {
 /**
  * @description 打开登录页面
  */
-function openLoginPage() {
+function openLoginPage(accountId?: string) {
   profileOpen.value = false;
 
   if (!isDesktopRuntime()) {
@@ -490,8 +484,11 @@ function openLoginPage() {
     return;
   }
 
-  const reauthUser = !loggedIn.value ? currentUser.value : null;
-  editingAccountId.value = reauthUser ? currentAccountId.value : "";
+  const reauthAccountId =
+    accountId ?? (!loggedIn.value ? currentAccountId.value || Object.keys(userMap.value)[0] || "" : "");
+  const reauthUser = userMap.value[reauthAccountId];
+  if (reauthUser && !loggedIn.value) userInfoStore.selectAccountForLogin(reauthAccountId);
+  editingAccountId.value = reauthUser ? reauthAccountId : "";
   inputSite.value = reauthUser?.site || "";
   inputSiteName.value = reauthUser?.siteName || reauthUser?.site || "";
   siteNameEdited.value = Boolean(reauthUser);
@@ -531,17 +528,9 @@ async function clearAuthInfo() {
   await navigateTo(localePath({ path: "/" }));
 }
 
-async function handleSwitchAccount(accountId: string) {
-  if (accountId === currentAccountId.value) return;
-
-  profileOpen.value = false;
-  if (!(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) return;
-  await userInfoStore.setCurrentAccount(accountId, { beforeSwitch: closeCurrentSiteWorkspace });
-}
-
 function openAddSite() {
   profileOpen.value = false;
-  openLoginPage();
+  openLoginPage("");
 }
 
 async function openUserSettings() {
@@ -808,13 +797,7 @@ onMounted(async () => {
       nextTick(() => {
         inputRef.value?.$el?.querySelector("input")?.focus();
       });
-
-      return;
     }
-
-    nextTick(() => {
-      userInfoStore.setUserLoggedIn(false);
-    });
   });
   if (!retainDesktopListener(unlistenErrorPageRef, unlistenErrorPage)) return;
 
@@ -848,11 +831,7 @@ onMounted(async () => {
       nextTick(() => {
         inputRef.value?.$el?.querySelector("input")?.focus();
       });
-
-      return;
     }
-
-    userInfoStore.setUserLoggedIn(false);
   });
   retainDesktopListener(unlistenLoginFailedRef, unlistenLoginFailed);
 });
@@ -931,7 +910,7 @@ onBeforeUnmount(() => {
             size="sm"
             block
             class="justify-start"
-            @click="openLoginPage"
+            @click="openLoginPage()"
           />
         </div>
 
@@ -1150,32 +1129,8 @@ onBeforeUnmount(() => {
 
             <template #content>
               <div data-profile-nested-popover>
-                <div v-if="siteAccounts.length" class="max-h-60 overflow-y-auto">
-                  <UButton
-                    v-for="[accountId, account] in siteAccounts"
-                    :key="accountId"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    block
-                    class="justify-start"
-                    :title="`${account.siteName || account.site} · ${account.name}`"
-                    :aria-current="accountId === currentAccountId ? 'true' : undefined"
-                    @click="handleSwitchAccount(accountId)"
-                  >
-                    <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
-                    <span class="min-w-0 flex-1 text-left">
-                      <span class="block truncate">{{ account.siteName || account.site }}</span>
-                      <span class="block truncate text-xs font-normal text-muted">{{ account.name }}</span>
-                    </span>
-                    <UIcon
-                      v-if="accountId === currentAccountId"
-                      name="i-lucide-check"
-                      class="size-3.5 shrink-0 text-primary"
-                    />
-                  </UButton>
-                </div>
-                <USeparator v-if="siteAccounts.length" class="my-1.5" :ui="menuSeparatorUi" />
+                <SiteAccounts @select="profileOpen = false" />
+                <USeparator v-if="Object.keys(userMap).length" class="my-1.5" :ui="menuSeparatorUi" />
                 <UButton
                   :label="t('Login.AddAccount')"
                   icon="i-lucide-user-round-plus"
@@ -1275,6 +1230,11 @@ onBeforeUnmount(() => {
         @remove="removeRecentSite"
         @clear="clearRecentSites"
       />
+
+      <div v-if="Object.keys(userMap).length" class="space-y-1 border-t border-(--app-border) pt-3">
+        <p class="px-2 text-xs text-muted">{{ t("Login.SavedSites") }}</p>
+        <SiteAccounts :disabled="loginBtn" :selected-account-id="editingAccountId" @switched="openModal = false" />
+      </div>
 
       <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
         {{ errorMessage }}

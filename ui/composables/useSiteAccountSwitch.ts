@@ -2,6 +2,8 @@ import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
 import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
 
@@ -16,6 +18,7 @@ type LeaveConfirmRequest = {
 };
 
 const leaveConfirm = ref<LeaveConfirmRequest | null>(null);
+const switchingAccountId = ref("");
 let leaveInFlight = false;
 let fileWorkspaceLeaveHandler: FileWorkspaceLeaveHandler | null = null;
 
@@ -80,8 +83,40 @@ export const useSiteAccountSwitch = () => {
     }
   });
 
+  const switchAccount = async (accountId: string) => {
+    const user = useUserInfoStore();
+    if (switchingAccountId.value || (accountId === user.currentAccountId && user.loggedIn)) return false;
+    const toast = useToast();
+    const { $i18n } = useNuxtApp();
+    const bus = useEventBus();
+    const compatibility = useClientCompatibility();
+    switchingAccountId.value = accountId;
+    try {
+      if (user.userMap[accountId]?.sessionExpired) {
+        bus.emit("login", { accountId });
+        return false;
+      }
+      if (!(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) return false;
+      const switched = await user.setCurrentAccount(accountId, {
+        beforeSwitch: closeCurrentSiteWorkspace,
+        onAuthRequired: () => bus.emit("login", { accountId })
+      });
+      if (!switched && !user.userMap[accountId]?.sessionExpired && !compatibility.blocked.value) {
+        toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
+      }
+      return switched;
+    } catch {
+      toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
+      return false;
+    } finally {
+      switchingAccountId.value = "";
+    }
+  };
+
   return {
     confirmOpen,
+    switchingAccountId,
+    switchAccount,
     leaveKind: computed(() => leaveConfirm.value?.kind ?? "switch"),
     confirmLeave: () => resolveLeaveConfirm(true)
   };

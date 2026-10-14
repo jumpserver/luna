@@ -15,6 +15,7 @@ import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export type SiteUserData = UserData & {
+  sessionExpired?: boolean;
   language?: string;
   rdpClientOption?: RdpGraphics;
   connectionInfoMap?: Record<string, ConnectionInfo>;
@@ -147,6 +148,15 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = l;
     };
 
+    const markSessionExpired = (accountId: string) => {
+      const user = userMap.value[accountId];
+      if (user) user.sessionExpired = true;
+      if (accountId === currentAccountId.value) {
+        loggedIn.value = false;
+        if (currentUser.value) (currentUser.value as SiteUserData).sessionExpired = true;
+      }
+    };
+
     const setCommandExecutionEnabled = (enabled: boolean) => {
       if (currentUser.value) currentUser.value.commandExecutionEnabled = enabled;
 
@@ -166,6 +176,19 @@ export const useUserInfoStore = defineStore(
       return userMap.value[accountId];
     };
 
+    const selectAccountForLogin = (accountId: string) => {
+      if (loggedIn.value) return;
+      const user = getUserData(accountId);
+      if (!user) return;
+      currentAccountId.value = accountId;
+      currentSite.value = user.site;
+      currentUser.value = user;
+      currentOrganizations.value = [];
+      currentConnectionInfoMap.value = user.connectionInfoMap || {};
+      currentConnectionPreferenceMap.value = user.connectionPreferenceMap || {};
+      currentRdpClientOption.value = user.rdpClientOption || {};
+    };
+
     /**
      * @description 设置用户数据
      * @param accountId
@@ -176,6 +199,7 @@ export const useUserInfoStore = defineStore(
       const next: SiteUserData = {
         ...previous,
         ...userData,
+        sessionExpired: false,
         accountId,
         connectionInfoMap: previous?.connectionInfoMap || {},
         connectionPreferenceMap: previous?.connectionPreferenceMap || {},
@@ -206,7 +230,7 @@ export const useUserInfoStore = defineStore(
 
       // 退出当前站点时立即请求清理其 Cookie
       if (isDesktopRuntime() && userData) {
-        desktopInvoke("logout", {
+        await desktopInvoke("logout", {
           name: "main",
           site: userData.site,
           sessionId: accountId
@@ -217,7 +241,9 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
+      ++accountSwitchGeneration;
       delete userMap.value[accountId];
+      if (accountId !== currentAccountId.value) return;
 
       // 如果还有用户，则切换到下一个用户
       if (hasUser.value) {
@@ -258,7 +284,10 @@ export const useUserInfoStore = defineStore(
      * @description 设置当前账号
      * @param accountId
      */
-    async function setCurrentAccount(accountId: string, options: { beforeSwitch?: () => Promise<void> } = {}) {
+    async function setCurrentAccount(
+      accountId: string,
+      options: { beforeSwitch?: () => Promise<void>; onAuthRequired?: () => void } = {}
+    ) {
       const desktop = isDesktopRuntime();
       const generation = desktop ? ++accountSwitchGeneration : 0;
       const userData = getUserData(accountId);
@@ -283,6 +312,11 @@ export const useUserInfoStore = defineStore(
           useClientCompatibility().show(result.compatibility, () => setCurrentAccount(accountId, options));
           return false;
         }
+        if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
+          markSessionExpired(accountId);
+          options.onAuthRequired?.();
+          return false;
+        }
         if (
           result?.status !== "success" ||
           !result.connection_id ||
@@ -294,7 +328,7 @@ export const useUserInfoStore = defineStore(
           return false;
         }
         connectionId = result.connection_id;
-        nextUser = { ...nextUser, bearerToken: result.bearer };
+        nextUser = { ...nextUser, bearerToken: result.bearer, sessionExpired: false };
       }
       enforceOrganizationLicense(nextUser);
       const activate = async () => {
@@ -561,11 +595,13 @@ export const useUserInfoStore = defineStore(
 
       setUserData,
       getUserData,
+      selectAccountForLogin,
       setCurrentOrg,
       setCurrentAccount,
       withSessionActivation,
       deleteUserData,
       setUserLoggedIn,
+      markSessionExpired,
       setCommandExecutionEnabled,
       setOrganizations,
       setRdpClientOption,

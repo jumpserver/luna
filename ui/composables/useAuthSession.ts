@@ -434,7 +434,7 @@ export const useAuthSession = () => {
 
         if (failure === "auth") {
           lastBootstrapFailure = null;
-          userInfoStore.setUserLoggedIn(false);
+          userInfoStore.markSessionExpired(accountId);
           if (restored) await promptDesktopLogin();
           return false;
         }
@@ -492,7 +492,9 @@ export const useAuthSession = () => {
   }
 
   const handleDesktopAuthExpired = async (sessionId: string) => {
-    if (!sessionId || sessionId !== currentAccountId.value) return false;
+    if (!sessionId) return false;
+    userInfoStore.markSessionExpired(sessionId);
+    if (sessionId !== currentAccountId.value) return false;
 
     userInfoStore.setUserLoggedIn(false);
     useEventBus().emit("clearAssets", undefined);

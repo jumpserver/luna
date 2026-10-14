@@ -1,6 +1,7 @@
 import type { AssetItem } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useBatchCommandPanel } from "./useBatchCommandPanel";
+import { useClientCompatibility } from "./useClientCompatibility";
 import {
   closeCurrentSiteWorkspace,
   confirmLeaveCurrentSiteSessions,
@@ -13,7 +14,8 @@ import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "./useWorks
 vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
 }));
-vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({}) }));
+const accountMocks = vi.hoisted(() => ({ user: {} as any, emit: vi.fn(), toast: vi.fn() }));
+vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => accountMocks.user }));
 
 const asset: AssetItem = {
   id: "asset-1",
@@ -141,5 +143,65 @@ describe("site account switch isolation", () => {
     confirmLeave();
     await expect(pending).resolves.toBe(true);
     expect(close).toHaveBeenCalledOnce();
+  });
+});
+
+describe("saved site switch feedback", () => {
+  beforeEach(() => {
+    accountMocks.user = { currentAccountId: "a", loggedIn: true, userMap: { b: {} }, setCurrentAccount: vi.fn() };
+    accountMocks.emit.mockReset();
+    accountMocks.toast.mockReset();
+    useClientCompatibility().dismiss();
+    vi.stubGlobal("useEventBus", () => ({ emit: accountMocks.emit }));
+    vi.stubGlobal("useToast", () => ({ add: accountMocks.toast }));
+    vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: (key: string) => key } }));
+  });
+
+  afterEach(() => {
+    accountMocks.user = {};
+    vi.unstubAllGlobals();
+  });
+
+  it("opens a known expired site's login without closing the current workspace", async () => {
+    openSession();
+    accountMocks.user.userMap.b.sessionExpired = true;
+    await expect(useSiteAccountSwitch().switchAccount("b")).resolves.toBe(false);
+    expect(accountMocks.emit).toHaveBeenCalledWith("login", { accountId: "b" });
+    expect(accountMocks.user.setCurrentAccount).not.toHaveBeenCalled();
+    expect(tabs.tabs.value).toHaveLength(1);
+    expect(confirmOpen.value).toBe(false);
+  });
+
+  it("prefills login for an expiry discovered while switching", async () => {
+    accountMocks.user.setCurrentAccount.mockImplementation(async (_id: string, options: any) => {
+      accountMocks.user.userMap.b.sessionExpired = true;
+      options.onAuthRequired();
+      return false;
+    });
+    await expect(useSiteAccountSwitch().switchAccount("b")).resolves.toBe(false);
+    expect(accountMocks.emit).toHaveBeenCalledWith("login", { accountId: "b" });
+    expect(accountMocks.toast).not.toHaveBeenCalled();
+  });
+
+  it("shows feedback when switching fails and releases the busy state", async () => {
+    accountMocks.user.setCurrentAccount.mockRejectedValue(new Error("network"));
+    const { switchAccount, switchingAccountId } = useSiteAccountSwitch();
+    await expect(switchAccount("b")).resolves.toBe(false);
+    expect(accountMocks.toast).toHaveBeenCalledWith({ title: "Login.SwitchFailed", color: "error" });
+    expect(switchingAccountId.value).toBe("");
+  });
+
+  it("ignores repeated clicks while switching and resumes after completion", async () => {
+    const pending = Promise.withResolvers<boolean>();
+    accountMocks.user.setCurrentAccount.mockReturnValue(pending.promise);
+    const { switchAccount, switchingAccountId } = useSiteAccountSwitch();
+    const first = switchAccount("b");
+    await vi.waitFor(() => expect(accountMocks.user.setCurrentAccount).toHaveBeenCalledOnce());
+    expect(switchingAccountId.value).toBe("b");
+    await expect(switchAccount("b")).resolves.toBe(false);
+    expect(accountMocks.user.setCurrentAccount).toHaveBeenCalledOnce();
+    pending.resolve(true);
+    await expect(first).resolves.toBe(true);
+    expect(switchingAccountId.value).toBe("");
   });
 });

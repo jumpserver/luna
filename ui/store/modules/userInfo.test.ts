@@ -428,6 +428,81 @@ describe("setCurrentAccount session order", () => {
     expect(desktopInvoke.mock.calls.map(([command]) => command)).toEqual(["logout", "bootstrap_auth_session"]);
     expect(useClientCompatibility().blocked.value?.site).toBe("https://b.test");
   });
+
+  it.each(["missing token", "profile unauthorized", "profile forbidden"])(
+    "offers reauthentication without closing A when B has %s",
+    async (failure) => {
+      const store = useUserInfoStore();
+      store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+      await store.setCurrentAccount("a");
+      desktopInvoke.mockImplementation(async () =>
+        failure === "missing token"
+          ? { status: "auth-required" }
+          : { status: "success", profile: { status: failure === "profile unauthorized" ? 401 : 403 } }
+      );
+      const beforeSwitch = vi.fn(async () => {});
+      const onAuthRequired = vi.fn();
+
+      await expect(store.setCurrentAccount("b", { beforeSwitch, onAuthRequired })).resolves.toBe(false);
+      expect(store.currentAccountId).toBe("a");
+      expect(store.loggedIn).toBe(true);
+      expect(store.userMap.b?.sessionExpired).toBe(true);
+      expect(beforeSwitch).not.toHaveBeenCalled();
+      expect(onAuthRequired).toHaveBeenCalledOnce();
+
+      desktopInvoke.mockImplementation(async (command, args) => connectionResponse(command, args));
+      await expect(store.setCurrentAccount("b")).resolves.toBe(true);
+      expect(store.userMap.b?.sessionExpired).toBe(false);
+    }
+  );
+
+  it("deletes an inactive site without switching or logging out the current site", async () => {
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    desktopInvoke.mockClear();
+    await store.deleteUserData("b");
+    expect(store.userMap.b).toBeUndefined();
+    expect(store.currentAccountId).toBe("a");
+    expect(store.currentSite).toBe("https://a.test");
+    expect(store.loggedIn).toBe(true);
+    expect(desktopInvoke.mock.calls.map(([command]) => command)).toEqual(["logout"]);
+  });
+
+  it("remembers the selected expired login site without activating an API session", () => {
+    const store = useUserInfoStore();
+    store.userMap.b = { ...siteUser("b", "https://b.test"), sessionExpired: true };
+    store.selectAccountForLogin("b");
+    expect(store.currentAccountId).toBe("b");
+    expect(store.currentSite).toBe("https://b.test");
+    expect(store.loggedIn).toBe(false);
+    expect(desktopInvoke).not.toHaveBeenCalled();
+  });
+
+  it("does not replace an authenticated account when preparing another site's login", async () => {
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    store.selectAccountForLogin("b");
+    expect(store.currentAccountId).toBe("a");
+    expect(store.loggedIn).toBe(true);
+  });
+
+  it("does not resurrect a site deleted during its bootstrap", async () => {
+    const store = useUserInfoStore();
+    store.userMap = { a: siteUser("a", "https://a.test"), b: siteUser("b", "https://b.test") };
+    await store.setCurrentAccount("a");
+    const pending = Promise.withResolvers<any>();
+    desktopInvoke.mockImplementation(async (command) =>
+      command === "bootstrap_auth_session" ? pending.promise : { status: "success" }
+    );
+    const switching = store.setCurrentAccount("b");
+    await store.deleteUserData("b");
+    pending.resolve(connectionResponse("bootstrap_auth_session", { sessionId: "b" }));
+    await expect(switching).resolves.toBe(false);
+    expect(store.userMap.b).toBeUndefined();
+    expect(store.currentAccountId).toBe("a");
+  });
 });
 
 describe.each([true, false])("organization license (desktop: %s)", (desktop) => {

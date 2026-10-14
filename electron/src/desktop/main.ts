@@ -1209,6 +1209,7 @@ async function handleInvoke(event, request) {
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
+  if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   if (command === "api_request") return authService.apiRequest(args.request);

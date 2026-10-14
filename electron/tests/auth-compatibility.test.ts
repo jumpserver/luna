@@ -107,6 +107,47 @@ function snapshot(auth: any) {
   });
 }
 
+test("missing or unrefreshable saved tokens require login while preserving the active site", async () => {
+  for (const token of [undefined, { access_token: "expired", expires_at: 1 }]) {
+    const { auth } = setup();
+    delete auth.freshToken;
+    if (token) auth.tokens.b = token;
+    const before = snapshot(auth);
+    const result = await auth.bootstrapAuthSession({ site: "https://b.test", sessionId: "b" });
+    assert.equal(result.status, "auth-required");
+    assert.equal(snapshot(auth), before);
+  }
+});
+
+test("profile authentication failures require login without activating the target", async () => {
+  for (const status of [401, 403]) {
+    const { auth } = setup();
+    auth.buildLoginPayload = async () => ({ ...payload(), profile: { status, success: false, data: "{}" } });
+    const result = await auth.bootstrapAuthSession({ site: "https://b.test", sessionId: "b" });
+    assert.equal(result.status, "auth-required");
+    assert.equal(auth.currentSessionKey, "a");
+    assert.equal(auth.pendingConnection, null);
+  }
+});
+
+test("saved account availability exposes only IDs with usable or refreshable tokens", () => {
+  const { auth } = setup();
+  auth.tokens.expired = { access_token: "expired", expires_at: 1 };
+  auth.tokens.refreshable = { access_token: "expired", expires_at: 1, refresh_token: "refresh" };
+  auth.tokens.empty = {};
+  assert.deepEqual(Array.from(auth.listAuthenticatedAccounts()), ["a", "refreshable"]);
+});
+
+test("deleting an inactive site clears its main-process session and tokens without changing the active site", async () => {
+  const { auth } = setup();
+  auth.sessions.set("b", { ...siteA, sessionKey: "b" });
+  auth.tokens.b = { access_token: "token-b" };
+  await auth.logout({ site: "https://b.test", sessionId: "b" });
+  assert.equal(auth.tokens.b, undefined);
+  assert.equal(auth.sessions.has("b"), false);
+  assert.equal(auth.currentSessionKey, "a");
+});
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -230,8 +271,9 @@ test("a failed or malformed profile cannot authorize a session", async () => {
       // Login success allows the renderer to close A's workspace; bootstrap keeps
       // transport failures available for its existing network/server retry logic.
       if (method === "authLogin") assert.equal(result.status, "failure");
+      else if (profile.status === 401) assert.equal(result.status, "auth-required");
       else if (!profile.success) assert.equal(result.status, "success");
-      assert.equal(result.profile.status, profile.status);
+      if (result.profile) assert.equal(result.profile.status, profile.status);
       assert.equal(result.connection_id, undefined);
       assert.equal(auth.pendingConnection, null);
       assert.equal(snapshot(auth), before);

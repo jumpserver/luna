@@ -4,7 +4,7 @@
 DOCKER_COMPOSE ?= docker compose
 
 .PHONY: run stop
-run: check-env ## 循环启动开发代理、Nuxt 和 Electron，Ctrl+C 停止（http://localhost:8888）
+run: check-env ## 启动开发代理、Nuxt 和 Electron，Ctrl+C 停止（http://localhost:8888）
 	@cleanup() { \
 		status=$$?; \
 		trap - EXIT INT TERM; \
@@ -15,10 +15,7 @@ run: check-env ## 循环启动开发代理、Nuxt 和 Electron，Ctrl+C 停止�
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(DOCKER_COMPOSE) up -d || exit $$?; \
-	while true; do \
-		npm run dev; \
-		sleep 1; \
-	done
+	pnpm dev
 
 stop: ## 停止并移除开发代理
 	$(DOCKER_COMPOSE) down
