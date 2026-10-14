@@ -169,6 +169,7 @@ async function reconnect() {
     :role="failed ? 'alert' : 'status'"
     aria-live="polite"
     class="absolute inset-0 z-20 grid place-items-center bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
+    :class="{ 'connection-progress-overlay--face': group?.faceUrl }"
   >
     <UButton
       v-if="failed && dismissible"
@@ -180,8 +181,8 @@ async function reconnect() {
       class="absolute top-6 right-6 z-10"
       @click="dismiss"
     />
-    <div class="relative w-full max-w-lg">
-      <div class="flex w-full items-center gap-5" aria-hidden="true">
+    <div class="relative w-full max-w-lg" :class="{ 'connection-progress-card--face': group?.faceUrl }">
+      <div v-show="!group?.faceUrl" class="flex w-full items-center gap-5" aria-hidden="true">
         <span class="relative shrink-0">
           <svg class="step-ring" :class="ringClass(0)" viewBox="0 0 52 52" aria-hidden="true">
             <circle cx="26" cy="26" r="24" pathLength="100" />
@@ -237,7 +238,10 @@ async function reconnect() {
           />
         </span>
       </div>
-      <div class="absolute inset-x-0 top-full mt-4 flex flex-col items-center gap-4">
+      <div
+        class="flex flex-col items-center gap-4"
+        :class="group?.faceUrl ? 'connection-progress-face-content' : 'absolute inset-x-0 top-full mt-4'"
+      >
         <p
           v-if="copy"
           :key="`copy-${playId}`"
@@ -260,7 +264,7 @@ async function reconnect() {
           ref="faceFrame"
           :src="group.faceUrl"
           allow="camera"
-          class="error-copy h-80 w-full max-w-lg rounded-lg border-0 bg-default"
+          class="error-copy connection-progress-face-frame w-full max-w-lg rounded-lg border-0 bg-default"
           sandbox="allow-scripts allow-same-origin"
           @error="group && failFace(group, 'AclDialog.FacePageUnavailable')"
         />
@@ -285,6 +289,29 @@ async function reconnect() {
 </template>
 
 <style scoped>
+.connection-progress-overlay--face {
+  display: flex;
+  overflow: auto;
+}
+
+.connection-progress-card--face {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  margin: auto;
+}
+
+.connection-progress-face-content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.connection-progress-face-frame {
+  height: 520px;
+  min-height: 400px;
+  flex-shrink: 1;
+}
+
 .progress-line {
   position: relative;
   height: 2px;

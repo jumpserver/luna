@@ -210,6 +210,7 @@ watch(
 <style scoped>
 .face-token-capture {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(260px, 1fr) auto;
   gap: 10px;
   width: 100%;
