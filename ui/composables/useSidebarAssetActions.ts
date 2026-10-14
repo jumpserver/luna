@@ -4,12 +4,7 @@ import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem, RdpGraphics } from "~/types";
 import { favoriteAssetsToFolder, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isAssetNameTaken } from "~/composables/useAssetTree";
-import {
-  isExternalClientConnectMethod,
-  pickConnectMethod,
-  useConnectMethods,
-  WEB_PROXY_NATIVE_VALUE
-} from "~/composables/useConnectMethods";
+import { isExternalClientConnectMethod, pickConnectMethod, useConnectMethods } from "~/composables/useConnectMethods";
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { writeClipboardText } from "~/utils/clipboard";
@@ -148,92 +143,6 @@ export function useSidebarAssetActions() {
     });
   };
 
-  const isWebsiteAsset = (asset: AssetItem) => {
-    const classification = [asset.category, asset.type].map((value) => String(value || "").toLowerCase());
-    return (
-      classification.some((value) => ["web", "website"].includes(value)) ||
-      (asset.permedProtocols || []).some((protocol) => ["http", "https"].includes(protocol.name?.toLowerCase()))
-    );
-  };
-
-  const resolveDirectWebsiteAccount = (asset: AssetItem) => {
-    const accounts = asset.permedAccounts || [];
-    const preferred = userInfoStore.getConnectionPreferenceForAsset(asset.id);
-    const hostedAccounts = accounts.filter((account) => !account.alias?.startsWith("@"));
-
-    if (preferred?.accountMode === "hosted") {
-      const matched = hostedAccounts.find(
-        (account) =>
-          (preferred.accountId && account.id === preferred.accountId) ||
-          account.name === preferred.username ||
-          account.username === preferred.username ||
-          account.alias === preferred.username
-      );
-      if (matched) return { account: matched.name, accountId: matched.id, accountMode: "hosted" as const };
-    }
-    if (hostedAccounts.length === 1) {
-      const account = hostedAccounts[0]!;
-      return { account: account.name, accountId: account.id, accountMode: "hosted" as const };
-    }
-    if (hostedAccounts.length === 0 && accounts.some((account) => account.alias === "@ANON")) {
-      return { account: "@ANON", accountId: undefined, accountMode: "anonymous" as const };
-    }
-    return null;
-  };
-
-  const connectWebsiteDirectly = async (asset: AssetItem) => {
-    if (!isDesktopRuntime() || !isWebsiteAsset(asset)) return false;
-
-    try {
-      const connectAsset = await loadAssetConnectionDetails(asset);
-      const protocols: string[] = [];
-      for (const item of connectAsset.permedProtocols || []) {
-        const protocol = String(item.name || "")
-          .trim()
-          .toLowerCase();
-        if (["http", "https"].includes(protocol) && !protocols.includes(protocol)) protocols.push(protocol);
-      }
-      if (protocols.length !== 1) return false;
-
-      const protocol = protocols[0]!;
-      const methods = await getMethodsForProtocol(protocol, connectAsset.id);
-      if (!methods.some((method) => method.value === WEB_PROXY_NATIVE_VALUE)) return false;
-
-      const selectedAccount = resolveDirectWebsiteAccount(connectAsset);
-      if (!selectedAccount) return false;
-
-      const session = openSession(connectAsset, {
-        protocol,
-        account: selectedAccount.account,
-        connectMethod: WEB_PROXY_NATIVE_VALUE
-      });
-      await confirmConnection(connectAsset, {
-        protocol,
-        account: selectedAccount.account,
-        accountId: selectedAccount.accountId,
-        accountMode: selectedAccount.accountMode,
-        manualUsername: "",
-        manualPassword: "",
-        dynamicPassword: "",
-        rememberSecret: false,
-        rememberSelection: false,
-        connectMethod: WEB_PROXY_NATIVE_VALUE,
-        connectOptions: {},
-        availableProtocols: protocols,
-        tabId: session.id
-      });
-      return true;
-    } catch (error) {
-      addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
-        description: String(error),
-        icon: "i-lucide-circle-alert",
-        duration: 4000
-      });
-      return true;
-    }
-  };
-
   const handleOpenMultipleAssets = async (assets: AssetItem[]) => {
     const selected = assets.map((asset) => ({
       ...asset,
@@ -322,7 +231,6 @@ export function useSidebarAssetActions() {
   const handleAssetConnect = async (asset: AssetItem) => {
     closeHoverPreview();
     if (isNarrowScreen.value) setCollapse(true);
-    if (!hasReusableSavedConnection(asset) && (await connectWebsiteDirectly(asset))) return;
     await connectWithSavedConnection(asset);
   };
 
