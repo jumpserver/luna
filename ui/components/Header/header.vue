@@ -29,17 +29,6 @@ const showWorkspaceHeader = computed(
 );
 
 const returnFromTool = async () => {
-  if (!loggedIn.value) {
-    await navigateTo(localePath({ path: "/" }));
-    return;
-  }
-
-  const previousPath = router.options.history.state.back;
-  if (typeof previousPath === "string" && previousPath) {
-    router.back();
-    return;
-  }
-
   await navigateTo(localePath({ path: "/" }));
 };
 
