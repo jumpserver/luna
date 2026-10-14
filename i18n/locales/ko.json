@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "각 연결 프로토콜에 사용할 데스크톱 애플리케이션을 선택합니다.",
     "AboutDescription": "버전, 제품 및 라이선스 정보입니다.",
     "Product": "제품",
+    "ServerVersion": "서버 버전",
+    "ClientVersion": "클라이언트 버전",
     "EnterpriseEdition": "엔터프라이즈 에디션",
     "CommunityEdition": "커뮤니티 에디션",
     "LicenseCompany": "라이선스 회사",

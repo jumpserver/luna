@@ -1310,6 +1310,8 @@
     "ApplicationDescription": "为各连接协议选择桌面应用程序。",
     "AboutDescription": "版本、产品与授权信息。",
     "Product": "产品",
+    "ServerVersion": "服务端版本",
+    "ClientVersion": "客户端版本",
     "EnterpriseEdition": "企业版",
     "CommunityEdition": "社区版",
     "LicenseCompany": "授权公司",
