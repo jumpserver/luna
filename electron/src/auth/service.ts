@@ -424,14 +424,24 @@ export class DesktopAuthService {
     };
   }
 
+  listAuthenticatedAccounts() {
+    const now = Math.floor(Date.now() / 1000);
+    return Object.entries(this.tokens)
+      .filter(([, token]: [string, any]) =>
+        Boolean(token.access_token && (!token.expires_at || token.expires_at > now || token.refresh_token))
+      )
+      .map(([sessionId]) => sessionId);
+  }
+
   async freshToken(site, sessionId, provided = "") {
     const stored = this.tokens[sessionId];
     if (!stored) {
       if (provided) return provided;
-      throw new Error(`no access token available for site ${site}`);
+      throw Object.assign(new Error(`no access token available for site ${site}`), { oauthError: "invalid_grant" });
     }
     if (!stored.expires_at || stored.expires_at > Math.floor(Date.now() / 1000) + 60) return stored.access_token;
-    if (!stored.refresh_token) throw new Error(`refresh_token missing for site ${site}`);
+    if (!stored.refresh_token)
+      throw Object.assign(new Error(`refresh_token missing for site ${site}`), { oauthError: "invalid_grant" });
 
     const activeRefresh = this.refreshingTokens.get(sessionId);
     if (activeRefresh) return activeRefresh;
@@ -484,9 +494,12 @@ export class DesktopAuthService {
       const bearer = await this.freshToken(site, sessionId);
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const payload = await this.buildLoginPayload(site, bearer);
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (payload.profile?.status === 401 || payload.profile?.status === 403) return { status: "auth-required" };
       return this.approveConnection(attempt, sessionId, payload);
     } catch (error) {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (error?.oauthError === "invalid_grant") return { status: "auth-required" };
       throw error;
     }
   }
@@ -650,12 +663,16 @@ export class DesktopAuthService {
     electronLog.info(`auth logout ${site}`);
     const token = this.tokens[sessionId];
     delete this.tokens[sessionId];
+    this.sessions.delete(sessionId);
+    if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
+    if (this.pendingConnection?.sessionId === sessionId) this.cancelAuth();
     await this.persistTokens();
     if (!token?.refresh_token) return;
     try {
       await this.fetchSite(endpoint(site, OAUTH_REVOKE), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        signal: AbortSignal.timeout(5_000),
         body: new URLSearchParams({
           token: token.refresh_token,
           token_type_hint: "refresh_token",

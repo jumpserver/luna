@@ -51,6 +51,9 @@ beforeEach(async () => {
     }),
     setUserLoggedIn: vi.fn((loggedIn: boolean) => {
       mocks.store.loggedIn = loggedIn;
+    }),
+    markSessionExpired: vi.fn((accountId: string) => {
+      if (accountId === currentAccountIdRef.value) mocks.store.loggedIn = false;
     })
   };
 
@@ -101,10 +104,12 @@ describe("desktop session expiry", () => {
     const auth = useAuthSession();
 
     await expect(auth.handleDesktopAuthExpired("account-2")).resolves.toBe(false);
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-2");
     expect(mocks.store.setUserLoggedIn).not.toHaveBeenCalled();
 
     await expect(auth.handleDesktopAuthExpired("account-1")).resolves.toBe(true);
-    expect(mocks.store.setUserLoggedIn).toHaveBeenCalledWith(false);
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-1");
+    expect(mocks.store.loggedIn).toBe(false);
     expect(navigateTo).toHaveBeenCalledWith({ path: "/" });
     expect(order).toEqual(["clearAssets", "navigate", "login"]);
 

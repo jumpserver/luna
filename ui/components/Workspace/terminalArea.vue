@@ -4,7 +4,8 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, userMap } = storeToRefs(userInfoStore);
+const currentUser = computed(() => userMap.value[userInfoStore.currentAccountId]);
 const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
   () => isDesktopRuntime() && authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
@@ -64,12 +65,17 @@ const openLogin = () => {
               root: 'rounded-2xl shadow-sm ring-[var(--app-border)] bg-[var(--app-card-bg-soft)]',
               body: 'flex flex-col items-center gap-4 px-8 py-7 sm:p-7'
             }"
+            class="w-[calc(100%-2rem)] max-w-sm"
           >
             <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
             <div class="font-medium" :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.LoginHint") }}</div>
             <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
-              {{ t("Common.Login") }}
+              {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}
             </UButton>
+            <div v-if="Object.keys(userMap).length" class="w-full space-y-1 border-t border-(--app-border) pt-3">
+              <p class="px-2 text-xs text-muted">{{ t("Login.SavedSites") }}</p>
+              <SiteAccounts />
+            </div>
           </UCard>
         </div>
       </template>
