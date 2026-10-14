@@ -60,6 +60,26 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 };
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
+const normalizeProtocolSite = (value: unknown) => {
+  if (typeof value !== "string" || !value.trim()) return "";
+  try {
+    const url = new URL(value.trim());
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      !url.hostname ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      return "";
+    }
+    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return "";
+  }
+};
+
 const CONNECTION_ERROR_CODES: Record<string, string> = {
   connect_method_rejected: "ConnectError.MethodUnavailable",
   perm_account_invalid: "ConnectError.AccountUnavailable",
@@ -1088,10 +1108,30 @@ export const useAssetAction = () => {
     });
   };
 
-  const handleWebClientProtocolPayload = async (payload: { protocol?: unknown; asset?: { id?: unknown } }) => {
+  const handleWebClientProtocolPayload = async (payload: {
+    protocol?: unknown;
+    site_url?: unknown;
+    org_id?: unknown;
+    asset?: { id?: unknown };
+  }) => {
     const protocol = String(payload.protocol || "").toLowerCase();
     const assetId = typeof payload.asset?.id === "string" ? payload.asset.id.trim() : "";
     if (!["http", "https"].includes(protocol) || !assetId) throw new Error("Invalid web client protocol payload");
+
+    if (payload.site_url !== undefined || payload.org_id !== undefined) {
+      const siteUrl = normalizeProtocolSite(payload.site_url);
+      const orgId = typeof payload.org_id === "string" ? payload.org_id.trim() : "";
+      if (!siteUrl || !orgId) throw new Error("Web client protocol is missing a valid site or organization");
+      const account = Object.entries(userInfoStore.userMap).find(
+        ([, user]) => !user.sessionExpired && normalizeProtocolSite(user.site) === siteUrl
+      );
+      if (!account) throw new Error(`Please sign in to ${siteUrl} in the client first`);
+      await desktopInvoke("register_authenticated_accounts", {
+        accounts: [{ sessionKey: account[0], origin: account[1].site }]
+      });
+      await desktopInvoke("open_web_protocol_window", { payload, sessionId: account[0] });
+      return;
+    }
 
     const currentOrgId = userInfoStore.currentUser?.org?.id || "";
     const detail = await getAssetDetailRequest(assetId, currentOrgId);

@@ -14,7 +14,7 @@ import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { useWorkspaceFeatures } from "~/composables/useWorkspaceFeatures";
 import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
-import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
 import {
@@ -290,14 +290,21 @@ let webProtocolDrainRequested = false;
 
 async function drainWebProtocolPayloads() {
   webProtocolDrainRequested = true;
-  if (drainingWebProtocols || !isDesktopRuntime() || !userInfoStore.loggedIn) return;
+  if (drainingWebProtocols || !isDesktopRuntime() || desktopWindow.label() !== "main" || !userInfoStore.loggedIn)
+    return;
 
   drainingWebProtocols = true;
   try {
     while (webProtocolDrainRequested && userInfoStore.loggedIn) {
       webProtocolDrainRequested = false;
-      const payloads =
-        await desktopInvoke<Array<{ protocol?: unknown; asset?: { id?: unknown } }>>("take_web_protocol_payloads");
+      const payloads = await desktopInvoke<
+        Array<{
+          protocol?: unknown;
+          site_url?: unknown;
+          org_id?: unknown;
+          asset?: { id?: unknown };
+        }>
+      >("take_web_protocol_payloads");
       for (const payload of payloads) {
         try {
           await handleWebClientProtocolPayload(payload);
@@ -424,13 +431,15 @@ onMounted(async () => {
     console.error("listen settings-navigate failed", err);
   }
 
-  try {
-    unlistenWebProtocolUrl.value = await desktopListen("web-protocol-url", () => {
+  if (desktopWindow.label() === "main") {
+    try {
+      unlistenWebProtocolUrl.value = await desktopListen("web-protocol-url", () => {
+        void drainWebProtocolPayloads();
+      });
       void drainWebProtocolPayloads();
-    });
-    void drainWebProtocolPayloads();
-  } catch (err) {
-    console.error("listen web-protocol-url failed", err);
+    } catch (err) {
+      console.error("listen web-protocol-url failed", err);
+    }
   }
 });
 

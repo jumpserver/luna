@@ -24,6 +24,8 @@ export function normalizeClientProtocolUrl(raw: unknown): string | undefined {
 
 export interface ClientProtocolPayload {
   protocol?: string;
+  site_url?: unknown;
+  org_id?: unknown;
   asset?: { id?: unknown; [key: string]: unknown };
   token?: { id?: unknown; protocol?: string; [key: string]: unknown };
   file?: { content?: unknown; [key: string]: unknown };
@@ -50,6 +52,30 @@ export function isWebAssetClientProtocolPayload(payload: ClientProtocolPayload) 
     typeof payload.asset?.id === "string" &&
     Boolean(payload.asset.id.trim())
   );
+}
+
+export function webAssetClientProtocolContext(payload: ClientProtocolPayload) {
+  const siteValue = typeof payload.site_url === "string" ? payload.site_url.trim() : "";
+  const orgId = typeof payload.org_id === "string" ? payload.org_id.trim() : "";
+  if (!siteValue || !orgId || orgId.length > 128 || !/^[-A-Za-z0-9_]+$/.test(orgId)) return;
+
+  try {
+    const site = new URL(siteValue);
+    if (
+      !["http:", "https:"].includes(site.protocol) ||
+      !site.hostname ||
+      site.username ||
+      site.password ||
+      site.search ||
+      site.hash
+    ) {
+      return;
+    }
+    const path = site.pathname.replace(/\/+$/, "");
+    return { siteUrl: `${site.origin}${path}`, orgId };
+  } catch {
+    // Invalid source URLs are not eligible for a scoped protocol window.
+  }
 }
 
 export function findClientProtocolUrl(argv: string[], additionalData?: unknown): string | undefined {

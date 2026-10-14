@@ -629,24 +629,25 @@ export const useUserInfoStore = defineStore(
     };
   },
   {
-    persist: typeof localStorage !== "undefined" && {
-      key: "userInfoV2",
-      storage: localStorage,
-      afterHydrate: ({ store }) => {
-        normalizeStoredConnections(store.$state as Parameters<typeof normalizeStoredConnections>[0]);
-        store.$persist();
-      },
-      pick: [
-        "userMap",
-        "loggedIn",
-        "currentUser",
-        "currentAccountId",
-        "currentSite",
-        "currentOrganizations",
-        "currentRdpClientOption",
-        "currentConnectionInfoMap",
-        "currentConnectionPreferenceMap"
-      ]
-    }
+    persist: typeof localStorage !== "undefined" &&
+      new URLSearchParams(globalThis.location?.search || "").get("client_protocol") !== "1" && {
+        key: "userInfoV2",
+        storage: localStorage,
+        afterHydrate: ({ store }) => {
+          normalizeStoredConnections(store.$state as Parameters<typeof normalizeStoredConnections>[0]);
+          store.$persist();
+        },
+        pick: [
+          "userMap",
+          "loggedIn",
+          "currentUser",
+          "currentAccountId",
+          "currentSite",
+          "currentOrganizations",
+          "currentRdpClientOption",
+          "currentConnectionInfoMap",
+          "currentConnectionPreferenceMap"
+        ]
+      }
   }
 );

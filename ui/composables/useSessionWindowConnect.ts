@@ -208,26 +208,50 @@ export function useSessionWindowConnect() {
 
     const saved = userInfoStore.getConnectionInfoForAsset(assetId);
     const preference = userInfoStore.getConnectionPreferenceForAsset(assetId);
-    const routeConnection = getRouteConnection();
+    let routeConnection = getRouteConnection();
     loading.value = true;
     error.value = "";
 
     try {
       const admin = String(route.query.admin || "") === "1";
+      const clientProtocol = String(route.query.client_protocol || "") === "1";
       const orgId = String(route.query.org || userInfoStore.currentUser?.org?.id || "");
-      if (orgId && !isDesktopRuntime()) setWebOrgId(orgId);
-      await syncSessionWindowOrganization(orgId, {
-        organizations: userInfoStore.currentOrganizations,
-        currentOrgId: userInfoStore.currentUser?.org?.id || "",
-        setCurrentOrg: userInfoStore.setCurrentOrg,
-        syncDesktopOrg: isDesktopRuntime() ? (id) => desktopInvoke("set_api_org", { orgId: id }) : undefined
-      });
+      if (!clientProtocol) {
+        if (orgId && !isDesktopRuntime()) setWebOrgId(orgId);
+        await syncSessionWindowOrganization(orgId, {
+          organizations: userInfoStore.currentOrganizations,
+          currentOrgId: userInfoStore.currentUser?.org?.id || "",
+          setCurrentOrg: userInfoStore.setCurrentOrg,
+          syncDesktopOrg: isDesktopRuntime() ? (id) => desktopInvoke("set_api_org", { orgId: id }) : undefined
+        });
+      }
       const asset = admin
         ? await fetchAdminSessionAsset(assetId, String(route.query.accountId || route.query.account || ""), orgId)
         : await fetchSessionAsset(assetId, orgId);
       asset.org_id = orgId || undefined;
       asset.savedConnection = saved || undefined;
       assetName.value = asset.name || "JumpServer";
+      if (clientProtocol && routeConnection) {
+        const account =
+          asset.permedAccounts?.find((item) => item.alias && !item.alias.startsWith("@")) ||
+          asset.permedAccounts?.find((item) => ["@ANON", "@USER", "@INPUT"].includes(item.alias));
+        if (account) {
+          const accountMode =
+            account.alias === "@ANON"
+              ? "anonymous"
+              : account.alias === "@USER"
+                ? "dynamic"
+                : account.alias === "@INPUT"
+                  ? "manual"
+                  : "hosted";
+          routeConnection = {
+            ...routeConnection,
+            account: account.alias.startsWith("@") ? account.alias : account.name,
+            accountId: accountMode === "hosted" ? account.id : undefined,
+            accountMode
+          };
+        }
+      }
 
       // An explicit credential must never fall back to a remembered account.
       if (route.query.personalCredentialId !== undefined) {
@@ -244,7 +268,7 @@ export function useSessionWindowConnect() {
         }
         const hostedAccount =
           routeConnection?.accountMode === "hosted"
-            ? asset.permedAccounts?.find((account) => account.id === routeConnection.accountId)
+            ? asset.permedAccounts?.find((account) => account.id === routeConnection?.accountId)
             : undefined;
         if (
           routeConnection?.accountMode === "hosted" &&
@@ -325,7 +349,7 @@ export function useSessionWindowConnect() {
           savePersonalCredential: false,
           dynamicPassword: reusableSavedConnection ? saved?.dynamicPassword || "" : "",
           rememberSecret: reusableSavedConnection && Boolean(saved?.rememberSecret),
-          rememberSelection: !admin,
+          rememberSelection: !admin && !clientProtocol,
           preserveStoredSelection: admin,
           connectMethod: connection.connectMethod || "",
           connectOptions: connection.connectOptions || {},

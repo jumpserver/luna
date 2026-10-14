@@ -28,6 +28,7 @@ import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
+import { normalizeCompatibilitySite } from "../auth/compatibility";
 import { FaceEngineManager } from "../face/manager";
 import { isFaceLiveWebSocket } from "../face/socket-policy";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
@@ -38,7 +39,8 @@ import {
   decodeClientProtocolPayload,
   findClientProtocolUrl,
   isWebAssetClientProtocolPayload,
-  normalizeClientProtocolUrl
+  normalizeClientProtocolUrl,
+  webAssetClientProtocolContext
 } from "../shared/client-protocol";
 import {
   activateDebugLogService,
@@ -70,6 +72,7 @@ const subscriptions = new Map();
 const stores = new Map();
 const localShellSessions = new Map();
 const apiStreams = new Map();
+const windowAuthContexts = new Map();
 const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
 const allowedChenOrigins = new Set();
 const allowedKokoOrigins = new Set();
@@ -122,8 +125,12 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-function resolveConnectorEndpoint(smartEndpoint: string, component: "chen" | "koko") {
-  const origin = normalizedHttpOrigin(smartEndpoint || authService.currentSession().origin, `${component} endpoint`);
+function resolveConnectorEndpoint(
+  smartEndpoint: string,
+  component: "chen" | "koko",
+  session = authService.currentSession()
+) {
+  const origin = normalizedHttpOrigin(smartEndpoint || session.origin, `${component} endpoint`);
   (component === "chen" ? allowedChenOrigins : allowedKokoOrigins).add(origin);
   electronLog.info(`${component} endpoint ${origin}`);
   return origin;
@@ -289,11 +296,17 @@ function startApiStream(event, win, args) {
   const owner = { controller, webContentsId: event.sender.id };
   apiStreams.set(streamId, owner);
   const label = labelForWindow(win);
+  const scopedSession = windowAuthContexts.get(event.sender.id)?.session;
+  const request = scopedSession ? { ...args.request, orgId: scopedSession.orgId } : args.request;
   void authService
-    .apiStreamRequest(args.request, {
-      signal: controller.signal,
-      onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
-    })
+    .apiStreamRequest(
+      request,
+      {
+        signal: controller.signal,
+        onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
+      },
+      scopedSession
+    )
     .then(() => emitDesktopEvent("api-stream", { streamId, type: "done" }, label))
     .catch((error) => {
       if (controller.signal.aborted) return;
@@ -480,7 +493,7 @@ interface CreateWindowOptions {
   url?: string;
 }
 
-function createWindow(label = "main", options: CreateWindowOptions = {}) {
+function createWindow(label = "main", options: CreateWindowOptions = {}, authContext?) {
   const existing = windows.get(label);
   if (existing && !existing.isDestroyed()) {
     existing.show();
@@ -550,6 +563,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   }
 
   windows.set(label, win);
+  if (authContext) windowAuthContexts.set(windowWebContentsId, authContext);
   installNavigationGuard(win);
   win.once("ready-to-show", () => {
     win.show();
@@ -582,6 +596,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
       stream.controller.abort();
     }
     webProxyManager.disposeHost(windowWebContentsId);
+    windowAuthContexts.delete(windowWebContentsId);
     clearDesktopEventSubscriptions(windowWebContents);
     faceEngine?.stopOwner(windowWebContentsId);
   });
@@ -781,8 +796,8 @@ function sendMenuCommand(command) {
   emitDesktopEvent("desktop-menu-command", command, label);
 }
 
-function sendMainWindowEvent(name, payload) {
-  const win = showMainWindow();
+function sendMainWindowEvent(name, payload, show = true) {
+  const win = show ? showMainWindow() : windows.get("main") || createWindow("main");
   const emit = () => emitDesktopEvent(name, payload, "main");
   if (win.webContents.isLoadingMainFrame()) {
     win.webContents.once("did-finish-load", () => setTimeout(emit, 0));
@@ -1024,6 +1039,7 @@ async function handleInvoke(event, request) {
   }
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
+  const scopedAuth = windowAuthContexts.get(event.sender.id);
 
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
@@ -1201,16 +1217,37 @@ async function handleInvoke(event, request) {
     }));
   }
 
-  if (command === "set_api_session") return authService.setSession(args);
-  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
+  if (command === "set_api_session") {
+    if (!scopedAuth) return authService.setSession(args);
+    const origin = normalizeCompatibilitySite(args.origin);
+    return origin === scopedAuth.session.origin && args.sessionKey === scopedAuth.session.sessionKey
+      ? { status: "success" }
+      : { status: "stale" };
+  }
+  if (command === "set_api_org") {
+    if (scopedAuth) return null;
+    return authService.setCurrentOrg(args.orgId);
+  }
+  if (command === "sync_backend_language") return authService.syncBackendLanguage(args, scopedAuth?.session);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
+  if (command === "register_authenticated_accounts") return authService.registerAuthenticatedAccounts(args);
+  if (command === "get_window_auth_session") {
+    if (!scopedAuth) throw new Error("This window does not have a scoped login session");
+    return scopedAuth.payload;
+  }
+  if (command === "open_web_protocol_window") {
+    if (labelForWindow(win) !== "main") throw new Error("Only the main window can open protocol sessions");
+    return withIpcErrorLog(command, () => openWebProtocolWindow(args));
+  }
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
-  if (command === "api_request") return authService.apiRequest(args.request);
+  if (command === "api_request") {
+    const apiRequest = scopedAuth ? { ...args.request, orgId: scopedAuth.session.orgId } : args.request;
+    return authService.apiRequest(apiRequest, scopedAuth?.session);
+  }
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
@@ -1223,9 +1260,14 @@ async function handleInvoke(event, request) {
   }
   if (command === "face_engine_process_frame") return faceEngine.processFrame(event.sender.id, args);
   if (command === "face_engine_stop_session") return faceEngine.stopSession(event.sender.id, args.sessionId);
-  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
-  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
-  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
+  if (command === "resolve_chen_endpoint")
+    return resolveConnectorEndpoint(args.endpointUrl, "chen", scopedAuth?.session);
+  if (command === "resolve_koko_endpoint")
+    return resolveConnectorEndpoint(args.endpointUrl, "koko", scopedAuth?.session);
+  if (command === "create_koko_connect_ticket") {
+    const ticket = scopedAuth ? { ...args, orgId: scopedAuth.session.orgId } : args;
+    return authService.createKokoConnectTicket(ticket, scopedAuth?.session);
+  }
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();
   if (command === "remove_offline_recording") return offlineRecordings.removeRecording(args.recordingId);
@@ -1252,7 +1294,14 @@ async function handleInvoke(event, request) {
       (command === "create_web_proxy_view" &&
         (args.successSelector || args.interactiveSelector || args.allowedUrls?.length))
     ) {
-      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
+      const settings = await authService.apiRequest(
+        {
+          method: "GET",
+          path: "/api/v1/settings/public/",
+          ...(scopedAuth ? { orgId: scopedAuth.session.orgId } : {})
+        },
+        scopedAuth?.session
+      );
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
     return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
@@ -1436,6 +1485,46 @@ function takePendingWebProtocolPayloads() {
   return pendingWebProtocolPayloads.splice(0).map((pending) => pending.payload);
 }
 
+async function openWebProtocolWindow({ payload, sessionId }) {
+  if (!isWebAssetClientProtocolPayload(payload)) throw new Error("Invalid web client protocol payload");
+  const source = webAssetClientProtocolContext(payload);
+  if (!source) throw new Error("Web client protocol is missing a valid site or organization");
+  sessionId = typeof sessionId === "string" ? sessionId.trim() : "";
+  if (!sessionId) throw new Error("No logged-in client account matches the protocol site");
+
+  const scoped = await authService.createScopedSession({
+    site: source.siteUrl,
+    sessionId,
+    orgId: source.orgId
+  });
+  const assetId = String(payload.asset.id).trim();
+  const protocolName = String(payload.protocol).toLowerCase();
+  const query = new URLSearchParams({
+    client_protocol: "1",
+    protocol: protocolName,
+    account: "-",
+    accountMode: "hosted",
+    method: "web_proxy_native",
+    org: source.orgId
+  });
+  const label = `web-asset-${assetId}-${Date.now()}`;
+  const title = typeof payload.asset.name === "string" && payload.asset.name.trim() ? payload.asset.name : productName;
+  createWindow(
+    label,
+    {
+      url: `/session/${encodeURIComponent(assetId)}?${query.toString()}`,
+      title,
+      width: 1440,
+      height: 920,
+      minWidth: 1080,
+      minHeight: 720
+    },
+    scoped
+  );
+  electronLog.info(`web protocol window ${source.siteUrl} org=${source.orgId}`);
+  return { label };
+}
+
 function describeProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
   if (isOAuthCallbackUrl(value)) return "auth-callback";
@@ -1448,7 +1537,7 @@ async function processIncomingProtocolUrl(value: string) {
   const payload = decodeClientProtocolPayload(value);
   if (isWebAssetClientProtocolPayload(payload)) {
     queueWebProtocolPayload(value, payload);
-    if (startupFinished) sendMainWindowEvent("web-protocol-url", null);
+    if (startupFinished) sendMainWindowEvent("web-protocol-url", null, false);
     return false;
   }
   await localApplicationLauncher.launch(value);

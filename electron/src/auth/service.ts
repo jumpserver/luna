@@ -327,11 +327,10 @@ export class DesktopAuthService {
     return { ...payload, connection_id: attempt.generation };
   }
 
-  async syncBackendLanguage({ language }) {
+  async syncBackendLanguage({ language }, session = this.sessions.get(this.currentSessionKey)) {
     if (typeof language !== "string" || !/^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(language)) {
       throw new Error("Invalid language code");
     }
-    const session = this.sessions.get(this.currentSessionKey);
     if (!session) return;
 
     // Electron net.fetch rejects manual redirects. Follow the cookie-setting
@@ -416,7 +415,7 @@ export class DesktopAuthService {
       if (!approved.connection_id) {
         return approved.status === "success" ? { ...approved, status: "failure" } : approved;
       }
-      this.tokens[sessionId] = { ...token, client_id: clientId };
+      this.tokens[sessionId] = { ...token, client_id: clientId, site };
       await this.persistTokens();
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       electronLog.info(`auth login success ${site}`);
@@ -461,6 +460,32 @@ export class DesktopAuthService {
       .map(([sessionId]) => sessionId);
   }
 
+  async registerAuthenticatedAccounts({ accounts }) {
+    if (!Array.isArray(accounts)) return;
+    let changed = false;
+    for (const account of accounts.slice(0, 100)) {
+      const sessionKey = typeof account?.sessionKey === "string" ? account.sessionKey.trim() : "";
+      if (!sessionKey || !this.tokens[sessionKey]) continue;
+      const origin = normalizeCompatibilitySite(account.origin);
+      const storedSite = this.tokens[sessionKey].site;
+      if (storedSite && normalizeCompatibilitySite(storedSite) !== origin) continue;
+      if (storedSite !== origin) {
+        this.tokens[sessionKey].site = origin;
+        changed = true;
+      }
+      const existing = this.sessions.get(sessionKey);
+      if (!existing) {
+        this.sessions.set(sessionKey, {
+          sessionKey,
+          origin,
+          bearerToken: this.tokens[sessionKey].access_token,
+          orgId: ""
+        });
+      }
+    }
+    if (changed) await this.persistTokens();
+  }
+
   async freshToken(site, sessionId, provided = "") {
     const stored = this.tokens[sessionId];
     if (!stored) {
@@ -489,7 +514,8 @@ export class DesktopAuthService {
         this.tokens[sessionId] = {
           ...refreshed,
           refresh_token: refreshed.refresh_token || stored.refresh_token,
-          client_id: stored.client_id || ""
+          client_id: stored.client_id || "",
+          site: stored.site || site
         };
         await this.persistTokens();
         return refreshed.access_token;
@@ -532,12 +558,12 @@ export class DesktopAuthService {
     }
   }
 
-  async buildLoginPayload(site, bearer) {
+  async buildLoginPayload(site, bearer, orgId = "") {
     const [profile, permissionOrgs, currentOrg, publicSettings] = await Promise.all([
-      this.requestApiResponse(site, USER_PROFILE, { bearerToken: bearer }),
-      this.requestApiResponse(site, USER_PERMISSIONS, { bearerToken: bearer }),
-      this.requestApiResponse(site, CURRENT_ORG, { bearerToken: bearer }),
-      this.requestApiResponse(site, PUBLIC_SETTINGS, { bearerToken: bearer })
+      this.requestApiResponse(site, USER_PROFILE, { bearerToken: bearer, orgId }),
+      this.requestApiResponse(site, USER_PERMISSIONS, { bearerToken: bearer, orgId }),
+      this.requestApiResponse(site, CURRENT_ORG, { bearerToken: bearer, orgId }),
+      this.requestApiResponse(site, PUBLIC_SETTINGS, { bearerToken: bearer, orgId })
     ]);
     let settings: Record<string, unknown> = {};
     if (publicSettings.success) {
@@ -559,8 +585,23 @@ export class DesktopAuthService {
     };
   }
 
-  async apiRequest(request) {
-    const session = this.currentSession();
+  async createScopedSession({ site, sessionId, orgId }) {
+    site = normalizeCompatibilitySite(site);
+    const token = this.tokens[sessionId];
+    const knownSite = token?.site || this.sessions.get(sessionId)?.origin;
+    if (!token || !knownSite || normalizeCompatibilitySite(knownSite) !== site) {
+      throw new Error("The protocol site is not logged in on this client");
+    }
+    const bearerToken = await this.freshToken(site, sessionId);
+    const payload = await this.buildLoginPayload(site, bearerToken, orgId);
+    if (!payload.profile?.success) throw new Error("The protocol site login has expired");
+    return {
+      session: { sessionKey: sessionId, origin: site, bearerToken, orgId },
+      payload: { ...payload, session_id: sessionId }
+    };
+  }
+
+  async apiRequest(request, session = this.currentSession()) {
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
@@ -603,9 +644,9 @@ export class DesktopAuthService {
 
   async apiStreamRequest(
     request,
-    { signal, onChunk }: { signal?: AbortSignal; onChunk?: (chunk: string) => void } = {}
+    { signal, onChunk }: { signal?: AbortSignal; onChunk?: (chunk: string) => void } = {},
+    session = this.currentSession()
   ) {
-    const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
@@ -652,8 +693,7 @@ export class DesktopAuthService {
     }
   }
 
-  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }) {
-    const session = this.currentSession();
+  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }, session = this.currentSession()) {
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
     const ticketOrgId = orgId || session.orgId || "";

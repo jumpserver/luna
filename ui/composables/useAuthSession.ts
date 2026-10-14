@@ -64,6 +64,8 @@ interface WebProfile {
   system_roles?: RoleType[];
 }
 
+type ScopedLoginPayload = LoginPayload & { session_id?: string };
+
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
 const WEB_ORGANIZATION_BOOTSTRAP_TIMEOUT_MS = 3_000;
 let bootstrapRetryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -389,6 +391,23 @@ export const useAuthSession = () => {
     if (bootstrapRetryTimer) {
       clearTimeout(bootstrapRetryTimer);
       bootstrapRetryTimer = null;
+    }
+
+    if (isDesktopRuntime() && new URLSearchParams(pageLocation().search).get("client_protocol") === "1") {
+      try {
+        const payload = await desktopInvoke<ScopedLoginPayload>("get_window_auth_session");
+        const accountId = String(payload?.session_id || "");
+        if (!accountId || classifyBootstrapFailure(payload)) return false;
+        return applyLoginPayload(payload, {
+          showToast: false,
+          navigateHome: false,
+          accountId,
+          siteName: payload.resolved_site
+        });
+      } catch (error) {
+        console.error("bootstrap scoped protocol session failed", error);
+        return false;
+      }
     }
 
     const restored = restorePersistedSnapshot();
