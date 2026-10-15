@@ -73,7 +73,7 @@ export function validateWebScript(value, origin) {
       if (/\{USERNAME\}|\{SECRET\}/.test(step.value) && step.command !== "type")
         throw new Error(`第 ${step.step} 步不允许填写凭据`);
       if (["type", "click", "button", "check", "code", "interactive", "success"].includes(step.command))
-        validateWebSelector(step.target);
+        validateWebSelector(step.target, `script 第 ${step.step} 步 target`);
       else if (step.command === "open") {
         const url = parseUrl(step.value || step.target, `${step.origin}/`);
         normalizedWebOrigin(url);
@@ -81,7 +81,7 @@ export function validateWebScript(value, origin) {
       } else if (step.command === "sleep") {
         const seconds = Number(step.target);
         if (!/^\d+$/.test(step.target) || seconds < 0 || seconds > 30) throw new Error("脚本 sleep 应为 0 至 30 秒");
-      } else throw new Error(`Web Proxy 不支持脚本命令 ${step.command}，当前支持同一窗口内的主页面`);
+      } else throw new Error(`第 ${step.step} 步使用了不支持的脚本命令，当前支持同一窗口内的主页面`);
       return step;
     })
     .sort((a, b) => a.step - b.step);
@@ -94,21 +94,23 @@ export function validateWebScript(value, origin) {
   return steps;
 }
 
-export function validateWebSelector(selector) {
+export function validateWebSelector(selector, field = "selector") {
   if (typeof selector !== "string" || !selector || selector.length > 1024) {
-    throw new Error("Website 代填元素配置无效");
+    throw new Error(`Website 代填元素配置无效（${field}）：应为 1 至 1024 个字符的字符串`);
   }
   const separator = selector.indexOf("=");
   const kind = selector.slice(0, separator).trim().toLowerCase();
   const value = selector.slice(separator + 1).trim();
   if (separator < 1 || !value || !SUPPORTED_SELECTOR_KINDS.has(kind)) {
-    throw new Error("Website 代填元素配置无效");
+    throw new Error(
+      `Website 代填元素配置无效（${field}）：请使用 类型=元素 格式，例如 id=dashboard；支持 ${[...SUPPORTED_SELECTOR_KINDS].join("、")}，不支持 JavaScript`
+    );
   }
   return selector;
 }
 
-export function optionalWebSelector(selector) {
-  return selector == null || selector === "" ? "" : validateWebSelector(selector);
+export function optionalWebSelector(selector, field = "selector") {
+  return selector == null || selector === "" ? "" : validateWebSelector(selector, field);
 }
 
 export async function createCredentialSession(
@@ -167,11 +169,14 @@ export async function createCredentialSession(
       ]
     : [targetOrigin];
 
-  const usernameSelector = optionalWebSelector(data.username_selector);
-  const passwordSelector = mode === "script" ? "" : optionalWebSelector(data.password_selector);
-  const submitSelector = mode === "script" ? "" : optionalWebSelector(data.submit_selector);
-  const successSelector = optionalWebSelector(configuredSuccessSelector || data.success_selector);
-  const interactiveSelector = optionalWebSelector(configuredInteractiveSelector || data.interactive_selector);
+  const usernameSelector = optionalWebSelector(data.username_selector, "username_selector");
+  const passwordSelector = mode === "script" ? "" : optionalWebSelector(data.password_selector, "password_selector");
+  const submitSelector = mode === "script" ? "" : optionalWebSelector(data.submit_selector, "submit_selector");
+  const successSelector = optionalWebSelector(configuredSuccessSelector || data.success_selector, "success_selector");
+  const interactiveSelector = optionalWebSelector(
+    configuredInteractiveSelector || data.interactive_selector,
+    "interactive_selector"
+  );
   const serverPublicKey = Buffer.from(required(data.server_public_key, "Web 公钥"), "base64");
   if (
     serverPublicKey.length !== X25519_SPKI_PREFIX.length + 32 ||

@@ -695,6 +695,11 @@ export function createWebProxyManager({
       }
       emitWebProxyState(managed, { url: validatedUrl, loading: false, error: failure });
     });
+    view.webContents.on("render-process-gone", (_event, details) => {
+      const failure = `WebProxy.PageProcessExited: ${details.reason} (exitCode: ${details.exitCode})`;
+      if (managed.autofillPending) finishWebProxyAutofill(managed, "error", failure);
+      else emitWebProxyState(managed, { loading: false, error: failure });
+    });
     startWebProxyAutofillWait(managed);
     managed.webSessionPromise = (
       createSession
