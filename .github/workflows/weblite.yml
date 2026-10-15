@@ -1,0 +1,124 @@
+name: Build and Release WebLite
+
+on:
+  push:
+    tags: ["weblite-v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: WebLite version or tag (e.g., v5.1.0 or weblite-v5.1.0-rc1)
+        required: true
+        type: string
+
+env:
+  RELEASE_TARGET: weblite
+  VERSION: >-
+    ${{ github.event_name == 'workflow_dispatch'
+    && inputs.version || github.ref_name }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weblite-release-${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Sync WebLite version
+        id: version
+        run: node scripts/set-version.js
+
+      - name: Validate release version handling
+        run: node --test --test-concurrency=1 scripts/set-version.test.mjs
+
+      - name: Verify WiX Toolset
+        shell: pwsh
+        run: Get-Command candle, light
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate WebLite
+        run: >-
+          pnpm exec oxlint applets/weblite packages/web-proxy &&
+          pnpm exec eslint "applets/weblite/**/*.vue" "packages/web-proxy/**/*.vue" &&
+          pnpm weblite:test &&
+          pnpm --dir applets/weblite typecheck
+
+      - name: Build WebLite installer
+        run: pnpm weblite:package
+
+      - name: Verify WebLite MSI layout and runtime
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem release/weblite/*.msi -File)
+          if ($installers.Count -ne 1 -or $installers[0].Length -eq 0) {
+            throw "Expected one non-empty WebLite installer"
+          }
+          $installer = $installers[0].FullName
+          $extract = Join-Path $env:RUNNER_TEMP "weblite-msi"
+          $process = Start-Process msiexec.exe -ArgumentList "/a `"$installer`" /qn /norestart TARGETDIR=`"$extract`"" -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "WebLite MSI extraction failed: $($process.ExitCode)"
+          }
+          $executables = @(Get-ChildItem $extract -Filter weblite.exe -File -Recurse)
+          if ($executables.Count -ne 1 -or !$executables[0].FullName.EndsWith('\JumpServer\WebLite\weblite.exe')) {
+            throw "WebLite MSI must contain one executable directly in JumpServer\WebLite"
+          }
+          $env:WEBLITE_EXECUTABLE = $executables[0].FullName
+          pnpm --dir applets/weblite test:runtime
+          if ($LASTEXITCODE -ne 0) {
+            throw "WebLite MSI runtime checks failed"
+          }
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: weblite-Windows-x64
+          if-no-files-found: error
+          retention-days: 14
+          path: release/weblite/*.msi
+
+  release:
+    name: publish WebLite prerelease
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: weblite-Windows-x64
+          path: release-assets
+
+      - name: Generate release checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum ./*.msi > SHA256SUMS
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: release-assets/*
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: true
