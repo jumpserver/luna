@@ -8,7 +8,11 @@ import {
   subscribeKokoTerminalUserInput
 } from "#koko";
 import { contrastingTextColor } from "~/shared/theme/color";
-import { shouldShowTerminalAiCaretHint, TERMINAL_AI_HINT_IDLE_MS } from "~/utils/terminalAiCommand";
+import {
+  canOpenTerminalAiCommand,
+  shouldShowTerminalAiCaretHint,
+  TERMINAL_AI_HINT_IDLE_MS
+} from "~/utils/terminalAiCommand";
 
 // A user-resized HUD should only be bounded by the viewport; auto-fit content should not.
 const AI_HUD_MIN_WIDTH = 280;
@@ -273,6 +277,10 @@ export function useTerminalAiHudLayout(options: {
     if (hintVisible.value) hintVisible.value = false;
   }
 
+  const hintWindow = computed(() => hostRef.value?.ownerDocument.defaultView);
+  useEventListener(hintWindow, ["focusin", "focusout", "focus"], () => void positionHint());
+  useEventListener(hintWindow, "blur", hideHint);
+
   async function positionHint() {
     if (options.open.value || !hintIdle.value) {
       hideHint();
@@ -286,12 +294,12 @@ export function useTerminalAiHudLayout(options: {
     const host = hostRef.value;
     const anchor = getKokoTerminalCursorAnchor(options.paneId());
     // Full-screen terminal apps own the content around their cursor.
-    if (!host || !anchor || anchor.bufferType === "alternate") {
+    if (!host || !anchor || !canOpenTerminalAiCommand(anchor)) {
       hideHint();
       return;
     }
     const xterm = getKokoTerminalElement(options.paneId()) || findXtermForAnchor(anchor) || activeXterm.value;
-    if (!xterm) {
+    if (!xterm || !xterm.ownerDocument.hasFocus() || !xterm.contains(xterm.ownerDocument.activeElement)) {
       hideHint();
       return;
     }

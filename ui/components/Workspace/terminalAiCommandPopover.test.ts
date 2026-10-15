@@ -6,7 +6,7 @@ it("limits quick approval to one alert and restores the composer after output", 
   expect(popover).toContain("isTerminalAiApprovalShortcut(event, isMacOS.value)");
   expect(popover).toContain('void decideApproval(quickApproval.value.id, "approve")');
   expect(popover).toContain("if (wasOpen && wasLocked) focusInput()");
-  expect(popover).toContain('const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘ ⇧ K" : "Ctrl ⇧ K"));');
+  expect(popover).toContain('const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));');
   expect(popover).toContain('const approvalShortcutLabel = computed(() => (isMacOS.value ? "⌘ ↵" : "Ctrl ↵"));');
   expect(popover).toContain('v-if="quickApproval?.id === approval.id"');
   expect(popover).toContain("{{ approvalShortcutLabel }}");

@@ -94,11 +94,13 @@ function rebindTerminalCursorAnchor(tabId: string) {
   const resizeDisposable = terminal.onResize(schedule);
   const scrollDisposable = terminal.onScroll(schedule);
   const bufferDisposable = terminal.buffer.onBufferChange(schedule);
+  const writeDisposable = terminal.onWriteParsed(schedule);
   stopCursorAnchorBindings.set(tabId, () => {
     cursorDisposable.dispose();
     resizeDisposable.dispose();
     scrollDisposable.dispose();
     bufferDisposable.dispose();
+    writeDisposable.dispose();
   });
   emitTerminalCursorAnchor(tabId);
 }
@@ -220,6 +222,11 @@ export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor
   const terminal = getRegisteredTerminal(tabId);
   const screen = terminal?.element?.querySelector<HTMLElement>(".xterm-screen");
   if (!terminal || !screen || terminal.cols <= 0 || terminal.rows <= 0) return null;
+
+  // ponytail: xterm 6 has no public cursor-visibility getter; replace this with it when one is available.
+  const cursorState = (terminal as Terminal & { _core?: { coreService?: { isCursorHidden?: boolean } } })._core
+    ?.coreService;
+  if (cursorState?.isCursorHidden) return null;
 
   const bounds = screen.getBoundingClientRect();
   const cellWidth = bounds.width / terminal.cols;

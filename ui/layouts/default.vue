@@ -10,10 +10,8 @@ import {
   SettingsGeneralPage,
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
-import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { isTerminalAiHistoryShortcut } from "~/utils/terminalAiCommand";
 
 const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPanel/AiOverlayPanel.vue"));
 
@@ -45,7 +43,7 @@ watch(
   },
   { immediate: true }
 );
-const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
 const { recentConnections } = useRecentConnections();
@@ -139,15 +137,6 @@ const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
   event.preventDefault();
   event.stopImmediatePropagation();
   void openAssetWorkspace(openLocalShell);
-};
-
-const handleAiHistoryShortcut = (event: KeyboardEvent) => {
-  if (!workspaceAiEnabled.value) return;
-  if (isWorkspaceTourActive() || event.repeat || isUtilityRoute.value || settingsOpen.value) return;
-  if (!isTerminalAiHistoryShortcut(event, isMacOS.value)) return;
-  event.preventDefault();
-  event.stopPropagation();
-  toggleAi();
 };
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
@@ -292,7 +281,6 @@ const syncTrayRecentConnections = () => {
 
 useEventListener(window, "keydown", startEscapeHold, { capture: true });
 useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
-useEventListener(window, "keydown", handleAiHistoryShortcut, { capture: true });
 useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold, { capture: true });

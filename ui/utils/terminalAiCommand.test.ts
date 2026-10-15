@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  canOpenTerminalAiCommand,
   isTerminalAiApprovalShortcut,
   isTerminalAiCommandShortcut,
-  isTerminalAiHistoryShortcut,
   shouldShowTerminalAiCaretHint,
   terminalAiCommandShortcutAction,
   terminalAiLiveTurn
@@ -19,21 +19,36 @@ const shortcutEvent = (overrides: Partial<Parameters<typeof isTerminalAiCommandS
 });
 
 describe("Terminal AI command shortcut", () => {
-  it("uses Command on macOS and Control on other platforms", () => {
+  it("only opens with a cursor in the normal terminal buffer", () => {
+    expect(canOpenTerminalAiCommand({ bufferType: "normal" })).toBe(true);
+    expect(canOpenTerminalAiCommand({ bufferType: "alternate" })).toBe(false);
+    expect(canOpenTerminalAiCommand(null)).toBe(false);
+  });
+
+  it("uses Command+K on macOS and Control+K on other platforms", () => {
     expect(isTerminalAiCommandShortcut(shortcutEvent({ metaKey: true }), true)).toBe(true);
     expect(isTerminalAiCommandShortcut(shortcutEvent({ ctrlKey: true }), false)).toBe(true);
     expect(isTerminalAiCommandShortcut(shortcutEvent({ ctrlKey: true }), true)).toBe(false);
     expect(isTerminalAiCommandShortcut(shortcutEvent({ metaKey: true }), false)).toBe(false);
-    expect(isTerminalAiCommandShortcut(shortcutEvent({ metaKey: true, shiftKey: true }), true)).toBe(false);
   });
 
-  it("opens history with Shift plus the AI shortcut", () => {
-    expect(isTerminalAiHistoryShortcut(shortcutEvent({ metaKey: true, shiftKey: true }), true)).toBe(true);
-    expect(isTerminalAiHistoryShortcut(shortcutEvent({ ctrlKey: true, shiftKey: true }), false)).toBe(true);
-    expect(isTerminalAiHistoryShortcut(shortcutEvent({ metaKey: true }), true)).toBe(false);
-    expect(isTerminalAiHistoryShortcut(shortcutEvent({ metaKey: true, shiftKey: true, altKey: true }), true)).toBe(
-      false
-    );
+  it.each([true, false])(
+    "passes the AI chord through in alternate buffers or without a cursor (macOS: %s)",
+    (isMacOS) => {
+      const event = shortcutEvent({ metaKey: isMacOS, ctrlKey: !isMacOS });
+      for (const anchor of [{ bufferType: "alternate" as const }, null]) {
+        expect(isTerminalAiCommandShortcut(event, isMacOS) && canOpenTerminalAiCommand(anchor)).toBe(false);
+      }
+    }
+  );
+
+  it.each([true, false])("rejects repeats, extra modifiers and other keys (macOS: %s)", (isMacOS) => {
+    const event = shortcutEvent({ metaKey: isMacOS, ctrlKey: !isMacOS });
+    expect(isTerminalAiCommandShortcut({ ...event, repeat: true }, isMacOS)).toBe(false);
+    expect(isTerminalAiCommandShortcut({ ...event, altKey: true }, isMacOS)).toBe(false);
+    expect(isTerminalAiCommandShortcut({ ...event, shiftKey: true }, isMacOS)).toBe(false);
+    expect(isTerminalAiCommandShortcut({ ...event, metaKey: true, ctrlKey: true }, isMacOS)).toBe(false);
+    expect(isTerminalAiCommandShortcut({ ...event, code: "KeyJ" }, isMacOS)).toBe(false);
   });
 
   it("approves one lightweight alert with Command or Control plus Enter", () => {

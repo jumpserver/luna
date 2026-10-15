@@ -12,9 +12,8 @@ export function isTerminalAiCommandShortcut(event: TerminalAiShortcutEvent, isMa
   return !event.repeat && !event.altKey && !event.shiftKey && primaryModifier && event.code === "KeyK";
 }
 
-export function isTerminalAiHistoryShortcut(event: TerminalAiShortcutEvent, isMacOS: boolean) {
-  const primaryModifier = isMacOS ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  return !event.repeat && !event.altKey && event.shiftKey && primaryModifier && event.code === "KeyK";
+export function canOpenTerminalAiCommand(anchor: { bufferType?: "normal" | "alternate" } | null) {
+  return Boolean(anchor && anchor.bufferType !== "alternate");
 }
 
 export function isTerminalAiApprovalShortcut(event: TerminalAiShortcutEvent, isMacOS: boolean) {
