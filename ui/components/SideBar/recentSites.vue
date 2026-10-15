@@ -15,9 +15,9 @@ const { t } = useI18n();
 
 <template>
   <Transition name="recent-sites">
-    <div v-if="visible" class="rounded-[length:var(--app-radius)] border border-black/10 dark:border-white/10 p-1 mt-2">
+    <div v-if="visible" class="rounded-[length:var(--app-radius)] border border-(--app-border) p-1 mt-2">
       <div class="flex items-center justify-between px-1">
-        <span class="text-[11px] text-gray-500 dark:text-gray-400">
+        <span class="text-[11px] text-muted">
           {{ t("Login.RecentSites") }}
         </span>
         <UButton color="neutral" variant="link" size="xs" :label="t('Login.ClearRecentSites')" @click="emit('clear')" />

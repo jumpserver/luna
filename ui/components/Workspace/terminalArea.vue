@@ -58,22 +58,27 @@ const openLogin = () => {
   >
     <div class="flex-1 min-h-0">
       <template v-if="showLoginPrompt">
-        <div class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+        <div class="flex h-full min-h-0 items-center justify-center p-4 text-sm" :style="{ color: 'var(--app-muted)' }">
           <UCard
             variant="outline"
             :ui="{
               root: 'rounded-2xl shadow-sm ring-[var(--app-border)] bg-[var(--app-card-bg-soft)]',
-              body: 'flex flex-col items-center gap-4 px-8 py-7 sm:p-7'
+              body: 'flex min-h-0 flex-col items-center gap-5 overflow-hidden px-6 py-8 sm:p-8'
             }"
-            class="w-[calc(100%-2rem)] max-w-sm"
+            class="flex max-h-full w-full max-w-lg flex-col"
           >
-            <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
-            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.LoginHint") }}</div>
-            <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
+            <UIcon name="i-lucide-log-in" class="size-10 shrink-0" :style="{ color: 'var(--app-muted)' }" />
+            <div class="shrink-0 font-medium" :style="{ color: 'var(--app-fg)' }">
+              {{ t("WorkspaceEmpty.LoginHint") }}
+            </div>
+            <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
               {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}
             </UButton>
-            <div v-if="Object.keys(userMap).length" class="w-full space-y-1 border-t border-(--app-border) pt-3">
-              <p class="px-2 text-xs text-muted">{{ t("Login.SavedSites") }}</p>
+            <div
+              v-if="Object.keys(userMap).length"
+              class="flex min-h-0 w-full flex-col gap-1 rounded-[length:var(--app-radius)] border border-(--app-border) p-1"
+            >
+              <p class="shrink-0 px-1 py-1 text-[11px] text-muted">{{ t("Login.SavedSites") }}</p>
               <SiteAccounts />
             </div>
           </UCard>

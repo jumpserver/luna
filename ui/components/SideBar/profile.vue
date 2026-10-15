@@ -53,6 +53,7 @@ const editingAccountId = ref("");
 const errorMessage = ref("");
 const loginBtn = ref(false);
 const openModal = ref(false);
+const addingSite = ref(false);
 const hasValidationError = ref(false);
 const validationField = ref<"site" | "name" | null>(null);
 const recentSitesDismissed = ref(false);
@@ -484,6 +485,7 @@ function openLoginPage(accountId?: string) {
     return;
   }
 
+  addingSite.value = accountId === "";
   const reauthAccountId =
     accountId ?? (!loggedIn.value ? currentAccountId.value || Object.keys(userMap.value)[0] || "" : "");
   const reauthUser = userMap.value[reauthAccountId];
@@ -1171,7 +1173,7 @@ onBeforeUnmount(() => {
   <Modal
     v-if="isDesktopRuntime()"
     v-model:open="openModal"
-    :title="t('Login.Title')"
+    :title="t(addingSite ? 'Login.AddAccount' : 'Login.Title')"
     :disabled="loginBtn"
     @update:open="openModal = $event"
     @confirm="handleConfirm"
@@ -1233,11 +1235,6 @@ onBeforeUnmount(() => {
         @remove="removeRecentSite"
         @clear="clearRecentSites"
       />
-
-      <div v-if="Object.keys(userMap).length" class="space-y-1 border-t border-(--app-border) pt-3">
-        <p class="px-2 text-xs text-muted">{{ t("Login.SavedSites") }}</p>
-        <SiteAccounts :disabled="loginBtn" :selected-account-id="editingAccountId" @switched="openModal = false" />
-      </div>
 
       <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
         {{ errorMessage }}
