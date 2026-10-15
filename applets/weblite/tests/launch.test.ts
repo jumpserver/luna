@@ -58,9 +58,32 @@ test("optional selectors still reject malformed nonempty configuration", () => {
             ...launch,
             login: { ...launch.login, config: { ...launch.login.config, [`${field}_selector`]: value } }
           }),
-        /代填元素配置无效/
+        new RegExp(`代填元素配置无效（${field}_selector）`)
       );
     }
+  }
+});
+
+test("script selector errors identify the step without echoing untrusted configuration", () => {
+  for (const command of ["click", "must-not-appear-in-error"]) {
+    assert.throws(
+      () =>
+        parseLaunch({
+          ...launch,
+          login: {
+            ...launch.login,
+            config: {
+              autofill: "script",
+              script: [{ step: 3, command, target: "javascript=must-not-appear-in-error" }]
+            }
+          }
+        }),
+      (error: Error) => {
+        assert.match(error.message, /第 3 步/);
+        assert.ok(!error.message.includes("must-not-appear-in-error"));
+        return true;
+      }
+    );
   }
 });
 

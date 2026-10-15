@@ -171,6 +171,16 @@ test("private certificate trust is scoped to configured HTTPS hosts and authorit
   }
 });
 
+test("page process exits report the reason and exit code during login and browsing", async () => {
+  const { contents, managed, state, finishAutofill } = await setupNavigation(false, [], true);
+  contents.emit("render-process-gone", {}, { reason: "oom", exitCode: 137 });
+  assert.equal(state.mock.calls.at(-1).arguments[1].error, "WebProxy.PageProcessExited: oom (exitCode: 137)");
+  managed.autofillPending = true;
+  contents.emit("render-process-gone", {}, { reason: "crashed", exitCode: 42 });
+  assert.equal(finishAutofill.mock.calls.at(-1).arguments[1], "error");
+  assert.equal(finishAutofill.mock.calls.at(-1).arguments[2], "WebProxy.PageProcessExited: crashed (exitCode: 42)");
+});
+
 test("proxy connection failures identify the selected proxy during login and later navigation", async () => {
   const { contents, state, managed, finishAutofill } = await setupNavigation(false);
   for (const description of ["ERR_TUNNEL_CONNECTION_FAILED", "ERR_PROXY_CONNECTION_FAILED"]) {
@@ -592,7 +602,7 @@ async function setupAutofill() {
     recording: { setPaused: mock.fn() }
   };
   const release = mock.fn(async () => ({ username: "managed-user", password: "secret" }));
-  const buildScript = mock.fn(() => "fill");
+  const buildScript = mock.fn((_selectors: Record<string, string>) => "fill");
   const views = new Map([[managed.label, managed]]);
   const scriptFinished = deferred<string>();
   const scriptStarted = deferred<void>();
@@ -787,6 +797,21 @@ test("fill-only login releases the page without claiming submission or waiting f
     assert.equal(webContents.stop.mock.callCount(), 0);
     assert.equal(managed.autofillFailure, "");
   }
+});
+
+test("a missing success indicator times out after autofill and submission", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
+  const { api, managed, events, release, webContents, buildScript } = await setupAutofill();
+  managed.credentialSession.selectors.success = "id=missing";
+  await api.tryWebProxyAutofill(managed);
+  assert.equal(release.mock.callCount(), 1);
+  assert.equal(buildScript.mock.calls[0].arguments[0].submit, "id=submit");
+  assert.ok(webContents.executeJavaScript.mock.calls.some(({ arguments: args }) => args[0] === "fill"));
+  assert.equal(managed.autofillPending, true);
+  t.mock.timers.tick(20_000);
+  assert.equal(managed.autofillPending, false);
+  assert.equal(managed.autofillFailure, "WebProxy.LoginSuccessIndicatorTimeout");
+  assert.ok(events.some(({ state }) => state.error === "WebProxy.LoginSuccessIndicatorTimeout"));
 });
 
 test("does not send a late preview to a closed session", async () => {

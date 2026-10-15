@@ -12,9 +12,11 @@ import { chromium } from "playwright";
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
 const password = mode.endsWith("-empty-password") ? "" : "runtime-secret";
-const standalone = mode === "standalone" || mode === "https-standalone";
+const standaloneErrors = mode === "standalone-errors";
+const standalone = mode === "standalone" || mode === "https-standalone" || standaloneErrors;
 const secure = mode.startsWith("https");
 const addressOnly = mode === "address" || mode === "anonymous";
+const missingSuccess = mode === "missing-success";
 let tls;
 if (secure) {
   const certificateDirectory = await mkdtemp(path.join(os.tmpdir(), "weblite-tls-"));
@@ -47,6 +49,7 @@ if (secure) {
 const requests = [];
 const handler = (req, res) => {
   requests.push(req.url);
+  if (req.url === "/disconnect") return res.destroy();
   res.setHeader("content-type", "text/html");
   if (standalone || addressOnly)
     return res.end("<!doctype html><html><body><h1>Standalone browsing works</h1></body></html>");
@@ -107,7 +110,7 @@ if (!standalone) {
                 username_selector: "id=username",
                 password_selector: "id=password",
                 submit_selector: "id=submit",
-                success_selector: "id=dashboard"
+                success_selector: missingSuccess ? "id=missing-dashboard" : "id=dashboard"
               },
       username: "tester",
       password,
@@ -174,9 +177,17 @@ try {
   if (standalone || addressOnly) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
-    await shell
-      .locator('[data-testid="web-proxy-session-status"][data-status="success"]')
-      .waitFor({ state: "visible" });
+    const status = shell.locator(
+      `[data-testid="web-proxy-session-status"][data-status="${missingSuccess ? "error" : "success"}"]`
+    );
+    await status.waitFor({ state: "visible", timeout: 30_000 });
+    if (missingSuccess) {
+      const alert = shell.getByRole("alert");
+      await alert.waitFor({ state: "visible" });
+      const message = (await alert.textContent()) || "";
+      assert.match(message, /success_selector/);
+      assert.ok(!message.includes(password), "login diagnostics must not expose credentials");
+    }
   }
   const bootstrap = await shell.evaluate(() => window.webApplet.invoke("bootstrap"));
   assert.equal(bootstrap.proxyUrl, "");
@@ -189,6 +200,29 @@ try {
     shell.evaluate(() => window.webApplet.invoke("start_web_proxy_recording", {})),
     /WebProxy\.AppletRecordingDisabled/
   );
+  if (standaloneErrors) {
+    await address.fill("file:///invalid");
+    await address.press("Enter");
+    await shell
+      .getByRole("alert")
+      .filter({ hasText: /HTTP\/HTTPS/ })
+      .waitFor({ state: "visible" });
+    await address.fill(`${new URL(target).origin}/disconnect`);
+    await address.press("Enter");
+    await shell
+      .getByRole("alert")
+      .filter({ hasText: /ERR_EMPTY_RESPONSE|ERR_CONNECTION_CLOSED/ })
+      .waitFor({ state: "visible" });
+    await address.fill(target);
+    await address.press("Enter");
+    await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
+    const debugging = await page.context().newCDPSession(page);
+    void debugging.send("Page.crash").catch(() => {});
+    await shell
+      .getByRole("alert")
+      .filter({ hasText: /crashed.*exitCode/ })
+      .waitFor({ state: "visible" });
+  }
   await shell.screenshot({
     path: fileURLToPath(new URL(`../../../release/applets/${mode}-runtime.png`, import.meta.url))
   });
@@ -200,7 +234,9 @@ try {
     requests.every((path) => !path.includes("_jumpserver")),
     "Applet contacted a Koko control endpoint"
   );
-  console.info(`WebLite ${mode}: direct browsing, no Koko communication, IPC isolation and clean exit passed.`);
+  console.info(
+    `WebLite ${mode}: ${missingSuccess ? "missing success selector diagnostics, " : ""}direct browsing, no Koko communication, IPC isolation and clean exit passed.`
+  );
 } catch (error) {
   console.error(stderr);
   throw error;

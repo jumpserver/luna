@@ -17,11 +17,11 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   if (typeof username !== "string" || typeof password !== "string" || username.length > 4096 || password.length > 65536)
     throw new Error("Tinker 凭据格式无效");
   const selectors = {
-    username: optionalWebSelector(config.username_selector),
-    password: optionalWebSelector(config.password_selector),
-    submit: optionalWebSelector(config.submit_selector),
-    success: optionalWebSelector(config.success_selector),
-    interactive: optionalWebSelector(config.interactive_selector)
+    username: optionalWebSelector(config.username_selector, "username_selector"),
+    password: optionalWebSelector(config.password_selector, "password_selector"),
+    submit: optionalWebSelector(config.submit_selector, "submit_selector"),
+    success: optionalWebSelector(config.success_selector, "success_selector"),
+    interactive: optionalWebSelector(config.interactive_selector, "interactive_selector")
   };
   // Same-name/manual accounts may have an empty password; preserve it for autofill.
   if (
