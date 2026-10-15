@@ -167,7 +167,11 @@ const openLogin = () => {
         </aside>
       </template>
 
-      <div v-else-if="!loggedIn" class="grid h-full place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+      <div
+        v-else-if="authReady && !loggedIn"
+        class="grid h-full place-items-center text-sm"
+        :style="{ color: 'var(--app-muted)' }"
+      >
         <div class="flex flex-col items-center gap-4">
           <UIcon name="i-lucide-log-in" class="size-10" />
           <p>{{ t("Common.Login") }}</p>
