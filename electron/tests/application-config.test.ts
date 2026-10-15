@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +13,57 @@ import { LocalApplicationLauncher, localAppLauncherInternals } from "../src/apps
 import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+test("RESP receives a private connection config through its settings directory", async (context) => {
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms RESP config "));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const app = { getPath: () => appData, isPackaged: false };
+  const service = new ApplicationConfigService(app, projectRoot);
+  service.builtInDir = async () => path.join(projectRoot, "plugins", "windows");
+  await service.initialize();
+  await service.updateSelection({
+    category: "databases",
+    protocol: "redis",
+    name: "resp",
+    path: process.execPath
+  });
+  await service.updateSelection({ category: "databases", protocol: "redis", name: "resp", makeDefault: true });
+  const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+  const payload = {
+    protocol: "redis",
+    client: "resp",
+    name: "RESP 测试连接",
+    endpoint: { host: "127.0.0.1", port: 16380 },
+    token: { id: "test-token", value: "secret with spaces * ' \" \\ 中文" },
+    asset: { info: { db_name: "0" } }
+  };
+  const settingsDirectories = [];
+  launcher.launchExecutable = async (application, argumentString) => {
+    assert.equal(application.name, "resp");
+    const args = Array.isArray(argumentString)
+      ? argumentString
+      : localAppLauncherInternals.splitArguments(argumentString);
+    assert.equal(args.length, 2);
+    assert.equal(args[0], "--settings-dir");
+    assert.ok(!args[1].includes("{config_file}"));
+    settingsDirectories.push(args[1]);
+    const configFile = path.join(args[1], ".rdm", "connections.json");
+    const connections = JSON.parse(await readFile(configFile, "utf8"));
+    assert.equal(connections.length, 1);
+    assert.equal(connections[0].name, "RESP测试连接");
+    assert.equal(connections[0].host, payload.endpoint.host);
+    assert.equal(connections[0].port, payload.endpoint.port);
+    assert.equal(connections[0].username, undefined);
+    assert.equal(connections[0].auth, `${payload.token.id}@${payload.token.value}`);
+    assert.ok(connections[0].timeout_connect > 1000);
+    assert.ok(connections[0].timeout_execute > 1000);
+    if (process.platform !== "win32") assert.equal((await stat(configFile)).mode & 0o777, 0o600);
+  };
+  const raw = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await launcher.launch(raw);
+  await launcher.launch(raw);
+  assert.equal(new Set(settingsDirectories).size, 2, "concurrent launches must not overwrite each other's config");
+});
 
 test(
   "installed DBX initiates a database connection through the plugin launcher",
