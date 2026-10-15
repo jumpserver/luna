@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AiTimelineAction } from "~/components/RightPanel/ai/types";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
-import { getKokoTerminalElement } from "#koko";
+import { getKokoTerminalCursorAnchor, getKokoTerminalElement } from "#koko";
 import { AgentHttpError } from "#koko/composables/agent/agentClient";
 import { getKokoTerminalAiSession, isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
@@ -23,6 +23,7 @@ import {
 } from "~/composables/useWorkspaceAssistantSession";
 import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
 import {
+  canOpenTerminalAiCommand,
   isTerminalAiApprovalShortcut,
   isTerminalAiCommandShortcut,
   terminalAiLiveTurn
@@ -50,7 +51,6 @@ const draft = computed({
   }
 });
 const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));
-const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘ ⇧ K" : "Ctrl ⇧ K"));
 const approvalShortcutLabel = computed(() => (isMacOS.value ? "⌘ ↵" : "Ctrl ↵"));
 const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }));
 const sendLabel = computed(() => (submitting.value ? t("TerminalAi.Sending") : t("TerminalAi.Send")));
@@ -198,8 +198,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
   if (!xterm?.getClientRects().length) return;
   if (
     !panelRef.value?.contains(target) &&
-    !xterm.contains(target) &&
-    target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')
+    (!xterm.contains(target) || !canOpenTerminalAiCommand(getKokoTerminalCursorAnchor(props.pane.id)))
   )
     return;
   event.preventDefault();
@@ -461,7 +460,6 @@ onBeforeUnmount(() => {
                 @click="openAi()"
               >
                 {{ t("TerminalAi.History") }}
-                <span class="text-[10px] text-muted">{{ historyShortcutLabel }}</span>
               </UButton>
               <UButton
                 data-terminal-ai-tour="close"

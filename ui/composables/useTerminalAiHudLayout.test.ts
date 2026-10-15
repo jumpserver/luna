@@ -29,8 +29,9 @@ vi.mock("#koko", () => ({
 
 const cleanups: Array<() => void> = [];
 beforeEach(() => {
-  if (typeof window === "undefined") vi.stubGlobal("window", { innerWidth: 1000, innerHeight: 800 });
-  else {
+  if (typeof window === "undefined") {
+    vi.stubGlobal("window", Object.assign(new EventTarget(), { innerWidth: 1000, innerHeight: 800 }));
+  } else {
     vi.stubGlobal("innerWidth", 1000);
     vi.stubGlobal("innerHeight", 800);
   }
@@ -44,7 +45,13 @@ afterEach(() => {
 
 async function setup(sessionInfoReady = false) {
   const area = { left: 100, top: 50, right: 900, bottom: 750, width: 800, height: 700 };
-  terminal.element = { getBoundingClientRect: () => area } as HTMLElement;
+  const terminalInput = {};
+  const documentState = { activeElement: terminalInput, hasFocus: vi.fn(() => true), defaultView: window };
+  terminal.element = {
+    getBoundingClientRect: () => area,
+    ownerDocument: documentState,
+    contains: (node: unknown) => node === terminalInput
+  } as unknown as HTMLElement;
   const measured = { height: 110, scrollHeight: 110 };
   const captured = new Set<number>();
   const handle = Object.assign(new EventTarget(), {
@@ -61,6 +68,7 @@ async function setup(sessionInfoReady = false) {
   )!;
   layout.hostRef.value = {
     getBoundingClientRect: () => area,
+    ownerDocument: documentState,
     style: { setProperty: vi.fn() }
   } as unknown as HTMLElement;
   layout.panelRef.value = Object.defineProperties(new EventTarget(), {
@@ -117,8 +125,57 @@ async function setup(sessionInfoReady = false) {
   }
   const position = () => ({ left: layout.panelStyle.value.left, top: layout.panelStyle.value.top });
   const size = () => ({ width: layout.panelStyle.value.width, maxHeight: layout.panelStyle.value.maxHeight });
-  return { area, measured, handle, open, layout, dispatch, dispatchResize, position, size };
+  return {
+    area,
+    measured,
+    handle,
+    open,
+    layout,
+    dispatch,
+    dispatchResize,
+    position,
+    size,
+    documentState,
+    terminalInput
+  };
 }
+
+it("shows the caret hint only while its terminal has input focus", async () => {
+  vi.stubGlobal("getComputedStyle", () => ({ backgroundColor: "rgb(0, 0, 0)" }));
+  const { layout, open, documentState, terminalInput } = await setup(true);
+  open.value = false;
+  documentState.activeElement = {};
+  layout.startCursorTracking();
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(false);
+
+  // Focus changes must update the hint even when the cursor has not moved.
+  documentState.activeElement = terminalInput;
+  window.dispatchEvent(new Event("focusin"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  documentState.activeElement = {};
+  window.dispatchEvent(new Event("focusout"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(false);
+
+  documentState.activeElement = terminalInput;
+  window.dispatchEvent(new Event("focusin"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  documentState.hasFocus.mockReturnValue(false);
+  window.dispatchEvent(new Event("blur"));
+  expect(layout.hintVisible.value).toBe(false);
+  await layout.positionHint();
+  expect(layout.hintVisible.value).toBe(false);
+
+  documentState.hasFocus.mockReturnValue(true);
+  window.dispatchEvent(new Event("focus"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+});
 
 it("reads the current buffer to hide alternate-screen hints after idle and allow manual opening", async () => {
   vi.useFakeTimers();
