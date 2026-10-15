@@ -46,6 +46,7 @@ function mountCapture(width: number, height: number, flow: unknown = null) {
   app.mount(host);
   return {
     host,
+    capture,
     cleanup: () => {
       app.unmount();
       host.remove();
@@ -88,6 +89,50 @@ it.skipIf(typeof document === "undefined")(
     try {
       await Vue.nextTick();
       expect(host.querySelector(".face-token-capture__message")!.textContent).toBe("Face.Remote.LivenessTimedOut");
+    } finally {
+      cleanup();
+    }
+  }
+);
+
+it.skipIf(typeof document === "undefined").each([
+  ["browser_unsupported", "Camera access is unavailable"],
+  ["camera_denied", "Permission denied"],
+  ["camera_not_found", "Requested device not found"],
+  ["camera_failed", "Could not start video source"]
+])("shows localized help instead of browser details for %s", async (code, message) => {
+  const { host, capture, cleanup } = mountCapture(570, 480);
+  try {
+    capture.clientState.value = "error";
+    capture.errorCode.value = code;
+    capture.errorMessage.value = message;
+    await Vue.nextTick();
+    expect(host.querySelector(".face-token-capture__message")!.textContent).toBe(`Face.Remote.ErrorHint.${code}`);
+    expect(host.textContent).not.toContain(message);
+  } finally {
+    cleanup();
+  }
+});
+
+it.skipIf(typeof document === "undefined")(
+  "prioritizes camera failure help over an active liveness action",
+  async () => {
+    const { host, capture, cleanup } = mountCapture(570, 480, {
+      mode: "auth",
+      status: "authenticating",
+      finished: false,
+      challenge: { type: "open_mouth", passed: false, calibrated: true, score: 0 }
+    });
+    try {
+      capture.clientState.value = "error";
+      capture.errorCode.value = "camera_failed";
+      capture.errorMessage.value = "Could not start video source";
+      await Vue.nextTick();
+      expect(host.querySelector(".face-token-capture__message")!.textContent).toBe(
+        "Face.Remote.ErrorHint.camera_failed"
+      );
+      expect(host.textContent).not.toContain("Could not start video source");
+      expect(host.textContent).not.toContain("Face.Remote.Challenge.open_mouth");
     } finally {
       cleanup();
     }

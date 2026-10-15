@@ -58,14 +58,18 @@ const stateLabel = computed(() => {
   if (capture.clientState.value === "active") return t("Face.Remote.CameraReady");
   return t("Face.Status.idle");
 });
+const clientErrorDetail = computed(() => {
+  const code = capture.errorCode.value;
+  if (["browser_unsupported", "camera_denied", "camera_not_found", "camera_failed"].includes(code)) {
+    return t(`Face.Remote.ErrorHint.${code}`);
+  }
+  return localizeFaceLiveDetail(capture.errorMessage.value, t);
+});
 const instruction = computed(() => {
   if (capture.clientState.value === "preparing") return t("Face.Remote.AllowCamera");
   if (capture.clientState.value === "connecting") return t("Face.Remote.ConnectingHint");
-  if (capture.clientState.value === "error" && !flow.value) {
-    return (
-      localizeFaceLiveDetail(capture.errorMessage.value, t) ||
-      t(`Face.Remote.ErrorHint.${capture.errorCode.value || "server_error"}`)
-    );
+  if (capture.clientState.value === "error" && (!flow.value || capture.errorCode.value)) {
+    return clientErrorDetail.value || t(`Face.Remote.ErrorHint.${capture.errorCode.value || "server_error"}`);
   }
   if (flow.value?.finished) {
     if (["auth_success", "enrollment_complete"].includes(flow.value.status)) return t("Face.Remote.Completed");
@@ -192,7 +196,7 @@ watch(
             <div class="h-full bg-primary transition-[width] duration-200" :style="{ width: `${progress}%` }" />
           </div>
           <p v-if="capture.errorMessage.value && flow" class="mt-1 line-clamp-2 text-xs text-error">
-            {{ localizeFaceLiveDetail(capture.errorMessage.value, t) }}
+            {{ clientErrorDetail }}
           </p>
         </div>
       </div>
