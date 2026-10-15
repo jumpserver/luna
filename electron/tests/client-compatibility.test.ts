@@ -9,7 +9,7 @@ import {
   normalizeCompatibilitySite
 } from "../src/auth/compatibility.ts";
 
-test("compares patch versions, release candidates, v prefixes, metadata and the stable LTS channel", () => {
+test("compares base versions, ignoring prerelease and build suffixes", () => {
   for (const [a, b, expected] of [
     ["5.1.0", "5.1.0", 0],
     ["5.1.1", "5.1.0", 1],
@@ -17,23 +17,20 @@ test("compares patch versions, release candidates, v prefixes, metadata and the 
     ["5.10.0", "5.2.0", 1],
     ["v5.1.0", "5.1.0", 0],
     ["v5.1.1", "v5.1.0", 1],
-    ["v5.1.0-rc1", "v5.1.0", -1],
+    ["v5.1.0-rc3", "v5.1.0", 0],
     ["v5.1.0-lts", "v5.1.0", 0],
-    ["5.1.0-rc1", "5.1.0", -1],
+    ["5.1.0-rc1", "5.1.0", 0],
     ["5.1.0-lts", "5.1.0", 0],
     ["v5.1.0-lts+build.1", "5.1.0", 0],
     ["5.1.0+build.9", "5.1.0+build.1", 0],
-    ["5.1.0-beta-lts", "5.1.0", -1],
-    ["5.1.0-1", "5.1.0-alpha", -1],
-    ["5.1.0-beta.11", "5.1.0-beta.2", 1],
+    ["5.1.0-beta-lts", "5.1.0", 0],
+    ["5.1.0-1", "5.1.0-alpha", 0],
+    ["5.1.0-beta.11", "5.1.0-beta.2", 0],
     ["9007199254740993.0.0", "9007199254740992.0.0", 1]
   ] as const) {
     assert.equal(compareVersions(a, b), expected, `${a} vs ${b}`);
     assert.equal(compareVersions(b, a), expected === 0 ? 0 : -expected);
   }
-  const ordered = ["alpha", "alpha.1", "alpha.beta", "beta", "beta.2", "beta.11", "rc.1"];
-  for (let i = 1; i < ordered.length; i += 1)
-    assert.equal(compareVersions(`5.1.0-${ordered[i - 1]}`, `5.1.0-${ordered[i]}`), -1);
   for (const invalid of [
     "",
     "dev",
@@ -69,11 +66,13 @@ test("checks both minimums, exempting only dev Core from its minimum", async () 
     ["5.1.0", "dev", "5.1.0", []],
     ["5.0.9", "dev", "5.1.0", ["client-too-old"]],
     ["5.1.0", "dev", "5.1.1", ["client-too-old"]],
-    ["5.1.0-rc1", "v5.1.0", "v5.1.0", ["client-too-old"]],
+    ["v5.1.0-rc3", "v5.1.0", "v5.1.0", []],
+    ["5.1.0-beta8", "v5.1.0", "v5.1.0", []],
+    ["5.1.0-rc3", "v5.1.0", "v5.1.0-rc9", []],
     ["5.1.0", "v5.1.0-rc1", "v5.1.0", []],
     ["5.1.0", "v5.1.1", "v5.1.1", ["client-too-old"]],
     ["5.1.1", "5.2.0", "5.1.0", []],
-    ["5.1.0-rc1", "5.1.0", "5.1.0", ["client-too-old"]],
+    ["5.1.0-rc1", "5.1.0", "5.1.0", []],
     ["5.1.0", "5.1.0-rc1", "5.1.0", []],
     ["5.1.0", "5.1.0-rc2", "5.1.0", []],
     ["5.1.0", "5.1.0-rc0", "5.1.0", []],
@@ -81,7 +80,9 @@ test("checks both minimums, exempting only dev Core from its minimum", async () 
     ["5.1.0", "v5.1.0-adasda", "5.1.0", []],
     ["5.1.0", "v5.1.0-rc.1+build.9", "5.1.0", []],
     ["5.1.0", "5.0.9-rc1", "5.1.0", ["core-too-old"]],
-    ["5.1.0-rc1", "5.1.0-rc1", "5.1.0", ["client-too-old"]],
+    ["5.1.0-rc1", "5.1.0-rc1", "5.1.0", []],
+    ["5.0.9-rc3", "5.1.0", "5.1.0", ["client-too-old"]],
+    ["5.1.0-rc3", "5.1.0", "5.1.1-beta8", ["client-too-old"]],
     ["5.1.0", "5.1.1-rc1", "5.1.1", ["client-too-old"]],
     ["5.1.0", "5.1.0", "5.1.1", ["client-too-old"]],
     ["5.0.9", "5.0.9", "5.1.0", ["client-too-old", "core-too-old"]],
