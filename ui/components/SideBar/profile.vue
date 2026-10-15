@@ -1198,8 +1198,9 @@ onBeforeUnmount(() => {
           </span>
         </label>
 
-        <template v-if="normalizedInputSite?.length" #trailing>
+        <template #trailing>
           <UButton
+            v-if="normalizedInputSite?.length"
             color="neutral"
             variant="link"
             size="sm"
