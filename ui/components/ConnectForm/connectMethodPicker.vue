@@ -71,16 +71,18 @@ const connectMethodTabItems = computed(() => {
   );
 
   if (isDesktopRuntime() && selectedConnectMethodType.value === "native") {
-    if (!configuredClients.value.length) return [];
+    const guideMethods = tabMethods.filter((method) => method.value.endsWith("_guide"));
+    const nativeMethod = tabMethods.find((method) => !method.value.endsWith("_guide"));
 
-    const nativeMethod = tabMethods[0];
-
-    return nativeMethod
-      ? configuredClients.value.map((client) => ({
-          label: client.display_name || client.name,
-          value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
-        }))
-      : [];
+    return [
+      ...(nativeMethod
+        ? configuredClients.value.map((client) => ({
+            label: client.display_name || client.name,
+            value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
+          }))
+        : []),
+      ...guideMethods.map((method) => ({ label: method.label || method.value, value: method.value }))
+    ];
   }
 
   return tabMethods.map((method) => ({

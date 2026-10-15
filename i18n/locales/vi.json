@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "Bắt đầu xác minh"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "Nhấp đúp để sao chép",
     "TokenCommand": "Lệnh kết nối (token)",
     "DirectCommand": "Lệnh kết nối (trực tiếp bằng ID tài sản)",
     "TokenPasswordHelp": "Sử dụng mật khẩu token trong bảng trên.",

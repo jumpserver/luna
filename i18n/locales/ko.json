@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "인증 시작"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "두 번 클릭하여 복사",
     "TokenCommand": "연결 명령 (토큰)",
     "DirectCommand": "연결 명령 (자산 ID로 직접 연결)",
     "TokenPasswordHelp": "위 표의 토큰 비밀번호를 사용하세요.",

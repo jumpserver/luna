@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "Iniciar verificação"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "Clique duas vezes para copiar",
     "TokenCommand": "Comando de conexão (token)",
     "DirectCommand": "Comando de conexão (direta pelo ID do ativo)",
     "TokenPasswordHelp": "Use a senha do token na tabela acima.",

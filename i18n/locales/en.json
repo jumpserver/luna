@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "Start verification"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "Double-click to copy",
     "TokenCommand": "Connect command (token)",
     "DirectCommand": "Connect command (direct by asset ID)",
     "TokenPasswordHelp": "Use the token password in the table above.",

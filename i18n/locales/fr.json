@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "Démarrer la vérification"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "Double-cliquez pour copier",
     "TokenCommand": "Commande de connexion (jeton)",
     "DirectCommand": "Commande de connexion (directe par ID d’actif)",
     "TokenPasswordHelp": "Utilisez le mot de passe du jeton dans le tableau ci-dessus.",

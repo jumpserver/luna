@@ -27,6 +27,7 @@ function isBuiltinConnectMethod(method: { value?: string }) {
 export function islandMethodIcon(value: string) {
   const key = String(value || "").toLowerCase();
   if (key.startsWith("native_app:")) return "i-lucide-app-window";
+  if (key.endsWith("_guide")) return "i-lucide-book-open";
   if (key === WEB_CLI_NATIVE_VALUE) return "i-lucide-square-terminal";
   if (key === SFTP_FILE_MANAGER_VALUE) return "i-lucide-folder";
   if (key === SFTP_FILE_EDITOR_VALUE) return "i-lucide-file";
