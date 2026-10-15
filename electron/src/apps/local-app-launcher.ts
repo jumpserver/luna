@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
@@ -262,6 +262,32 @@ export class LocalApplicationLauncher {
     await this.launchExecutable(application, args, {});
   }
 
+  async launchResp(application, payload, values) {
+    await mkdir(this.configService.configDir, { recursive: true });
+    const settingsDir = await mkdtemp(path.join(this.configService.configDir, "resp-"));
+    const configDir = path.join(settingsDir, ".rdm");
+    await mkdir(configDir, { mode: 0o700 });
+    await writeFile(
+      path.join(configDir, "connections.json"),
+      JSON.stringify([
+        {
+          name: values.name,
+          host: values.host,
+          port: Number(values.port),
+          auth: `${values.username}@${values.value}`,
+          timeout_connect: 60000,
+          timeout_execute: 60000
+        }
+      ]),
+      { mode: 0o600 }
+    );
+    // Expand the path after splitting so spaces and Windows backslashes remain intact.
+    const args = splitArguments(application.arg_format).map((argument) =>
+      render(argument, { ...values, config_file: settingsDir })
+    );
+    return this.launchExecutable(application, args, values, payload);
+  }
+
   async launchScript(application, payload, values) {
     const scriptPath = path.resolve(application.plugin_dir, application.script_path || "");
     if (!scriptPath.startsWith(`${path.resolve(application.plugin_dir)}${path.sep}`) || !(await isFile(scriptPath))) {
@@ -307,6 +333,9 @@ export class LocalApplicationLauncher {
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
     const values = valuesFor(payload);
+    if (application.launch_type === "args" && application.launch_driver === "resp") {
+      return this.launchResp(application, payload, values);
+    }
     if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])
       values.protocol = application.protocol_aliases[payload.protocol];
