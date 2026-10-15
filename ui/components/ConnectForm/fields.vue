@@ -38,13 +38,15 @@ const props = withDefaults(
     submitting: false
   }
 );
-const emit = defineEmits<{ submit: []; downloadRdp: [connectMethod: string] }>();
+const emit = defineEmits<{ submit: []; downloadRdp: [connectMethod: string]; ready: [] }>();
 const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
 const { modernIsland, rdpResolution } = useSettingManager();
 const { getMethodsForProtocol } = useConnectMethods();
 const protocolMethods = shallowRef<ConnectMethod[]>([]);
+const methodsLoaded = ref(false);
+const settingsLoaded = ref(false);
 const viewAssetOnlineSessionInfo = ref(false);
 const hasXPack = shallowRef(false);
 const appletClientEnabled = shallowRef<boolean>();
@@ -186,8 +188,10 @@ const downloadRdp = () => {
 watch(
   [() => draft.value.protocol, () => props.asset.id],
   async ([protocol, assetId]) => {
+    methodsLoaded.value = false;
     protocolMethods.value = [];
     if (!protocol) {
+      methodsLoaded.value = true;
       return;
     }
     try {
@@ -195,6 +199,8 @@ watch(
       if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = methods;
     } catch {
       if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = [];
+    } finally {
+      if (protocol === draft.value.protocol && assetId === props.asset.id) methodsLoaded.value = true;
     }
   },
   { immediate: true }
@@ -210,8 +216,24 @@ onMounted(async () => {
   } catch {
     viewAssetOnlineSessionInfo.value = false;
     appletClientEnabled.value = false;
+  } finally {
+    settingsLoaded.value = true;
   }
 });
+
+// Reveal the initial form only after async controls have their final layout.
+watch(
+  () =>
+    methodsLoaded.value &&
+    settingsLoaded.value &&
+    !props.personalCredentialsLoading &&
+    (!protocolMethods.value.length || !!draft.value.connectMethod) &&
+    !appletOptionsLoading.value,
+  (ready) => {
+    if (ready) emit("ready");
+  },
+  { flush: "post", once: true }
+);
 
 watchDebounced(
   () => ({

@@ -292,7 +292,7 @@ export function useGuacamoleClient(
     tunnel.onerror = () => {
       if (generation !== connectGeneration) return;
       loading.value = false;
-      connectionError.value = t("WebSocketError");
+      connectionError.value ||= t("WebSocketError");
       if (connectStatus.value !== 5) connectStatus.value = 5;
     };
     tunnel.onuuid = (uuid: string) => {

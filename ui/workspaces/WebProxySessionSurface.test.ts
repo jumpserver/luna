@@ -3,8 +3,11 @@ import { createI18n } from "vue-i18n";
 import { formatWebProxyMessage, webProxyMessages } from "../../packages/web-proxy/src/i18n";
 import { expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, reactive, ref, toRaw, watch } from "vue";
+import * as Vue from "vue";
+import { compileScript, parse } from "vue/compiler-sfc";
 import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
 import aiPanelSource from "../components/RightPanel/AiOverlayPanel.vue?raw";
+import workspaceSource from "./WebProxySessionSurface.vue?raw";
 
 function setupSurface(safeMode = false, observe = false, dom?: Document) {
   const desktopWebProxy = {
@@ -336,6 +339,91 @@ it("keeps a safe preview through timeout and only marks the session connected af
   expect(surface.preview.value).toBe("");
   expect(surface.navigationDisabled.value).toBe(false);
   expect(markSessionConnected).toHaveBeenCalledWith("tab");
+});
+
+it.each([
+  ["WebProxy.LoginElementsTimeout", webProxyMessages.zh.WebProxy.LoginElementsTimeout],
+  ["ERR_PROXY_CONNECTION_FAILED", "ERR_PROXY_CONNECTION_FAILED"]
+])("reports connection failure %s to the host and ignores other views", async (message, formatted) => {
+  const { surface, emit, markSessionConnected, stop } = setupSurface(false, true);
+  try {
+    const state = { loading: false, error: message, autofillPending: false };
+    surface.handleState({ ...state, label: "another-view" });
+    await nextTick();
+    expect(emit).not.toHaveBeenCalled();
+
+    surface.handleState({ ...state, label: surface.viewLabel });
+    await nextTick();
+    expect(emit).toHaveBeenCalledWith("fatal", formatted);
+    expect(markSessionConnected).not.toHaveBeenCalled();
+  } finally {
+    stop();
+  }
+});
+
+it("reports native view creation errors to the host", async () => {
+  const { surface, desktopWebProxy, emit, mount, stop } = setupSurface(false, true);
+  desktopWebProxy.create.mockRejectedValue(new Error("native view unavailable"));
+  surface.viewCreated.value = false;
+  try {
+    await mount();
+    await nextTick();
+    expect(emit).toHaveBeenCalledWith("fatal", "Error: native view unavailable");
+    expect(surface.viewCreated.value).toBe(false);
+  } finally {
+    stop();
+  }
+});
+
+it.skipIf(typeof document === "undefined")("forwards fatal errors to the affected workspace pane", async () => {
+  const disconnected = vi.fn();
+  const component = Vue.defineComponent({
+    emits: ["fatal"],
+    setup(_, { emit }) {
+      Vue.onMounted(() => emit("fatal", "代理连接失败"));
+      return () => Vue.h("div");
+    }
+  });
+  const { descriptor } = parse(workspaceSource);
+  const script = compileScript(descriptor, { id: "web-proxy-workspace-test", inlineTemplate: true });
+  const { outputText } = ts.transpileModule(script.content, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
+  const scope = {
+    ...Vue,
+    useWorkspaceTabs: () => ({
+      activeTabId: ref("owner"),
+      tabs: ref([]),
+      markSessionConnected: vi.fn(),
+      markSessionDisconnected: disconnected
+    }),
+    usePlatform: () => ({ isMacOS: false }),
+    useColorMode: () => ({ value: "dark" }),
+    isDesktopRuntime: () => true,
+    registerWorkspaceSessionCloseGuard: () => vi.fn()
+  };
+  const wrapper = new Function(
+    "require",
+    ...Object.keys(scope),
+    `const exports = {};\n${outputText}\nreturn exports.default;`
+  )(
+    (name: string) =>
+      name === "vue"
+        ? Vue
+        : name === "@jumpserver/web-proxy/surface"
+          ? { __esModule: true, default: component }
+          : { desktopWebProxy: {}, desktopWindow: {} },
+    ...Object.values(scope)
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const app = Vue.createApp(wrapper, { tab: { id: "affected-pane", payload: {} } });
+  try {
+    app.mount(host);
+    await nextTick();
+    expect(disconnected).toHaveBeenCalledExactlyOnceWith("affected-pane", "代理连接失败");
+  } finally {
+    app.unmount();
+    host.remove();
+  }
 });
 
 it("finalizes the old view once before requesting a fresh connection", async () => {

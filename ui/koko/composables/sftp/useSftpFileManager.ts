@@ -238,11 +238,12 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   });
 
   const stopFailureListener = socket.onFailure((failure) => {
+    const serverError = fatalError.value ? error.value : "";
     fatalError.value = true;
     fileAiReadiness.reset();
     capabilities.value = null;
     capabilitiesKnown.value = false;
-    error.value = errorMessage(failure.code, t);
+    error.value = serverError || errorMessage(failure.code, t);
     loading.value = false;
   });
 

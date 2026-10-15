@@ -2,6 +2,7 @@
 import type { WorkspacePane, WorkspacePaneDropPlacement, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
+import { shouldShowConnectionProgress } from "~/composables/workspaceConnectionProgress";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -582,7 +583,11 @@ onBeforeUnmount(() => {
             leave-to-class="opacity-0"
           >
             <WorkspaceConnectionProgressOverlay
-              v-if="pane.connectionProgress && pane.mode !== 'setup'"
+              v-if="
+                pane.connectionProgress &&
+                pane.mode !== 'setup' &&
+                shouldShowConnectionProgress(pane, hasScopeGroup(pane.id))
+              "
               :pane-id="pane.id"
               :stage="pane.connectionProgress"
               :dismissible="pane.connectionFailureDismissible"

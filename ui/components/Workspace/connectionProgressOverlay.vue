@@ -168,7 +168,7 @@ async function reconnect() {
     v-show="!dismissed"
     :role="failed ? 'alert' : 'status'"
     aria-live="polite"
-    class="absolute inset-0 z-20 grid place-items-center bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
+    class="absolute inset-0 z-20 grid place-items-center overflow-y-auto bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
     :class="{ 'connection-progress-overlay--face': group?.faceUrl }"
   >
     <UButton
@@ -181,8 +181,20 @@ async function reconnect() {
       class="absolute top-6 right-6 z-10"
       @click="dismiss"
     />
-    <div class="relative w-full max-w-lg" :class="{ 'connection-progress-card--face': group?.faceUrl }">
-      <div v-show="!group?.faceUrl" class="flex w-full items-center gap-5" aria-hidden="true">
+    <div
+      class="relative m-auto w-full max-w-lg"
+      :class="[
+        { 'connection-progress-card--face': group?.faceUrl },
+        failed && !group?.faceUrl
+          ? 'rounded-xl border border-error/30 bg-[var(--app-surface-overlay)] p-6 shadow-[var(--theme-shadow-soft)]'
+          : ''
+      ]"
+    >
+      <div v-if="failed && !group?.faceUrl" class="flex items-center gap-3 text-error">
+        <UIcon name="i-lucide-circle-alert" class="size-6 shrink-0" />
+        <h2 class="text-base font-semibold">{{ t("ConnectError.ConnectFailed") }}</h2>
+      </div>
+      <div v-show="!group?.faceUrl && !failed" class="flex w-full items-center gap-5" aria-hidden="true">
         <span class="relative shrink-0">
           <svg class="step-ring" :class="ringClass(0)" viewBox="0 0 52 52" aria-hidden="true">
             <circle cx="26" cy="26" r="24" pathLength="100" />
@@ -240,12 +252,19 @@ async function reconnect() {
       </div>
       <div
         class="flex flex-col items-center gap-4"
-        :class="group?.faceUrl ? 'connection-progress-face-content' : 'absolute inset-x-0 top-full mt-4'"
+        :class="
+          group?.faceUrl ? 'connection-progress-face-content' : failed ? 'mt-4' : 'absolute inset-x-0 top-full mt-4'
+        "
       >
         <p
           v-if="copy"
           :key="`copy-${playId}`"
-          class="error-copy max-h-40 max-w-lg overflow-y-auto text-center text-sm text-default whitespace-pre-wrap wrap-break-word"
+          class="error-copy max-h-40 w-full max-w-lg overflow-y-auto text-sm whitespace-pre-wrap wrap-break-word"
+          :class="
+            failed
+              ? 'rounded-lg border border-error/25 bg-error/10 px-4 py-3 text-left text-error'
+              : 'text-center text-default'
+          "
         >
           {{ copy }}
         </p>
