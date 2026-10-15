@@ -13,7 +13,8 @@ import {
 import { desktopLocalShell } from "~/shared/desktop/bridge";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected, markSessionFailed } = useWorkspaceTabs();
+const { t } = useI18n();
 const { codeFontSize } = useSettingManager();
 const terminalConfig = getDefaultTerminalConfig();
 const containerRef = shallowRef<HTMLElement | null>(null);
@@ -71,12 +72,7 @@ async function start() {
       if (payload.sessionId === props.tab.id) {
         started = false;
         unregisterLocalShellTerminalSession(props.tab.id);
-        markSessionFailed({
-          tabId: props.tab.id,
-          assetId: props.tab.assetId,
-          protocol: props.tab.protocol,
-          account: props.tab.account
-        });
+        markSessionDisconnected(props.tab.id, t("ConnectError.SessionClosed"), { dismissible: true });
         instance.write("\r\n\x1B[90m[Process exited]\x1B[0m\r\n");
       }
     })
@@ -107,12 +103,15 @@ async function start() {
     markSessionConnected(props.tab.id);
     instance.focus();
   } catch (error) {
-    markSessionFailed({
-      tabId: props.tab.id,
-      assetId: props.tab.assetId,
-      protocol: props.tab.protocol,
-      account: props.tab.account
-    });
+    markSessionFailed(
+      {
+        tabId: props.tab.id,
+        assetId: props.tab.assetId,
+        protocol: props.tab.protocol,
+        account: props.tab.account
+      },
+      error instanceof Error ? error.message : String(error)
+    );
     instance.write(`\x1B[31m${String(error)}\x1B[0m\r\n`);
   }
 }

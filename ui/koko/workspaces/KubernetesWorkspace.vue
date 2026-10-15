@@ -608,7 +608,7 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
   }
 
   disconnectTerminalAiSessions();
-  connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
+  connectionError.value ||= t("koko.kubernetes.websocketConnectionFailed");
   markSessionDisconnected(props.tab.id, connectionError.value, { dismissible: connectorConnected.value });
 });
 

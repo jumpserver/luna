@@ -192,6 +192,8 @@ describe("sFTP browser protocol", () => {
     expect(manager.fatalError.value).toBe(true);
     expect(manager.hasConnected.value).toBe(true);
     expect(manager.error.value).toBe("koko.fileManagement.pathPermissionDenied");
+    fake.close();
+    expect(manager.error.value).toBe("koko.fileManagement.pathPermissionDenied");
     scope.stop();
   });
 

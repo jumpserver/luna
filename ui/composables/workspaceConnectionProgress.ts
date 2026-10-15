@@ -3,6 +3,7 @@ import type { WorkspacePane, WorkspaceSessionTab } from "~/composables/useWorksp
 import type { PermedAccount } from "~/types";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { normalizeConnectionFailure } from "~/utils/connectionFailure";
+import { WEB_PROXY_NATIVE_VALUE } from "~/shared/connectors/capabilities";
 
 export type WorkspaceConnectionProgressStage = "token" | "session" | "connected";
 
@@ -14,6 +15,17 @@ type SessionMatch = { tabId?: string; assetId: string; protocol: string; account
 type ProgressMatch = { tab: WorkspaceSessionTab; pane: WorkspacePane; paneIndex: number };
 
 const CONNECTION_PROGRESS_MIN_MS = 1000;
+
+export function shouldShowConnectionProgress(
+  session: Pick<WorkspacePane, "connectionProgress" | "connectMethod" | "setupDraft" | "payload" | "connectionFailure">,
+  hasAcl = false
+) {
+  if (!session.connectionProgress) return false;
+  const method = session.payload?.connectMethod?.value || session.setupDraft?.connectMethod || session.connectMethod;
+  if (method !== WEB_PROXY_NATIVE_VALUE) return true;
+  // Web Proxy owns its progress and errors once its surface is available.
+  return hasAcl || Boolean(session.connectionFailure && !session.payload?.webProxy);
+}
 
 export function createWorkspaceConnectionProgress(host: {
   findPane: (paneId: string) => ProgressMatch | null;

@@ -4,7 +4,7 @@ import WebProxySurface from "@jumpserver/web-proxy/surface";
 import { desktopWebProxy, desktopWindow } from "~/shared/desktop/bridge";
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
-const { activeTabId, markSessionConnected, tabs } = useWorkspaceTabs();
+const { activeTabId, markSessionConnected, markSessionDisconnected, tabs } = useWorkspaceTabs();
 const { isMacOS } = usePlatform();
 const colorMode = useColorMode();
 const surface = ref<InstanceType<typeof WebProxySurface>>();
@@ -41,6 +41,7 @@ defineExpose({ focus: () => surface.value?.focus() });
     :mac-inset="macInset"
     reconnectable
     @connected="markSessionConnected(props.tab.id)"
+    @fatal="markSessionDisconnected(props.tab.id, $event)"
     @reconnect="emit('reconnect')"
   />
 </template>

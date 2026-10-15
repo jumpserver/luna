@@ -23,6 +23,10 @@ function compileComponent(source: string, scope: Record<string, unknown>) {
 
 const labels: Record<string, string> = {
   "Common.Cancel": "取消",
+  "Common.Close": "关闭",
+  "ConnectError.ConnectFailed": "连接失败",
+  "ConnectionSetup.BackToForm": "修改连接",
+  "WorkspacePane.Reconnect": "重新连接",
   "Face.Remote.AuthTitle": "人脸身份认证",
   "Face.Remote.CameraReady": "摄像头已就绪",
   "Face.Remote.LookStraight": "请正视摄像头，并将面部保持在引导框内"
@@ -105,8 +109,10 @@ async function mountFaceOverlay(width: number, height: number) {
   host.style.cssText = `position:relative;width:${width}px;height:${height}px;overflow:hidden`;
   document.body.append(host);
   const cancel = vi.fn();
-  const app = Vue.createApp(component, { paneId: "asset", stage: "token", onCancel: cancel });
+  const props = Vue.reactive({ paneId: "asset", stage: "token", error: "", dismissible: true, onCancel: cancel });
+  const app = Vue.createApp({ render: () => Vue.h(component, props) });
   app.component("UButton", button);
+  app.component("UIcon", { render: () => Vue.h("svg", { width: 24, height: 24 }) });
   app.mount(host);
   await Vue.nextTick();
   const iframe = host.querySelector("iframe")!;
@@ -143,6 +149,11 @@ async function mountFaceOverlay(width: number, height: number) {
     frameDocument,
     close,
     cancel,
+    fail: (message: string) => {
+      group.value.faceUrl = "";
+      group.value.items[0]!.settled = true;
+      props.error = message;
+    },
     cleanup: () => {
       captureApp.unmount();
       app.unmount();
@@ -171,6 +182,35 @@ describe("workspace connection progress overlay", () => {
   it("preserves normalized diagnostic line breaks", () => {
     expect(overlay).toContain("whitespace-pre-wrap");
     expect(overlay).toContain("wrap-break-word");
+  });
+
+  it.skipIf(typeof document === "undefined").each([
+    [860, 500],
+    [320, 360]
+  ])("shows a prominent failure with reachable actions in a %s x %s pane", async (width, height) => {
+    const fixture = await mountFaceOverlay(width, height);
+    try {
+      const message = `SSH authentication failed\n${"Error detail ".repeat(100)}`;
+      fixture.fail(message);
+      await Vue.nextTick();
+      const { host, page } = fixture;
+      expect(host.querySelector("h2")?.textContent).toBe("连接失败");
+      expect(host.textContent).toContain(message);
+      const root = host.firstElementChild as HTMLElement;
+      expect(root.getAttribute("role")).toBe("alert");
+      expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth + 1);
+      const editButton = [...host.querySelectorAll("button")].find((element) => element.textContent === "修改连接")!;
+      root.scrollTop = root.scrollHeight;
+      await Vue.nextTick();
+      expectWithin(editButton.getBoundingClientRect(), host.getBoundingClientRect());
+      root.scrollTop = 0;
+      const title = host.querySelector("h2")!;
+      expectWithin(title.getBoundingClientRect(), host.getBoundingClientRect());
+      await page.getByRole("button", { name: "关闭", exact: true }).click();
+      expect(root.style.display).toBe("none");
+    } finally {
+      fixture.cleanup();
+    }
   });
 
   it.skipIf(typeof document === "undefined").each([

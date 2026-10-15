@@ -2,7 +2,6 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetPageType } from "~/types/index";
 
-import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 import { resolveConnectionAttemptError, resolveConnectionSetupLoadError } from "~/composables/useConnectionFormState";
 import {
@@ -10,6 +9,7 @@ import {
   parseLocalApplicationConnectMethod,
   useConnectMethods
 } from "~/composables/useConnectMethods";
+import { shouldShowConnectionProgress } from "~/composables/workspaceConnectionProgress";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useConnectionSetupDrag } from "./useConnectionSetupDrag";
 
@@ -25,6 +25,7 @@ const props = withDefaults(
 
 const route = useRoute();
 const { t } = useI18n();
+const { hasScopeGroup } = useAclDialog();
 const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
@@ -45,6 +46,7 @@ const {
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(true);
+const formReady = ref(false);
 const connecting = ref(false);
 const downloadingRdp = shallowRef(false);
 const connectionError = ref(props.tab.connectionFailure || "");
@@ -286,9 +288,17 @@ onMounted(loadAsset);
         :class="modernIsland ? 'w-[min(520px,100%)]' : 'w-[min(640px,100%)]'"
         :style="compactLayout ? undefined : dialogPosition"
       >
+        <UIcon
+          v-if="loading || !formReady"
+          name="i-lucide-loader-circle"
+          class="absolute size-5 animate-spin text-(--app-text-muted)"
+          role="status"
+          :aria-label="t('Loading.Loading')"
+        />
         <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
           <section
-            v-if="dialogVisible && !(connecting && !downloadingRdp && !externalClientLaunch)"
+            v-if="dialogVisible"
+            v-show="!loading && formReady && !(connecting && !downloadingRdp && !externalClientLaunch)"
             class="connection-setup-shell relative w-full overflow-hidden"
             :class="
               modernIsland
@@ -351,8 +361,7 @@ onMounted(loadAsset);
                   { 'connection-setup-form--fields': !loading && !launchSuccessVisible && currentAsset }
                 ]"
               >
-                <ConnectFormSkeleton v-if="loading" />
-                <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+                <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                   <section
                     class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
                   >
@@ -411,7 +420,7 @@ onMounted(loadAsset);
                   </section>
                 </div>
 
-                <template v-else-if="currentAsset">
+                <template v-else-if="!loading && currentAsset">
                   <ConnectFormFields
                     v-model:draft="draft"
                     :asset="currentAsset"
@@ -426,6 +435,7 @@ onMounted(loadAsset);
                     :downloading-rdp="downloadingRdp"
                     :header-action-target="headerActionTarget"
                     :disabled="connecting || !draft.protocol"
+                    @ready="formReady = true"
                     @submit="submit()"
                     @download-rdp="submit"
                   />
@@ -476,7 +486,12 @@ onMounted(loadAsset);
         leave-to-class="opacity-0"
       >
         <WorkspaceConnectionProgressOverlay
-          v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
+          v-if="
+            tab.connectionProgress &&
+            shouldShowConnectionProgress(tab, hasScopeGroup(tab.id)) &&
+            !downloadingRdp &&
+            !externalClientLaunch
+          "
           :pane-id="tab.id"
           :stage="tab.connectionProgress"
           :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"

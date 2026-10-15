@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types";
 
-import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 
 const { t } = useI18n();
@@ -23,6 +22,7 @@ const {
 
 const currentAsset = ref<AssetItem | null>(null);
 const loading = ref(false);
+const formReady = ref(false);
 const downloadingRdp = shallowRef(false);
 const headerActionTarget = shallowRef<HTMLElement | null>(null);
 let loadSequence = 0;
@@ -38,6 +38,7 @@ const loadAsset = async () => {
     currentAsset.value = null;
     return;
   }
+  formReady.value = false;
   const sequence = ++loadSequence;
   loading.value = true;
   try {
@@ -105,7 +106,7 @@ watch(
     :dismissible="false"
     :title="modalTitle"
     :ui="{
-      content: 'connection-form-modal w-[calc(100vw-3rem)] max-w-2xl',
+      content: `connection-form-modal w-[calc(100vw-3rem)] max-w-2xl ${loading || !formReady ? 'invisible' : ''}`,
       header: 'min-h-12 p-3 sm:px-4',
       title: 'connection-form-modal-title text-sm leading-5',
       close: 'connection-form-modal-close top-2 end-2 size-7 p-1',
@@ -117,8 +118,7 @@ watch(
       <div ref="headerActionTarget" class="connection-form-modal-action-target" />
     </template>
     <template #body>
-      <ConnectFormSkeleton v-if="loading" />
-      <div v-else-if="currentAsset" class="connection-form-modal-fields">
+      <div v-if="!loading && currentAsset" class="connection-form-modal-fields">
         <ConnectFormFields
           v-model:draft="draft"
           :asset="currentAsset"
@@ -132,6 +132,7 @@ watch(
           :downloading-rdp="downloadingRdp"
           :header-action-target="headerActionTarget"
           asset-type="assets"
+          @ready="formReady = true"
           @submit="confirm"
           @download-rdp="downloadRdp"
         />

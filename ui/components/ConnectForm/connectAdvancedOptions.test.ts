@@ -81,14 +81,17 @@ function mountFields(
   getPreferences: () => Promise<unknown>,
   options: Record<string, unknown> = {},
   local = "auto",
-  license = false
+  license = false,
+  services: Record<string, unknown> = {}
 ) {
   const draft = Vue.ref({ protocol: "rdp", connectMethod: "mstsc", account: "Administrator", connectOptions: options });
+  const onReady = vi.fn();
   const mounted = mountSetup(
     fieldsSource,
     () => ({
       asset: { id: "asset", permedAccounts: [] },
       submitLabel: "Connect",
+      onReady,
       draft: draft.value,
       "onUpdate:draft": (value: typeof draft.value) => {
         draft.value = value;
@@ -99,10 +102,11 @@ function mountFields(
       useConnectMethods: () => ({ getMethodsForProtocol: async () => [{ value: "mstsc", component: "razor" }] }),
       parseLocalApplicationConnectMethod: (value: string) => ({ connectMethod: value }),
       getPublicSettings: async () => ({ XPACK_LICENSE_IS_VALID: license }),
-      getLunaPreferences: getPreferences
+      getLunaPreferences: getPreferences,
+      ...services
     }
   );
-  return { ...mounted, draft };
+  return { ...mounted, draft, onReady };
 }
 
 it.each([
@@ -172,6 +176,48 @@ it.each(["selection", "protocol"])("ignores a late preference response after a %
     await Vue.nextTick();
     await Vue.nextTick();
     expect(draft.value.connectOptions).toEqual(change === "selection" ? { resolution: "auto" } : {});
+  } finally {
+    unmount();
+  }
+});
+
+it("reveals the form once settings and methods are ready, without hiding it again on protocol changes", async () => {
+  const settings = Promise.withResolvers<Record<string, unknown>>();
+  const methods = Promise.withResolvers<Record<string, unknown>[]>();
+  const { onReady, draft, unmount } = mountFields(async () => ({}), {}, "auto", false, {
+    getPublicSettings: () => settings.promise,
+    useConnectMethods: () => ({ getMethodsForProtocol: () => methods.promise })
+  });
+  try {
+    await Vue.nextTick();
+    expect(onReady).not.toHaveBeenCalled();
+    methods.resolve([{ value: "mstsc", component: "razor" }]);
+    await Vue.nextTick();
+    expect(onReady).not.toHaveBeenCalled();
+    settings.resolve({});
+    await vi.waitFor(() => expect(onReady).toHaveBeenCalledOnce());
+    draft.value.protocol = "ssh";
+    await Vue.nextTick();
+    await Vue.nextTick();
+    expect(onReady).toHaveBeenCalledOnce();
+  } finally {
+    unmount();
+  }
+});
+
+it("still reveals the form when optional settings or method requests fail", async () => {
+  const { onReady, unmount } = mountFields(async () => ({}), {}, "auto", false, {
+    getPublicSettings: async () => {
+      throw new Error("Unavailable");
+    },
+    useConnectMethods: () => ({
+      getMethodsForProtocol: async () => {
+        throw new Error("Unavailable");
+      }
+    })
+  });
+  try {
+    await vi.waitFor(() => expect(onReady).toHaveBeenCalledOnce());
   } finally {
     unmount();
   }

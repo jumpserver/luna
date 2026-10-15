@@ -462,6 +462,9 @@ function focus() {
   if (shouldShowView()) void setViewVisible(true);
 }
 
+watch(error, (message) => {
+  if (message && !disposed) emit("fatal", formatMessage(message));
+});
 watch([() => props.active, overlayOpen, error, verificationCollapsed], () => nextTick(syncView));
 watch([() => props.colorScheme, viewCreated], async ([colorScheme, created]) => {
   if (!created) return;

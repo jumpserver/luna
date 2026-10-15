@@ -1,6 +1,7 @@
 import type { AssetItem } from "~/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useWorkspaceTabs } from "./useWorkspaceTabs";
+import { shouldShowConnectionProgress } from "./workspaceConnectionProgress";
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({ loggedIn: false }) }));
 
 vi.mock("~/composables/useRecentConnections", () => ({
@@ -28,6 +29,44 @@ const tabs = useWorkspaceTabs();
 describe("workspace session disconnect status", () => {
   beforeEach(async () => {
     await tabs.closeAllSessions({ force: true });
+  });
+
+  it("lets Web Proxy show its own progress and failures while keeping ACL and pre-launch errors visible", () => {
+    const pane = tabs.openSetupSession(asset);
+    tabs.startSessionConnection(pane.id, { protocol: "http", account: "admin" });
+    tabs.setSessionConnectMethod(pane.id, "web_proxy_native");
+    expect(shouldShowConnectionProgress(pane)).toBe(false);
+    expect(shouldShowConnectionProgress(pane, true)).toBe(true);
+
+    pane.connectionFailure = "Creating connection token failed";
+    expect(shouldShowConnectionProgress(pane)).toBe(true);
+    pane.payload = {
+      connectMethod: { value: "web_proxy_native" },
+      webProxy: {
+        assetId: asset.id,
+        title: "Website",
+        targetUrl: "https://asset.test/",
+        proxyUrl: "http://proxy.test:5001",
+        successSelector: "",
+        interactiveSelector: "",
+        safeMode: false,
+        allowedUrls: []
+      }
+    };
+    tabs.markSessionDisconnected(pane.id, "ERR_TUNNEL_CONNECTION_FAILED");
+    expect(shouldShowConnectionProgress(pane)).toBe(false);
+    expect(pane.connectionFailure).toBe("ERR_TUNNEL_CONNECTION_FAILED");
+    expect(shouldShowConnectionProgress(pane, true)).toBe(true);
+  });
+
+  it("uses the selected Web Proxy draft before method resolution and preserves other connector overlays", () => {
+    const pane = tabs.openSetupSession(asset);
+    tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
+    expect(shouldShowConnectionProgress(pane)).toBe(true);
+    pane.setupDraft = { connectMethod: "web_proxy_native" } as NonNullable<typeof pane.setupDraft>;
+    expect(shouldShowConnectionProgress(pane)).toBe(false);
+    pane.connectionProgress = undefined;
+    expect(shouldShowConnectionProgress(pane, true)).toBe(false);
   });
 
   it("clears connected status so duration stops after the socket closes", () => {
