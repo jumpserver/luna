@@ -32,7 +32,13 @@ export class ApiRequestError extends Error {
     contentType = ""
   ) {
     if (typeof data === "string") data = compactApiErrorBody(data, contentType);
-    super(typeof data === "string" ? data : data?.detail || data?.code || `HTTP ${status}`);
+    const fieldError =
+      data && typeof data === "object"
+        ? Object.values(data)
+            .flat()
+            .find((value) => typeof value === "string" && value.trim())
+        : "";
+    super(typeof data === "string" ? data : data?.detail || data?.code || fieldError || `HTTP ${status}`);
     this.data = data;
     this.name = "ApiRequestError";
   }
