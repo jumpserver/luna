@@ -7,41 +7,23 @@ const COMPATIBILITY_PATH = "/api/v1/settings/client/compatibility/";
 
 function parseVersion(value: unknown) {
   if (typeof value !== "string" || value.length > 256) return null;
-  // JumpServer's terminal -lts suffix labels the stable release channel.
-  // Other suffixes retain their SemVer prerelease meaning (including rc1/beta8).
-  const normalized = value
-    .trim()
-    .replace(/^v/, "")
-    .replace(/^(\d+\.\d+\.\d+)-lts(?=\+|$)/, "$1");
+  const normalized = value.trim().replace(/^v/, "");
   const match = normalized.match(
     /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/
   );
   if (!match) return null;
   const prerelease = match[4]?.split(".") || [];
   if (prerelease.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith("0"))) return null;
-  return { release: match.slice(1, 4).map(BigInt), prerelease };
+  return { release: match.slice(1, 4).map(BigInt) };
 }
 
+// Compatibility depends only on X.Y.Z, regardless of prerelease or build suffixes.
 export function compareVersions(left: unknown, right: unknown): number | null {
   const a = parseVersion(left);
   const b = parseVersion(right);
   if (!a || !b) return null;
   for (let i = 0; i < 3; i += 1) {
     if (a.release[i] !== b.release[i]) return a.release[i] > b.release[i] ? 1 : -1;
-  }
-  if (!a.prerelease.length || !b.prerelease.length) {
-    return Number(!a.prerelease.length) - Number(!b.prerelease.length);
-  }
-  for (let i = 0; i < Math.max(a.prerelease.length, b.prerelease.length); i += 1) {
-    const x = a.prerelease[i];
-    const y = b.prerelease[i];
-    if (x === y) continue;
-    if (x === undefined || y === undefined) return x === undefined ? -1 : 1;
-    const xNumeric = /^\d+$/.test(x);
-    const yNumeric = /^\d+$/.test(y);
-    if (xNumeric && yNumeric) return BigInt(x) > BigInt(y) ? 1 : -1;
-    if (xNumeric !== yNumeric) return xNumeric ? -1 : 1;
-    return x > y ? 1 : -1;
   }
   return 0;
 }
@@ -133,9 +115,8 @@ export async function checkSiteCompatibility(
     result.coreVersion = data.core_version;
     result.minClientVersion = data.min_client_version;
     if (compareVersions(clientVersion, data.min_client_version)! < 0) result.failures.push("client-too-old");
-    // Core uses the base release; dev skips this minimum check. Retain the full version above.
-    if (coreVersion && compareVersions(coreVersion.release.join("."), MIN_CORE_VERSION)! < 0)
-      result.failures.push("core-too-old");
+    // dev Core skips its minimum check. Retain the full version above for display.
+    if (coreVersion && compareVersions(data.core_version, MIN_CORE_VERSION)! < 0) result.failures.push("core-too-old");
     return { ...result, status: result.failures.length ? "incompatible" : "compatible" };
   } catch {
     return { ...result, reason: "invalid-response" };
