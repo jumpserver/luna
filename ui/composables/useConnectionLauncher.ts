@@ -37,6 +37,13 @@ export function useConnectionLauncher() {
         settled = true;
         resolve(result);
       };
+      const fail = (error: unknown) => {
+        if (settled) return;
+        const { t } = useI18n();
+        const { addErrorToast } = useErrorToast();
+        addErrorToast({ title: t("ConnectError.ConnectFailed"), error });
+        finish(false);
+      };
 
       void confirmConnection(asset, {
         ...info,
@@ -61,8 +68,8 @@ export function useConnectionLauncher() {
           }
           finish(true);
         },
-        onSessionError: () => finish(false)
-      }).catch(() => finish(false));
+        onSessionError: fail
+      }).catch(fail);
     });
 
   const configure = (asset: AssetItem, options: ConnectionLaunchOptions = {}) =>
