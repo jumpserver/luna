@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "開始核驗"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "按兩下複製",
     "TokenCommand": "連線命令（使用 Token）",
     "DirectCommand": "連線命令（透過資產 ID 直連）",
     "TokenPasswordHelp": "密碼為上方表格中的 Token 密碼。",

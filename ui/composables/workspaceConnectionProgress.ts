@@ -22,6 +22,7 @@ export function shouldShowConnectionProgress(
 ) {
   if (!session.connectionProgress) return false;
   const method = session.payload?.connectMethod?.value || session.setupDraft?.connectMethod || session.connectMethod;
+  if (method?.endsWith("_guide")) return hasAcl || Boolean(session.connectionFailure);
   if (method !== WEB_PROXY_NATIVE_VALUE) return true;
   // Web Proxy owns its progress and errors once its surface is available.
   return hasAcl || Boolean(session.connectionFailure && !session.payload?.webProxy);
@@ -93,8 +94,8 @@ export function createWorkspaceConnectionProgress(host: {
   };
 
   const hideProgressAfterGuide = (found: ProgressMatch) => {
-    connectionProgressGoal.set(found.pane.id, "hide");
-    pumpConnectionProgress(found.pane, found.tab, found.paneIndex);
+    clearConnectionProgress(found.pane);
+    if (found.paneIndex === 0) host.syncTabFromPrimaryPane(found.tab);
   };
 
   const markSessionConnecting = (paneId: string) => {

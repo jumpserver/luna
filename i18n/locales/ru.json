@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "Начать проверку"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "Дважды щёлкните, чтобы скопировать",
     "TokenCommand": "Команда подключения (токен)",
     "DirectCommand": "Команда подключения (напрямую по ID актива)",
     "TokenPasswordHelp": "Используйте пароль токена из таблицы выше.",

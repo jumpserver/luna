@@ -166,7 +166,32 @@ describe("workspace session disconnect status", () => {
     }
   });
 
-  it("finishes the connection progress after a guide payload is ready", () => {
+  it.each([
+    ["ssh", "ssh_guide"],
+    ["mysql", "db_guide"],
+    ["vnc", "vnc_guide"]
+  ])("skips the loading overlay for %s guides while preserving ACL and errors", (protocol, connectMethod) => {
+    const pane = tabs.openSetupSession(asset);
+    tabs.startSessionConnection(pane.id, { protocol, account: "root" });
+    pane.setupDraft = { connectMethod } as NonNullable<typeof pane.setupDraft>;
+    expect(shouldShowConnectionProgress(pane)).toBe(false);
+    expect(shouldShowConnectionProgress(pane, true)).toBe(true);
+
+    pane.connectionFailure = "Token creation failed";
+    expect(shouldShowConnectionProgress(pane)).toBe(true);
+    pane.connectionFailure = undefined;
+
+    pane.setupDraft = undefined;
+    tabs.setSessionConnectMethod(pane.id, connectMethod);
+    expect(shouldShowConnectionProgress(pane)).toBe(false);
+    pane.payload = { connectMethod: { value: connectMethod } };
+    for (const stage of ["token", "session", "connected"] as const) {
+      pane.connectionProgress = stage;
+      expect(shouldShowConnectionProgress(pane)).toBe(false);
+    }
+  });
+
+  it("clears guide progress and pending timers immediately when its payload is ready", () => {
     vi.useFakeTimers();
     try {
       const pane = tabs.openSetupSession(asset);
@@ -175,9 +200,10 @@ describe("workspace session disconnect status", () => {
       tabs.markSessionTokenCreated(match);
       tabs.updateSessionPayload(match, { id: "token", connectMethod: { value: "ssh_guide" } });
 
-      vi.advanceTimersByTime(1000);
-      expect(pane.connectionProgress).toBe("connected");
-      vi.advanceTimersByTime(1000);
+      expect(pane.connectionProgress).toBeUndefined();
+      expect(tabs.tabs.value[0]?.connectionProgress).toBeUndefined();
+      expect(shouldShowConnectionProgress(pane)).toBe(false);
+      vi.advanceTimersByTime(2000);
       expect(pane.connectionProgress).toBeUndefined();
     } finally {
       vi.useRealTimers();

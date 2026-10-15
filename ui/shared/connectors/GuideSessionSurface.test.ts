@@ -14,7 +14,10 @@ const { outputText } = ts.transpileModule(script.content, {
   compilerOptions: { module: ts.ModuleKind.CommonJS }
 });
 const unmounts: Array<() => void> = [];
-afterEach(() => unmounts.splice(0).forEach((unmount) => unmount()));
+afterEach(() => {
+  unmounts.splice(0).forEach((unmount) => unmount());
+  vi.useRealTimers();
+});
 
 function mountGuide(
   options: {
@@ -59,6 +62,7 @@ function mountGuide(
     ref: Vue.ref,
     watch: Vue.watch,
     onMounted: Vue.onMounted,
+    onBeforeUnmount: Vue.onBeforeUnmount,
     useI18n: () => ({ t: (key: string) => key }),
     useToast: () => ({ add: toast }),
     getSmartEndpoint: async () => ({ host: "gateway.example.com", magnus_port: 5525 })
@@ -73,7 +77,8 @@ function mountGuide(
     database: Ref<string>;
     rows: Ref<Array<{ name: string; value: unknown }>>;
     commands: Ref<Array<{ value: string }>>;
-    copy: (value: unknown) => Promise<void>;
+    copiedKey: Ref<string>;
+    copy: (value: unknown, key: string) => Promise<void>;
   };
   const setup = component.setup;
   component.setup = (props: unknown, context: unknown) => {
@@ -109,12 +114,54 @@ it("loads MongoDB's default database from asset details for display, copy and mo
   expect(state.database.value).toBe("app");
   const databaseRow = state.rows.value.find((row) => row.name === "database");
   expect(databaseRow?.value).toBe("app");
-  await state.copy(databaseRow?.value);
+  await state.copy(databaseRow?.value, "row:database");
   expect(writeText).toHaveBeenCalledExactlyOnceWith("app");
   expect(state.commands.value.map((command) => command.value)).toEqual([
     'mongosh "mongodb://token-id:secret@gateway.example.com:5525/app?authSource=admin&loadBalanced=true&retryWrites=false"'
   ]);
   expect(token.asset).toEqual({ id: "asset-id", name: "MongoDB" });
+});
+
+it("shows copied feedback on the current item, resets on repeat copies and never toasts", async () => {
+  const { state, writeText, toast } = mountGuide();
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  vi.useFakeTimers();
+
+  await state.copy("gateway.example.com", "row:host");
+  expect(writeText).toHaveBeenLastCalledWith("gateway.example.com");
+  expect(state.copiedKey.value).toBe("row:host");
+  vi.advanceTimersByTime(1500);
+  await state.copy("gateway.example.com", "row:host");
+  vi.advanceTimersByTime(1500);
+  expect(state.copiedKey.value).toBe("row:host");
+
+  await state.copy("mysql -h gateway.example.com", "command:0");
+  expect(state.copiedKey.value).toBe("command:0");
+  vi.advanceTimersByTime(1999);
+  expect(state.copiedKey.value).toBe("command:0");
+  vi.advanceTimersByTime(1);
+  expect(state.copiedKey.value).toBe("");
+  expect(toast).not.toHaveBeenCalled();
+});
+
+it("does not show copied feedback if the clipboard write fails", async () => {
+  const { state, writeText, toast } = mountGuide();
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  writeText.mockRejectedValueOnce(new Error("Clipboard unavailable"));
+
+  await expect(state.copy("secret", "row:password")).rejects.toThrow("Clipboard unavailable");
+  expect(state.copiedKey.value).toBe("");
+  expect(toast).not.toHaveBeenCalled();
+});
+
+it("cleans up the copied feedback timer when the guide closes", async () => {
+  const { state } = mountGuide();
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  vi.useFakeTimers();
+  await state.copy("value", "row:host");
+  expect(vi.getTimerCount()).toBe(1);
+  unmounts.pop()!();
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 it.each(["mysql", "mariadb", "postgresql", "sqlserver", "redis"])(

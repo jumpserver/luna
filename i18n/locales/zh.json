@@ -1207,6 +1207,7 @@
     "StartFaceVerify": "开始核验"
   },
   "ConnectionGuide": {
+    "DoubleClickToCopy": "双击复制",
     "TokenCommand": "连接命令（使用 Token）",
     "DirectCommand": "连接命令（通过资产 ID 直连）",
     "TokenPasswordHelp": "密码为上方表格中的 Token 密码。",

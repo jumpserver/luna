@@ -190,6 +190,36 @@ describe("opening assets in local applications", () => {
     expect(mocks.errorToast).not.toHaveBeenCalled();
   });
 
+  it.each(
+    [false, true].flatMap((desktop) =>
+      [
+        ["ssh", "ssh_guide", "koko"],
+        ["mysql", "db_guide", "magnus"],
+        ["vnc", "vnc_guide", "nec"]
+      ].map(([protocol, value, component]) => ({ desktop, protocol: protocol!, value: value!, component }))
+    )
+  )("opens $value in the workspace without launching a client (desktop=$desktop)", async (input) => {
+    vi.stubGlobal("isDesktopRuntime", () => input.desktop);
+    vi.stubGlobal("isElectronRuntime", () => input.desktop);
+    const guide = { ...method, value: input.value, component: input.component };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ [input.protocol]: [guide] }),
+      getMethodsForProtocol: async () => [guide]
+    }));
+
+    const { ready, failed } = await connect(input.value, input.protocol);
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(ready.mock.calls[0]?.[0].connectMethod.value).toBe(input.value);
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: input.protocol, connect_method: input.value }),
+      expect.anything()
+    );
+    expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+    expect(mocks.invoke).not.toHaveBeenCalledWith("pull_up", expect.anything());
+    expect(mocks.assign).not.toHaveBeenCalled();
+  });
+
   it("saves K8s manual credentials as tokens", async () => {
     vi.stubGlobal("useConnectMethods", () => ({
       fetchConnectMethods: async () => ({ k8s: [method] }),
