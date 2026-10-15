@@ -63,13 +63,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="isDesktopRuntime() && accounts.length" class="max-h-64 space-y-0.5 overflow-y-auto">
+  <div
+    v-if="isDesktopRuntime() && accounts.length"
+    class="min-h-0 max-h-64 space-y-0.5 overflow-y-auto overscroll-contain"
+  >
     <div v-for="[accountId, account] in accounts" :key="accountId" class="flex items-center gap-0.5">
       <UButton
         color="neutral"
         variant="ghost"
         size="sm"
-        class="min-w-0 flex-1 justify-start text-left"
+        class="min-w-0 flex-1 justify-start py-1 text-left"
         :title="account.site"
         :aria-current="accountId === selectedId ? 'true' : undefined"
         :loading="switchingAccountId === accountId"
@@ -79,17 +82,15 @@ onMounted(async () => {
         <UIcon name="i-lucide-globe" class="size-4 shrink-0 text-muted" />
         <span class="min-w-0 flex-1">
           <span class="block truncate">{{ account.siteName || account.site }}</span>
-          <span class="block truncate text-xs font-normal text-muted">{{ account.name || account.site }}</span>
-          <span class="block text-xs font-normal" :class="account.sessionExpired ? 'text-warning' : 'text-muted'">
-            {{
-              t(
-                account.sessionExpired
-                  ? "Login.SessionExpired"
-                  : accountId === currentAccountId && !loggedIn
-                    ? "Common.LoginFirst"
-                    : "Login.SignedIn"
-              )
-            }}
+          <span class="flex min-w-0 items-center gap-1.5 text-xs font-normal text-muted">
+            <span
+              v-if="account.sessionExpired || (accountId === currentAccountId && !loggedIn)"
+              class="shrink-0"
+              :class="{ 'text-warning': account.sessionExpired }"
+            >
+              {{ t(account.sessionExpired ? "Login.SessionExpired" : "Common.LoginFirst") }}
+            </span>
+            <span class="truncate">{{ account.name || account.site }}</span>
           </span>
         </span>
         <UBadge v-if="accountId === selectedId" color="neutral" variant="soft" size="sm">
@@ -97,7 +98,7 @@ onMounted(async () => {
         </UBadge>
       </UButton>
       <UButton
-        icon="i-lucide-trash-2"
+        icon="i-lucide-x"
         color="neutral"
         variant="ghost"
         size="xs"

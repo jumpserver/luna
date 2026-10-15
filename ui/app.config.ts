@@ -34,13 +34,14 @@ export default defineAppConfig({
       slots: {
         base: "cursor-pointer rounded-[length:var(--app-radius)]"
       },
-      variants: {
-        ghost: {
-          neutral: {
-            base: "bg-transparent text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
-          }
+      compoundVariants: [
+        {
+          color: "neutral",
+          variant: "ghost",
+          class:
+            "bg-transparent text-(--app-fg) hover:bg-(--app-surface-canvas) active:bg-(--app-surface-canvas) focus-visible:bg-(--app-surface-canvas)"
         }
-      }
+      ]
     },
     badge: {
       slots: {
