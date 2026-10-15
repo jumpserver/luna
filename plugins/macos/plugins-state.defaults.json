@@ -8,6 +8,7 @@
     "filetransfer:sftp": "macos.iterm-sftp",
     "databases:oracle": "macos.dbx",
     "databases:mysql": "macos.dbx",
+    "databases:oceanbase": "macos.terminal-db",
     "databases:postgresql": "macos.dbx",
     "databases:mariadb": "macos.dbx",
     "databases:redis": "macos.dbx",

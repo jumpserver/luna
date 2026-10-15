@@ -21,6 +21,7 @@ describe("asset icon URLs", () => {
     ["MongoDB", "mongodb.svg"],
     ["ClickHouse", "clickhouse.svg"],
     ["Dameng", "dameng.png"],
+    ["OceanBase", "oceanbase.svg"],
     ["DB2", "db2.png"],
     ["IBM DB2", "db2.png"],
     ["Linux", "linux.svg"],
@@ -51,5 +52,18 @@ describe("asset icon URLs", () => {
       fallback: "i-tabler-database-filled"
     });
     expect(resolveAssetIconSrc("database")).toBe("");
+  });
+
+  it("uses OceanBase icons for both tenant modes before MySQL or Oracle hints", () => {
+    expect(resolveAssetIconFromCandidates(["OceanBase-Oracle", "mysql", "database"])).toEqual({
+      src: "/icons/oceanbase.svg",
+      fallback: "i-tabler-database-filled"
+    });
+    expect(resolveAssetIconFromCandidates(["OceanBase-MySQL", "oracle", "database"], "/luna/").src).toBe(
+      "/luna/icons/oceanbase.svg"
+    );
+    expect(resolveAssetIconSrc("oceanbase", "/luna/")).toBe("/luna/icons/oceanbase.svg");
+    expect(resolveAssetIconSrc("OceanBase-Oracle", "/luna/")).toBe("/luna/icons/oceanbase.svg");
+    expect(resolveAssetIconSrc("OceanBase-MySQL", "/luna/")).toBe("/luna/icons/oceanbase.svg");
   });
 });

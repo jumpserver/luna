@@ -12,6 +12,7 @@
     "mariadb",
     "mongodb",
     "mysql",
+    "oceanbase",
     "oracle",
     "dameng",
     "postgresql",

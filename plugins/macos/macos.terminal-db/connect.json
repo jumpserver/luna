@@ -19,6 +19,7 @@
       "dameng": "disql {dameng_disql}",
       "postgresql": "psql 'user={username} password={value} host={host} dbname={dbname} port={port}'",
       "mysql": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",
+      "oceanbase": "obclient -u {obclient_user} -p{obclient_password} -h {host} -P {port} {obclient_database}",
       "mariadb": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",
       "sqlserver": "sqlcmd -S {host},{port} -U {username} -P {value} -d {dbname}",
       "mongodb": "mongosh {mongodb_shell_uri}"

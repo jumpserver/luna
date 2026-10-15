@@ -37,6 +37,11 @@
       "category": "databases"
     },
     {
+      "id": "windows.obclient",
+      "name": "obclient",
+      "category": "databases"
+    },
+    {
       "id": "windows.plsql",
       "name": "plsql",
       "category": "databases"

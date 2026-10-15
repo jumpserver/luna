@@ -1,0 +1,17 @@
+{
+  "id": "windows.obclient",
+  "name": "obclient",
+  "display_name": "OceanBase Client",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://www.oceanbase.com/",
+  "download_url": "",
+  "category": "databases",
+  "protocols": ["oceanbase"],
+  "builtin": true,
+  "comment": {
+    "zh": "通过 Windows Terminal 启动 obclient。请先安装 obclient 并加入 PATH。",
+    "en": "Launch obclient through Windows Terminal. Install obclient and add it to PATH first."
+  }
+}

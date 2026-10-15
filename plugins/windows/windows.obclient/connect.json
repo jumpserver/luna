@@ -1,0 +1,17 @@
+{
+  "platform": "windows",
+  "match_first": [],
+  "is_default": false,
+  "is_set": true,
+  "is_internal": false,
+  "executable": {
+    "type": "system",
+    "default": "wt.exe"
+  },
+  "launch": {
+    "type": "args",
+    "driver": "windows-terminal",
+    "template": "obclient -u {obclient_user} -p{obclient_password} -h {host} -P {port} {obclient_database}"
+  },
+  "display_name": "OceanBase Client"
+}

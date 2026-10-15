@@ -13,7 +13,7 @@ const localePath = useLocalePath();
 const { activeApplicationProtocol } = useSettingsWindow();
 const { pluginList, installPlugin, uninstallPlugin } = useApplicationConfig();
 const { language } = useSettingManager();
-const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng"]);
+const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng", "oceanbase"]);
 const appName = getConfiguredAppName();
 const pluginModalOpen = ref(false);
 const installingPlugin = ref(false);
@@ -33,6 +33,7 @@ const protocolComponents = {
   pg: defineAsyncComponent(() => import("~/pages/setting/application/pg.vue")),
   oracle: defineAsyncComponent(() => import("~/pages/setting/application/oracle.vue")),
   dameng: defineAsyncComponent(() => import("~/pages/setting/application/dameng.vue")),
+  oceanbase: defineAsyncComponent(() => import("~/pages/setting/application/oceanbase.vue")),
   sqlserver: defineAsyncComponent(() => import("~/pages/setting/application/sqlserver.vue"))
 } as const;
 
@@ -64,6 +65,7 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
     { label: "PostgreSQL", protocol: "pg" as const, routeName: "setting-application-pg" },
     { label: "Oracle", protocol: "oracle" as const, routeName: "setting-application-oracle" },
     { label: "Dameng", protocol: "dameng" as const, routeName: "setting-application-dameng" },
+    { label: "OceanBase", protocol: "oceanbase" as const, routeName: "setting-application-oceanbase" },
     { label: "SQL Server", protocol: "sqlserver" as const, routeName: "setting-application-sqlserver" }
   ]
     .filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol))

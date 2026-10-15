@@ -57,6 +57,7 @@ function mongodbUri(payload) {
 
 function valuesFor(payload): Record<string, string> {
   const dmConnection = `${username(payload)}/${String(payload.token?.value || "")}@${String(payload.endpoint?.host || "")}:${String(payload.endpoint?.port || "")}`;
+  const obDatabase = String(payload.asset?.info?.db_name || "");
   return {
     name: sanitizedName(payload.name),
     protocol: payload.protocol,
@@ -66,6 +67,9 @@ function valuesFor(payload): Record<string, string> {
     port: String(payload.endpoint?.port || ""),
     dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
     dameng_disql: shellQuote(dmConnection),
+    obclient_user: shellQuote(username(payload)),
+    obclient_password: shellQuote(String(payload.token?.value || "")),
+    obclient_database: obDatabase ? shellQuote(obDatabase) : "",
     mongodb_shell_uri: payload.protocol === "mongodb" ? shellQuote(mongodbUri(payload)) : "",
     dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
     dbx_url: dbxUrl(payload),
@@ -291,10 +295,15 @@ export class LocalApplicationLauncher {
       throw new Error("local client payload is missing required connection fields");
     }
     const selectionProtocol =
-      payload.protocol === "mysql" && payload.token?.protocol === "mariadb" ? "mariadb" : payload.protocol;
+      payload.protocol === "mysql" && payload.asset?.type === "oceanbase"
+        ? "oceanbase"
+        : payload.protocol === "mysql" && payload.token?.protocol === "mariadb"
+          ? "mariadb"
+          : payload.protocol;
     const application = await this.resolveApplication({ ...payload, protocol: selectionProtocol });
-    // Preserve MariaDB application preferences, but use the MySQL driver on Magnus's shared port.
+    // Native client selection is asset-specific; Core/Magnus still route on the MySQL wire protocol.
     if (selectionProtocol === "mariadb") payload.protocol = "mysql";
+    if (selectionProtocol === "oceanbase") payload.protocol = "oceanbase";
     if (application.launch_type === "file") {
       if (!payload.file?.content) throw new Error("local client payload is missing connection file content");
       electronLog.info(`launch ${payload.protocol} connection file via ${application.display_name || "file handler"}`);

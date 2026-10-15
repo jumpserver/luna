@@ -51,6 +51,34 @@ test(
 );
 
 for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} selects the OceanBase client from an asset on the shared MySQL port`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-oceanbase-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    const payload = {
+      protocol: "mysql",
+      name: "OceanBase-Oracle",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "secret" },
+      asset: { type: "oceanbase", info: { db_name: "app" } }
+    };
+    let launched = false;
+    launcher.launchTerminal = async (selected, command) => {
+      assert.equal(selected.name, platform === "windows" ? "obclient" : "terminal");
+      assert.equal(command, "obclient -u 'token-id' -p'secret' -h gateway.example.com -P 5525 'app'");
+      launched = true;
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+    assert.equal(payload.protocol, "mysql");
+  });
+}
+
+for (const platform of ["macos", "linux", "windows"]) {
   test(`${platform} defaults to DBX and launches encoded, one-time database connections`, async (context) => {
     const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbx-"));
     context.after(() => rm(appData, { recursive: true, force: true }));

@@ -5,6 +5,7 @@ export interface ChenAuthResponse {
 
 export interface ChenProfile {
   dbType: string;
+  databaseProduct?: string;
   canCopy: boolean;
   canPaste: boolean;
 }

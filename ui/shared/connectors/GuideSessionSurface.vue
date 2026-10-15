@@ -48,7 +48,11 @@ const reusable = ref(false);
 const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
-const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
+const assetType = computed(() => {
+  const type = assetDetail.value?.type || (token.value?.asset as any)?.type;
+  return String(typeof type === "object" ? type?.value || type?.name || "" : type || "");
+});
+const clientProtocol = computed(() => getGuideClientProtocol(protocol.value, assetType.value));
 const showDirectCommand = computed(() => {
   const method = props.tab.payload?.connectMethod;
   return (
@@ -116,6 +120,7 @@ const commands = computed(() => {
     host: host.value,
     port: port.value,
     database: database.value,
+    assetType: assetType.value,
     redisAuth: password.value
   });
   const tokenPassword = protocol.value === "ssh" || protocol.value === "vnc";
@@ -194,8 +199,11 @@ onMounted(async () => {
       }).then((value) => {
         endpoint.value = value;
       }),
-      // Connection tokens normally include only asset id/name, not the default database.
-      showDatabaseHelp.value && protocol.value !== "oracle" && !database.value && assetId
+      // Fetch MySQL-family asset type even when the default database is in the token.
+      showDatabaseHelp.value &&
+      protocol.value !== "oracle" &&
+      (protocol.value === "mysql" || !database.value) &&
+      assetId
         ? getAssetDetailRequest(assetId, token.value.org_id || props.tab.orgId)
             .then((value) => {
               assetDetail.value = value;

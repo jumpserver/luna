@@ -153,6 +153,18 @@ it("reports failed asset loading and still finishes loading the guide", async ()
   expect(state.database.value).toBe("");
 });
 
+it("shows obclient for OceanBase assets sharing the MySQL proxy port", async () => {
+  const { state, getAssetDetailRequest } = mountGuide({
+    protocol: "mysql",
+    asset: { spec_info: { db_name: "app" } },
+    detail: { type: { value: "oceanbase", name: "OceanBase" }, spec_info: { db_name: "app" } }
+  });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(getAssetDetailRequest).toHaveBeenCalledOnce();
+  expect(state.rows.value.find((row) => row.name === "protocol")?.value).toBe("oceanbase");
+  expect(state.commands.value[0]?.value).toBe("obclient -u token-id -psecret -h gateway.example.com -P 5525 app");
+});
+
 it.each(["oracle", "ssh", "vnc"])("does not fetch database details for %s", async (protocol) => {
   const { state, getAssetDetailRequest } = mountGuide({ protocol });
   await vi.waitFor(() => expect(state.loading.value).toBe(false));

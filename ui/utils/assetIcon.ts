@@ -13,6 +13,7 @@ const iconMap: Record<string, string> = {
   redis: "/icons/redis.svg",
   mongodb: "/icons/mongodb.svg",
   dameng: "/icons/dameng.png",
+  oceanbase: "/icons/oceanbase.svg",
   db2: "/icons/db2.png",
   clickhouse: "/icons/clickhouse.svg",
   windows_ad: "/icons/windows.svg",
@@ -33,6 +34,7 @@ function resolveAssetIconPath(type?: string) {
   if (key.includes("linux") || key.includes("unix")) return iconMap.linux!;
   if (key.includes("windows")) return iconMap.windows!;
   if (key.includes("web")) return iconMap.website!;
+  if (key.includes("oceanbase")) return iconMap.oceanbase!;
   if (key.includes("mysql")) return iconMap.mysql!;
   if (key.includes("mariadb")) return iconMap.mariadb!;
   if (key.includes("oracle")) return iconMap.oracle!;
@@ -53,6 +55,7 @@ export function resolveAssetIconSrc(type?: string, baseURL = "/") {
 
 export function resolveAssetIconFallback(type?: string) {
   const key = String(type || "").toLowerCase();
+  if (key.includes("oceanbase")) return "i-tabler-database-filled";
   if (key.includes("database")) return "i-tabler-database-filled";
   if (key.includes("device")) return "i-lucide-router";
   return "i-lucide-terminal";
@@ -74,6 +77,7 @@ export function resolveAssetIconFromCandidates(values: (string | undefined)[], b
   if (has("k8s") || has("kubernetes")) return resolve(iconMap.kubernetes!, "i-lucide-container");
   if (has("linux") || has("unix")) return resolve(iconMap.linux!, "i-lucide-terminal");
   if (has("windows")) return resolve(iconMap.windows!, "i-lucide-terminal");
+  if (has("oceanbase")) return resolve(iconMap.oceanbase!, "i-tabler-database-filled");
   if (has("mysql")) return resolve(iconMap.mysql!, "i-lucide-database");
   if (has("mariadb")) return resolve(iconMap.mariadb!, "i-lucide-database");
   if (has("oracle")) return resolve(iconMap.oracle!, "i-lucide-database");
