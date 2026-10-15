@@ -34,14 +34,19 @@ import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
 import { readableToWebBody } from "../shared/bytes";
-import { findClientProtocolUrl, normalizeClientProtocolUrl } from "../shared/client-protocol";
+import {
+  decodeClientProtocolPayload,
+  findClientProtocolUrl,
+  isWebAssetClientProtocolPayload,
+  normalizeClientProtocolUrl
+} from "../shared/client-protocol";
 import {
   activateDebugLogService,
   DebugLogService,
   electronLog,
   parsePersistedDebugLogEnabled
 } from "../shared/debug-log";
-import { menuCommandTargetLabel } from "../shared/menu-command";
+import { editCopyAccelerator, menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
@@ -652,6 +657,7 @@ function menuLabels() {
       statusBar: "底部状态栏",
       batchCommand: "批量命令",
       close: "关闭窗口",
+      closeTab: "关闭当前标签页",
       minimize: "最小化窗口",
       zoom: "缩放",
       fullscreen: "进入全屏幕",
@@ -688,6 +694,7 @@ function menuLabels() {
     statusBar: "Bottom Status Bar",
     batchCommand: "Batch Command",
     close: "Close Window",
+    closeTab: "Close Current Tab",
     minimize: "Minimize Window",
     zoom: "Zoom",
     fullscreen: "Enter Full Screen",
@@ -765,7 +772,7 @@ function openAboutWindow() {
 }
 
 function sendMenuCommand(command) {
-  if (command !== "toggle-fullscreen-mode") {
+  if (command !== "toggle-fullscreen-mode" && command !== "close-current-tab") {
     sendMainWindowEvent("desktop-menu-command", command);
     return;
   }
@@ -791,7 +798,7 @@ function buildMenu() {
     { type: "separator" },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
-    { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" },
+    { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" },
     { label: labels.minimize, accelerator: "CmdOrCtrl+M", role: "minimize" }
   ];
   if (process.platform === "darwin") {
@@ -815,7 +822,11 @@ function buildMenu() {
           click: () => sendMenuCommand("open-local-shell")
         },
         { type: "separator" },
-        { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }
+        {
+          label: labels.closeTab,
+          accelerator: "CmdOrCtrl+W",
+          click: () => sendMenuCommand("close-current-tab")
+        }
       ]
     },
     {
@@ -825,7 +836,7 @@ function buildMenu() {
         { label: labels.redo, role: "redo" },
         { type: "separator" },
         { label: labels.cut, role: "cut" },
-        { label: labels.copy, role: "copy" },
+        { label: labels.copy, role: "copy", accelerator: editCopyAccelerator() },
         { label: labels.paste, role: "paste" },
         { label: labels.selectAll, role: "selectAll" }
       ]
@@ -856,7 +867,7 @@ function buildMenu() {
         { label: labels.minimize, role: "minimize" },
         { label: labels.zoom, role: "zoom" },
         { type: "separator" },
-        { label: labels.close, role: "close" }
+        { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" }
       ]
     },
     { label: labels.help, submenu: [] }
@@ -1192,11 +1203,11 @@ async function handleInvoke(event, request) {
 
   if (command === "set_api_session") return authService.setSession(args);
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "get_version_message") return authService.getVersionMessage();
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
+  if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   if (command === "api_request") return authService.apiRequest(args.request);
@@ -1291,6 +1302,7 @@ async function handleInvoke(event, request) {
     return applicationConfig.updateCustomTerminal({ ...args, path: resolveExecutablePath(args.path) });
   }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
+  if (command === "take_web_protocol_payloads") return takePendingWebProtocolPayloads();
   if (command === "list_system_fonts") return listSystemFonts();
   if (command === "cancel_transcode") return replayTranscoder.cancelCurrent(labelForWindow(win));
   if (command === "transcode_replays") {
@@ -1409,7 +1421,20 @@ interface PendingProtocolUrl {
 }
 
 const pendingProtocolUrls: PendingProtocolUrl[] = [];
+const pendingWebProtocolPayloads: Array<{
+  url: string;
+  payload: ReturnType<typeof decodeClientProtocolPayload>;
+}> = [];
 let startupFinished = false;
+
+function queueWebProtocolPayload(url: string, payload: ReturnType<typeof decodeClientProtocolPayload>) {
+  if (pendingWebProtocolPayloads.some((pending) => pending.url === url)) return;
+  pendingWebProtocolPayloads.push({ url, payload });
+}
+
+function takePendingWebProtocolPayloads() {
+  return pendingWebProtocolPayloads.splice(0).map((pending) => pending.payload);
+}
 
 function describeProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
@@ -1420,6 +1445,12 @@ function describeProtocolUrl(rawUrl) {
 
 async function processIncomingProtocolUrl(value: string) {
   if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return false;
+  const payload = decodeClientProtocolPayload(value);
+  if (isWebAssetClientProtocolPayload(payload)) {
+    queueWebProtocolPayload(value, payload);
+    if (startupFinished) sendMainWindowEvent("web-protocol-url", null);
+    return false;
+  }
   await localApplicationLauncher.launch(value);
   return true;
 }

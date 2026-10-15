@@ -1,6 +1,48 @@
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 
+export type SftpFileSortColumn = "name" | "mod_time" | "size" | "type";
+
 const sizeUnits = ["B", "KB", "MB", "GB", "TB"];
+const entryNameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+
+function fileModifiedTimestamp(value: string): number {
+  if (!value.trim()) return NaN;
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp)
+    ? timestamp < 1_000_000_000_000
+      ? timestamp * 1000
+      : timestamp
+    : Date.parse(value);
+}
+
+export function sortFileEntries(
+  entries: SftpFileEntry[],
+  column: SftpFileSortColumn,
+  order: "asc" | "desc"
+): SftpFileEntry[] {
+  const direction = order === "asc" ? 1 : -1;
+  return [...entries].sort((left, right) => {
+    if (left.name === ".." || right.name === "..") return Number(right.name === "..") - Number(left.name === "..");
+    if (left.is_dir !== right.is_dir) return left.is_dir ? -1 : 1;
+    const nameOrder = entryNameCollator.compare(left.name, right.name);
+    if (column === "name") return nameOrder * direction;
+    if (column === "size" && left.is_dir) return nameOrder;
+    if (column === "type") {
+      const leftType = resolveSftpFileType(left, { folder: "", file: "" });
+      const rightType = resolveSftpFileType(right, { folder: "", file: "" });
+      if (Boolean(leftType) !== Boolean(rightType)) return leftType ? -1 : 1;
+      return entryNameCollator.compare(leftType, rightType) * direction || nameOrder;
+    }
+    const leftValue =
+      column === "size" ? (left.size.trim() ? Number(left.size) : NaN) : fileModifiedTimestamp(left.mod_time);
+    const rightValue =
+      column === "size" ? (right.size.trim() ? Number(right.size) : NaN) : fileModifiedTimestamp(right.mod_time);
+    const leftMissing = !Number.isFinite(leftValue);
+    const rightMissing = !Number.isFinite(rightValue);
+    if (leftMissing !== rightMissing) return leftMissing ? 1 : -1;
+    return (leftMissing ? 0 : (leftValue - rightValue) * direction) || nameOrder;
+  });
+}
 
 export function formatSftpFileSize(value: string): string {
   const bytes = Number(value);

@@ -4,6 +4,7 @@ export * from "./types/component";
 export * from "./types/fileTransfer";
 export * from "./types/message";
 export * from "./types/session";
+export * from "./types/sessionShare";
 export * from "./useConnectorEndpoint";
 export * from "./useHostBridge";
 export * from "./utils/formatMessage";

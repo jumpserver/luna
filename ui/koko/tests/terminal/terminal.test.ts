@@ -1,5 +1,5 @@
-import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
-import { readText } from "clipboard-polyfill";
+import { HOST_MESSAGE_TYPE, MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import { readText, writeText } from "clipboard-polyfill";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref, shallowRef } from "vue";
 
@@ -30,9 +30,11 @@ import {
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
+import { useKokoZmodemTransfer } from "#koko/composables/terminal/useZmodemTransfer";
 import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
+import { MAX_TRANSFER_SIZE } from "#koko/utils/config";
 
 vi.mock("clipboard-polyfill", () => ({
   readText: vi.fn(async () => "clipped"),
@@ -147,29 +149,102 @@ it("blocks denied copy and paste events before xterm handles them", () => {
   input.stop();
 });
 
+it("keeps xterm focused while reporting content after mouse leave", () => {
+  const container = new EventTarget();
+  const sendHostEvent = vi.fn();
+  const terminal = {
+    attachCustomKeyEventHandler: vi.fn(),
+    blur: vi.fn(),
+    focus: vi.fn(),
+    getSelection: vi.fn(() => ""),
+    hasSelection: vi.fn(() => false),
+    onData: vi.fn(),
+    onResize: vi.fn(),
+    onSelectionChange: vi.fn(),
+    buffer: { active: { length: 0, getLine: vi.fn() } }
+  };
+  const input = useKokoTerminalInput({
+    container: shallowRef(container as HTMLElement),
+    terminal: ref(terminal as never),
+    socket: ref(null),
+    terminalId: ref("terminal-1"),
+    sessionId: ref("session-1"),
+    selectionText: ref(""),
+    lastSendTime: ref(new Date()),
+    fit: vi.fn(),
+    isSocketOpen: vi.fn(() => true),
+    isZmodemActive: vi.fn(() => false),
+    abortZmodem: vi.fn(),
+    onContextMenu: vi.fn(),
+    getTerminalConfig: vi.fn(() => ({})),
+    onResize: vi.fn(),
+    onHostKey: vi.fn(),
+    inputLocked: vi.fn(() => false),
+    sendHostEvent,
+    sendToHost: vi.fn(),
+    sendMittEvent: vi.fn(),
+    validateClipboardText: vi.fn(() => true)
+  });
+  input.start();
+  container.dispatchEvent(new Event("mouseleave"));
+
+  expect(terminal.blur).not.toHaveBeenCalled();
+  expect(sendHostEvent).toHaveBeenCalledWith(HOST_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE, {
+    content: "",
+    sessionId: "session-1",
+    terminalId: "terminal-1"
+  });
+
+  input.stop();
+});
+
+function keyEvent(partial: Partial<KeyboardEvent> = {}) {
+  return {
+    type: "keydown",
+    key: "c",
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    preventDefault: vi.fn(),
+    ...partial
+  } as KeyboardEvent;
+}
+
 function startContextMenuInput(overrides: {
   getTerminalConfig: () => { quickPaste?: string; ctrlCAsCtrlZ?: string };
   socket?: { send: ReturnType<typeof vi.fn> } | null;
   isSocketOpen?: () => boolean;
   inputLocked?: (data?: string) => boolean;
+  getSelection?: () => string;
+  validateClipboardText?: () => boolean;
+  isZmodemActive?: () => boolean;
 }) {
   const container = new EventTarget();
   const onContextMenu = vi.fn();
   const send = overrides.socket?.send ?? vi.fn();
+  const getSelection = overrides.getSelection ?? (() => "");
+  const abortZmodem = vi.fn();
   let onData!: (data: string) => void;
+  let onSelectionChange!: () => void;
+  let keyHandler: (event: KeyboardEvent) => boolean = () => true;
   const input = useKokoTerminalInput({
     container: shallowRef(container as HTMLElement),
     terminal: ref({
-      attachCustomKeyEventHandler: vi.fn(),
+      attachCustomKeyEventHandler: vi.fn((handler: (event: KeyboardEvent) => boolean) => {
+        keyHandler = handler;
+      }),
       blur: vi.fn(),
       focus: vi.fn(),
-      getSelection: vi.fn(() => ""),
-      hasSelection: vi.fn(() => false),
+      getSelection: vi.fn(getSelection),
+      hasSelection: vi.fn(() => Boolean(getSelection())),
       onData: (handler: (data: string) => void) => {
         onData = handler;
       },
       onResize: vi.fn(),
-      onSelectionChange: vi.fn()
+      onSelectionChange: (handler: () => void) => {
+        onSelectionChange = handler;
+      }
     } as never),
     socket: ref(overrides.socket === null ? null : ({ send } as never)),
     terminalId: ref("1"),
@@ -178,8 +253,8 @@ function startContextMenuInput(overrides: {
     lastSendTime: ref(new Date()),
     fit: vi.fn(),
     isSocketOpen: overrides.isSocketOpen ?? (() => true),
-    isZmodemActive: vi.fn(() => false),
-    abortZmodem: vi.fn(),
+    isZmodemActive: overrides.isZmodemActive ?? (() => false),
+    abortZmodem,
     onContextMenu,
     getTerminalConfig: vi.fn(overrides.getTerminalConfig),
     onResize: vi.fn(),
@@ -188,10 +263,19 @@ function startContextMenuInput(overrides: {
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
-    validateClipboardText: vi.fn(() => true)
+    validateClipboardText: vi.fn(overrides.validateClipboardText ?? (() => true))
   });
   input.start();
-  return { container, input, onContextMenu, send, onData };
+  return {
+    container,
+    input,
+    onContextMenu,
+    send,
+    onData,
+    onSelectionChange,
+    keyHandler: (event: KeyboardEvent) => keyHandler(event),
+    abortZmodem
+  };
 }
 
 it.each([false, true])("preserves the terminal interrupt policy while locked (readOnly=%s)", (readOnly) => {
@@ -281,6 +365,117 @@ it("opens the menu on right-click when quickPaste is disabled", () => {
   container.dispatchEvent(event);
   expect(onContextMenu).toHaveBeenCalledWith(event);
   expect(send).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("copies the selection when xterm selection changes", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text"
+  });
+  onSelectionChange();
+  await vi.waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith("selected text"));
+  input.stop();
+});
+
+it("does not copy when xterm selection is empty", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({})
+  });
+  onSelectionChange();
+  expect(writeText).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("does not copy when clipboard ACL denies copy", async () => {
+  vi.mocked(writeText).mockClear();
+  const validateClipboardText = vi.fn(() => false);
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text",
+    validateClipboardText
+  });
+  onSelectionChange();
+  onSelectionChange();
+  expect(writeText).not.toHaveBeenCalled();
+  expect(validateClipboardText).toHaveBeenCalledOnce();
+  input.stop();
+});
+
+it("sends Ctrl+C as an interrupt even when text is selected", () => {
+  vi.mocked(writeText).mockClear();
+  const remapped = startContextMenuInput({
+    getTerminalConfig: () => ({ ctrlCAsCtrlZ: "1" }),
+    getSelection: () => "selected text",
+    socket: { send: vi.fn() }
+  });
+  const event = keyEvent({ ctrlKey: true });
+  expect(remapped.keyHandler(event)).toBe(false);
+  expect(event.preventDefault).toHaveBeenCalled();
+  expect(remapped.keyHandler(keyEvent({ type: "keyup", ctrlKey: true }))).toBe(false);
+  expect(remapped.send).toHaveBeenCalledExactlyOnceWith(buildTerminalInput(1, "\x1a"));
+  expect(remapped.keyHandler(keyEvent({ ctrlKey: true, altKey: true }))).toBe(true);
+  expect(writeText).not.toHaveBeenCalled();
+  remapped.input.stop();
+
+  const zmodem = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text",
+    socket: { send: vi.fn() },
+    isZmodemActive: () => true
+  });
+  const zmodemEvent = keyEvent({ ctrlKey: true });
+  expect(zmodem.keyHandler(zmodemEvent)).toBe(false);
+  expect(zmodemEvent.preventDefault).toHaveBeenCalled();
+  expect(zmodem.send).toHaveBeenCalledExactlyOnceWith(buildTerminalInput(1, "\x03"));
+  expect(zmodem.abortZmodem).toHaveBeenCalledOnce();
+  expect(writeText).not.toHaveBeenCalled();
+  zmodem.input.stop();
+});
+
+it("copies with Cmd+C and Ctrl+Shift+C without sending the chord", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, keyHandler, send } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text",
+    socket: { send: vi.fn() }
+  });
+  const command = keyEvent({ metaKey: true });
+  const shifted = keyEvent({ ctrlKey: true, shiftKey: true, key: "C" });
+  expect(keyHandler(command)).toBe(false);
+  expect(keyHandler(shifted)).toBe(false);
+  expect(keyHandler(keyEvent({ ctrlKey: true, shiftKey: true }))).toBe(false);
+  await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith("selected text"));
+  expect(command.preventDefault).toHaveBeenCalled();
+  expect(send).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("does not copy or interrupt on a copy chord without a selection", () => {
+  vi.mocked(writeText).mockClear();
+  const { input, keyHandler } = startContextMenuInput({
+    getTerminalConfig: () => ({})
+  });
+  expect(keyHandler(keyEvent({ metaKey: true }))).toBe(false);
+  expect(keyHandler(keyEvent({ ctrlKey: true, shiftKey: true }))).toBe(false);
+  expect(writeText).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("copies a drag selection once, after the pointer is released", async () => {
+  vi.mocked(writeText).mockClear();
+  const { container, input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text"
+  });
+  container.dispatchEvent(new PointerEvent("pointerdown", { button: 0, bubbles: true }));
+  onSelectionChange();
+  expect(writeText).not.toHaveBeenCalled();
+  window.dispatchEvent(new PointerEvent("pointerup", { button: 0 }));
+  onSelectionChange();
+  await vi.waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith("selected text"));
   input.stop();
 });
 
@@ -592,4 +787,24 @@ it("saves downloaded packets through a temporary anchor element", () => {
   expect(click).toHaveBeenCalledTimes(1);
   expect(appendChild).toHaveBeenCalledWith(link);
   expect(removeChild).toHaveBeenCalledWith(link);
+});
+
+it("aborts zmodem upload when the file exceeds the size cap", async () => {
+  const addErrorToast = vi.fn();
+  const onAbortSession = vi.fn();
+  const transfer = useKokoZmodemTransfer({
+    t: ((key: string) => key) as never,
+    toast: { add: vi.fn() } as never,
+    addErrorToast,
+    onCleanup: vi.fn(),
+    onActivateSession: vi.fn(),
+    onAbortSession
+  });
+  const file = new File(["x"], "huge.bin");
+  Object.defineProperty(file, "size", { value: MAX_TRANSFER_SIZE });
+
+  await transfer.uploadFile({} as never, {} as never, file, {} as never);
+
+  expect(onAbortSession).toHaveBeenCalledTimes(1);
+  expect(addErrorToast).toHaveBeenCalledTimes(1);
 });

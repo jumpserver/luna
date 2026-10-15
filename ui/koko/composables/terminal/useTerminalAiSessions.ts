@@ -26,9 +26,9 @@ export interface KokoTerminalAiSessionOptions {
   sendMcpFrame?: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
 }
 
-export function terminalExecutionMode(value: unknown) {
+export function terminalExecutionMode(value: unknown, capabilities?: { ptyExec: boolean }) {
   const mode = String(value || "auto").toLowerCase();
-  if (mode === "pty") return "pty";
+  if (mode === "pty") return capabilities?.ptyExec === false ? "auto" : "pty";
   if (mode === "background" || mode === "background_exec") return "background";
   return "auto";
 }
@@ -65,6 +65,7 @@ export interface KokoTerminalAiSession {
   connected: boolean;
   enabled: boolean;
   sessionInfoReady: boolean;
+  ptyExec: boolean;
   backgroundExec: boolean;
   backgroundReason: string;
   backgroundReasonCode: string;
@@ -323,8 +324,12 @@ function createSession(
       transformToolArguments: (toolCallId, toolName, argumentsValue) => {
         if (!toolName.startsWith("execute_") || !isRecord(argumentsValue)) return argumentsValue;
         const override = session?.executionOverrides.get(toolCallId);
-        const execution = terminalExecutionMode(override || session?.executionMode);
-        return execution === "auto" && !override ? argumentsValue : { ...argumentsValue, execution };
+        const selected = terminalExecutionMode(override || session?.executionMode);
+        const requested = selected === "auto" && !override ? argumentsValue.execution : selected;
+        const execution = terminalExecutionMode(requested, session);
+        return selected === "auto" && !override && execution === terminalExecutionMode(requested)
+          ? argumentsValue
+          : { ...argumentsValue, execution };
       },
       sendFrame: (frame) => {
         const target = session?.socket;
@@ -418,6 +423,7 @@ function createSession(
     connected: socket.readyState === WebSocket.OPEN,
     enabled: false,
     sessionInfoReady: false,
+    ptyExec: true,
     backgroundExec: false,
     backgroundReason: "",
     backgroundReasonCode: "",
@@ -653,7 +659,12 @@ export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown
       (tool) => tool._meta?.["com.jumpserver/toolKind"] === "command" || tool.name === "execute_command"
     );
     const executionModes = commandTool?._meta?.["com.jumpserver/executionModes"];
+    session.ptyExec = !Array.isArray(executionModes) || executionModes.includes("pty");
     session.backgroundExec = Array.isArray(executionModes) && executionModes.includes("background");
+    session.executionMode = terminalExecutionMode(session.executionMode, session);
+    for (const [id, mode] of session.executionOverrides) {
+      session.executionOverrides.set(id, terminalExecutionMode(mode, session));
+    }
     if (!session.backgroundExec && session.executionMode === "background") session.executionMode = "auto";
     void session.agent.actions.attachManifest(manifestFromFrame(frame)).catch((error) => {
       session.errorCode = "agent_unavailable";
@@ -685,7 +696,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.backgroundReasonCode = String(capability.backgroundReasonCode || capability.reasonCode || "");
     session.approvalThreshold = Number(capability.approvalThreshold) || 2;
     if (capability.executionMode !== undefined) {
-      session.executionMode = terminalExecutionMode(capability.executionMode);
+      session.executionMode = terminalExecutionMode(capability.executionMode, session);
     }
     if (!session.enabled) {
       session.inputLocked = false;
@@ -774,7 +785,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const policy = partData(message, "data-policy");
   if (policy) {
     session.approvalThreshold = Number(policy.approvalThreshold) || session.approvalThreshold;
-    session.executionMode = String(policy.executionMode || session.executionMode);
+    session.executionMode = terminalExecutionMode(policy.executionMode || session.executionMode, session);
     return;
   }
 
@@ -821,7 +832,7 @@ export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiCha
           session.errorText = error instanceof Error ? error.message : "Failed to update approval mode";
         });
       }
-      session.executionMode = terminalExecutionMode(data.executionMode || session.executionMode);
+      session.executionMode = terminalExecutionMode(data.executionMode || session.executionMode, session);
       handled = true;
     }
     if (part.type === "data-approval" || part.type === "data-metadata-approval") {

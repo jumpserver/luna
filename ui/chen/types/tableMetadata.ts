@@ -1,4 +1,11 @@
-export type ChenTableMetadataSection = "columns" | "primaryKey" | "foreignKeys" | "indexes" | "constraints" | "ddl";
+export type ChenTableMetadataSection =
+  | "columns"
+  | "primaryKey"
+  | "foreignKeys"
+  | "indexes"
+  | "constraints"
+  | "statistics"
+  | "ddl";
 
 export interface ChenTableMetadataCapabilities {
   columns: boolean;
@@ -6,7 +13,15 @@ export interface ChenTableMetadataCapabilities {
   foreignKeys: boolean;
   indexes: boolean;
   constraints: boolean;
+  statistics?: boolean;
+  estimatedRows?: boolean;
+  totalSizeBytes?: boolean;
   ddl: boolean;
+}
+
+export interface ChenTableStatistics {
+  estimatedRows: number | null;
+  totalSizeBytes: number | null;
 }
 
 export interface ChenTableMetadataColumn {
@@ -74,5 +89,6 @@ export interface ChenTableMetadata {
   foreignKeys: ChenTableForeignKey[];
   indexes: ChenTableIndex[];
   constraints: ChenTableConstraint[];
+  statistics: ChenTableStatistics | null;
   ddl: string | null;
 }

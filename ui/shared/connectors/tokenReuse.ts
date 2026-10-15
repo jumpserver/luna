@@ -6,6 +6,7 @@ export const DATABASE_GUIDE_PROTOCOLS = new Set([
   "postgresql",
   "redis",
   "oracle",
+  "dameng",
   "sqlserver",
   "mongodb"
 ]);

@@ -3,6 +3,7 @@ import type { KokoWorkspaceTab } from "#koko/host";
 import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import { writeText } from "clipboard-polyfill";
 import { withBase } from "ufo";
 import {
   KubernetesTerminalMessageType,
@@ -25,7 +26,7 @@ import {
   unregisterKokoTerminalDataSender,
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
-import { KeyboardKey } from "#koko/constants/keyboard";
+import { isTerminalCopyChord, isTerminalInterruptChord, KeyboardKey } from "#koko/constants/keyboard";
 import { useKokoHostAdapter } from "#koko/host";
 import {
   createUnrestrictedClipboardAccess,
@@ -69,7 +70,6 @@ interface TreeRow {
 }
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
 const kubernetesIconSrc = withBase("/icons/kubernetes.svg", useRuntimeConfig().app.baseURL);
@@ -77,7 +77,7 @@ const toast = useToast();
 const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected } = useWorkspaceTabs();
 const colorMode = useColorMode();
 
 const tree = ref<K8sNode[]>([]);
@@ -98,6 +98,7 @@ const resourceTreeWidth = computed(() =>
 );
 const resizingSidebar = ref(false);
 const connectionError = ref("");
+const connectorConnected = ref(false);
 const terminalTabs = ref<TerminalTab[]>([]);
 const activeTabId = ref("");
 const globalTerminalId = ref("");
@@ -112,6 +113,7 @@ let resizeHandle: HTMLElement | null = null;
 let resizePointerId: number | null = null;
 const terminalSocket = useKubernetesTerminalSocket();
 
+const connectingOverlay = computed(() => Boolean((tab.value as { connectionProgress?: string }).connectionProgress));
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
 const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
 const resize = useDebounceFn(() => {
@@ -198,7 +200,12 @@ function canUseClipboardText(direction: ClipboardDirection, text: string, termin
   return false;
 }
 
-function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalTabId: string) {
+function installClipboardControls(
+  el: HTMLElement,
+  terminal: Terminal,
+  terminalTabId: string,
+  sendInterrupt: (data: string) => void
+) {
   const onPaste = (event: ClipboardEvent) => {
     const text = event.clipboardData?.getData("text/plain") ?? "";
     if (canUseClipboardText("paste", text, terminalTabId)) return;
@@ -216,8 +223,25 @@ function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalT
   el.addEventListener("copy", onCopy, true);
   terminal.attachCustomKeyEventHandler((event) => {
     if (event.key === KeyboardKey.Enter && event.isComposing) return false;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
+    if (isTerminalCopyChord(event)) {
+      if (event.type === "keydown" && terminal.hasSelection()) {
+        event.preventDefault();
+        const text = terminal.getSelection();
+        if (text && canUseClipboardText("copy", text, terminalTabId)) {
+          void writeText(text).catch((error) => {
+            console.error("Failed to write terminal selection to clipboard:", error);
+          });
+        }
+      }
       return false;
+    }
+    if (isTerminalInterruptChord(event)) {
+      if (event.type === "keydown") {
+        event.preventDefault();
+        sendInterrupt("\x03");
+      }
+      return false;
+    }
     return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
   });
 
@@ -410,14 +434,15 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   terminal.open(el);
   syncXtermBackground(terminal);
   fit.fit();
-  const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id);
+  const sendInput = (data: string) => {
+    if (!globalTerminalId.value || isKokoTerminalAiInputLocked(tabItem.id)) return;
+    terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
+  };
+  const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id, sendInput);
   terminals.set(tabItem.id, { terminal, fit, cleanupClipboard });
   syncActiveTerminalSession();
 
-  terminal.onData((data) => {
-    if (!globalTerminalId.value || isKokoTerminalAiInputLocked(tabItem.id)) return;
-    terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
-  });
+  terminal.onData(sendInput);
   terminal.onResize(() => sendResize(tabItem.id, terminal));
 
   terminalSocket.initializeTerminal(
@@ -504,11 +529,6 @@ function refreshTree() {
   if (terminalSocket.connected.value) terminalSocket.requestTree();
 }
 
-function retryConnection() {
-  terminalSocket.close();
-  emit("reconnect");
-}
-
 function syncTerminalTheme() {
   for (const { terminal } of terminals.values()) {
     applyXtermTheme(terminal, appTerminalTheme());
@@ -533,10 +553,12 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     defaultClipboardAccess.value = resolveClipboardAccess(info?.permission, info?.clipboard_policy);
     globalTerminalId.value = message.id;
     terminalSocket.requestTree();
+    connectorConnected.value = true;
     markSessionConnected(props.tab.id);
     connectionError.value = "";
   } else if (message.type === KubernetesTerminalMessageType.Tree) {
     tree.value = normalizeTree(JSON.parse(message.data || "{}"));
+    connectorConnected.value = true;
     connectionError.value = "";
     markSessionConnected(props.tab.id);
   } else if (message.type === KubernetesTerminalMessageType.Data && terminals.has(message.k8s_id)) {
@@ -567,6 +589,7 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     message.type === KubernetesTerminalMessageType.TerminalError
   ) {
     connectionError.value = message.err || t("koko.kubernetes.connectionFailed");
+    markSessionDisconnected(props.tab.id, connectionError.value, { dismissible: connectorConnected.value });
   }
 });
 
@@ -585,13 +608,8 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
   }
 
   disconnectTerminalAiSessions();
-  connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-  markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol || "",
-    account: props.tab.account || ""
-  });
+  connectionError.value ||= t("koko.kubernetes.websocketConnectionFailed");
+  markSessionDisconnected(props.tab.id, connectionError.value, { dismissible: connectorConnected.value });
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
@@ -599,6 +617,7 @@ watch(
   context,
   (ctx) => {
     if (!ctx) return;
+    connectorConnected.value = false;
     connectionError.value = "";
     terminalSocket.connect(ctx);
   },
@@ -652,8 +671,6 @@ onUnmounted(() => {
     :loading="loading"
     :error="sessionError || connectionError"
     :loading-text="t('koko.kubernetes.preparingConnection')"
-    :retry-label="t('koko.actions.retry')"
-    @retry="retryConnection"
   >
     <div
       class="relative flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
@@ -831,7 +848,10 @@ onUnmounted(() => {
             class="kubernetes-terminal absolute inset-0"
             :class="activeTabId === item.id ? '' : 'pointer-events-none invisible'"
           />
-          <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-(--app-muted)">
+          <div
+            v-if="!terminalTabs.length && !connectingOverlay"
+            class="grid h-full place-items-center p-6 text-sm text-(--app-muted)"
+          >
             <div class="flex flex-col items-center gap-3">
               <UIcon name="i-lucide-square-terminal" class="size-10" />
               <span>{{ t("koko.kubernetes.empty") }}</span>

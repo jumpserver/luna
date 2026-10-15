@@ -3,12 +3,14 @@ import type { FileTransferConflictPolicy, FileTransferTask } from "@jumpserver/c
 import type { SftpTransferTargetGroup } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import type { SftpTransferGroupStatus } from "#koko/utils/sftpTransferSummary";
 import SftpTransferFile from "#koko/components/FileManagement/transfer-center/SftpTransferFile.vue";
+import { topLevelFolderName } from "#koko/composables/sftp/file-manager/selectors";
 import {
   canPauseTransferTasks,
   canResumeTransferTasks,
   canRetryTransferTask,
   getTargetTransferError,
-  sftpTransferConflictError,
+  isTransferConflictError,
+  sftpFolderConflictError,
   sftpTransferErrorText,
   sftpTransferTerminalStatuses,
   targetHasConflictTasks
@@ -39,7 +41,16 @@ const groupActionButtonUi = { leadingIcon: "size-3.5" };
 const status = computed(() => sftpTransferGroupStatus(props.target.allTasks));
 const progress = computed(() => sftpTransferProgress(props.target.allTasks));
 const conflictTask = computed(() =>
-  props.target.allTasks.find((task) => task.status === "paused" && task.error === sftpTransferConflictError)
+  props.target.allTasks.find((task) => task.status === "paused" && isTransferConflictError(task.error))
+);
+const isFolderConflict = computed(() => conflictTask.value?.error === sftpFolderConflictError);
+const conflictName = computed(
+  () =>
+    (isFolderConflict.value
+      ? topLevelFolderName(conflictTask.value?.source.relativeDir)
+      : conflictTask.value?.source.name) ||
+    conflictTask.value?.source.name ||
+    ""
 );
 const hasConflict = computed(() => targetHasConflictTasks(props.target.allTasks));
 const error = computed(() =>
@@ -169,8 +180,8 @@ function statusIcon(value: SftpTransferGroupStatus): string {
         <b>{{ target.label }}</b>
         ·
         {{
-          t("koko.sftpTransferCenter.targetConflict", {
-            filename: conflictTask?.source.name
+          t(isFolderConflict ? "koko.sftpTransferCenter.folderConflict" : "koko.sftpTransferCenter.targetConflict", {
+            filename: conflictName
           })
         }}
         <div class="sftp-conflict-actions">

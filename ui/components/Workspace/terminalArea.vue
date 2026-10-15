@@ -4,10 +4,11 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, userMap } = storeToRefs(userInfoStore);
+const currentUser = computed(() => userMap.value[userInfoStore.currentAccountId]);
 const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
-  () => authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
+  () => isDesktopRuntime() && authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
 );
 const { t } = useI18n();
 const shortcutRows = computed(() => [
@@ -40,7 +41,7 @@ const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value) || null);
 const supportsTerminalAiCommand = computed(() => {
   const pane = activePane.value;
-  if (!pane) return false;
+  if (!pane || pane.connectionProgress) return false;
   return isKokoTerminalAiAvailable(pane.id);
 });
 
@@ -57,19 +58,29 @@ const openLogin = () => {
   >
     <div class="flex-1 min-h-0">
       <template v-if="showLoginPrompt">
-        <div class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+        <div class="flex h-full min-h-0 items-center justify-center p-4 text-sm" :style="{ color: 'var(--app-muted)' }">
           <UCard
             variant="outline"
             :ui="{
               root: 'rounded-2xl shadow-sm ring-[var(--app-border)] bg-[var(--app-card-bg-soft)]',
-              body: 'flex flex-col items-center gap-4 px-8 py-7 sm:p-7'
+              body: 'flex min-h-0 flex-col items-center gap-5 overflow-hidden px-6 py-8 sm:p-8'
             }"
+            class="flex max-h-full w-full max-w-lg flex-col"
           >
-            <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
-            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.LoginHint") }}</div>
-            <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
-              {{ t("Common.Login") }}
+            <UIcon name="i-lucide-log-in" class="size-10 shrink-0" :style="{ color: 'var(--app-muted)' }" />
+            <div class="shrink-0 font-medium" :style="{ color: 'var(--app-fg)' }">
+              {{ t("WorkspaceEmpty.LoginHint") }}
+            </div>
+            <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
+              {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}
             </UButton>
+            <div
+              v-if="Object.keys(userMap).length"
+              class="flex min-h-0 w-full flex-col gap-1 rounded-[length:var(--app-radius)] border border-(--app-border) p-1"
+            >
+              <p class="shrink-0 px-1 py-1 text-[11px] text-muted">{{ t("Login.SavedSites") }}</p>
+              <SiteAccounts />
+            </div>
           </UCard>
         </div>
       </template>

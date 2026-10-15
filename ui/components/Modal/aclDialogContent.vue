@@ -2,7 +2,7 @@
 import type { AclDialogGroup } from "~/composables/useAclDialog";
 
 import AclErrorDetail from "~/components/Modal/aclErrorDetail.vue";
-import { isFaceLiveHostMessage } from "~/utils/faceLive";
+import { isFaceLiveHostMessage, localizeFaceLiveDetail } from "~/utils/faceLive";
 
 const props = withDefaults(
   defineProps<{
@@ -39,7 +39,7 @@ const hasFaceFailure = computed(
   () => props.group.code.startsWith("acl_face_") && props.group.items.some((item) => item.status === "failed")
 );
 const isFaceGroup = computed(() => props.group.code.startsWith("acl_face_"));
-const visibleDetail = (detail: string) => (detail.startsWith("AclDialog.Face") ? t(detail) : detail);
+const visibleDetail = (detail: string) => localizeFaceLiveDetail(detail, t);
 
 const handleFaceMessage = (event: MessageEvent) => {
   if (!isFaceLiveHostMessage(event.data)) return;

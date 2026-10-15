@@ -6,14 +6,10 @@ import mitt from "mitt";
 type BusEvents = {
   setSort: SortType;
   search: string;
-  login: undefined;
+  login: { accountId: string } | undefined;
   loaded: undefined;
   loading: undefined;
   refresh: undefined;
-  versionAlert: {
-    type: string;
-    version?: string;
-  };
   assetRenamed: {
     assetId: string;
     name: string;

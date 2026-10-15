@@ -8,12 +8,15 @@ import type {
 import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
+import { needsInputSecret, supportsPersonalCredential } from "~/utils/connection";
 
 export interface ConnectionFormInfo {
   protocol: string;
   account: string;
   manualUsername: string;
   manualPassword: string;
+  hostedSecret?: string;
+  inputSecretType?: string;
   personalCredentialId?: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType?: string;
@@ -37,6 +40,7 @@ export interface ConnectionFormInfo {
 }
 
 export function useAssetConnection() {
+  const { t } = useI18n();
   const { handleAssetConnection, displayUser } = useAssetAction();
   const { getMethodsForProtocol } = useConnectMethods();
   const { appConfig } = useSettingManager();
@@ -44,9 +48,9 @@ export function useAssetConnection() {
 
   const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const assetProtocols = sortPermedProtocols(asset.permedProtocols || [])
-      .filter((protocol) => isDesktopRuntime() || protocol?.public !== false)
+      .filter((protocol) => protocol?.public !== false)
       .map((protocol) => protocol.name);
-    const protocols = assetProtocols.length > 0 ? assetProtocols : connectionInfo.availableProtocols || [];
+    const protocols = asset.permedProtocols !== undefined ? assetProtocols : connectionInfo.availableProtocols || [];
     const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : protocols[0] || "";
     const accounts = asset.permedAccounts || [];
 
@@ -60,13 +64,9 @@ export function useAssetConnection() {
     } as const;
 
     if (accountMode === "hosted") {
-      const matched = accounts.find(
-        (item) =>
-          (accountId && item.id === accountId) ||
-          item.name === account ||
-          item.username === account ||
-          item.alias === account
-      );
+      const matched =
+        accounts.find((item) => item.id === accountId) ||
+        accounts.find((item) => item.name === account || item.username === account || item.alias === account);
 
       if (matched && !matched.alias.startsWith("@")) {
         account = matched.name;
@@ -93,7 +93,7 @@ export function useAssetConnection() {
     let connectMethod = "";
     if (protocol) {
       try {
-        const methods = await getMethodsForProtocol(protocol);
+        const methods = await getMethodsForProtocol(protocol, asset.id);
         connectMethod = isConnectMethodAvailable(connectionInfo.connectMethod, methods, protocol, appConfig.value)
           ? connectionInfo.connectMethod
           : methods[0]?.value || "";
@@ -103,7 +103,15 @@ export function useAssetConnection() {
       }
     }
 
-    const canUsePersonalCredential = accountMode === "manual";
+    const sameHostedAccount =
+      accountMode === "hosted" &&
+      connectionInfo.accountMode === "hosted" &&
+      accountId === connectionInfo.accountId &&
+      protocol === connectionInfo.protocol;
+    const canUsePersonalCredential =
+      protocol === connectionInfo.protocol &&
+      ((accountMode === "manual" && connectionInfo.accountMode === "manual") ||
+        (sameHostedAccount && supportsPersonalCredential(accounts.find((item) => item.id === accountId))));
 
     return {
       ...connectionInfo,
@@ -111,9 +119,11 @@ export function useAssetConnection() {
       account,
       accountId,
       accountMode,
+      hostedSecret: sameHostedAccount ? connectionInfo.hostedSecret : "",
       connectMethod,
       personalCredentialId: canUsePersonalCredential ? connectionInfo.personalCredentialId : undefined,
       personalCredentialVersion: canUsePersonalCredential ? connectionInfo.personalCredentialVersion : undefined,
+      personalCredentialSecretType: canUsePersonalCredential ? connectionInfo.personalCredentialSecretType : undefined,
       savePersonalCredential: canUsePersonalCredential && connectionInfo.savePersonalCredential,
       availableProtocols: protocols
     };
@@ -212,12 +222,9 @@ export function useAssetConnection() {
       accountId: resolvedAccountId,
       accountMode: connectionInfo.accountMode,
       manualUsername: connectionInfo.accountMode === "manual" ? connectionInfo.manualUsername : "",
-      personalCredentialId:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialId || undefined : undefined,
-      personalCredentialVersion:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialVersion : undefined,
-      personalCredentialSecretType:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialSecretType || "password" : undefined,
+      personalCredentialId: connectionInfo.personalCredentialId || undefined,
+      personalCredentialVersion: connectionInfo.personalCredentialVersion,
+      personalCredentialSecretType: connectionInfo.personalCredentialSecretType,
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
       rememberSecret: connectionInfo.accountMode === "manual" ? false : connectionInfo.rememberSecret,
       connectMethod: connectionInfo.connectMethod,
@@ -233,6 +240,23 @@ export function useAssetConnection() {
    */
   const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
+    const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
+    if (
+      !normalized.protocol ||
+      (normalized.accountMode === "hosted" &&
+        needsInputSecret(selectedAccount) &&
+        !normalized.hostedSecret &&
+        !(normalized.personalCredentialId && !normalized.savePersonalCredential))
+    ) {
+      const error = new Error(
+        t(normalized.protocol ? "ConnectError.SecretRequired" : "ConnectError.ProtocolUnavailable")
+      );
+      if (normalized.onSessionError) {
+        normalized.onSessionError(error);
+        return;
+      }
+      throw error;
+    }
 
     if (!normalized.preserveStoredSelection && !normalized.downloadRdp) {
       saveConnectionPreference(asset, normalized);
@@ -248,6 +272,8 @@ export function useAssetConnection() {
       accountId: normalized.accountId,
       manualUsername: normalized.manualUsername,
       manualPassword: normalized.manualPassword,
+      hostedSecret: normalized.hostedSecret,
+      inputSecretType: normalized.inputSecretType,
       personalCredentialId: normalized.personalCredentialId,
       personalCredentialVersion: normalized.personalCredentialVersion,
       personalCredentialSecretType: normalized.personalCredentialSecretType,

@@ -2,6 +2,7 @@ import type { PermOrgItem } from "~/types";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildAdminConnectSessionPath,
+  buildSessionPath,
   shouldShowSessionTabStrip,
   syncSessionWindowOrganization,
   toAdminAssetItem
@@ -16,7 +17,8 @@ vi.mock("~/composables/useApiRequest", () => ({
 }));
 vi.mock("~/utils/connection", () => ({
   hasReusableSavedConnection: vi.fn(),
-  isSavedConnectionAvailable: vi.fn()
+  isSavedConnectionAvailable: vi.fn(),
+  needsInputSecret: vi.fn()
 }));
 
 const organization = (id: string): PermOrgItem => ({
@@ -76,6 +78,26 @@ describe("syncSessionWindowOrganization", () => {
 });
 
 describe("admin connect from Lina", () => {
+  it("carries the hosted account and personal credential into a new window", () => {
+    const path = buildSessionPath({ id: "asset-1" } as Parameters<typeof buildSessionPath>[0], {
+      protocol: "sftp",
+      account: "root",
+      accountId: "account-1",
+      accountMode: "hosted",
+      personalCredentialId: "credential",
+      manualUsername: "",
+      manualPassword: "",
+      dynamicPassword: "",
+      rememberSecret: false,
+      connectMethod: "sftp_file_manager"
+    });
+    const query = new URL(path, "https://example.com").searchParams;
+    expect(Object.fromEntries(query)).toMatchObject({
+      accountId: "account-1",
+      accountMode: "hosted",
+      personalCredentialId: "credential"
+    });
+  });
   it("maps console query params onto the session window path", () => {
     expect(
       buildAdminConnectSessionPath({

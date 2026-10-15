@@ -289,6 +289,37 @@ it("derives background execution availability from the command tool manifest", a
   );
 
   expect(session.backgroundExec).toBe(true);
+  expect(session.ptyExec).toBe(true);
+});
+
+it("honors supported terminal modes when approving commands and relaying model calls", async () => {
+  const session = createSession("native-command-modes");
+  const sendMcpFrame = vi.fn();
+  registerKokoTerminalAiSession(session.paneId, session.socket!, session.terminalId, { sendMcpFrame });
+  session.executionMode = "pty";
+  session.executionOverrides.set("old-call", "pty");
+  const resourceId = await agentHarness.attach(handleKokoTerminalAiWireMessage, session.paneId, "terminal", undefined, [
+    { name: "execute_command", inputSchema: {}, _meta: { "com.jumpserver/executionModes": ["auto", "background"] } }
+  ]);
+  expect(session).toMatchObject({ ptyExec: false, backgroundExec: true, executionMode: "auto" });
+  expect(session.executionOverrides.has("old-call")).toBe(false);
+  const context = { paneId: session.paneId, surface: null, now: 0, t: (key: string) => key };
+  terminalAiPanelDomain.handleTimelineAction?.(
+    session,
+    { domain: "terminal", type: "set-execution-override", id: "approval-1", value: "pty" },
+    context
+  );
+  expect(session.executionOverrides.get("approval-1")).toBe("auto");
+  expect(
+    terminalAiPanelDomain.describe(session, context, []).modeOptions.find((option) => option.value === "pty")?.disabled
+  ).toBe(true);
+  agentHarness.emit(resourceId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: { tool_name: "execute_command", arguments: { command: "Get-Location", execution: "pty" } }
+  });
+  expect(sendMcpFrame.mock.calls[0]?.[0].data.params.arguments).toEqual({ command: "Get-Location", execution: "auto" });
 });
 
 it("queues prompts through the enabled pane and rejects unavailable sessions", async () => {

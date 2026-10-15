@@ -6,7 +6,6 @@ import { useDebounceFn, useResizeObserver } from "@vueuse/core";
 import { FitAddon } from "@xterm/addon-fit";
 
 import { SearchAddon } from "@xterm/addon-search";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { KOKO_MCP_FRAME_TYPES } from "#koko/composables/agent/types";
 import {
@@ -50,9 +49,12 @@ import { useKokoHostAdapter } from "#koko/host";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
+import { watchTerminalRenderer } from "#koko/utils/terminalRenderer";
 import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
-import { describeTerminalClose } from "./protocol";
+import { useMobile } from "~/composables/useMobile";
+import { normalizeConnectionFailure } from "~/utils/connectionFailure";
+import { createKokoStartupOutputCapture, describeTerminalClose, resolveKokoTerminalCloseMessage } from "./protocol";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
 
@@ -60,6 +62,8 @@ const isXtermAddonDisposeError = (error: unknown) =>
   error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
 
 export const useKokoTerminalSocket = () => {
+  const isMobile = useMobile();
+  let stopRendererWatch: (() => void) | undefined;
   const toast = useToast();
   const zmodem = useKokoZmodem();
   const transport = useKokoTerminalTransport();
@@ -129,27 +133,26 @@ export const useKokoTerminalSocket = () => {
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
+  let sessionReady = false;
   let socketOpened = false;
   let serverCloseReason: string | undefined;
+  const startupOutput = createKokoStartupOutputCapture();
   let disposeSocketEvents: (() => void) | undefined;
   let hasPendingContainerFit = false;
+  let monitorSizeReceived = false;
 
   const reportInitialConnectionFailure = () => {
-    if (socketOpened || connectionError.value) return;
+    if (sessionReady || connectionError.value) return;
 
     connectionError.value = t("koko.terminal.websocketConnectionFailed");
     const tabId = unref(sessionCtxRef)?.tabId;
     if (!tabId) return;
 
-    hostAdapter.markSessionFailed({
-      id: tabId,
-      assetId: "",
-      protocol: "",
-      account: ""
-    });
+    hostAdapter.markSessionDisconnected(tabId, connectionError.value);
   };
 
   const fitToContainer = () => {
+    if (monitorSizeReceived) return;
     const container = containerRef.value;
     if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
     fitAddon?.fit();
@@ -176,6 +179,7 @@ export const useKokoTerminalSocket = () => {
   };
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
+    if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return;
     if (!socketRef.value || !isSocketOpen(socketRef.value)) return;
     socketRef.value.send(
       formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_RESIZE, JSON.stringify({ cols, rows }))
@@ -262,7 +266,7 @@ export const useKokoTerminalSocket = () => {
 
   const showInfoOnce = (content: string) => {
     if (lastMessage === content) return;
-    toast.add({ title: content, color: "info" });
+    toast.add({ id: "session-state", title: content, color: "info" });
     lastMessage = content;
   };
 
@@ -294,6 +298,10 @@ export const useKokoTerminalSocket = () => {
     onServerClose: (reason) => {
       serverCloseReason = reason;
     },
+    onTerminalReady: startupOutput.markReady,
+    onMonitorResize: () => {
+      monitorSizeReceived = true;
+    },
     onZmodemEnd: zmodem.finishDraining,
     onZmodemAbort: () => {
       zmodem.abortActiveSession();
@@ -302,6 +310,8 @@ export const useKokoTerminalSocket = () => {
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
       if (tabId) {
+        sessionReady = true;
+        hostAdapter.markSessionConnected(tabId);
         registerKokoTerminalSession(tabId, {
           socket,
           terminalId: id,
@@ -334,6 +344,7 @@ export const useKokoTerminalSocket = () => {
   const messageHandler = useKokoTerminalMessageHandler(terminalMessageHandlers, {
     onTerminalOutput: (messageTerminalId, data) => {
       if (messageTerminalId === Number(terminalId.value)) {
+        startupOutput.append(data);
         binaryHandler.handleBinaryMessage(data);
       }
     }
@@ -382,18 +393,15 @@ export const useKokoTerminalSocket = () => {
         lastSendTime: lastSendTime.value.toISOString(),
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
-      if (!socketOpened) {
-        reportInitialConnectionFailure();
-        return;
-      }
-      if (paneId) hostAdapter.markSessionDisconnected(paneId);
-      if (!terminalRef.value) return;
-      const message = t(detail.messageKey, {
+      const closeMessage = t(detail.messageKey, {
         code: event.code,
         reason: detail.reasonKey ? t(detail.reasonKey) : ""
       });
+      const message = resolveKokoTerminalCloseMessage(normalizeConnectionFailure(startupOutput.take()), closeMessage);
+      if (paneId) hostAdapter.markSessionDisconnected(paneId, message, { dismissible: socketOpened });
+      if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
-      terminalRef.value.write(`\x1B[31m${message}\x1B[0m`);
+      terminalRef.value.write(`\x1B[31m${closeMessage}\x1B[0m`);
     };
 
     const handleSocketMessage = async (message: MessageEvent) => {
@@ -440,20 +448,10 @@ export const useKokoTerminalSocket = () => {
       customGlyphs: true
     });
     const fit = new FitAddon();
-    const webgl = new WebglAddon();
     const search = new SearchAddon();
-
-    webgl.onContextLoss(() => {
-      try {
-        webgl.dispose();
-      } catch (error) {
-        if (!isXtermAddonDisposeError(error)) throw error;
-      }
-    });
 
     terminal.loadAddon(fit);
     terminal.loadAddon(search);
-    terminal.loadAddon(webgl);
 
     terminalRef.value = markRaw(terminal);
     fitAddon = fit;
@@ -465,8 +463,9 @@ export const useKokoTerminalSocket = () => {
     const socket = transport.connect(url);
     if (!socket) {
       reportInitialConnectionFailure();
-      addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
+      return;
     }
+    listenSocketEvent();
   };
 
   // dark/light 切 class、preset 切 data-theme-preset、Luna 预设写内联 style，三种路径都在 <html> 属性上
@@ -496,13 +495,14 @@ export const useKokoTerminalSocket = () => {
     window.addEventListener("right-panel-resize-end", handleRightPanelResizeEnd);
     createTerminal();
     createWebSocket();
-    listenSocketEvent();
     observeAppTheme();
     nextTick(() => {
       input.start();
       terminalRef.value?.open(containerRef.value!);
-      if (terminalRef.value) syncXtermBackground(terminalRef.value);
-      fitToContainer();
+      if (terminalRef.value) {
+        syncXtermBackground(terminalRef.value);
+        stopRendererWatch = watchTerminalRenderer(terminalRef.value, isMobile, fitToContainer);
+      }
     });
   });
 
@@ -526,6 +526,7 @@ export const useKokoTerminalSocket = () => {
     disposeSocketEvents?.();
     transport.close();
     sentryRef.value = null;
+    stopRendererWatch?.();
     try {
       terminalRef.value?.dispose();
     } catch (error) {

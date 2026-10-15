@@ -48,11 +48,10 @@ const localDraggedId = ref("");
 const dropTargetId = ref("");
 const dropPlacement = ref<"before" | "after">("before");
 const editorTabMime = "application/x-jumpserver-editor-tab";
-const SUB_TAB_MAX_WIDTH = 160;
 const SUB_TAB_GAP = 4;
 const tabStripIdealWidth = computed(() => {
   const count = props.tabs.length;
-  return `${count * SUB_TAB_MAX_WIDTH + Math.max(0, count - 1) * SUB_TAB_GAP}px`;
+  return `calc(${count} * var(--workspace-sub-tab-width) + ${Math.max(0, count - 1) * SUB_TAB_GAP}px)`;
 });
 const tabMenuItems = computed<DropdownMenuItem[]>(() =>
   props.tabs.map((tab) => ({
@@ -235,7 +234,7 @@ watch(
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-full min-w-20 max-w-40 basis-40 grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
+          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
           :class="[
             activeId === tab.id ? 'text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',

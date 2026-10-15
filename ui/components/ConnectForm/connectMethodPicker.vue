@@ -71,16 +71,18 @@ const connectMethodTabItems = computed(() => {
   );
 
   if (isDesktopRuntime() && selectedConnectMethodType.value === "native") {
-    if (!configuredClients.value.length) return [];
+    const guideMethods = tabMethods.filter((method) => method.value.endsWith("_guide"));
+    const nativeMethod = tabMethods.find((method) => !method.value.endsWith("_guide"));
 
-    const nativeMethod = tabMethods[0];
-
-    return nativeMethod
-      ? configuredClients.value.map((client) => ({
-          label: client.display_name || client.name,
-          value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
-        }))
-      : [];
+    return [
+      ...(nativeMethod
+        ? configuredClients.value.map((client) => ({
+            label: client.display_name || client.name,
+            value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
+          }))
+        : []),
+      ...guideMethods.map((method) => ({ label: method.label || method.value, value: method.value }))
+    ];
   }
 
   return tabMethods.map((method) => ({
@@ -95,52 +97,6 @@ const islandConnectMethodItems = computed(() =>
     icon: islandMethodIcon(item.value)
   }))
 );
-
-const islandMethodTransitionKey = computed(
-  () =>
-    `${props.protocol}:${selectedConnectMethodType.value}:${islandConnectMethodItems.value.map((item) => item.value).join("|")}`
-);
-
-function setIslandMethodHeight(el: Element, height: string) {
-  const node = el as HTMLElement;
-  node.style.height = height;
-  node.style.overflow = "hidden";
-}
-
-function clearIslandMethodHeight(el: Element) {
-  const node = el as HTMLElement;
-  node.style.height = "";
-  node.style.overflow = "";
-}
-
-function onIslandMethodBeforeEnter(el: Element) {
-  setIslandMethodHeight(el, "0px");
-}
-
-function onIslandMethodEnter(el: Element) {
-  const node = el as HTMLElement;
-  void node.offsetHeight;
-  node.style.height = `${node.scrollHeight}px`;
-}
-
-function onIslandMethodAfterEnter(el: Element) {
-  clearIslandMethodHeight(el);
-}
-
-function onIslandMethodBeforeLeave(el: Element) {
-  const node = el as HTMLElement;
-  setIslandMethodHeight(el, `${node.scrollHeight}px`);
-}
-
-function onIslandMethodLeave(el: Element) {
-  const node = el as HTMLElement;
-  void node.offsetHeight;
-  node.style.height = "0px";
-}
-
-function onIslandMethodAfterLeave(el: Element) {
-  clearIslandMethodHeight(el);
-}
 
 watch(
   () => [props.methods, connectMethod.value] as const,
@@ -198,66 +154,54 @@ async function openProtocolApplicationSettings() {
         @update:model-value="selectConnectMethodType"
       />
       <div class="connect-method-island__content">
-        <Transition
-          name="island-method"
-          mode="out-in"
-          @before-enter="onIslandMethodBeforeEnter"
-          @enter="onIslandMethodEnter"
-          @after-enter="onIslandMethodAfterEnter"
-          @before-leave="onIslandMethodBeforeLeave"
-          @leave="onIslandMethodLeave"
-          @after-leave="onIslandMethodAfterLeave"
-        >
-          <div :key="islandMethodTransitionKey">
-            <URadioGroup
-              v-if="islandConnectMethodItems.length"
-              v-model="connectMethod"
-              :items="islandConnectMethodItems"
-              value-key="value"
-              label-key="label"
-              variant="card"
-              orientation="vertical"
-              indicator="start"
-              size="sm"
-              color="primary"
-              :ui="{
-                fieldset: 'w-full gap-1.5',
-                item: 'w-full items-center rounded-[length:var(--workspace-island-radius)] border-0 bg-[var(--app-surface-overlay)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--theme-fg)_16%,transparent)] has-data-[state=checked]:bg-[var(--app-state-selected)] has-data-[state=checked]:ring-[color-mix(in_srgb,var(--theme-accent)_50%,transparent)]',
-                base: 'bg-transparent ring-[color-mix(in_srgb,var(--theme-fg)_40%,transparent)] data-[state=checked]:bg-transparent data-[state=checked]:ring-[var(--theme-accent)]',
-                indicator:
-                  'bg-transparent after:block after:size-1.5 after:rounded-full after:bg-[var(--theme-accent)]',
-                wrapper: 'flex items-center',
-                label: '!flex items-center gap-2 text-[13px] font-medium',
-                description: 'text-[11px] text-[var(--app-text-muted)]'
-              }"
-            >
-              <template #label="{ item }">
-                <UIcon :name="item.icon || 'i-lucide-box'" class="size-4 text-[var(--app-text-muted)]" />
-                {{ item.label }}
-              </template>
-            </URadioGroup>
-            <div
-              v-else-if="isDesktopRuntime() && selectedConnectMethodType === 'native'"
-              class="connect-method-island__empty"
-            >
-              <p class="text-xs text-[var(--app-text-muted)]">
-                {{ t("Setting.NoClientConfigured") }}
-              </p>
-              <UButton
-                type="button"
-                icon="i-lucide-settings"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                :label="t('Setting.ConfigureClient')"
-                @click="openProtocolApplicationSettings"
-              />
-            </div>
-            <p v-else class="py-1 text-center text-xs text-[var(--app-text-muted)]" role="status">
-              {{ t("ConnectMethod.Empty") }}
+        <div>
+          <URadioGroup
+            v-if="islandConnectMethodItems.length"
+            v-model="connectMethod"
+            :items="islandConnectMethodItems"
+            value-key="value"
+            label-key="label"
+            variant="card"
+            orientation="vertical"
+            indicator="start"
+            size="sm"
+            color="primary"
+            :ui="{
+              fieldset: 'w-full gap-1.5',
+              item: 'w-full items-center rounded-[length:var(--workspace-island-radius)] border-0 bg-[var(--app-surface-overlay)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--theme-fg)_16%,transparent)] has-data-[state=checked]:bg-[var(--app-state-selected)] has-data-[state=checked]:ring-[color-mix(in_srgb,var(--theme-accent)_50%,transparent)]',
+              base: 'bg-transparent ring-[color-mix(in_srgb,var(--theme-fg)_40%,transparent)] data-[state=checked]:bg-transparent data-[state=checked]:ring-[var(--theme-accent)]',
+              indicator: 'bg-transparent after:block after:size-1.5 after:rounded-full after:bg-[var(--theme-accent)]',
+              wrapper: 'flex items-center',
+              label: '!flex items-center gap-2 text-[13px] font-medium',
+              description: 'text-[11px] text-[var(--app-text-muted)]'
+            }"
+          >
+            <template #label="{ item }">
+              <UIcon :name="item.icon || 'i-lucide-box'" class="size-4 text-[var(--app-text-muted)]" />
+              {{ item.label }}
+            </template>
+          </URadioGroup>
+          <div
+            v-else-if="isDesktopRuntime() && selectedConnectMethodType === 'native'"
+            class="connect-method-island__empty"
+          >
+            <p class="text-xs text-[var(--app-text-muted)]">
+              {{ t("Setting.NoClientConfigured") }}
             </p>
+            <UButton
+              type="button"
+              icon="i-lucide-settings"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              :label="t('Setting.ConfigureClient')"
+              @click="openProtocolApplicationSettings"
+            />
           </div>
-        </Transition>
+          <p v-else class="py-1 text-center text-xs text-[var(--app-text-muted)]" role="status">
+            {{ t("ConnectMethod.Empty") }}
+          </p>
+        </div>
       </div>
     </div>
     <div
@@ -287,7 +231,7 @@ async function openProtocolApplicationSettings() {
           orientation="horizontal"
           :ui="{
             fieldset: 'flex flex-wrap gap-2',
-            item: 'rounded-[length:var(--app-radius)] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
+            item: 'items-center rounded-[length:var(--app-radius)] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
           }"
         />
         <div
@@ -370,24 +314,5 @@ async function openProtocolApplicationSettings() {
   min-height: 76px;
   padding: 16px 12px;
   text-align: center;
-}
-
-.island-method-enter-active,
-.island-method-leave-active {
-  overflow: hidden;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    height 220ms ease;
-}
-
-.island-method-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.island-method-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
 }
 </style>

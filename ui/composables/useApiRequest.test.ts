@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   apiRequest,
   ApiRequestError,
@@ -11,12 +11,26 @@ import {
   updateLunaPreferences
 } from "./useApiRequest";
 
-const { desktopInvoke } = vi.hoisted(() => ({ desktopInvoke: vi.fn() }));
+const { desktopInvoke, userInfoStore } = vi.hoisted(() => ({
+  desktopInvoke: vi.fn(),
+  userInfoStore: {
+    loggedIn: false,
+    orgId: "org-current",
+    setUserLoggedIn: vi.fn()
+  }
+}));
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
-vi.mock("~/store/modules/userInfo", () => ({
-  useUserInfoStore: () => ({ loggedIn: false, orgId: "org-current" })
-}));
+vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => userInfoStore }));
+
+beforeEach(() => {
+  desktopInvoke.mockReset();
+  userInfoStore.loggedIn = false;
+  userInfoStore.setUserLoggedIn.mockReset();
+  userInfoStore.setUserLoggedIn.mockImplementation((loggedIn: boolean) => {
+    userInfoStore.loggedIn = loggedIn;
+  });
+});
 
 describe("API request headers", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -292,6 +306,37 @@ describe("API error summaries", () => {
       message: "Denied",
       data: { code: "acl_error", detail: "Denied" }
     });
+  });
+
+  it("does not infer auth expiry from an OAuth error description", async () => {
+    userInfoStore.loggedIn = true;
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    desktopInvoke.mockRejectedValueOnce(
+      new Error(
+        'Error invoking remote method \'jms:invoke\': Error: Token exchange failed: status=400, body={"error":"server_error","error_description":"mentions invalid_grant"}'
+      )
+    );
+
+    await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toThrow("invalid_grant");
+    expect(userInfoStore.setUserLoggedIn).not.toHaveBeenCalled();
+  });
+
+  it("does not throttle the next auth failure while already logged out", async () => {
+    const emit = vi.fn();
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    vi.stubGlobal("useEventBus", () => ({ emit }));
+    desktopInvoke.mockRejectedValue(
+      new Error('api GET /api/test/: api request failed: status=401, body={"detail":"Unauthorized"}')
+    );
+
+    await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toMatchObject({ status: 401 });
+    userInfoStore.loggedIn = true;
+    await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toMatchObject({ status: 401 });
+
+    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledOnce();
+    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledWith(false);
+    expect(emit).toHaveBeenCalledWith("clearAssets", undefined);
+    expect(emit).toHaveBeenCalledWith("login", undefined);
   });
 
   it("preserves structured validation data", () => {

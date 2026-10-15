@@ -11,13 +11,20 @@ import type {
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import {
+  findMatchingPersonalCredential,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 
 export interface ConnectionFormDraft {
   protocol: string;
   account: string;
+  accountId?: string;
   manualUsername: string;
   manualPassword: string;
+  hostedSecret: string;
+  inputSecretType: string;
   personalCredentialId: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType: string;
@@ -58,8 +65,11 @@ export function useConnectionFormState() {
   const draft = ref<ConnectionFormDraft>({
     protocol: "",
     account: "",
+    accountId: undefined,
     manualUsername: "",
     manualPassword: "",
+    hostedSecret: "",
+    inputSecretType: "password",
     personalCredentialId: "",
     personalCredentialVersion: undefined,
     personalCredentialSecretType: "password",
@@ -83,11 +93,9 @@ export function useConnectionFormState() {
   );
 
   const getVisibleProtocols = (protocols: PermedProtocol[]) =>
-    isDesktopRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
+    protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
-  const isManualInputAccount = (account: string) =>
-    account === "@INPUT" || account === getManualInputLabel() || account === "手动输入" || account === "Manual input";
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>
     [asset.org_id || userInfoStore.currentUser?.org?.id || "", asset.id, protocol.trim().toLowerCase()].join(":");
   const resetPersonalCredentialSelection = (protocol = draft.value.protocol) => {
@@ -125,13 +133,11 @@ export function useConnectionFormState() {
     }
     if (mode === "anonymous" && accounts.some((account) => account.alias === "@ANON")) return "@ANON";
     if (mode === "hosted" && username) {
-      const hosted = accounts.find(
-        (account) =>
-          (source?.accountId && account.id === source.accountId) ||
-          account.name === username ||
-          account.username === username ||
-          account.alias === username
-      );
+      const hosted =
+        accounts.find((account) => account.id === source?.accountId) ||
+        accounts.find(
+          (account) => account.name === username || account.username === username || account.alias === username
+        );
       if (hosted) return hosted.name;
     }
 
@@ -154,20 +160,13 @@ export function useConnectionFormState() {
       resetPersonalCredentialSelection(protocol);
     }
     personalCredentialScope = nextScope;
-    const supportsManualInput = (asset.permedAccounts || []).some((account) => account.alias === "@INPUT");
-    if (!supportsManualInput || !protocol) {
+    const supportsCredentials = (asset.permedAccounts || []).some(supportsPersonalCredential);
+    if (!supportsCredentials || !protocol) {
       personalCredentials.value = [];
       personalCredentialsLoading.value = false;
       personalCredentialsLoaded.value = true;
       personalCredentialsLoadFailed.value = false;
       resetPersonalCredentialSelection(protocol);
-      return;
-    }
-
-    const needsPersonalCredentials = isManualInputAccount(draft.value.account) || !!draft.value.personalCredentialId;
-    if (!needsPersonalCredentials) {
-      personalCredentialsLoading.value = false;
-      personalCredentialsLoadFailed.value = false;
       return;
     }
 
@@ -210,11 +209,18 @@ export function useConnectionFormState() {
     }
     personalCredentialScope = nextPersonalCredentialScope;
 
+    const account = resolvePreferredAccount(source, accounts);
+    const hostedAccount =
+      accounts.find((item) => !item.alias.startsWith("@") && item.id === source.accountId) ||
+      accounts.find((item) => !item.alias.startsWith("@") && item.name === account);
     draft.value = {
       protocol,
-      account: resolvePreferredAccount(source, accounts),
+      account,
+      accountId: hostedAccount?.id,
       manualUsername: source.manualUsername || "",
       manualPassword: "",
+      hostedSecret: "",
+      inputSecretType: "password",
       personalCredentialId: savedCredentialMatchesProtocol ? saved?.personalCredentialId || "" : "",
       personalCredentialVersion: savedCredentialMatchesProtocol ? saved?.personalCredentialVersion : undefined,
       personalCredentialSecretType:
@@ -236,8 +242,19 @@ export function useConnectionFormState() {
 
   const restoreDraft = (asset: AssetItem, value: ConnectionFormDraft) => {
     activeAsset.value = asset;
-    draft.value = { ...value, connectOptions: { ...value.connectOptions } };
+    draft.value = {
+      ...value,
+      hostedSecret: value.hostedSecret || "",
+      inputSecretType: value.inputSecretType || "password",
+      connectOptions: { ...value.connectOptions }
+    };
     void loadPersonalCredentials(asset, draft.value.protocol);
+  };
+
+  const clearEnteredSecrets = () => {
+    draft.value.manualPassword = "";
+    draft.value.dynamicPassword = "";
+    draft.value.hostedSecret = "";
   };
 
   const buildConnectionInfo = (asset: AssetItem): ConnectionFormInfo => {
@@ -255,26 +272,33 @@ export function useConnectionFormState() {
       account = dynamic?.name || account.replace(/\(.+\)/, "");
     }
     if (accountMode === "hosted") {
-      accountId = asset.permedAccounts?.find(
-        (item) => item.name === account || item.username === account || item.alias === account
-      )?.id;
+      accountId =
+        asset.permedAccounts?.find((item) => item.id === draft.value.accountId)?.id ||
+        asset.permedAccounts?.find(
+          (item) => item.name === account || item.username === account || item.alias === account
+        )?.id;
     }
-    const canUsePersonalCredential = accountMode === "manual";
+    const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
+    const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
+    const inputSecretType =
+      accountMode === "hosted" || accountMode === "dynamic"
+        ? ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
+          ? draft.value.inputSecretType === "ssh_key"
+            ? "ssh_key"
+            : "password"
+          : resolvePersonalCredentialSecretType(draft.value.protocol, selectedAccount?.secret_type || "password")
+        : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      draft.value.personalCredentialSecretType
+      accountMode === "hosted" ? inputSecretType : draft.value.personalCredentialSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
-        ? personalCredentials.value.find((credential) => {
-            const secretType =
-              typeof credential.secret_type === "string"
-                ? credential.secret_type
-                : credential.secret_type?.value || "password";
-            return (
-              credential.username === draft.value.manualUsername.trim() && secretType === personalCredentialSecretType
-            );
-          })
+        ? findMatchingPersonalCredential(
+            personalCredentials.value,
+            accountMode === "hosted" ? selectedAccount?.username || "" : draft.value.manualUsername,
+            personalCredentialSecretType
+          )
         : undefined;
 
     const availableProtocols = sortProtocolNames(
@@ -289,6 +313,8 @@ export function useConnectionFormState() {
       accountMode,
       manualUsername: draft.value.manualUsername,
       manualPassword: draft.value.manualPassword,
+      hostedSecret: draft.value.hostedSecret,
+      inputSecretType,
       personalCredentialId: canUsePersonalCredential
         ? draft.value.personalCredentialId || matchingPersonalCredential?.id
         : undefined,
@@ -300,7 +326,7 @@ export function useConnectionFormState() {
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret,
+      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },
@@ -309,12 +335,7 @@ export function useConnectionFormState() {
   };
 
   watch(
-    [
-      () => activeAsset.value?.id,
-      () => draft.value.protocol,
-      () => draft.value.account,
-      () => userInfoStore.currentUser?.org?.id
-    ],
+    [() => activeAsset.value?.id, () => draft.value.protocol, () => userInfoStore.currentUser?.org?.id],
     ([, protocol]) => {
       if (activeAsset.value) void loadPersonalCredentials(activeAsset.value, String(protocol || ""));
     }
@@ -327,9 +348,7 @@ export function useConnectionFormState() {
     return {
       ...asset,
       permedAccounts: detail.permed_accounts ?? asset.permedAccounts ?? [],
-      permedProtocols: (detail.permed_protocols ?? asset.permedProtocols ?? []).filter(
-        (protocol: PermedProtocol) => protocol?.name !== "winrm"
-      )
+      permedProtocols: detail.permed_protocols ?? asset.permedProtocols ?? []
     };
   };
 
@@ -338,6 +357,7 @@ export function useConnectionFormState() {
     draft,
     initDraft,
     restoreDraft,
+    clearEnteredSecrets,
     loadAssetDetails,
     personalCredentials,
     personalCredentialsLoaded,

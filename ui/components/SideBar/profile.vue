@@ -2,23 +2,13 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { closeCurrentSiteWorkspace, confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
-import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
-
-interface VersionAlertPayload {
-  type: string;
-  version?: string;
-}
-
-interface VersionMessageResponse {
-  status: number;
-  data: string;
-  success: boolean;
-}
 
 const recentSiteLimit = 5;
 const loginFailureToastId = "login-failed";
@@ -63,6 +53,7 @@ const editingAccountId = ref("");
 const errorMessage = ref("");
 const loginBtn = ref(false);
 const openModal = ref(false);
+const addingSite = ref(false);
 const hasValidationError = ref(false);
 const validationField = ref<"site" | "name" | null>(null);
 const recentSitesDismissed = ref(false);
@@ -82,6 +73,8 @@ const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 let desktopListenersActive = true;
+let loginRequestGeneration = 0;
+let loginInFlight = false;
 
 const retainDesktopListener = (target: typeof unlistenAuthUrlRef, unlisten: DesktopUnlistenFn) => {
   if (!desktopListenersActive) {
@@ -92,7 +85,7 @@ const retainDesktopListener = (target: typeof unlistenAuthUrlRef, unlisten: Desk
   return true;
 };
 
-useEventBus().on("login", openLoginPage);
+useEventBus().on("login", (request) => openLoginPage(request?.accountId));
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 const normalizedInputSiteName = computed(() => inputSiteName.value.trim());
@@ -132,6 +125,15 @@ const clearLoginBtnUnlockTimer = () => {
   }
 };
 
+watch(normalizedInputSite, () => {
+  loginRequestGeneration += 1;
+  if (!loginInFlight) return;
+  loginInFlight = false;
+  loginBtn.value = false;
+  clearLoginBtnUnlockTimer();
+  void desktopInvoke("auth_cancel").catch((error) => console.debug("auth_cancel failed", error));
+});
+
 const enableLoginBtnAfter = (ms: number) => {
   clearLoginBtnUnlockTimer();
 
@@ -142,12 +144,12 @@ const enableLoginBtnAfter = (ms: number) => {
 };
 
 const accountTooltip = computed(() => {
+  if (!loggedIn.value) return t("Common.More");
   if (loggedIn.value && currentUser.value?.name) return currentUser.value.name;
   return t("Common.Account");
 });
 
 const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
-const siteAccounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
 
 const languageItems = computed(() =>
   ((locales.value as Array<{ code?: string; name?: string } | string>) || []).map((item) => {
@@ -218,7 +220,10 @@ const menuShortcutButtonUi = {
   label: "min-w-0 flex-1 truncate text-left"
 };
 
-const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
+const currentThemeAccent = computed(() => {
+  const preset = getThemePreset(currentThemePresetId.value);
+  return preset?.baseColor || preset?.accent || "var(--theme-accent)";
+});
 const themePaletteOpen = ref(false);
 const previewedThemePresetId = ref<ThemePresetId | null>(null);
 const palettePreviewArmed = ref(false);
@@ -357,11 +362,6 @@ const applyPalettePreset = (id: ThemePresetId) => {
   } catch {}
 };
 
-const accountInitial = (name?: string) => {
-  const trimmed = (name || "").trim();
-  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
-};
-
 watch(
   () => userTheme.value,
   () => {
@@ -474,110 +474,10 @@ const handleClearInput = () => {
   recentSitesDismissed.value = false;
 };
 
-function normalizeVersionMessage(response: VersionMessageResponse) {
-  if (response.status === 404) {
-    return { status: "incompatible" as const, versions: [] as string[] };
-  }
-
-  if (!response.data) {
-    return { status: "list" as const, versions: [] as string[] };
-  }
-
-  try {
-    const parsed = JSON.parse(response.data);
-    const versions = Array.isArray(parsed)
-      ? parsed.map((item) => (item == null ? "" : String(item))).filter((v) => v.length > 0)
-      : [];
-    return { status: "list" as const, versions };
-  } catch {
-    return { status: "list" as const, versions: [] as string[] };
-  }
-}
-
-function normalizeMajorMinor(version: string) {
-  const cleaned = (version || "").trim();
-  if (!cleaned) return "";
-
-  const parts = cleaned.split(".");
-  const major = (parts[0] || "").replace(/\D/g, "");
-  if (!major) return "";
-
-  const minor = (parts[1] || "").replace(/\D/g, "");
-  return minor ? `${major}.${minor}` : major;
-}
-
-function normalizeMajorMinorList(versions: string[]) {
-  const normalized: string[] = [];
-  const seen = new Set<string>();
-
-  for (const version of versions) {
-    const value = normalizeMajorMinor(version);
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    normalized.push(value);
-  }
-
-  return normalized;
-}
-
-const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
-  openModal.value = false;
-  loginBtn.value = false;
-  useEventBus().emit("versionAlert", payload);
-};
-
-const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
-  if (!isDesktopRuntime()) return true;
-
-  await desktopInvoke("set_api_session", {
-    sessionKey: accountId,
-    origin: site,
-    bearerToken: "",
-    orgId: ""
-  });
-
-  const [versionResponse, appVersion] = await Promise.all([
-    desktopInvoke<VersionMessageResponse>("get_version_message").catch(() => {
-      return null;
-    }),
-    desktopApp.getVersion().catch(() => "")
-  ]);
-
-  if (!versionResponse || versionResponse.status === 0) {
-    console.warn("Skip version precheck before OAuth because version endpoint is unavailable", {
-      site,
-      versionResponse
-    });
-    return true;
-  }
-
-  const { status: versionStatus, versions } = normalizeVersionMessage(versionResponse);
-
-  if (versionStatus === "incompatible") {
-    emitVersionAlertAndCloseModal({ type: "incompatible" });
-    return false;
-  }
-
-  const normalizedAppVersion = normalizeMajorMinor(appVersion);
-  const normalizedVersions = normalizeMajorMinorList(versions);
-
-  if (normalizedAppVersion && normalizedVersions.length > 0) {
-    if (!normalizedVersions.includes(normalizedAppVersion)) {
-      emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
-      return false;
-    }
-  } else if (appVersion && versions.length > 0 && !versions.includes(appVersion)) {
-    emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
-    return false;
-  }
-
-  return true;
-};
-
 /**
  * @description 打开登录页面
  */
-function openLoginPage() {
+function openLoginPage(accountId?: string) {
   profileOpen.value = false;
 
   if (!isDesktopRuntime()) {
@@ -585,8 +485,12 @@ function openLoginPage() {
     return;
   }
 
-  const reauthUser = !loggedIn.value ? currentUser.value : null;
-  editingAccountId.value = reauthUser ? currentAccountId.value : "";
+  addingSite.value = accountId === "";
+  const reauthAccountId =
+    accountId ?? (!loggedIn.value ? currentAccountId.value || Object.keys(userMap.value)[0] || "" : "");
+  const reauthUser = userMap.value[reauthAccountId];
+  if (reauthUser && !loggedIn.value) userInfoStore.selectAccountForLogin(reauthAccountId);
+  editingAccountId.value = reauthUser ? reauthAccountId : "";
   inputSite.value = reauthUser?.site || "";
   inputSiteName.value = reauthUser?.siteName || reauthUser?.site || "";
   siteNameEdited.value = Boolean(reauthUser);
@@ -626,17 +530,9 @@ async function clearAuthInfo() {
   await navigateTo(localePath({ path: "/" }));
 }
 
-async function handleSwitchAccount(accountId: string) {
-  if (accountId === currentAccountId.value) return;
-
-  profileOpen.value = false;
-  if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
-  await userInfoStore.setCurrentAccount(accountId);
-}
-
 function openAddSite() {
   profileOpen.value = false;
-  openLoginPage();
+  openLoginPage("");
 }
 
 async function openUserSettings() {
@@ -718,8 +614,8 @@ const handleClipboard = (value: string) => {
 /**
  * @description 处理确认输入
  */
-const handleConfirm = async () => {
-  if (loginBtn.value) return;
+const handleConfirm = async (confirmation?: { id: number; accountId: string; generation: number }) => {
+  if (loginBtn.value || (confirmation && confirmation.generation !== loginRequestGeneration)) return;
 
   errorMessage.value = "";
   hasValidationError.value = false;
@@ -785,27 +681,46 @@ const handleConfirm = async () => {
 
   const isReauth = Boolean(editingAccountId.value && editingAccountId.value === currentAccountId.value);
   const leavingCurrentSite = loggedIn.value && !isReauth;
-  if (leavingCurrentSite && !(await confirmLeaveCurrentSiteSessions("login", { close: false }))) return;
+  const generation = confirmation?.generation ?? ++loginRequestGeneration;
+  if (leavingCurrentSite && !confirmation && !(await confirmLeaveCurrentSiteSessions("login", { close: false })))
+    return;
+  if (generation !== loginRequestGeneration) return;
 
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
-    const accountId = editingAccountId.value || globalThis.crypto.randomUUID();
-    const ok = await checkVersionBeforeOAuth(accountId, normalizedSite);
-    if (!ok) return;
-
+    loginInFlight = true;
+    const accountId = confirmation?.accountId || editingAccountId.value || globalThis.crypto.randomUUID();
+    useClientCompatibility().dismiss();
     const payload = await desktopInvoke<any>("auth_login", {
       site: normalizedSite,
-      sessionId: accountId
+      sessionId: accountId,
+      compatibilityConfirmationId: confirmation?.id
     });
+    if (generation !== loginRequestGeneration) return;
+    if (payload?.status === "confirmation-required" && payload.compatibility) {
+      openModal.value = false;
+      loginBtn.value = false;
+      useClientCompatibility().show(payload.compatibility, async () => {
+        if (generation !== loginRequestGeneration) return;
+        openModal.value = true;
+        await handleConfirm({ id: payload.compatibility_confirmation_id, accountId, generation });
+      });
+      return;
+    }
     if (!payload || payload.status !== "success") {
       loginBtn.value = false;
       return;
     }
     if (leavingCurrentSite) await closeCurrentSiteWorkspace();
-    await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName });
+    if (generation !== loginRequestGeneration) return;
+    if (!(await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName }))) {
+      loginBtn.value = false;
+      return;
+    }
     void saveRecentSite(normalizedSite);
   } catch (e: any) {
+    if (generation !== loginRequestGeneration) return;
     const raw = (e?.message || e || "").toString();
     const looksLikeSiteIssue = [
       "Failed to fetch OAuth config",
@@ -833,6 +748,8 @@ const handleConfirm = async () => {
     nextTick(() => {
       inputRef.value?.$el?.querySelector("input")?.focus();
     });
+  } finally {
+    if (generation === loginRequestGeneration) loginInFlight = false;
   }
 };
 
@@ -885,13 +802,7 @@ onMounted(async () => {
       nextTick(() => {
         inputRef.value?.$el?.querySelector("input")?.focus();
       });
-
-      return;
     }
-
-    nextTick(() => {
-      userInfoStore.setUserLoggedIn(false);
-    });
   });
   if (!retainDesktopListener(unlistenErrorPageRef, unlistenErrorPage)) return;
 
@@ -925,11 +836,7 @@ onMounted(async () => {
       nextTick(() => {
         inputRef.value?.$el?.querySelector("input")?.focus();
       });
-
-      return;
     }
-
-    userInfoStore.setUserLoggedIn(false);
   });
   retainDesktopListener(unlistenLoginFailedRef, unlistenLoginFailed);
 });
@@ -971,7 +878,7 @@ onBeforeUnmount(() => {
         @pointerdown="profileOpenedByPointer = true"
         @keydown="profileOpenedByPointer = false"
       >
-        <UIcon :name="loggedIn ? 'i-lucide-circle-user-round' : 'i-lucide-user-round'" class="size-4" />
+        <UIcon :name="loggedIn ? 'i-lucide-circle-user-round' : 'i-lucide-menu'" class="size-4" />
       </UButton>
     </UTooltip>
 
@@ -1008,7 +915,7 @@ onBeforeUnmount(() => {
             size="sm"
             block
             class="justify-start"
-            @click="openLoginPage"
+            @click="openLoginPage()"
           />
         </div>
 
@@ -1131,7 +1038,7 @@ onBeforeUnmount(() => {
                   >
                     <span
                       class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
-                      :style="{ backgroundColor: item.accent }"
+                      :style="{ backgroundColor: item.baseColor || item.accent }"
                     />
                     <span class="min-w-0 flex-1 truncate text-left text-xs">{{ themePresetLabel(item) }}</span>
                     <UIcon
@@ -1227,32 +1134,8 @@ onBeforeUnmount(() => {
 
             <template #content>
               <div data-profile-nested-popover>
-                <div v-if="siteAccounts.length" class="max-h-60 overflow-y-auto">
-                  <UButton
-                    v-for="[accountId, account] in siteAccounts"
-                    :key="accountId"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    block
-                    class="justify-start"
-                    :title="`${account.siteName || account.site} · ${account.name}`"
-                    :aria-current="accountId === currentAccountId ? 'true' : undefined"
-                    @click="handleSwitchAccount(accountId)"
-                  >
-                    <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
-                    <span class="min-w-0 flex-1 text-left">
-                      <span class="block truncate">{{ account.siteName || account.site }}</span>
-                      <span class="block truncate text-xs font-normal text-muted">{{ account.name }}</span>
-                    </span>
-                    <UIcon
-                      v-if="accountId === currentAccountId"
-                      name="i-lucide-check"
-                      class="size-3.5 shrink-0 text-primary"
-                    />
-                  </UButton>
-                </div>
-                <USeparator v-if="siteAccounts.length" class="my-1.5" :ui="menuSeparatorUi" />
+                <SiteAccounts @select="profileOpen = false" />
+                <USeparator v-if="Object.keys(userMap).length" class="my-1.5" :ui="menuSeparatorUi" />
                 <UButton
                   :label="t('Login.AddAccount')"
                   icon="i-lucide-user-round-plus"
@@ -1290,7 +1173,7 @@ onBeforeUnmount(() => {
   <Modal
     v-if="isDesktopRuntime()"
     v-model:open="openModal"
-    :title="t('Login.Title')"
+    :title="t(addingSite ? 'Login.AddAccount' : 'Login.Title')"
     :disabled="loginBtn"
     @update:open="openModal = $event"
     @confirm="handleConfirm"
@@ -1315,8 +1198,9 @@ onBeforeUnmount(() => {
           </span>
         </label>
 
-        <template v-if="normalizedInputSite?.length" #trailing>
+        <template #trailing>
           <UButton
+            v-if="normalizedInputSite?.length"
             color="neutral"
             variant="link"
             size="sm"

@@ -1,5 +1,7 @@
 import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import type {
   ConnectionInfo,
   ConnectionPreferenceInfo,
@@ -8,6 +10,7 @@ import type {
   PermOrgItem,
   RdpGraphics,
   RoleType,
+  UserData,
   UserIntiInfo
 } from "~/types";
 import { getUserPermissions } from "~/composables/useApiRequest";
@@ -25,17 +28,19 @@ import {
   WORKSPACE_BRAND_STATE_KEY,
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
+import { pageLocation } from "~/utils/runtime";
 
 interface BootstrapResponse {
   data: string;
   status?: number;
 }
-type LoginPayload = UserIntiInfo & {
-  bearer: string;
-  profile: BootstrapResponse;
-  current_org: BootstrapResponse;
-  permission_orgs: BootstrapResponse;
-};
+type LoginPayload = UserIntiInfo &
+  DesktopConnectionResult & {
+    bearer: string;
+    profile: BootstrapResponse;
+    current_org: BootstrapResponse;
+    permission_orgs: BootstrapResponse;
+  };
 interface PersistedUserSnapshot {
   loggedIn?: boolean;
   currentAccountId?: string;
@@ -140,7 +145,7 @@ export const useAuthSession = () => {
     );
     const currentOrg: CurrentOrg | null = selectedOrg ? { ...selectedOrg, comment: selectedOrg.comment || "" } : null;
 
-    userInfoStore.setUserData(accountId, {
+    const userData: UserData = {
       accountId,
       userId,
       siteName,
@@ -163,13 +168,35 @@ export const useAuthSession = () => {
         protocol: "",
         username: ""
       }
-    });
+    };
 
-    userInfoStore.setOrganizations(availableOrgs);
-    if (currentOrg?.id) {
-      userInfoStore.setCurrentOrg(currentOrg);
+    const publishSession = () => {
+      userInfoStore.setUserData(accountId, userData);
+
+      userInfoStore.setOrganizations(availableOrgs);
+      if (currentOrg?.id) {
+        userInfoStore.setCurrentOrg(currentOrg);
+      }
+      userInfoStore.setUserLoggedIn(true);
+    };
+
+    if (isDesktopRuntime()) {
+      if (Number(profile.status) < 200 || Number(profile.status) >= 300) return false;
+      const applied = await userInfoStore.withSessionActivation(async () => {
+        const activation = await desktopInvoke<DesktopConnectionResult>("set_api_session", {
+          sessionKey: accountId,
+          origin: resolvedSite,
+          connectionId: payload.connection_id,
+          orgId: existingUser?.org?.id || ""
+        });
+        if (activation?.status !== "success") return false;
+        publishSession();
+        return true;
+      });
+      if (!applied) return false;
+    } else {
+      publishSession();
     }
-    userInfoStore.setUserLoggedIn(true);
 
     if (options.showToast !== false) {
       toast.add({
@@ -230,7 +257,7 @@ export const useAuthSession = () => {
         currentConnectionPreferenceMap: parsed.currentConnectionPreferenceMap || {}
       });
 
-      userInfoStore.setCurrentAccount(snapshotAccountId);
+      if (!isDesktopRuntime()) void userInfoStore.setCurrentAccount(snapshotAccountId);
       userInfoStore.setUserLoggedIn(false);
       console.info("restore persisted userInfo success", {
         snapshotAccountId,
@@ -272,7 +299,7 @@ export const useAuthSession = () => {
       return false;
     }
 
-    const connectionToken = new URLSearchParams(window.location.search).get("token");
+    const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
       fetchWebJson<WebProfile>([
         connectionToken
@@ -296,7 +323,7 @@ export const useAuthSession = () => {
     }
 
     const cookieOrgId = getWebOrgId();
-    const site = window.location.origin;
+    const site = pageLocation().origin;
     const profileOrg: CurrentOrg = {
       id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
       name: profileData.org_name || profileData.org?.name || "",
@@ -350,19 +377,21 @@ export const useAuthSession = () => {
     return true;
   };
 
-  const bootstrapSession = async () => {
+  const promptDesktopLogin = async () => {
+    if (import.meta.server || !isDesktopRuntime()) return;
+    if (pageLocation().pathname.includes("/auth")) return;
+    await navigateTo(localePath({ path: "/" }));
+    await nextTick();
+    useEventBus().emit("login", undefined);
+  };
+
+  const bootstrapSession = async (compatibilityConfirmationId?: number) => {
     if (bootstrapRetryTimer) {
       clearTimeout(bootstrapRetryTimer);
       bootstrapRetryTimer = null;
     }
 
     const restored = restorePersistedSnapshot();
-
-    const promptLogin = () => {
-      if (!import.meta.client || !isDesktopRuntime()) return;
-      if (window.location.pathname.includes("/auth")) return;
-      useEventBus().emit("login", undefined);
-    };
 
     const notifyBootstrapFailure = (failure: "network" | "server") => {
       if (lastBootstrapFailure === failure) return;
@@ -394,14 +423,22 @@ export const useAuthSession = () => {
 
         const payload = await desktopInvoke<LoginPayload>("bootstrap_auth_session", {
           site,
-          sessionId: accountId
+          sessionId: accountId,
+          compatibilityConfirmationId
         });
+        if (payload?.status === "stale") return false;
+        if (payload?.status === "confirmation-required" && payload.compatibility) {
+          useClientCompatibility().show(payload.compatibility, () =>
+            bootstrapPersistedSession(payload.compatibility_confirmation_id)
+          );
+          return false;
+        }
         const failure = classifyBootstrapFailure(payload);
 
         if (failure === "auth") {
           lastBootstrapFailure = null;
-          userInfoStore.setUserLoggedIn(false);
-          if (restored) promptLogin();
+          userInfoStore.markSessionExpired(accountId);
+          if (restored) await promptDesktopLogin();
           return false;
         }
         if (failure) {
@@ -423,7 +460,7 @@ export const useAuthSession = () => {
         }
 
         userInfoStore.setUserLoggedIn(false);
-        if (restored) promptLogin();
+        if (restored) await promptDesktopLogin();
         return false;
       }
 
@@ -433,27 +470,39 @@ export const useAuthSession = () => {
       userInfoStore.setUserLoggedIn(false);
       bootstrapRetryTimer = setTimeout(() => {
         bootstrapRetryTimer = null;
-        bootstrapPromise = bootstrapSession();
+        bootstrapPromise = bootstrapSession(compatibilityConfirmationId);
       }, 5000);
       return false;
     } catch (error) {
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);
-      if (restored) promptLogin();
+      if (restored) await promptDesktopLogin();
       return false;
     }
   };
 
   const authReady = useState("auth-bootstrap-ready", () => false);
 
-  const bootstrapPersistedSession = () => {
+  function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
     if (!bootstrapPromise) {
-      bootstrapPromise = bootstrapSession().finally(() => {
+      bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
         authReady.value = true;
+        bootstrapPromise = null;
       });
     }
 
     return bootstrapPromise;
+  }
+
+  const handleDesktopAuthExpired = async (sessionId: string) => {
+    if (!sessionId) return false;
+    userInfoStore.markSessionExpired(sessionId);
+    if (sessionId !== currentAccountId.value) return false;
+
+    userInfoStore.setUserLoggedIn(false);
+    useEventBus().emit("clearAssets", undefined);
+    await promptDesktopLogin();
+    return true;
   };
 
   const refreshOrganizations = () => {
@@ -490,6 +539,7 @@ export const useAuthSession = () => {
     applyLoginPayload,
     authReady,
     bootstrapPersistedSession,
+    handleDesktopAuthExpired,
     refreshOrganizations
   };
 };

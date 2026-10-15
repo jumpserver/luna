@@ -1,4 +1,4 @@
-import { finalizeSha256, parseSha256State, sha256Hex, updateSha256 } from "./sha256";
+import { chainTransferChecksum, emptyTransferChecksumState, sha256Hex } from "./sha256";
 
 interface ChecksumRequest {
   id: string;
@@ -18,18 +18,21 @@ const workerScope = globalThis as unknown as ChecksumWorkerScope;
 workerScope.onmessage = async (event) => {
   try {
     const request = event.data;
-    const state = parseSha256State(request.state);
+    const state = request.state || emptyTransferChecksumState();
 
     if (request.kind === "finalize") {
-      workerScope.postMessage({ id: request.id, checksum: finalizeSha256(state), state: JSON.stringify(state) });
+      workerScope.postMessage({ id: request.id, checksum: state, state });
       return;
     }
 
     const bytes = new Uint8Array(request.data || new ArrayBuffer(0));
     const chunkChecksum = await sha256Hex(bytes);
 
-    updateSha256(state, bytes);
-    workerScope.postMessage({ id: request.id, chunkChecksum, state: JSON.stringify(state) });
+    workerScope.postMessage({
+      id: request.id,
+      chunkChecksum,
+      state: await chainTransferChecksum(state, chunkChecksum)
+    });
   } catch (error) {
     workerScope.postMessage({ id: event.data.id, error: error instanceof Error ? error.message : String(error) });
   }

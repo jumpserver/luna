@@ -4,6 +4,7 @@ import { effectScope, ref } from "vue";
 import { resolveSessionComponent, resolveSessionSurface } from "~/shared/connectors/registry";
 import { ApiRequestError } from "./useApiRequest";
 import { useAssetAction } from "./useAssetAction";
+import { SFTP_FILE_MANAGER_VALUE } from "./useConnectMethods";
 import { useRdpResolutionPreference } from "./useRdpResolutionPreference";
 import { useWebProxyManager } from "./useWebProxyManager";
 
@@ -93,21 +94,11 @@ vi.mock("~/utils/runtime", async (importOriginal) => {
 function stubLocation(location: { protocol?: string; origin?: string } = {}) {
   mocks.location.protocol = location.protocol ?? "https:";
   mocks.location.origin = location.origin ?? "https://jumpserver.example";
-  vi.stubGlobal("window", {
-    location: {
-      assign: mocks.assign,
-      get protocol() {
-        return mocks.location.protocol;
-      },
-      get origin() {
-        return mocks.location.origin;
-      }
-    }
-  });
 }
 
 describe("opening assets in local applications", () => {
   const method = { value: "ssh_client", type: "native", component: "koko", disabled: false };
+  const sftpMethod = { value: SFTP_FILE_MANAGER_VALUE, type: "web", component: "koko", disabled: false };
   const payload = {
     protocol: "ssh",
     name: "生产主机",
@@ -120,6 +111,8 @@ describe("opening assets in local applications", () => {
     mocks.appConfig.value = undefined;
     mocks.rdpResolution.value = undefined;
     vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("isElectronRuntime", () => false);
+    vi.stubGlobal("getSmartEndpoint", async () => ({ host: "jumpserver.example", https_port: 443 }));
     vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
     vi.stubGlobal("useToast", () => ({}));
     vi.stubGlobal("useErrorToast", () => ({ addErrorToast: mocks.errorToast }));
@@ -127,8 +120,8 @@ describe("opening assets in local applications", () => {
     mocks.createTicket.mockResolvedValue({ ticket: "web-ticket" });
     vi.stubGlobal("useWorkspaceConnectors", () => ({ createKokoTicket: mocks.createTicket }));
     vi.stubGlobal("useConnectMethods", () => ({
-      fetchConnectMethods: async () => ({ ssh: [method] }),
-      getMethodsForProtocol: async () => [method]
+      fetchConnectMethods: async () => ({ ssh: [method], sftp: [sftpMethod] }),
+      getMethodsForProtocol: async (protocol: string) => (protocol === "sftp" ? [sftpMethod] : [method])
     }));
     vi.stubGlobal("storeToRefs", () => ({
       currentSite: ref(mocks.store.currentSite),
@@ -188,13 +181,43 @@ describe("opening assets in local applications", () => {
     [{ input_secret: ["Required"] }, "ConnectError.SecretRequired"],
     [{ code: "unknown", detail: "Backend detail" }, "Backend detail"],
     [{}, "HTTP 400"]
-  ])("maps connection token errors before showing the toast", async (data, description) => {
+  ])("maps connection token errors onto the session error callback", async (data, _description) => {
     mocks.createToken.mockRejectedValue(new ApiRequestError(400, data));
 
     const { failed } = await connect();
 
     expect(failed).toHaveBeenCalledWith(expect.any(ApiRequestError));
-    expect(mocks.errorToast).toHaveBeenCalledWith(expect.objectContaining({ description }));
+    expect(mocks.errorToast).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    [false, true].flatMap((desktop) =>
+      [
+        ["ssh", "ssh_guide", "koko"],
+        ["mysql", "db_guide", "magnus"],
+        ["vnc", "vnc_guide", "nec"]
+      ].map(([protocol, value, component]) => ({ desktop, protocol: protocol!, value: value!, component }))
+    )
+  )("opens $value in the workspace without launching a client (desktop=$desktop)", async (input) => {
+    vi.stubGlobal("isDesktopRuntime", () => input.desktop);
+    vi.stubGlobal("isElectronRuntime", () => input.desktop);
+    const guide = { ...method, value: input.value, component: input.component };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ [input.protocol]: [guide] }),
+      getMethodsForProtocol: async () => [guide]
+    }));
+
+    const { ready, failed } = await connect(input.value, input.protocol);
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(ready.mock.calls[0]?.[0].connectMethod.value).toBe(input.value);
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: input.protocol, connect_method: input.value }),
+      expect.anything()
+    );
+    expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+    expect(mocks.invoke).not.toHaveBeenCalledWith("pull_up", expect.anything());
+    expect(mocks.assign).not.toHaveBeenCalled();
   });
 
   it("saves K8s manual credentials as tokens", async () => {
@@ -249,6 +272,268 @@ describe("opening assets in local applications", () => {
       expect.anything()
     );
   });
+
+  it.each(["ssh", "sftp"])(
+    "passes a temporary SSH key for a hosted %s account without a stored secret",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      const account = {
+        alias: "root",
+        date_expired: "",
+        has_secret: false,
+        has_username: true,
+        id: "account-id",
+        name: "root",
+        secret_type: "password",
+        username: "root",
+        actions: []
+      };
+
+      await useAssetAction().handleAssetConnection("root", "asset", protocol, [account], undefined, {
+        accountMode: "hosted",
+        accountId: account.id,
+        hostedSecret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+        inputSecretType: "ssh_key",
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: "account-id",
+          protocol,
+          input_username: "root",
+          input_secret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+          input_secret_type: "ssh_key"
+        }),
+        expect.anything()
+      );
+    }
+  );
+
+  it.each(
+    (
+      [
+        [false, "manual", false],
+        [true, "manual", false],
+        [false, "manual", true],
+        [true, "manual", true],
+        [false, "dynamic", false],
+        [true, "dynamic", false]
+      ] as const
+    ).flatMap(([desktop, mode, save]) =>
+      (["ssh", "sftp"] as const).map((protocol) => [protocol, desktop, mode, save] as const)
+    )
+  )(
+    "submits an SSH key over %s with desktop=%s, mode=%s, save=%s",
+    async (protocol, desktop, accountMode, savePersonalCredential) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      const alias = accountMode === "manual" ? "@INPUT" : "@USER";
+      const privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\nkey-data\n-----END OPENSSH PRIVATE KEY-----";
+      await useAssetAction().handleAssetConnection(
+        alias,
+        "asset",
+        "ssh",
+        [
+          {
+            alias,
+            date_expired: "",
+            has_secret: false,
+            has_username: false,
+            id: "",
+            name: alias,
+            secret_type: "password",
+            username: alias,
+            actions: []
+          }
+        ],
+        protocol === "sftp" ? "sftp" : undefined,
+        {
+          accountMode,
+          manualUsername: "root",
+          manualPassword: privateKey,
+          dynamicPassword: privateKey,
+          inputSecretType: "ssh_key",
+          personalCredentialSecretType: "ssh_key",
+          savePersonalCredential,
+          connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: alias,
+          protocol,
+          input_username: accountMode === "manual" ? "root" : "",
+          input_secret: privateKey,
+          input_secret_type: "ssh_key",
+          ...(savePersonalCredential ? { save_personal_credential: true } : {})
+        }),
+        expect.anything()
+      );
+    }
+  );
+
+  it.each(["ssh", "sftp"])(
+    "uses a saved SSH key over %s without sending an empty replacement secret",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("@INPUT", "asset", protocol, [], undefined, {
+        accountMode: "manual",
+        personalCredentialId: "saved-key",
+        personalCredentialSecretType: "ssh_key",
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body.personal_credential_id).toBe("saved-key");
+      expect(body).not.toHaveProperty("input_secret");
+      expect(body).not.toHaveProperty("input_secret_type");
+    }
+  );
+
+  it.each(["ssh", "sftp"])(
+    "updates a saved SSH key over %s with its version and selected credential type",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("@INPUT", "asset", protocol, [], undefined, {
+        accountMode: "manual",
+        manualUsername: "root",
+        manualPassword: "replacement-private-key",
+        personalCredentialId: "saved-key",
+        personalCredentialVersion: 3,
+        personalCredentialSecretType: "ssh_key",
+        savePersonalCredential: true,
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken.mock.calls[0]![0]).toMatchObject({
+        personal_credential_id: "saved-key",
+        personal_credential_version: 3,
+        input_username: "root",
+        input_secret: "replacement-private-key",
+        input_secret_type: "ssh_key",
+        save_personal_credential: true
+      });
+    }
+  );
+
+  it.each(["ssh", "sftp"])("rejects an empty-secret hosted %s account before requesting a token", async (protocol) => {
+    const failed = vi.fn();
+    await useAssetAction().handleAssetConnection(
+      "root",
+      "asset",
+      protocol,
+      [
+        {
+          alias: "root",
+          date_expired: "",
+          has_secret: false,
+          has_username: true,
+          id: "account-id",
+          name: "root",
+          secret_type: "password",
+          username: "root",
+          actions: []
+        }
+      ],
+      undefined,
+      { accountMode: "hosted", accountId: "account-id", onSessionError: failed }
+    );
+
+    expect(failed).toHaveBeenCalledWith(expect.any(Error));
+    expect(mocks.createToken).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    ["ssh", "sftp"].flatMap((protocol) =>
+      [false, true].flatMap((desktop) =>
+        ["use", "create", "update"].map((operation) => [protocol, desktop, operation] as const)
+      )
+    )
+  )(
+    "uses a personal credential with the hosted account ID over %s, desktop=%s, operation=%s",
+    async (protocol, desktop, operation) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection(
+        "root",
+        "asset",
+        protocol,
+        [
+          {
+            alias: "account-id",
+            id: "account-id",
+            name: "root",
+            username: "root",
+            has_secret: false,
+            has_username: true,
+            secret_type: "password",
+            actions: [],
+            date_expired: ""
+          }
+        ],
+        undefined,
+        {
+          accountMode: "hosted",
+          accountId: "account-id",
+          personalCredentialId: operation === "create" ? undefined : "saved-key",
+          personalCredentialVersion: 3,
+          personalCredentialSecretType: "ssh_key",
+          inputSecretType: "ssh_key",
+          hostedSecret: operation === "use" ? "" : "replacement-key",
+          savePersonalCredential: operation !== "use",
+          connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body).toMatchObject({ account: "account-id", protocol });
+      if (operation === "use") {
+        expect(body.personal_credential_id).toBe("saved-key");
+        expect(body).not.toHaveProperty("input_username");
+        expect(body).not.toHaveProperty("input_secret");
+        expect(body).not.toHaveProperty("input_secret_type");
+      } else {
+        expect(body).toMatchObject({
+          input_username: "root",
+          input_secret: "replacement-key",
+          input_secret_type: "ssh_key",
+          save_personal_credential: true
+        });
+        if (operation === "update")
+          expect(body).toMatchObject({
+            personal_credential_id: "saved-key",
+            personal_credential_version: 3
+          });
+      }
+    }
+  );
 
   it("reuses Magnus db_client tokens before launching the local client", async () => {
     const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
@@ -316,6 +601,41 @@ describe("opening assets in local applications", () => {
       // Desktop resolves the user's MariaDB application first, then normalizes the driver in the launcher.
       protocol: desktop ? "mariadb" : "mysql"
     });
+  });
+
+  it("passes Dameng proxy credentials to the selected desktop client", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ dameng: [dbMethod] }),
+      getMethodsForProtocol: async () => [dbMethod]
+    }));
+    mocks.appConfig.value = {
+      databases: [{ name: "dbeaver", protocol: ["dameng"], is_set: true, path_exists: true, match_first: ["dameng"] }]
+    };
+    const dbPayload = {
+      ...payload,
+      protocol: "dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { ...payload.token, protocol: "dameng" }
+    };
+    mocks.getLocalClientUrl.mockResolvedValue({
+      url: `jms2://${btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(dbPayload))))}`
+    });
+    mocks.createToken.mockResolvedValue(dbPayload.token);
+
+    const { failed } = await connect("native_app:db_client:dbeaver", "dameng");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "dameng", connect_method: "db_client" }),
+      expect.anything()
+    );
+    const launchedUrl = mocks.invoke.mock.calls[0]?.[1].url;
+    const launchedPayload = JSON.parse(
+      new TextDecoder().decode(Uint8Array.from(atob(launchedUrl.slice(7)), (character) => character.charCodeAt(0)))
+    );
+    expect(launchedPayload).toEqual({ ...dbPayload, client: "dbeaver" });
   });
 
   it("preserves an applet's RDP launch protocol for a MariaDB asset", async () => {
@@ -622,6 +942,7 @@ describe("opening assets in local applications", () => {
     [undefined, false],
     [15001, undefined]
   ])("uses the Web Proxy endpoint port %s with license %s", async (port, license) => {
+    mocks.createToken.mockResolvedValue({ id: "id", value: "token-value", org_id: "asset-org" });
     mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: license });
     vi.stubGlobal("isDesktopRuntime", () => true);
     vi.stubGlobal("isElectronRuntime", () => true);
@@ -655,7 +976,11 @@ describe("opening assets in local applications", () => {
     });
     await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
     expect(failed).not.toHaveBeenCalled();
-    expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
+    expect(mocks.createTicket).toHaveBeenCalledWith({
+      baseUrl: "https://proxy.example",
+      tokenId: "id",
+      orgId: "asset-org"
+    });
     expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
     expect(ready.mock.calls[0]?.[0].webProxy.ticketEndpoint).toBe(mocks.createTicket.mock.calls[0]?.[0].baseUrl);
     expect(ready.mock.calls[0]?.[0].webProxy.recordingEnabled).toBe(license === true);
@@ -664,6 +989,61 @@ describe("opening assets in local applications", () => {
     expect(endpoint).toHaveBeenNthCalledWith(1, { protocol: "web_proxy", assetId: "asset", token: "id" }, undefined);
     expect(endpoint).toHaveBeenCalledTimes(port === undefined ? 2 : 1);
     expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
+  it("opens an HTTP client protocol payload in the desktop web proxy workspace", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    vi.stubGlobal("isElectronRuntime", () => true);
+    vi.stubGlobal("useWebProxyManager", useWebProxyManager);
+    const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ http: methods }),
+      getMethodsForProtocol: async () => methods
+    }));
+    const openSession = vi.fn(() => ({ id: "web-tab" }));
+    const updateSessionPayload = vi.fn();
+    vi.stubGlobal("useWorkspaceTabs", () => ({
+      getSessionConnectionAttempt: () => 0,
+      markSessionFailed: vi.fn(),
+      markSessionTokenCreated: vi.fn(),
+      openSession,
+      setSessionConnectMethod: vi.fn(),
+      updateSessionPayload
+    }));
+    vi.stubGlobal(
+      "getSmartEndpoint",
+      vi.fn().mockResolvedValue({ host: "proxy.example", web_proxy_port: 5001, https_port: 443 })
+    );
+    mocks.createToken.mockResolvedValue({ id: "id", value: "token-value", org_id: "org" });
+    mocks.getAssetDetail.mockResolvedValue({
+      name: "Website",
+      address: "https://website.example",
+      platform: { name: "Website" },
+      zone: { name: "Default" },
+      category: { value: "web" },
+      type: { value: "website" },
+      org_id: "org",
+      permed_accounts: [{ id: "account", name: "root", username: "root", alias: "root" }],
+      permed_protocols: [{ name: "http", port: 80 }],
+      spec_info: {}
+    });
+
+    await useAssetAction().handleWebClientProtocolPayload({ protocol: "http", asset: { id: "asset" } });
+
+    expect(openSession).toHaveBeenCalledWith(expect.objectContaining({ id: "asset" }), {
+      protocol: "http",
+      account: "root",
+      connectMethod: "web_proxy_native"
+    });
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ asset: "asset", protocol: "http", connect_method: "web_proxy" }),
+      expect.anything()
+    );
+    expect(updateSessionPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ tabId: "web-tab", assetId: "asset", protocol: "http" }),
+      expect.objectContaining({ webProxy: expect.objectContaining({ ticket: "web-ticket" }) })
+    );
+    expect(mocks.invoke).not.toHaveBeenCalledWith("pull_up", expect.anything());
   });
 
   it.each([
@@ -769,6 +1149,25 @@ describe("opening assets in local applications", () => {
     }
   );
 
+  it("launches a website client with Core's web_proxy method", async () => {
+    const webProxy = { value: "web_proxy", type: "native", component: "koko", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ http: [webProxy] }),
+      getMethodsForProtocol: async () => [webProxy]
+    }));
+
+    const { failed } = await connect("web_proxy", "http");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "http", connect_method: "web_proxy" }),
+      expect.anything()
+    );
+    expect(mocks.getLocalClientUrl).toHaveBeenCalledWith("id", expect.anything());
+    expect(mocks.assign).toHaveBeenCalledExactlyOnceWith(`jms2://${encoded}`);
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
   it("rejects legacy client URLs", async () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: `jms://${encoded}` });
     const { failed } = await connect();
@@ -816,7 +1215,7 @@ describe("opening assets in local applications", () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: "https://unexpected.example" });
     const { failed } = await connect();
     expect(failed).toHaveBeenCalledOnce();
-    expect(mocks.errorToast).toHaveBeenCalledOnce();
+    expect(mocks.errorToast).not.toHaveBeenCalled();
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalled();
   });

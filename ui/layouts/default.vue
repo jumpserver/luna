@@ -10,10 +10,8 @@ import {
   SettingsGeneralPage,
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
-import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { isTerminalAiHistoryShortcut } from "~/utils/terminalAiCommand";
 
 const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPanel/AiOverlayPanel.vue"));
 
@@ -34,7 +32,18 @@ const {
   statusBarVisible
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
-const { open: aiPanelOpen, setOpen: setAiPanelOpen, openAi } = useAiPanel();
+// Mount on first open, then keep mounted. Unmounting the panel tears down its
+// KeepAlive cache, which drops the SFTP file manager's websocket and restarts
+// any transfer running in it.
+const rightPanelMounted = ref(false);
+watch(
+  rightPanelOpen,
+  (open) => {
+    if (open) rightPanelMounted.value = true;
+  },
+  { immediate: true }
+);
+const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
 const { recentConnections } = useRecentConnections();
@@ -128,15 +137,6 @@ const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
   event.preventDefault();
   event.stopImmediatePropagation();
   void openAssetWorkspace(openLocalShell);
-};
-
-const handleAiHistoryShortcut = (event: KeyboardEvent) => {
-  if (!workspaceAiEnabled.value) return;
-  if (isWorkspaceTourActive() || event.repeat || isUtilityRoute.value || settingsOpen.value) return;
-  if (!isTerminalAiHistoryShortcut(event, isMacOS.value)) return;
-  event.preventDefault();
-  event.stopPropagation();
-  openAi();
 };
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
@@ -281,7 +281,6 @@ const syncTrayRecentConnections = () => {
 
 useEventListener(window, "keydown", startEscapeHold, { capture: true });
 useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
-useEventListener(window, "keydown", handleAiHistoryShortcut, { capture: true });
 useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold, { capture: true });
@@ -317,10 +316,7 @@ onMounted(() => {
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
     if (isDesktopRuntime()) {
-      return desktopInvoke("create_koko_connect_ticket", {
-        baseUrl: request.baseUrl,
-        tokenId: request.tokenId
-      });
+      return desktopInvoke("create_koko_connect_ticket", { ...request });
     }
 
     const url = `${request.baseUrl.replace(/\/+$/, "")}/koko/api/connect-ticket/`;
@@ -387,7 +383,7 @@ onBeforeUnmount(() => {
               type="button"
               :aria-label="$t('TabMenu.ExitFocusMode')"
               :title="$t('TabMenu.ExitFocusModeHint')"
-              class="group absolute right-3 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              class="group absolute right-3 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-(--app-surface-panel) text-(--app-muted) opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               @click.stop="exitFocusMode"
             >
               <span
@@ -410,7 +406,7 @@ onBeforeUnmount(() => {
 
       <template #rightPanel>
         <div v-if="isVideoPlayerRoute" id="offline-playlist-host" class="h-full min-h-0" />
-        <RightPanel v-else-if="rightPanelOpen" />
+        <RightPanel v-else-if="rightPanelMounted" v-show="rightPanelOpen" />
       </template>
 
       <template #bottomPanel>
@@ -437,7 +433,7 @@ onBeforeUnmount(() => {
         aria-modal="true"
         :aria-label="$t('Common.Settings')"
         data-state="open"
-        class="fixed inset-0 z-[200]"
+        class="fixed inset-0 z-200"
       >
         <SettingsShell mode="inline" :active-section="activeSettingsSection" class="h-full">
           <Transition name="settings-section" mode="out-in">

@@ -25,6 +25,7 @@ const props = withDefaults(
     submitLabel: string;
     submitting?: boolean;
     downloadingRdp?: boolean;
+    headerActionTarget?: HTMLElement | null;
   }>(),
   {
     assetType: "assets",
@@ -37,13 +38,15 @@ const props = withDefaults(
     submitting: false
   }
 );
-const emit = defineEmits<{ submit: []; downloadRdp: [connectMethod: string] }>();
+const emit = defineEmits<{ submit: []; downloadRdp: [connectMethod: string]; ready: [] }>();
 const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
 const { modernIsland, rdpResolution } = useSettingManager();
 const { getMethodsForProtocol } = useConnectMethods();
 const protocolMethods = shallowRef<ConnectMethod[]>([]);
+const methodsLoaded = ref(false);
+const settingsLoaded = ref(false);
 const viewAssetOnlineSessionInfo = ref(false);
 const hasXPack = shallowRef(false);
 const appletClientEnabled = shallowRef<boolean>();
@@ -57,12 +60,21 @@ const submitLabel = computed(() => {
   if (!showOnlineNum.value) return props.submitLabel;
   return `${props.submitLabel} (${t("EditModal.CurrentOnline", { count: onlineNum.value ?? "-" })})`;
 });
-const manualCredentialReady = computed(() => {
+const credentialReady = computed(() => {
   const isManual = draft.value.account === "@INPUT" || draft.value.account === t("Account.ManualInput");
-  if (!isManual) return true;
+  if (isManual) {
+    if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
+    if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
+    return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword.trim();
+  }
+  const accounts = props.asset.permedAccounts || [];
+  const hosted =
+    accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||
+    accounts.find((item) => item.name === draft.value.account && !item.alias.startsWith("@"));
+  if (hosted?.has_secret !== false) return true;
   if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
   if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
-  return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword;
+  return !!draft.value.hostedSecret.trim();
 });
 const methodDisabled = computed(() =>
   protocolMethods.value.some(
@@ -76,7 +88,7 @@ const credentialsDisabled = computed(
     props.submitting ||
     !draft.value.protocol ||
     !props.asset.permedAccounts?.length ||
-    !manualCredentialReady.value
+    !credentialReady.value
 );
 const selectedMethod = computed(() => {
   const selected = parseLocalApplicationConnectMethod(draft.value.connectMethod).connectMethod;
@@ -165,12 +177,7 @@ watch(
   },
   { immediate: true }
 );
-const downloadDisabled = computed(() => {
-  const account = props.asset.permedAccounts?.find((item) =>
-    [item.name, item.username, item.alias].includes(draft.value.account)
-  );
-  return credentialsDisabled.value || (!!account && !account.alias.startsWith("@") && !account.has_secret);
-});
+const downloadDisabled = computed(() => credentialsDisabled.value);
 const submit = () => {
   if (!submitDisabled.value) emit("submit");
 };
@@ -179,17 +186,21 @@ const downloadRdp = () => {
 };
 
 watch(
-  () => draft.value.protocol,
-  async (protocol) => {
+  [() => draft.value.protocol, () => props.asset.id],
+  async ([protocol, assetId]) => {
+    methodsLoaded.value = false;
     protocolMethods.value = [];
     if (!protocol) {
+      methodsLoaded.value = true;
       return;
     }
     try {
-      const methods = await getMethodsForProtocol(protocol);
-      if (protocol === draft.value.protocol) protocolMethods.value = methods;
+      const methods = await getMethodsForProtocol(protocol, assetId);
+      if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = methods;
     } catch {
-      if (protocol === draft.value.protocol) protocolMethods.value = [];
+      if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = [];
+    } finally {
+      if (protocol === draft.value.protocol && assetId === props.asset.id) methodsLoaded.value = true;
     }
   },
   { immediate: true }
@@ -205,8 +216,24 @@ onMounted(async () => {
   } catch {
     viewAssetOnlineSessionInfo.value = false;
     appletClientEnabled.value = false;
+  } finally {
+    settingsLoaded.value = true;
   }
 });
+
+// Reveal the initial form only after async controls have their final layout.
+watch(
+  () =>
+    methodsLoaded.value &&
+    settingsLoaded.value &&
+    !props.personalCredentialsLoading &&
+    (!protocolMethods.value.length || !!draft.value.connectMethod) &&
+    !appletOptionsLoading.value,
+  (ready) => {
+    if (ready) emit("ready");
+  },
+  { flush: "post", once: true }
+);
 
 watchDebounced(
   () => ({
@@ -246,10 +273,25 @@ watchDebounced(
 </script>
 
 <template>
-  <div @keydown.enter.prevent="submit">
+  <div class="connection-form-fields" @keydown.enter.prevent="submit">
+    <Teleport v-if="headerActionTarget" :to="headerActionTarget">
+      <UButton
+        :label="props.submitLabel"
+        :loading="props.submitting && !props.downloadingRdp"
+        :disabled="submitDisabled"
+        color="primary"
+        variant="outline"
+        size="xs"
+        class="connection-form-mobile-submit h-7 shrink-0 justify-center px-2.5"
+        @click="submit"
+      />
+    </Teleport>
     <ConnectForm
       v-model:protocol="draft.protocol"
       v-model:account="draft.account"
+      v-model:account-id="draft.accountId"
+      v-model:hosted-secret="draft.hostedSecret"
+      v-model:input-secret-type="draft.inputSecretType"
       v-model:manual-username="draft.manualUsername"
       v-model:manual-password="draft.manualPassword"
       v-model:personal-credential-id="draft.personalCredentialId"
@@ -260,6 +302,7 @@ watchDebounced(
       v-model:remember-secret="draft.rememberSecret"
       v-model:connect-method="draft.connectMethod"
       v-model:connect-options="draft.connectOptions"
+      :asset-id="props.asset.id"
       :preferred-connect-method="props.preferredConnectMethod"
       :personal-credentials="props.personalCredentials"
       :personal-credentials-loading="props.personalCredentialsLoading"
@@ -271,43 +314,67 @@ watchDebounced(
       :has-x-pack="hasXPack"
       :applet-client-enabled="appletClientEnabled === true"
       :connection-token-reusable="connectionTokenReusable"
-    />
-    <div class="mt-4">
-      <UCheckbox
-        v-model="draft.rememberSelection"
-        icon="i-lucide-check"
-        :label="t('EditModal.RememberSelection')"
-        :description="t('EditModal.RememberSelectionDescription')"
-        :ui="{ description: 'text-xs leading-5' }"
-      />
-    </div>
-    <p v-if="methodDisabled" class="mt-4 text-xs text-[var(--app-muted)]">
-      {{ t("ConnectError.MethodDisabled") }}
-    </p>
-    <div class="mt-6 mb-2 flex flex-wrap gap-2">
-      <UButton
-        :label="submitLabel"
-        :loading="props.submitting && !props.downloadingRdp"
-        :disabled="submitDisabled"
-        :size="modernIsland ? 'md' : 'lg'"
-        class="flex-1 justify-center"
-        :class="modernIsland ? '' : 'uppercase tracking-[0.08em]'"
-        @click="submit"
-      />
-      <UButton
-        v-if="rdpDownloadMethod"
-        type="button"
-        icon="i-lucide-download"
-        color="neutral"
-        variant="outline"
-        :label="t('EditModal.DownloadRdpFile')"
-        :loading="props.downloadingRdp"
-        :disabled="downloadDisabled"
-        :size="modernIsland ? 'md' : 'lg'"
-        class="flex-1 justify-center"
-        @keydown.enter.stop
-        @click="downloadRdp"
-      />
-    </div>
+    >
+      <div class="connection-form-remember mt-4">
+        <UCheckbox
+          v-model="draft.rememberSelection"
+          icon="i-lucide-check"
+          :label="t('EditModal.RememberSelection')"
+          :description="t('EditModal.RememberSelectionDescription')"
+          :ui="{ description: 'text-xs leading-5' }"
+        />
+      </div>
+      <p v-if="methodDisabled" class="mt-4 text-xs text-[var(--app-muted)]">
+        {{ t("ConnectError.MethodDisabled") }}
+      </p>
+      <div class="connection-form-actions mt-6 mb-2 flex flex-wrap gap-2">
+        <UButton
+          :label="submitLabel"
+          :loading="props.submitting && !props.downloadingRdp"
+          :disabled="submitDisabled"
+          :size="modernIsland ? 'md' : 'lg'"
+          class="connection-form-submit flex-1 justify-center"
+          :class="modernIsland ? '' : 'uppercase tracking-[0.08em]'"
+          @click="submit"
+        />
+        <UButton
+          v-if="rdpDownloadMethod"
+          type="button"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="outline"
+          :label="t('EditModal.DownloadRdpFile')"
+          :loading="props.downloadingRdp"
+          :disabled="downloadDisabled"
+          :size="modernIsland ? 'md' : 'lg'"
+          class="flex-1 justify-center"
+          @keydown.enter.stop
+          @click="downloadRdp"
+        />
+      </div>
+    </ConnectForm>
   </div>
 </template>
+
+<style scoped>
+.connection-form-mobile-submit {
+  display: none;
+}
+
+body.mobile .connection-form-fields {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.mobile .connection-form-mobile-submit {
+  display: inline-flex;
+}
+
+body.mobile .connection-form-remember,
+body.mobile .connection-form-actions {
+  margin-top: 0.75rem;
+}
+</style>

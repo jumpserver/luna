@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { once } from "node:events";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -10,6 +13,266 @@ import { LocalApplicationLauncher, localAppLauncherInternals } from "../src/apps
 import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+test("RESP receives a private connection config through its settings directory", async (context) => {
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms RESP config "));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const app = { getPath: () => appData, isPackaged: false };
+  const service = new ApplicationConfigService(app, projectRoot);
+  service.builtInDir = async () => path.join(projectRoot, "plugins", "windows");
+  await service.initialize();
+  await service.updateSelection({
+    category: "databases",
+    protocol: "redis",
+    name: "resp",
+    path: process.execPath
+  });
+  await service.updateSelection({ category: "databases", protocol: "redis", name: "resp", makeDefault: true });
+  const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+  const payload = {
+    protocol: "redis",
+    client: "resp",
+    name: "RESP 测试连接",
+    endpoint: { host: "127.0.0.1", port: 16380 },
+    token: { id: "test-token", value: "secret with spaces * ' \" \\ 中文" },
+    asset: { info: { db_name: "0" } }
+  };
+  const settingsDirectories = [];
+  launcher.launchExecutable = async (application, argumentString) => {
+    assert.equal(application.name, "resp");
+    const args = Array.isArray(argumentString)
+      ? argumentString
+      : localAppLauncherInternals.splitArguments(argumentString);
+    assert.equal(args.length, 2);
+    assert.equal(args[0], "--settings-dir");
+    assert.ok(!args[1].includes("{config_file}"));
+    settingsDirectories.push(args[1]);
+    const configFile = path.join(args[1], ".rdm", "connections.json");
+    const connections = JSON.parse(await readFile(configFile, "utf8"));
+    assert.equal(connections.length, 1);
+    assert.equal(connections[0].name, "RESP测试连接");
+    assert.equal(connections[0].host, payload.endpoint.host);
+    assert.equal(connections[0].port, payload.endpoint.port);
+    assert.equal(connections[0].username, undefined);
+    assert.equal(connections[0].auth, `${payload.token.id}@${payload.token.value}`);
+    assert.ok(connections[0].timeout_connect > 1000);
+    assert.ok(connections[0].timeout_execute > 1000);
+    if (process.platform !== "win32") assert.equal((await stat(configFile)).mode & 0o777, 0o600);
+  };
+  const raw = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await launcher.launch(raw);
+  await launcher.launch(raw);
+  assert.equal(new Set(settingsDirectories).size, 2, "concurrent launches must not overwrite each other's config");
+});
+
+test(
+  "installed DBX initiates a database connection through the plugin launcher",
+  {
+    skip: !process.env.JMS_TEST_DBX_EXECUTABLE
+  },
+  async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbx-native-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const server = createServer((socket) => socket.destroy());
+    context.after(() => server.close());
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "mysql",
+      name: "dbx",
+      pluginId: undefined,
+      path: process.env.JMS_TEST_DBX_EXECUTABLE
+    });
+    const received = once(server, "connection", { signal: AbortSignal.timeout(8000) });
+    const payload = {
+      protocol: "mysql",
+      client: "dbx",
+      name: `Luna DBX connection probe ${Date.now()}`,
+      endpoint: { host: "127.0.0.1", port: (server.address() as { port: number }).port },
+      token: { id: "luna-probe", value: "test-only" },
+      asset: { info: { db_name: "probe" } }
+    };
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    await Promise.all([received, launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`)]);
+  }
+);
+
+for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} defaults to DBX and launches encoded, one-time database connections`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbx-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    const config = await service.getConfig();
+    const dbx = config.databases.find((item) => item.name === "dbx");
+    assert.ok(dbx);
+    assert.ok(config.databases.some((item) => item.name === "dbeaver"));
+    assert.equal(dbx.launch_type, "args");
+    assert.equal(dbx.executable_type, "user_path");
+    const types = {
+      mysql: "mysql",
+      mariadb: "mysql",
+      postgresql: "postgres",
+      oracle: "oracle",
+      sqlserver: "mssql",
+      dameng: "dm",
+      clickhouse: "clickhouse",
+      mongodb: "mongodb",
+      redis: "redis"
+    };
+    assert.deepEqual(new Set(dbx.protocol), new Set(Object.keys(types)));
+    assert.deepEqual(dbx.match_first, dbx.protocol);
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    for (const [protocol, type] of Object.entries(types)) {
+      const payload = {
+        protocol,
+        name: "测试 DBX &连接",
+        endpoint: { host: "2001:db8::1", port: 5525 },
+        token: { id: "token&+/*'\"\\中文", value: " secret &one_time=false+?#%/*'\"\\中文 ", protocol },
+        asset: { info: { db_name: protocol === "redis" ? "0" : "库 名&+/*'\"\\" } }
+      };
+      let launches = 0;
+      launcher.launchExecutable = async (application, argumentString) => {
+        assert.equal(application.name, "dbx");
+        const args = localAppLauncherInternals.splitArguments(argumentString);
+        assert.equal(args.length, 1);
+        const url = new URL(args[0]);
+        assert.equal(url.protocol, "dbx:");
+        assert.equal(url.hostname, "connection");
+        assert.equal(url.pathname, "/new");
+        assert.deepEqual(Object.fromEntries(url.searchParams), {
+          name: "测试DBX&连接",
+          type,
+          host: payload.endpoint.host,
+          port: "5525",
+          user: payload.token.id,
+          password: payload.token.value,
+          database: protocol === "oracle" ? payload.token.id : payload.asset.info.db_name,
+          one_time: "true",
+          ...(protocol === "mongodb" ? { url_params: "authSource=admin&loadBalanced=true&retryWrites=false" } : {})
+        });
+        launches++;
+      };
+      for (const client of [undefined, "dbx"]) {
+        await launcher.launch(`jms2://${Buffer.from(JSON.stringify({ ...payload, client })).toString("base64")}`);
+      }
+      if (protocol === "mariadb") {
+        await launcher.launch(
+          `jms2://${Buffer.from(JSON.stringify({ ...payload, protocol: "mysql" })).toString("base64")}`
+        );
+      }
+      assert.equal(launches, protocol === "mariadb" ? 3 : 2);
+    }
+
+    // Upgrades retain saved DBeaver paths, other defaults, and explicitly disabled protocols.
+    const preferences = {
+      version: 1,
+      selections: {
+        "databases:mysql": `${platform}.dbeaver`,
+        "databases:postgresql": `${platform}.${platform === "windows" ? "navicat17" : "terminal-db"}`,
+        "databases:redis": ""
+      },
+      enabled_selections: { "databases:mysql": [`${platform}.dbeaver`] },
+      plugins: { [`${platform}.dbeaver`]: { path: process.execPath, enabled: true } }
+    };
+    await service.saveState(preferences);
+    const state = await service.loadState();
+    for (const [key, value] of Object.entries(preferences.selections)) assert.equal(state.selections[key], value);
+    assert.deepEqual(state.plugins, preferences.plugins);
+    assert.deepEqual(state.enabled_selections, preferences.enabled_selections);
+    assert.equal((await launcher.resolveApplication({ protocol: "mysql" })).name, "dbeaver");
+    await assert.rejects(launcher.resolveApplication({ protocol: "redis" }), /no configured application/);
+  });
+}
+
+for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} offers DBeaver for Dameng and launches its native driver`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dameng-dbeaver-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "dbeaver",
+      pluginId: undefined,
+      path: process.execPath
+    });
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "dbeaver",
+      pluginId: undefined,
+      path: undefined,
+      makeDefault: true
+    });
+    const application = (await service.getConfig()).databases.find((item) => item.name === "dbeaver");
+    assert.ok(application?.protocol.includes("dameng"));
+    assert.ok(application.match_first.includes("dameng"));
+
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    let launched = false;
+    launcher.launchExecutable = async (selected, argumentString) => {
+      assert.equal(selected.name, "dbeaver");
+      assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [
+        "-con",
+        "name=Dameng|driver=dameng|user=token-id|password=secret|host=gateway.example.com|port=5525|save=false|connect=true"
+      ]);
+      launched = true;
+    };
+    const payload = {
+      protocol: "dameng",
+      name: "Dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "secret" },
+      asset: { info: { db_name: "business" } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
+
+for (const platform of ["macos", "linux"]) {
+  test(`${platform} offers a shell-safe Dameng disql launch`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dameng-disql-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "terminal",
+      pluginId: undefined,
+      path: undefined,
+      makeDefault: true
+    });
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    let launched = false;
+    launcher.launchTerminal = async (selected, command) => {
+      assert.equal(selected.name, "terminal");
+      assert.equal(command, "disql 'token-id/p'\\''a&b@gateway.example.com:5525'");
+      launched = true;
+    };
+    const payload = {
+      protocol: "dameng",
+      name: "Dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "p'a&b" }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
 
 for (const [platform, protocol, expectedClient] of [
   ["macos", "ssh", "terminal"],
@@ -281,6 +544,58 @@ test("launches RDP connection files without endpoint fields", async () => {
   assert.deepEqual(launchedPayload, payload);
 });
 
+for (const platform of ["macos", "linux"]) {
+  test(`${platform}/terminal-db quotes and encodes MongoDB connection values`, async (context) => {
+    if (process.platform === "win32") return context.skip("POSIX shell test");
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.terminal-db`, "connect.json"), "utf8")
+    );
+    const application = {
+      name: "terminal-db",
+      protocol: ["mongodb"],
+      is_set: true,
+      match_first: ["mongodb"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: config.launch.protocol_templates
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    const user = "token:id@/";
+    const password = ["space value", "$HOME", "`printf injected`", "'", '"', ";", "&", "/", "\\", "?", "#"].join("");
+    const database = "data /?#";
+    const expectedUri = `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(password)}@gateway.example.com:5525/${encodeURIComponent(database)}?authSource=admin&loadBalanced=true&retryWrites=false`;
+    let launched = false;
+    launcher.launchTerminal = async (_selected, command) => {
+      const result = spawnSync("bash", ["-lc", `mongosh() { printf '%s\\n' "$@"; }\n${command}`], {
+        encoding: "utf8"
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${expectedUri}\n`);
+      const parsed = new URL(expectedUri);
+      assert.equal(decodeURIComponent(parsed.username), user);
+      assert.equal(decodeURIComponent(parsed.password), password);
+      assert.equal(decodeURIComponent(parsed.pathname.slice(1)), database);
+      assert.equal(parsed.searchParams.get("authSource"), "admin");
+      launched = true;
+    };
+    const payload = {
+      protocol: "mongodb",
+      name: "MongoDB",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: user, value: password },
+      asset: { info: { db_name: database } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
+
 for (const [platform, plugin, expected] of [
   ["macos", "dbeaver", "driver=mysql"],
   ["linux", "dbeaver", "driver=mysql"],
@@ -394,6 +709,48 @@ for (const [platform, plugin] of [
     }
   });
 }
+
+test("selects the MariaDB application when Magnus exposes its shared MySQL protocol", async () => {
+  const dbeaver = {
+    name: "dbeaver",
+    protocol: ["mariadb", "mysql"],
+    is_set: true,
+    enabled_protocols: ["mysql"],
+    match_first: ["mysql"],
+    launch_type: "args",
+    arg_format: "{protocol}"
+  };
+  const terminal = {
+    name: "terminal",
+    protocol: ["mariadb", "mysql"],
+    is_set: true,
+    enabled_protocols: ["mariadb"],
+    match_first: ["mariadb"],
+    launch_type: "args",
+    arg_format: "{protocol}"
+  };
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    { getConfig: async () => ({ databases: [dbeaver, terminal] }) },
+    null
+  );
+  let selected;
+  launcher.launchExecutable = async (application, args) => {
+    selected = application;
+    assert.equal(args, "mysql");
+  };
+  const payload = {
+    protocol: "mysql",
+    name: "MariaDB",
+    endpoint: { host: "gateway.example.com", port: 5525 },
+    token: { id: "token-id", value: "secret", protocol: "mariadb" }
+  };
+
+  await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+
+  assert.equal(selected, terminal);
+});
 
 test("normalizes duplicate and hidden system font families", () => {
   assert.deepEqual(systemFontInternals.normalizeFamilies(["Menlo", " .Hidden ", "Menlo", "SF Mono", ""]), [

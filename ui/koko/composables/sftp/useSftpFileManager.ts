@@ -3,6 +3,7 @@ import type { Ref } from "vue";
 import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
+import { isSftpDirectoryAffectedByTransfer } from "./file-manager/selectors";
 import {
   isSftpDisconnectCause,
   parseSftpCapabilities,
@@ -156,16 +157,16 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   }
 
   const transferEndpoint = transferRef
-    ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
-        const normalizedTarget = targetPath.replace(/\/+$/, "");
-        const separator = normalizedTarget.lastIndexOf("/");
-        const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
-        const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
-
-        if (destinationDirectory !== displayedDirectory) return;
-
-        await loadCurrentDirectory(currentPath.value, undefined, false);
-      })
+    ? useSftpTransferEndpoint(
+        socket,
+        transferRef,
+        async ({ targetPath }) => {
+          const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
+          if (!isSftpDirectoryAffectedByTransfer(displayedDirectory, targetPath)) return;
+          await loadCurrentDirectory(currentPath.value, undefined, false);
+        },
+        () => capabilities.value?.transfer_binary === true
+      )
     : null;
 
   function changeDirectory(entry: SftpFileEntry) {
@@ -226,6 +227,10 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       message.type === SftpMessageType.Closed ||
       message.type === SftpMessageType.Error
     ) {
+      const serverError = message.err || message.error_code || message.data;
+      error.value = serverError
+        ? sftpOperationErrorMessage(serverError, t)
+        : errorMessage(SftpSocketFailureCode.ConnectionClosed, t);
       fatalError.value = true;
       capabilities.value = null;
       capabilitiesKnown.value = false;
@@ -233,11 +238,12 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   });
 
   const stopFailureListener = socket.onFailure((failure) => {
+    const serverError = fatalError.value ? error.value : "";
     fatalError.value = true;
     fileAiReadiness.reset();
     capabilities.value = null;
     capabilitiesKnown.value = false;
-    error.value = errorMessage(failure.code, t);
+    error.value = serverError || errorMessage(failure.code, t);
     loading.value = false;
   });
 
@@ -279,7 +285,9 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     loading,
     error,
     fatalError,
+    hasConnected: socket.hasConnected,
     connected: computed(() => socket.connected.value && !fatalError.value),
+    ready: computed(() => capabilitiesKnown.value && socket.connected.value && !fatalError.value),
     uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,

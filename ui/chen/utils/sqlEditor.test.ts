@@ -1,11 +1,12 @@
 import type { CompletionSource } from "@codemirror/autocomplete";
 
 import { CompletionContext } from "@codemirror/autocomplete";
-import { PostgreSQL, sql } from "@codemirror/lang-sql";
+import { PLSQL, PostgreSQL, sql } from "@codemirror/lang-sql";
 import { EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 import {
   chenSqlExtensions,
+  chenSqlDialect,
   chenSqlStatementAtCursor,
   chenSqlStatementRanges,
   executableChenSql
@@ -50,6 +51,11 @@ describe("sql editor execution targets", () => {
 });
 
 describe("sql editor keyword completion", () => {
+  it("uses the PL/SQL grammar for Dameng protocol names", () => {
+    expect(chenSqlDialect("dameng")).toBe(PLSQL);
+    expect(chenSqlDialect("dm")).toBe(PLSQL);
+  });
+
   async function completionLabels(keywordCase: "lower" | "upper") {
     const state = EditorState.create({
       doc: "sel",

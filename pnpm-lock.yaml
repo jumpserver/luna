@@ -298,6 +298,9 @@ importers:
       vue:
         specifier: ^3.5.35
         version: 3.5.40(typescript@6.0.3)
+      vue-i18n:
+        specifier: ^11.4.8
+        version: 11.4.8(vue@3.5.40(typescript@6.0.3))
     devDependencies:
       '@electron/packager':
         specifier: 18.3.5
@@ -423,6 +426,9 @@ importers:
       vue:
         specifier: ^3.5.0
         version: 3.5.40(typescript@6.0.3)
+      vue-i18n:
+        specifier: ^11.4.8
+        version: 11.4.8(vue@3.5.40(typescript@6.0.3))
 
 packages:
 

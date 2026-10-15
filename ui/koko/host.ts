@@ -31,6 +31,7 @@ export type KokoTerminalCommandProfile =
   | "redis"
   | "mongodb"
   | "oracle"
+  | "dameng"
   | "sqlserver";
 
 const SENSITIVE_TERMINAL_COMMAND_PATTERNS = [
@@ -143,6 +144,8 @@ export interface KokoSftpConnectionChoice {
   accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
   manualUsername?: string;
   manualPassword?: string;
+  hostedSecret?: string;
+  inputSecretType?: string;
   personalCredentialId?: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType?: string;
@@ -214,8 +217,8 @@ export interface KokoHostAdapter {
   getWindowOrigin: () => string;
   isDesktopRuntime: () => boolean;
   markSessionConnected: (tabId: string) => void;
-  markSessionDisconnected: (tabId: string) => void;
-  markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => void;
+  markSessionDisconnected: (tabId: string, reason?: string, options?: { dismissible?: boolean }) => void;
+  markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">, reason?: string) => void;
   registerSessionCloseGuard?: (tabId: string, guard: () => boolean | Promise<boolean>) => () => void;
   setSessionDetails: (tabId: string, details: Record<string, unknown>) => void;
   clearSessionDetails: (tabId: string) => void;

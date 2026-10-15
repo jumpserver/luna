@@ -11,13 +11,16 @@ afterEach(() => {
   useWorkspaceConnectors().registerKokoTicketProvider(null);
 });
 
-it("creates a desktop ticket without mounting the workspace layout", async () => {
-  mocks.desktop = true;
-  mocks.invoke.mockResolvedValue({ ticket: "desktop-ticket" });
-  const request = { baseUrl: "https://endpoint.example", tokenId: "" };
-  await expect(useWorkspaceConnectors().createKokoTicket(request)).resolves.toEqual({ ticket: "desktop-ticket" });
-  expect(mocks.invoke).toHaveBeenCalledWith("create_koko_connect_ticket", request);
-});
+it.each([undefined, "asset-org"])(
+  "creates a desktop ticket with organization %s without the workspace layout",
+  async (orgId) => {
+    mocks.desktop = true;
+    mocks.invoke.mockResolvedValue({ ticket: "desktop-ticket" });
+    const request = { baseUrl: "https://endpoint.example", tokenId: "token", ...(orgId ? { orgId } : {}) };
+    await expect(useWorkspaceConnectors().createKokoTicket(request)).resolves.toEqual({ ticket: "desktop-ticket" });
+    expect(mocks.invoke).toHaveBeenCalledWith("create_koko_connect_ticket", request);
+  }
+);
 
 it("retains cookie authentication and explicit providers in the browser", async () => {
   const connectors = useWorkspaceConnectors();

@@ -20,6 +20,8 @@ export function chenSqlDialect(dbType: string) {
     case "postgresql":
       return PostgreSQL;
     case "oracle":
+    case "dameng":
+    case "dm":
       return PLSQL;
     case "sqlserver":
     case "sql server":
@@ -71,10 +73,4 @@ export function executableChenSql(state: EditorState) {
   const { from, to, head } = state.selection.main;
   if (from !== to) return state.doc.sliceString(from, to);
   return chenSqlStatementAtCursor(state, head)?.sql || "";
-}
-
-/** Estimated plan uses the selection, otherwise the full editor buffer. Never the cursor statement fragment. */
-export function chenPlanRequestSql(documentSql: string, selectedSql = "") {
-  const selected = selectedSql.trim();
-  return selected ? selectedSql : documentSql;
 }

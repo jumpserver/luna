@@ -10,6 +10,14 @@ export const getDesktopRuntime = (): DesktopRuntime => {
 
 export const isDesktopRuntime = () => getDesktopRuntime() !== "web";
 export const isElectronRuntime = () => getDesktopRuntime() === "electron";
+export const isMobileDevice = () => {
+  const nav = globalThis.navigator;
+  return (
+    !!nav &&
+    (/Android|iPhone|iPad|iPod/i.test(nav.userAgent) || (/Macintosh/i.test(nav.userAgent) && nav.maxTouchPoints > 1))
+  );
+};
+export const pageLocation = () => window.location;
 
 export const getCookieValue = (name: string) => {
   if (!import.meta.client) return "";
@@ -73,7 +81,11 @@ const normalizeBasePath = (path = "/") => {
   let normalizedPath = path || "/";
 
   if (isAbsoluteUrl(normalizedPath)) {
-    normalizedPath = new URL(normalizedPath).pathname;
+    try {
+      normalizedPath = new URL(normalizedPath).pathname;
+    } catch {
+      /* keep path */
+    }
   }
 
   if (!normalizedPath.startsWith("/")) {
@@ -153,12 +165,17 @@ export const redirectToWebLogin = () => {
   if (!import.meta.client) return;
   if (isWebAuthPath()) return;
 
-  const loginUrl = new URL(withWebSitePrefix("/core/auth/login/"), window.location.origin);
-  loginUrl.searchParams.set("next", `${window.location.pathname}${window.location.search}`);
-  window.location.href = loginUrl.toString();
+  const location = pageLocation();
+  const loginUrl = new URL(withWebSitePrefix("/core/auth/login/"), location.origin);
+  if (loginUrl.origin !== location.origin) return;
+  loginUrl.searchParams.set("next", `${location.pathname}${location.search}`);
+  location.assign(`${loginUrl.pathname}${loginUrl.search}`);
 };
 
 export const redirectToWebLogout = () => {
   if (!import.meta.client) return;
-  window.location.href = withWebSitePrefix("/core/auth/logout/");
+  const location = pageLocation();
+  const logoutUrl = new URL(withWebSitePrefix("/core/auth/logout/"), location.origin);
+  if (logoutUrl.origin !== location.origin) return;
+  location.assign(logoutUrl.pathname);
 };

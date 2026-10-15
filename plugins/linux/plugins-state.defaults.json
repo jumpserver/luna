@@ -4,12 +4,15 @@
     "terminal:ssh": "linux.terminal",
     "terminal:telnet": "linux.terminal",
     "remotedesktop:vnc": "linux.tigervnc",
-    "databases:oracle": "linux.terminal-db",
-    "databases:mysql": "linux.terminal-db",
-    "databases:postgresql": "linux.terminal-db",
-    "databases:mariadb": "linux.terminal-db",
-    "databases:redis": "linux.terminal-db",
-    "databases:mongodb": "linux.terminal-db"
+    "databases:oracle": "linux.dbx",
+    "databases:mysql": "linux.dbx",
+    "databases:postgresql": "linux.dbx",
+    "databases:mariadb": "linux.dbx",
+    "databases:redis": "linux.dbx",
+    "databases:mongodb": "linux.dbx",
+    "databases:sqlserver": "linux.dbx",
+    "databases:dameng": "linux.dbx",
+    "databases:clickhouse": "linux.dbx"
   },
   "plugins": {}
 }

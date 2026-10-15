@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types";
 
-import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 
 const { t } = useI18n();
@@ -10,6 +9,7 @@ const { activeRequest, settle } = useConnectionFormModal();
 const { confirmConnection } = useAssetConnection();
 const {
   buildConnectionInfo,
+  clearEnteredSecrets,
   draft,
   initDraft,
   loadAssetDetails,
@@ -22,7 +22,9 @@ const {
 
 const currentAsset = ref<AssetItem | null>(null);
 const loading = ref(false);
+const formReady = ref(false);
 const downloadingRdp = shallowRef(false);
+const headerActionTarget = shallowRef<HTMLElement | null>(null);
 let loadSequence = 0;
 
 const modalTitle = computed(() => {
@@ -36,6 +38,7 @@ const loadAsset = async () => {
     currentAsset.value = null;
     return;
   }
+  formReady.value = false;
   const sequence = ++loadSequence;
   loading.value = true;
   try {
@@ -57,7 +60,10 @@ const loadAsset = async () => {
 };
 
 const confirm = () => {
-  if (currentAsset.value) settle(buildConnectionInfo(currentAsset.value));
+  if (currentAsset.value) {
+    settle(buildConnectionInfo(currentAsset.value));
+    clearEnteredSecrets();
+  }
 };
 const downloadRdp = async (connectMethod: string) => {
   if (!currentAsset.value || downloadingRdp.value) return;
@@ -79,7 +85,10 @@ const downloadRdp = async (connectMethod: string) => {
     addErrorToast({ title: t("ConnectError.DownloadRdpFailed"), description: String(error) });
   }
 };
-const cancel = () => settle(null);
+const cancel = () => {
+  settle(null);
+  clearEnteredSecrets();
+};
 const updateOpen = (open: boolean) => {
   if (!open) cancel();
 };
@@ -97,17 +106,19 @@ watch(
     :dismissible="false"
     :title="modalTitle"
     :ui="{
-      content: 'w-[calc(100vw-3rem)] max-w-2xl',
+      content: `connection-form-modal w-[calc(100vw-3rem)] max-w-2xl ${loading || !formReady ? 'invisible' : ''}`,
       header: 'min-h-12 p-3 sm:px-4',
-      title: 'text-sm leading-5',
-      close: 'top-2 end-2 size-7 p-1',
-      body: 'pt-1 sm:pt-1'
+      title: 'connection-form-modal-title text-sm leading-5',
+      close: 'connection-form-modal-close top-2 end-2 size-7 p-1',
+      body: 'connection-form-modal-body pt-1 sm:pt-1'
     }"
     @update:open="updateOpen"
   >
+    <template #actions>
+      <div ref="headerActionTarget" class="connection-form-modal-action-target" />
+    </template>
     <template #body>
-      <ConnectFormSkeleton v-if="loading" />
-      <div v-else-if="currentAsset">
+      <div v-if="!loading && currentAsset" class="connection-form-modal-fields">
         <ConnectFormFields
           v-model:draft="draft"
           :asset="currentAsset"
@@ -119,7 +130,9 @@ watch(
           :submit-label="t('Common.Connect')"
           :submitting="downloadingRdp"
           :downloading-rdp="downloadingRdp"
+          :header-action-target="headerActionTarget"
           asset-type="assets"
+          @ready="formReady = true"
           @submit="confirm"
           @download-rdp="downloadRdp"
         />
@@ -127,3 +140,47 @@ watch(
     </template>
   </UModal>
 </template>
+
+<style>
+.connection-form-modal-action-target {
+  display: none;
+}
+
+body.mobile .connection-form-modal-action-target {
+  display: flex;
+  flex-shrink: 0;
+  order: -1;
+  margin-inline-end: 4px;
+}
+
+body.mobile .connection-form-modal {
+  width: calc(100vw - 1rem);
+  height: calc(100dvh - 1rem);
+  max-height: calc(100dvh - 1rem);
+}
+
+body.mobile .connection-form-modal-body,
+body.mobile .connection-form-modal-fields {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.mobile .connection-form-modal-body {
+  padding: 4px 12px 8px;
+}
+
+body.mobile .connection-form-modal-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.mobile .connection-form-modal-close {
+  position: static;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
+}
+</style>

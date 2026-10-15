@@ -4,6 +4,8 @@ import type {
   FileTransferEndpoint,
   FileTransferEndpointRef
 } from "@jumpserver/connectors-core";
+import type { SftpFileSortColumn } from "#koko/composables/sftp/file-manager/filePresentation";
+import type { BrowserUploadSelection } from "#koko/composables/sftp/file-manager/transfer";
 import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
@@ -16,10 +18,10 @@ import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFile
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
 import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
 import SftpRemotePaneToolbar from "#koko/components/FileManagement/pane/SftpRemotePaneToolbar.vue";
+import { sortFileEntries } from "#koko/composables/sftp/file-manager/filePresentation";
 import {
   buildTransferSourcePayload,
-  hasFolderBrowserUpload,
-  hasFolderTransferSelection,
+  collectBrowserUploadSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -69,10 +71,11 @@ const emit = defineEmits<{
   transferEndpointConnected: [];
   transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
   connectionChange: [connected: boolean];
+  connectionFailure: [message: string, dismissible: boolean];
   focus: [];
   addRemote: [];
   startTour: [];
-  browserUpload: [files: File[]];
+  browserUpload: [selection: BrowserUploadSelection];
 }>();
 
 const { t } = useI18n();
@@ -84,19 +87,19 @@ const manager = useSftpFileManager(
 const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact);
 const activeTransferDragSourceId = useState<string | null>("sftp-active-transfer-drag-source", () => null);
 const search = ref("");
+const sortBy = shallowRef<SftpFileSortColumn>("name");
+const sortDirection = shallowRef<"asc" | "desc">("asc");
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextEntry = ref<SftpFileEntry | null>(null);
 const { filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.toLowerCase();
-  return filterHiddenEntries(manager.entries.value)
-    .filter((entry) => entry.name.toLowerCase().includes(query))
-    .sort((left, right) => {
-      if (left.name === "..") return -1;
-      if (right.name === "..") return 1;
-      return Number(right.is_dir) - Number(left.is_dir);
-    });
+  return sortFileEntries(
+    filterHiddenEntries(manager.entries.value).filter((entry) => entry.name.toLowerCase().includes(query)),
+    sortBy.value,
+    sortDirection.value
+  );
 });
 let transferEndpointReady = false;
 const selection = useSftpPaneSelection<SftpFileEntry>({ visibleEntries });
@@ -143,6 +146,12 @@ const transferDropBlocked = computed(
     activeTransferDragSourceId.value === props.transferEndpoint?.id
 );
 
+function changeSort(column: SftpFileSortColumn, direction: "asc" | "desc"): void {
+  sortBy.value = column;
+  sortDirection.value = direction;
+  selection.resetSelectionAnchor();
+}
+
 function hideContextMenu(): void {
   contextMenuVisible.value = false;
   contextEntry.value = null;
@@ -157,17 +166,8 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
   });
 }
 
-function showFolderTransferUnsupported(): void {
-  toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-}
-
-function hasFolderSelection() {
-  return hasFolderTransferSelection(selectedEntries.value);
-}
-
 function requestSend(): void {
   if (!canTransferFiles.value) return;
-  if (hasFolderSelection()) return showFolderTransferUnsupported();
   const payload = transferSourcePayload();
   if (!payload) return;
   hideContextMenu();
@@ -193,6 +193,7 @@ const actions = useSftpRemotePaneActions({
   hideContextMenu,
   requestSend,
   requestDownload,
+  sendPeerDirection: () => props.sendPeerDirection,
   translate: (key, params) => String(params ? t(key, params) : t(key))
 });
 const {
@@ -238,11 +239,6 @@ function clearTransferredSelection(names: string[], sourcePath: string, revision
 }
 
 function onDragStart(event: DragEvent, entry: SftpFileEntry): void {
-  if (entry.is_dir || hasFolderSelection()) {
-    showFolderTransferUnsupported();
-    event.preventDefault();
-    return;
-  }
   if (entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
     event.preventDefault();
     return;
@@ -277,27 +273,24 @@ function clearTransferDragState(): void {
   activeTransferDragSourceId.value = null;
 }
 
-function emitBrowserUpload(files: File[]): void {
-  if (files.length) emit("browserUpload", files);
+function emitBrowserUpload(selection: BrowserUploadSelection): void {
+  if (selection.items.length) emit("browserUpload", selection);
+  if (selection.failures.length) toast.add({ title: t("koko.fileManagement.operationFailed"), color: "warning" });
 }
 
-function onUpload(event: Event): void {
+async function onUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
-  const files = [...(input.files || [])];
+  const files = Array.from(input.files || []);
   input.value = "";
-  if (hasFolderBrowserUpload(files)) return showFolderTransferUnsupported();
-  emitBrowserUpload(files);
+  emitBrowserUpload(await collectBrowserUploadSelection(files));
 }
 
-function onTransferDrop(event: DragEvent): void {
-  const files = [...(event.dataTransfer?.files || [])];
-  if (hasFolderBrowserUpload(files, event.dataTransfer?.items)) {
+async function onTransferDrop(event: DragEvent): Promise<void> {
+  const files = event.dataTransfer?.files;
+  const items = event.dataTransfer?.items;
+  if (files?.length || Array.from(items || []).some((item) => item.kind === "file")) {
     event.preventDefault();
-    return showFolderTransferUnsupported();
-  }
-  if (files.length) {
-    event.preventDefault();
-    emitBrowserUpload(files);
+    emitBrowserUpload(await collectBrowserUploadSelection(files || [], items));
     return;
   }
   const payload = parseTransferDragPayload(event, props.transferEndpoint?.id);
@@ -422,7 +415,12 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
-watch(manager.connected, (connected) => emit("connectionChange", Boolean(connected)), { immediate: true });
+watch(manager.ready, (ready) => emit("connectionChange", Boolean(ready)), { immediate: true });
+watch(manager.fatalError, (fatalError) => {
+  if (fatalError) {
+    emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"), manager.hasConnected.value);
+  }
+});
 watch([manager.connected, manager.loading, manager.fatalError], ([connected, loading, fatalError]) => {
   if (!connected || fatalError) {
     transferEndpointReady = false;
@@ -452,7 +450,6 @@ defineExpose({
   selectedEntries,
   clearSelection,
   clearTransferredSelection,
-  hasFolderTransferSelection: hasFolderSelection,
   transferSourcePayload,
   focusPane,
   refresh: refreshCurrentDirectory
@@ -467,7 +464,6 @@ defineExpose({
     <div class="flex flex-col items-center gap-2 text-center">
       <UIcon name="i-lucide-circle-alert" class="size-6" />
       <p>{{ manager.error.value }}</p>
-      <UButton size="xs" @click="manager.retry.reconnect()">{{ t("koko.fileManagement.reconnect") }}</UButton>
     </div>
   </div>
   <div
@@ -511,6 +507,8 @@ defineExpose({
       <SftpPaneFileTable
         class="min-h-0 flex-1"
         :entries="visibleEntries"
+        :sort-by="sortBy"
+        :sort-direction="sortDirection"
         :selected-names="selectedEntries.map((entry) => entry.name)"
         :highlighted-names="highlightedNames"
         :select-all-state="selectAllState"
@@ -519,6 +517,7 @@ defineExpose({
         :list-key="manager.currentPath.value"
         :refreshing="manager.loading.value && manager.entries.value.length > 0"
         show-status-bar
+        @sort="changeSort"
         @select="selectEntry"
         @toggle="toggleEntry"
         @toggle-all="toggleAllVisible"

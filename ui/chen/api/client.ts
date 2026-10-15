@@ -1,3 +1,5 @@
+import { pageLocation } from "~/utils/runtime";
+
 export const buildHeaders = (token?: string, init?: HeadersInit) => ({
   ...getWebApiHeaders(),
   ...(token ? { token } : {}),
@@ -6,7 +8,7 @@ export const buildHeaders = (token?: string, init?: HeadersInit) => ({
 
 export function chenPath(path: string, endpointUrl?: string) {
   const connectorPath = `/chen${path.startsWith("/") ? path : `/${path}`}`;
-  const currentOrigin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+  const currentOrigin = typeof window === "undefined" ? "http://localhost" : pageLocation().origin;
   const endpoint = new URL(endpointUrl || currentOrigin, currentOrigin);
 
   if (isElectronRuntime()) {
@@ -34,5 +36,9 @@ export async function readJson<T>(response: Response): Promise<T> {
     return {} as T;
   }
 
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text);
+  }
 }

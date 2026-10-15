@@ -2,7 +2,7 @@ export default defineAppConfig({
   app: {
     name: "JumpServer",
     author: "JumpServer",
-    version: "5.0.0",
+    version: "v5.1.0",
     repo: "https://github.com/jumpserver/clients"
   },
   componentsConfig: {
@@ -34,13 +34,14 @@ export default defineAppConfig({
       slots: {
         base: "cursor-pointer rounded-[length:var(--app-radius)]"
       },
-      variants: {
-        ghost: {
-          neutral: {
-            base: "bg-transparent text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
-          }
+      compoundVariants: [
+        {
+          color: "neutral",
+          variant: "ghost",
+          class:
+            "bg-transparent text-(--app-fg) hover:bg-(--app-surface-canvas) active:bg-(--app-surface-canvas) focus-visible:bg-(--app-surface-canvas)"
         }
-      }
+      ]
     },
     badge: {
       slots: {

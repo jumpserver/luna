@@ -1,18 +1,8 @@
 import { spawn } from "node:child_process";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-
-function decodePayload(raw) {
-  const value = String(raw || "");
-  const encoded = value.startsWith("jms2://") ? value.slice(7) : "";
-  if (!encoded) throw new Error("invalid local client URL scheme");
-  try {
-    return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
-  } catch (error) {
-    throw new Error(`decode local client payload failed: ${error instanceof Error ? error.message : error}`);
-  }
-}
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -36,7 +26,37 @@ function navicatUrl(payload) {
   return `navicat://conn.${protocol}?Conn.Host=${payload.endpoint.host}&Conn.Name=${sanitizedName(payload.name)}&Conn.Port=${payload.endpoint.port}&Conn.Username=${username(payload)}`;
 }
 
+function dbxUrl(payload) {
+  const aliases = { postgresql: "postgres", sqlserver: "mssql", dameng: "dm", mariadb: "mysql" };
+  const query = new URLSearchParams({
+    name: sanitizedName(payload.name),
+    type: aliases[payload.protocol] || payload.protocol,
+    host: String(payload.endpoint?.host || ""),
+    port: String(payload.endpoint?.port || ""),
+    user: username(payload),
+    password: String(payload.token?.value || ""),
+    // Magnus routes Oracle connections by the token supplied as the service name.
+    database: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
+    one_time: "true"
+  });
+  if (payload.protocol === "mongodb") {
+    query.set("url_params", "authSource=admin&loadBalanced=true&retryWrites=false");
+  }
+  // The legacy argument splitter treats '*' as an argument separator, even inside quotes.
+  return `dbx://connection/new?${query.toString().replaceAll("*", "%2A")}`;
+}
+
+function mongodbUri(payload) {
+  const user = encodeURIComponent(username(payload));
+  const password = encodeURIComponent(String(payload.token?.value || ""));
+  const database = encodeURIComponent(String(payload.asset?.info?.db_name || ""));
+  const host = String(payload.endpoint?.host || "");
+  const port = String(payload.endpoint?.port || "");
+  return `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
+}
+
 function valuesFor(payload): Record<string, string> {
+  const dmConnection = `${username(payload)}/${String(payload.token?.value || "")}@${String(payload.endpoint?.host || "")}:${String(payload.endpoint?.port || "")}`;
   return {
     name: sanitizedName(payload.name),
     protocol: payload.protocol,
@@ -45,7 +65,10 @@ function valuesFor(payload): Record<string, string> {
     host: String(payload.endpoint?.host || ""),
     port: String(payload.endpoint?.port || ""),
     dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
+    dameng_disql: shellQuote(dmConnection),
+    mongodb_shell_uri: payload.protocol === "mongodb" ? shellQuote(mongodbUri(payload)) : "",
     dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
+    dbx_url: dbxUrl(payload),
     url: navicatUrl(payload)
   };
 }
@@ -207,13 +230,23 @@ export class LocalApplicationLauncher {
     return spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
   }
 
-  async launchExecutable(application, argumentString, values) {
+  async launchExecutable(application, argumentString, values, payload?) {
     const executable = await this.resolveExecutable(application);
+    const args = Array.isArray(argumentString) ? argumentString : splitArguments(argumentString);
+    if (
+      application.name === "dbeaver" &&
+      payload?.protocol === "oracle" &&
+      payload.connect_options?.use_sysdba === true
+    ) {
+      const connectionIndex = args.indexOf("-con") + 1;
+      if (!connectionIndex || !args[connectionIndex] || args[connectionIndex].startsWith("-")) {
+        throw new Error("DBeaver connection arguments are missing");
+      }
+      args[connectionIndex] += "|auth=oracle_native|authProp.oracle.logon-as=SYSDBA";
+    }
     const env = { ...process.env };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
-    return spawnDetached(executable, Array.isArray(argumentString) ? argumentString : splitArguments(argumentString), {
-      env
-    });
+    return spawnDetached(executable, args, { env });
   }
 
   async launchFile(application, payload) {
@@ -227,6 +260,32 @@ export class LocalApplicationLauncher {
     }
     const args = splitArguments(application.arg_format).map((argument) => render(argument, { file: connectionPath }));
     await this.launchExecutable(application, args, {});
+  }
+
+  async launchResp(application, payload, values) {
+    await mkdir(this.configService.configDir, { recursive: true });
+    const settingsDir = await mkdtemp(path.join(this.configService.configDir, "resp-"));
+    const configDir = path.join(settingsDir, ".rdm");
+    await mkdir(configDir, { mode: 0o700 });
+    await writeFile(
+      path.join(configDir, "connections.json"),
+      JSON.stringify([
+        {
+          name: values.name,
+          host: values.host,
+          port: Number(values.port),
+          auth: `${values.username}@${values.value}`,
+          timeout_connect: 60000,
+          timeout_execute: 60000
+        }
+      ]),
+      { mode: 0o600 }
+    );
+    // Expand the path after splitting so spaces and Windows backslashes remain intact.
+    const args = splitArguments(application.arg_format).map((argument) =>
+      render(argument, { ...values, config_file: settingsDir })
+    );
+    return this.launchExecutable(application, args, values, payload);
   }
 
   async launchScript(application, payload, values) {
@@ -257,9 +316,11 @@ export class LocalApplicationLauncher {
     if (!payload.protocol || !payload.token?.id) {
       throw new Error("local client payload is missing required connection fields");
     }
-    const application = await this.resolveApplication(payload);
+    const selectionProtocol =
+      payload.protocol === "mysql" && payload.token?.protocol === "mariadb" ? "mariadb" : payload.protocol;
+    const application = await this.resolveApplication({ ...payload, protocol: selectionProtocol });
     // Preserve MariaDB application preferences, but use the MySQL driver on Magnus's shared port.
-    if (payload.protocol === "mariadb") payload.protocol = "mysql";
+    if (selectionProtocol === "mariadb") payload.protocol = "mysql";
     if (application.launch_type === "file") {
       if (!payload.file?.content) throw new Error("local client payload is missing connection file content");
       electronLog.info(`launch ${payload.protocol} connection file via ${application.display_name || "file handler"}`);
@@ -272,6 +333,9 @@ export class LocalApplicationLauncher {
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
     const values = valuesFor(payload);
+    if (application.launch_type === "args" && application.launch_driver === "resp") {
+      return this.launchResp(application, payload, values);
+    }
     if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])
       values.protocol = application.protocol_aliases[payload.protocol];
@@ -292,7 +356,7 @@ export class LocalApplicationLauncher {
         application.use_ssh_helper && !String(template).includes("{helper}")
       );
     }
-    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values);
+    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values, payload);
     throw new Error(`unsupported application launch type: ${application.launch_type}`);
   }
 }

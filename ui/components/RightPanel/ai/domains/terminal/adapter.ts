@@ -45,7 +45,7 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
   if (!decisionId || session.decisions.has(decisionId)) return;
 
   const override = session.executionOverrides.get(decisionId);
-  const execution = terminalExecutionMode(override || action.data.execution);
+  const execution = terminalExecutionMode(override || action.data.execution, session);
   const toolCallId = String(action.data.toolCallId || "");
   if (action.approved && toolCallId && (override || execution !== "auto")) {
     session.executionOverrides.set(toolCallId, execution);
@@ -174,7 +174,8 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
         {
           label: context.t("RightPanel.AIModePtyShort"),
           description: context.t("RightPanel.AIModePty"),
-          value: "pty"
+          value: "pty",
+          disabled: !current.ptyExec
         },
         {
           label: context.t("RightPanel.AIModeBackgroundShort"),
@@ -253,8 +254,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
   updateExecutionMode(session, value) {
     const current = terminalSession(session);
     if (!current) return;
-    const mode = String(value || "auto");
-    current.executionMode = mode === "pty" || mode === "background" ? mode : "auto";
+    current.executionMode = terminalExecutionMode(value, current);
   },
 
   handleTimelineAction(session, action) {
@@ -265,7 +265,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
       return;
     }
     if (action.type === "set-execution-override") {
-      current.executionOverrides.set(action.id, action.value);
+      current.executionOverrides.set(action.id, terminalExecutionMode(action.value, current));
       return;
     }
     if (action.type === "set-step-expanded") {

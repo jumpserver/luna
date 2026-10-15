@@ -3,6 +3,12 @@ import type { FaceLiveHostMessage, FaceLivePageMode } from "~/types/face";
 export const FACE_LIVE_MESSAGE_SOURCE = "jumpserver-facelive" as const;
 export const FACE_CAPTURE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
 
+export function localizeFaceLiveDetail(detail: string, t: (key: string) => string) {
+  if (detail === "Face verification timed out") return t("AclDialog.FaceVerificationTimedOut");
+  if (detail === "The liveness action was not completed in time") return t("Face.Remote.LivenessTimedOut");
+  return detail.startsWith("AclDialog.Face") ? t(detail) : detail;
+}
+
 const trimPath = (path: string) => {
   const normalized = `/${String(path || "").replace(/^\/+|\/+$/g, "")}`;
   return normalized === "/" ? "" : normalized;

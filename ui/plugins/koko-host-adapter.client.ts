@@ -66,6 +66,8 @@ export default defineNuxtPlugin((nuxtApp) => {
           ...(connection && {
             manualUsername: connection.manualUsername,
             manualPassword: connection.manualPassword,
+            hostedSecret: connection.hostedSecret,
+            inputSecretType: connection.inputSecretType,
             personalCredentialId: connection.personalCredentialId,
             personalCredentialVersion: connection.personalCredentialVersion,
             personalCredentialSecretType: connection.personalCredentialSecretType,
@@ -112,13 +114,16 @@ export default defineNuxtPlugin((nuxtApp) => {
     isDesktopRuntime,
     markSessionConnected,
     markSessionDisconnected,
-    markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => {
-      markSessionFailed({
-        tabId: tab.id,
-        assetId: tab.assetId,
-        protocol: tab.protocol || "",
-        account: tab.account || ""
-      });
+    markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">, reason?: string) => {
+      markSessionFailed(
+        {
+          tabId: tab.id,
+          assetId: tab.assetId,
+          protocol: tab.protocol || "",
+          account: tab.account || ""
+        },
+        reason
+      );
     },
     registerSessionCloseGuard: registerWorkspaceSessionCloseGuard,
     setSessionDetails: (tabId, details) => {

@@ -1,0 +1,17 @@
+{
+  "platform": "windows",
+  "match_first": [],
+  "is_default": true,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "C:\\Program Files\\DBX\\DBX.exe",
+    "required": true
+  },
+  "launch": {
+    "type": "args",
+    "template": "\"{dbx_url}\""
+  },
+  "display_name": "DBX"
+}

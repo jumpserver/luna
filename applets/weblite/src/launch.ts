@@ -5,6 +5,7 @@ import { webProxyNavigationPolicy } from "@jumpserver/web-proxy/script";
 
 export function standaloneLaunch() {
   return {
+    language: undefined as string | undefined,
     targetUrl: "https://www.jumpserver.org/",
     safeMode: false,
     allowedUrls: [],
@@ -29,6 +30,7 @@ export function parseLaunch(value: unknown) {
   if (typeof data.safe_mode !== "boolean") throw new Error("缺少安全模式配置");
   const localSession = createLocalCredentialSession(target.toString(), data.login);
   return {
+    language: typeof data.language === "string" ? data.language : undefined,
     targetUrl: target.toString(),
     safeMode: data.safe_mode,
     allowedUrls,
@@ -67,6 +69,7 @@ function appletLaunchData(data: Record<string, unknown>) {
   const anonymous = account.username === "@ANON";
   const config = anonymous ? { autofill: "none" } : spec.autofill ? spec : setting;
   return {
+    language: object(data.connect_options ?? {}).lang,
     target_url: target.toString(),
     safe_mode: setting.safe_mode ?? false,
     allowed_urls: spec.allowed_urls,

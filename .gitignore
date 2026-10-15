@@ -29,6 +29,7 @@ node_modules
 .cache
 .angular
 .output
+/output/
 playwright-report
 test-results
 .env

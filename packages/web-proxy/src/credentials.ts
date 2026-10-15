@@ -73,7 +73,7 @@ export function validateWebScript(value, origin) {
       if (/\{USERNAME\}|\{SECRET\}/.test(step.value) && step.command !== "type")
         throw new Error(`第 ${step.step} 步不允许填写凭据`);
       if (["type", "click", "button", "check", "code", "interactive", "success"].includes(step.command))
-        validateWebSelector(step.target);
+        validateWebSelector(step.target, `script 第 ${step.step} 步 target`);
       else if (step.command === "open") {
         const url = parseUrl(step.value || step.target, `${step.origin}/`);
         normalizedWebOrigin(url);
@@ -81,7 +81,7 @@ export function validateWebScript(value, origin) {
       } else if (step.command === "sleep") {
         const seconds = Number(step.target);
         if (!/^\d+$/.test(step.target) || seconds < 0 || seconds > 30) throw new Error("脚本 sleep 应为 0 至 30 秒");
-      } else throw new Error(`Web Proxy 不支持脚本命令 ${step.command}，当前支持同一窗口内的主页面`);
+      } else throw new Error(`第 ${step.step} 步使用了不支持的脚本命令，当前支持同一窗口内的主页面`);
       return step;
     })
     .sort((a, b) => a.step - b.step);
@@ -94,17 +94,23 @@ export function validateWebScript(value, origin) {
   return steps;
 }
 
-export function validateWebSelector(selector) {
+export function validateWebSelector(selector, field = "selector") {
   if (typeof selector !== "string" || !selector || selector.length > 1024) {
-    throw new Error("Website 代填元素配置无效");
+    throw new Error(`Website 代填元素配置无效（${field}）：应为 1 至 1024 个字符的字符串`);
   }
   const separator = selector.indexOf("=");
   const kind = selector.slice(0, separator).trim().toLowerCase();
   const value = selector.slice(separator + 1).trim();
   if (separator < 1 || !value || !SUPPORTED_SELECTOR_KINDS.has(kind)) {
-    throw new Error("Website 代填元素配置无效");
+    throw new Error(
+      `Website 代填元素配置无效（${field}）：请使用 类型=元素 格式，例如 id=dashboard；支持 ${[...SUPPORTED_SELECTOR_KINDS].join("、")}，不支持 JavaScript`
+    );
   }
   return selector;
+}
+
+export function optionalWebSelector(selector, field = "selector") {
+  return selector == null || selector === "" ? "" : validateWebSelector(selector, field);
 }
 
 export async function createCredentialSession(
@@ -163,17 +169,14 @@ export async function createCredentialSession(
       ]
     : [targetOrigin];
 
-  const usernameSelector = data.username_selector || "";
-  if (usernameSelector) validateWebSelector(usernameSelector);
-  const passwordSelector =
-    mode === "script" ? "" : validateWebSelector(required(data.password_selector, "密码元素配置"));
-  const submitSelector = mode === "script" ? "" : validateWebSelector(required(data.submit_selector, "提交元素配置"));
-  const successSelector = configuredSuccessSelector || data.success_selector || "";
-  if (successSelector) validateWebSelector(successSelector);
-  const interactiveSelector = configuredInteractiveSelector || data.interactive_selector || "";
-  if (interactiveSelector) {
-    validateWebSelector(interactiveSelector);
-  }
+  const usernameSelector = optionalWebSelector(data.username_selector, "username_selector");
+  const passwordSelector = mode === "script" ? "" : optionalWebSelector(data.password_selector, "password_selector");
+  const submitSelector = mode === "script" ? "" : optionalWebSelector(data.submit_selector, "submit_selector");
+  const successSelector = optionalWebSelector(configuredSuccessSelector || data.success_selector, "success_selector");
+  const interactiveSelector = optionalWebSelector(
+    configuredInteractiveSelector || data.interactive_selector,
+    "interactive_selector"
+  );
   const serverPublicKey = Buffer.from(required(data.server_public_key, "Web 公钥"), "base64");
   if (
     serverPublicKey.length !== X25519_SPKI_PREFIX.length + 32 ||
@@ -218,7 +221,7 @@ export async function heartbeatWebProxySession(proxyUrl, sessionId, proxyAuth) {
     method: "POST",
     proxyAuth
   });
-  if (!response.ok) throw await responseError(response, "Web 代理会话心跳失败");
+  if (!response.ok) throw await responseError(response, "WebProxy.SessionHeartbeatFailed");
 }
 
 export async function releaseCredentials(session, currentUrl) {
@@ -321,8 +324,8 @@ const elementsReady = () => {
   const password = findElement(selectors.password);
   const submit = findElement(selectors.submit);
   const usernameReady = !selectors.username || (username instanceof HTMLInputElement && ["text", "email", "tel"].includes(username.type) && !username.disabled && visible(username));
-  const passwordReady = password instanceof HTMLInputElement && password.type === "password" && !password.disabled && visible(password);
-  const submitReady = (submit instanceof HTMLButtonElement || submit instanceof HTMLAnchorElement || (submit instanceof HTMLInputElement && ["submit", "button"].includes(submit.type))) && (selectors.interactive || (!submit.disabled && visible(submit)));
+  const passwordReady = !selectors.password || (password instanceof HTMLInputElement && password.type === "password" && !password.disabled && visible(password));
+  const submitReady = !selectors.submit || ((submit instanceof HTMLButtonElement || submit instanceof HTMLAnchorElement || (submit instanceof HTMLInputElement && ["submit", "button"].includes(submit.type))) && (selectors.interactive || (!submit.disabled && visible(submit))));
   return usernameReady && passwordReady && submitReady;
 };
 let readySince = 0;
@@ -350,30 +353,31 @@ check();
 
 export function buildAutofillScript(selectors, credentials) {
   const payload = {
-    usernameValue: credentials.username,
-    passwordValue: credentials.password,
+    usernameValue: selectors.username ? credentials.username : "",
+    passwordValue: selectors.password ? credentials.password : "",
     usernameSelector: selectors.username,
     passwordSelector: selectors.password,
     submitSelector: selectors.submit,
     successSelector: selectors.success,
     interactiveSelector: selectors.interactive
   };
-  return `(() => {
+  return `(async () => {
 ${selectorLookupScript}
 ${submitElementScript}
 let payload = ${JSON.stringify(payload)};
 const username = payload.usernameSelector ? findElement(payload.usernameSelector) : null;
 const password = findElement(payload.passwordSelector);
 const submit = findElement(payload.submitSelector);
-if ((payload.usernameSelector && !(username instanceof HTMLInputElement)) || !(password instanceof HTMLInputElement) || !submit) {
+if ((payload.usernameSelector && !(username instanceof HTMLInputElement)) || (payload.passwordSelector && !(password instanceof HTMLInputElement)) || (payload.submitSelector && !submit)) {
   payload.usernameValue = "";
   payload.passwordValue = "";
   return false;
 }
 const overlay = document.createElement("div");
+const manualSubmit = !payload.submitSelector;
 overlay.setAttribute("data-jms-secure-login", "true");
 Object.assign(overlay.style, { position: "fixed", inset: "0", zIndex: "2147483647", cursor: "wait", background: "transparent" });
-if (!payload.interactiveSelector) document.documentElement.appendChild(overlay);
+if (!manualSubmit && !payload.interactiveSelector) document.documentElement.appendChild(overlay);
 let internalAction = false;
 const blockedEvents = ["pointerdown", "pointerup", "mousedown", "mouseup", "click", "dblclick", "keydown", "keyup", "keypress", "touchstart", "touchend"];
 const blocker = (event) => {
@@ -381,7 +385,7 @@ const blocker = (event) => {
   event.preventDefault();
   event.stopImmediatePropagation();
 };
-if (!payload.interactiveSelector) for (const name of blockedEvents) document.addEventListener(name, blocker, true);
+if (!manualSubmit && !payload.interactiveSelector) for (const name of blockedEvents) document.addEventListener(name, blocker, true);
 let cleanedUp = false;
 const cleanup = () => {
   if (cleanedUp) return;
@@ -390,7 +394,7 @@ const cleanup = () => {
   for (const name of blockedEvents) document.removeEventListener(name, blocker, true);
   overlay.remove();
   if (username?.isConnected) setValue(username, "");
-  if (password.isConnected) setValue(password, "");
+  if (password?.isConnected) setValue(password, "");
 };
 const setValue = (element, value) => {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
@@ -399,9 +403,11 @@ const setValue = (element, value) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 if (username) setValue(username, payload.usernameValue);
-setValue(password, payload.passwordValue);
+if (password) setValue(password, payload.passwordValue);
 payload.usernameValue = "";
 payload.passwordValue = "";
+// Fill-only configurations retain the inputs so the user can submit the page.
+if (manualSubmit) return true;
 const successObserver = !payload.interactiveSelector && payload.successSelector ? new MutationObserver(() => {
   if (findElement(payload.successSelector)) cleanup();
 }) : null;
@@ -411,9 +417,17 @@ if (successObserver) {
 }
 // The main process decides whether a visible verification area must precede submission.
 if (payload.interactiveSelector) return true;
-internalAction = true;
 try {
-  return submitElement(submit);
+  // Input handlers may schedule a framework render that replaces or enables the
+  // submit button. Let that update finish, then resolve the current DOM node.
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const currentSubmit = findElement(payload.submitSelector);
+  if (!(currentSubmit instanceof HTMLElement) || !currentSubmit.isConnected || currentSubmit.disabled) {
+    throw new Error("登录提交按钮不可用，请检查提交元素配置或页面是否需要验证");
+  }
+  internalAction = true;
+  if (!submitElement(currentSubmit)) throw new Error("登录表单校验未通过，请检查必填项或验证码配置");
+  return true;
 } finally {
   internalAction = false;
   if (!payload.successSelector && !payload.interactiveSelector) cleanup();

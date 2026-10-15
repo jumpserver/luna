@@ -1,35 +1,57 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
+import type { TerminalCursorAnchor } from "#koko";
 import { useTerminalAiHudLayout } from "./useTerminalAiHudLayout";
+import { TERMINAL_AI_HINT_IDLE_MS } from "~/utils/terminalAiCommand";
 
 const terminal = vi.hoisted(() => ({
-  anchor: { left: 140, top: 100, width: 8, height: 18 },
-  element: null as HTMLElement | null
+  anchor: null as TerminalCursorAnchor | null,
+  element: null as HTMLElement | null,
+  cursorListener: (_anchor: TerminalCursorAnchor | null) => {},
+  inputListener: () => {}
 }));
 vi.mock("#koko", () => ({
   getKokoTerminalCursorAnchor: () => terminal.anchor,
   getKokoTerminalElement: () => terminal.element,
-  subscribeKokoTerminalCursorAnchor: () => () => {},
-  subscribeKokoTerminalUserInput: () => () => {}
+  subscribeKokoTerminalCursorAnchor: (_paneId: string, listener: typeof terminal.cursorListener) => {
+    terminal.cursorListener = listener;
+    return () => {
+      terminal.cursorListener = () => {};
+    };
+  },
+  subscribeKokoTerminalUserInput: (_paneId: string, listener: () => void) => {
+    terminal.inputListener = listener;
+    return () => {
+      terminal.inputListener = () => {};
+    };
+  }
 }));
 
 const cleanups: Array<() => void> = [];
 beforeEach(() => {
-  if (typeof window === "undefined") vi.stubGlobal("window", { innerWidth: 1000, innerHeight: 800 });
-  else {
+  if (typeof window === "undefined") {
+    vi.stubGlobal("window", Object.assign(new EventTarget(), { innerWidth: 1000, innerHeight: 800 }));
+  } else {
     vi.stubGlobal("innerWidth", 1000);
     vi.stubGlobal("innerHeight", 800);
   }
-  terminal.anchor = { left: 140, top: 100, width: 8, height: 18 };
+  terminal.anchor = { left: 140, top: 100, width: 8, height: 18, bufferType: "normal" };
 });
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup());
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-async function setup() {
+async function setup(sessionInfoReady = false) {
   const area = { left: 100, top: 50, right: 900, bottom: 750, width: 800, height: 700 };
-  terminal.element = { getBoundingClientRect: () => area } as HTMLElement;
+  const terminalInput = {};
+  const documentState = { activeElement: terminalInput, hasFocus: vi.fn(() => true), defaultView: window };
+  terminal.element = {
+    getBoundingClientRect: () => area,
+    ownerDocument: documentState,
+    contains: (node: unknown) => node === terminalInput
+  } as unknown as HTMLElement;
   const measured = { height: 110, scrollHeight: 110 };
   const captured = new Set<number>();
   const handle = Object.assign(new EventTarget(), {
@@ -42,16 +64,29 @@ async function setup() {
   const open = ref(false);
   const scope = effectScope();
   const layout = scope.run(() =>
-    useTerminalAiHudLayout({ paneId: () => "pane", open, sessionInfoReady: () => false })
+    useTerminalAiHudLayout({ paneId: () => "pane", open, sessionInfoReady: () => sessionInfoReady })
   )!;
-  layout.hostRef.value = { getBoundingClientRect: () => area } as HTMLElement;
-  layout.panelRef.value = {
-    getBoundingClientRect: () => measured,
-    get scrollHeight() {
-      return measured.scrollHeight;
-    }
+  layout.hostRef.value = {
+    getBoundingClientRect: () => area,
+    ownerDocument: documentState,
+    style: { setProperty: vi.fn() }
   } as unknown as HTMLElement;
+  layout.panelRef.value = Object.defineProperties(new EventTarget(), {
+    getBoundingClientRect: { value: () => measured },
+    scrollHeight: { get: () => measured.scrollHeight }
+  }) as unknown as HTMLElement;
   layout.dragHandleRef.value = handle as unknown as HTMLElement;
+  let resizeHandleEl: EventTarget;
+  const resizeHandle = (edge: string) =>
+    Object.assign(new EventTarget(), {
+      closest: (selector: string) => (selector === "[data-terminal-ai-resize]" ? resizeHandleEl : null),
+      focus: vi.fn(),
+      setPointerCapture: vi.fn((id: number) => captured.add(id)),
+      hasPointerCapture: (id: number) => captured.has(id),
+      releasePointerCapture: vi.fn((id: number) => captured.delete(id)),
+      dataset: { terminalAiResize: edge }
+    });
+  resizeHandleEl = resizeHandle("se");
   cleanups.push(() => {
     layout.dispose();
     scope.stop();
@@ -73,9 +108,113 @@ async function setup() {
     await nextTick();
     return event;
   }
+  async function dispatchResize(edge: string, type: string, properties: Record<string, unknown> = {}) {
+    resizeHandleEl = resizeHandle(edge);
+    const event = Object.assign(new Event(type, { cancelable: true }), {
+      button: 0,
+      isPrimary: true,
+      pointerId: 2,
+      clientX: 200,
+      clientY: 200,
+      ...properties
+    });
+    Object.defineProperty(event, "target", { value: resizeHandleEl });
+    layout.panelRef.value!.dispatchEvent(event);
+    await nextTick();
+    return event;
+  }
   const position = () => ({ left: layout.panelStyle.value.left, top: layout.panelStyle.value.top });
-  return { area, measured, handle, open, layout, dispatch, position };
+  const size = () => ({ width: layout.panelStyle.value.width, maxHeight: layout.panelStyle.value.maxHeight });
+  return {
+    area,
+    measured,
+    handle,
+    open,
+    layout,
+    dispatch,
+    dispatchResize,
+    position,
+    size,
+    documentState,
+    terminalInput
+  };
 }
+
+it("shows the caret hint only while its terminal has input focus", async () => {
+  vi.stubGlobal("getComputedStyle", () => ({ backgroundColor: "rgb(0, 0, 0)" }));
+  const { layout, open, documentState, terminalInput } = await setup(true);
+  open.value = false;
+  documentState.activeElement = {};
+  layout.startCursorTracking();
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(false);
+
+  // Focus changes must update the hint even when the cursor has not moved.
+  documentState.activeElement = terminalInput;
+  window.dispatchEvent(new Event("focusin"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  documentState.activeElement = {};
+  window.dispatchEvent(new Event("focusout"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(false);
+
+  documentState.activeElement = terminalInput;
+  window.dispatchEvent(new Event("focusin"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  documentState.hasFocus.mockReturnValue(false);
+  window.dispatchEvent(new Event("blur"));
+  expect(layout.hintVisible.value).toBe(false);
+  await layout.positionHint();
+  expect(layout.hintVisible.value).toBe(false);
+
+  documentState.hasFocus.mockReturnValue(true);
+  window.dispatchEvent(new Event("focus"));
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+});
+
+it("reads the current buffer to hide alternate-screen hints after idle and allow manual opening", async () => {
+  vi.useFakeTimers();
+  if (!window.setTimeout) {
+    window.setTimeout = globalThis.setTimeout as unknown as typeof window.setTimeout;
+    window.clearTimeout = globalThis.clearTimeout as typeof window.clearTimeout;
+  }
+  vi.stubGlobal("getComputedStyle", () => ({ backgroundColor: "rgb(0, 0, 0)" }));
+  const { layout, open } = await setup(true);
+  open.value = false;
+  layout.startCursorTracking();
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  const pending = layout.positionHint();
+  terminal.anchor = { ...terminal.anchor!, bufferType: "alternate" };
+  await pending;
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.inputListener();
+  await vi.advanceTimersByTimeAsync(TERMINAL_AI_HINT_IDLE_MS);
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.anchor = { ...terminal.anchor, bufferType: "normal" };
+  terminal.cursorListener(terminal.anchor);
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  terminal.inputListener();
+  const anchor = terminal.anchor;
+  terminal.anchor = null;
+  await vi.advanceTimersByTimeAsync(TERMINAL_AI_HINT_IDLE_MS);
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.anchor = { ...anchor, bufferType: "alternate" };
+  await layout.reveal(terminal.element!);
+  expect(open.value).toBe(true);
+  expect(layout.hintVisible.value).toBe(false);
+});
 
 it("moves from the original pointer position without drift and stays moved when the cursor or content changes", async () => {
   const { layout, measured, dispatch, position } = await setup();
@@ -89,7 +228,7 @@ it("moves from the original pointer position without drift and stays moved when 
   expect(position()).toEqual({ left: "140px", top: "126px" });
   await dispatch("pointermove", { clientX: 260, clientY: 240 });
   await dispatch("pointerup");
-  terminal.anchor.top = 500;
+  terminal.anchor!.top = 500;
   measured.height = measured.scrollHeight = 250;
   await layout.positionPanel();
   expect(position()).toEqual({ left: "240px", top: "226px" });
@@ -158,3 +297,65 @@ it.each(["pointerup", "pointercancel", "lostpointercapture", "close", "dispose"]
     expect(position()).toEqual({ left: "140px", top: "126px" });
   }
 );
+
+it("caps the auto-fit height instead of filling all available room near the cursor", async () => {
+  const { size } = await setup();
+  // Plenty of room exists below the cursor (spaceBelow ~616px), but the HUD should not grow past
+  // the comfortable default cap (this is the exact regression reported in issue #17541).
+  expect(size()).toEqual({ width: "520px", maxHeight: "420px" });
+});
+
+it("resizes via a corner handle, clamps to the viewport, and resets on Home", async () => {
+  const { dispatch, dispatchResize, layout, position, size } = await setup();
+  await dispatchResize("se", "pointerdown");
+  await dispatchResize("se", "pointermove", { clientX: 400, clientY: 400 });
+  expect(size()).toEqual({ width: "640px", maxHeight: "310px" });
+  expect(layout.panelStyle.value.height).toBe("310px");
+  await dispatchResize("se", "pointerup");
+  expect(layout.dragging.value).toBe(false);
+
+  // Resetting via the header's Home shortcut drops the manual size and returns to auto-fit.
+  await dispatch("keydown", { key: "Home" });
+  expect(size()).toEqual({ width: "520px", maxHeight: "420px" });
+  expect(layout.panelStyle.value.height).toBeUndefined();
+  expect(position()).toEqual({ left: "140px", top: "126px" });
+});
+
+it("smooth-scrolls the live transcript to the bottom, respecting reduced motion", async () => {
+  const { layout } = await setup();
+  const scrollTo = vi.fn();
+  layout.liveRef.value = { scrollTo, scrollHeight: 400 } as unknown as HTMLElement;
+
+  window.matchMedia = ((query: string) => ({ matches: false, media: query })) as typeof window.matchMedia;
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenLastCalledWith({ top: 400, behavior: "smooth" });
+
+  window.matchMedia = ((query: string) => ({ matches: true, media: query })) as typeof window.matchMedia;
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenLastCalledWith({ top: 400, behavior: "auto" });
+});
+
+it("keeps following the bottom through smooth-scroll's own intermediate events, but stops on a real scroll-up", async () => {
+  const { layout } = await setup();
+  const scrollTo = vi.fn();
+  const live = { scrollTo, scrollHeight: 1000, clientHeight: 200, scrollTop: 0 };
+  layout.liveRef.value = live as unknown as HTMLElement;
+
+  function scrollEvent(top: number) {
+    live.scrollTop = top;
+    return { currentTarget: live } as unknown as Event;
+  }
+
+  // Our own smooth-scroll animation climbs toward the bottom in steps; none of these
+  // intermediate events should look like the user scrolling away from the bottom.
+  layout.onLiveScroll(scrollEvent(300));
+  layout.onLiveScroll(scrollEvent(600));
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1000 }));
+
+  // A genuine scroll-up away from the bottom should stop auto-following.
+  scrollTo.mockClear();
+  layout.onLiveScroll(scrollEvent(400));
+  await layout.pinLive();
+  expect(scrollTo).not.toHaveBeenCalled();
+});

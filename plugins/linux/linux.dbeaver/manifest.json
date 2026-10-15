@@ -12,6 +12,7 @@
     "mariadb",
     "mysql",
     "oracle",
+    "dameng",
     "postgresql",
     "sqlserver"
   ],

@@ -1,9 +1,19 @@
 import type { AssetDetail, AssetItem, PermedAccount, PermOrgItem, RdpGraphics } from "~/types";
-import { getAccountDetail, getAssetDetailRequest, getConsoleAssetDetail } from "~/composables/useApiRequest";
+import {
+  getAccountDetail,
+  getAssetDetailRequest,
+  getConsoleAssetDetail,
+  getPersonalAssetCredential
+} from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
+import {
+  hasReusableSavedConnection,
+  isSavedConnectionAvailable,
+  needsInputSecret,
+  supportsPersonalCredential
+} from "~/utils/connection";
 import { setWebOrgId } from "~/utils/runtime";
 
 export interface SessionWindowConnectionInfo {
@@ -11,6 +21,7 @@ export interface SessionWindowConnectionInfo {
   account: string;
   manualUsername: string;
   manualPassword: string;
+  personalCredentialId?: string;
   dynamicPassword: string;
   rememberSecret: boolean;
   rememberSelection?: boolean;
@@ -89,7 +100,7 @@ export function toAdminAssetItem(
   const item = transformAssetDetail(assetId, {
     ...asset,
     permed_protocols: (asset.permed_protocols || asset.protocols || []).filter(
-      (protocol) => protocol?.name && protocol.name !== "winrm"
+      (protocol) => protocol?.name
     ) as AssetDetail["permed_protocols"],
     permed_accounts: [
       {
@@ -122,6 +133,9 @@ export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindo
   query.set("accountMode", connectionInfo.accountMode);
   if (connectionInfo.accountId) query.set("accountId", connectionInfo.accountId);
   if (connectionInfo.connectMethod) query.set("method", connectionInfo.connectMethod);
+  if (["manual", "hosted"].includes(connectionInfo.accountMode) && connectionInfo.personalCredentialId) {
+    query.set("personalCredentialId", connectionInfo.personalCredentialId);
+  }
 
   return `/session/${encodeURIComponent(asset.id)}?${query.toString()}`;
 }
@@ -162,6 +176,7 @@ const sessionAccountModes = new Set<SessionWindowConnectionInfo["accountMode"]>(
 
 export function useSessionWindowConnect() {
   const route = useRoute();
+  const { t } = useI18n();
   const { activeTab, openSession, openSetupSession } = useWorkspaceTabs();
   const { confirmConnection } = useAssetConnection();
   const userInfoStore = useUserInfoStore();
@@ -214,10 +229,82 @@ export function useSessionWindowConnect() {
       asset.savedConnection = saved || undefined;
       assetName.value = asset.name || "JumpServer";
 
-      const reusableSavedConnection = !admin && hasReusableSavedConnection(asset);
+      // An explicit credential must never fall back to a remembered account.
+      if (route.query.personalCredentialId !== undefined) {
+        const credentialId = queryValue(route.query.personalCredentialId);
+        if (admin || !credentialId) throw new Error(t("ConnectError.PersonalCredentialNotFound"));
+
+        const credential = await getPersonalAssetCredential(credentialId, orgId);
+        if (credential.asset.id !== assetId || !credential.is_active || !credential.has_secret) {
+          throw new Error(t("ConnectError.PersonalCredentialNotFound"));
+        }
+        const protocol = typeof credential.protocol === "string" ? credential.protocol : credential.protocol.value;
+        if (!asset.permedProtocols?.some((item) => item.name === protocol && item.public !== false)) {
+          throw new Error(t("ConnectError.ProtocolUnavailable"));
+        }
+        const hostedAccount =
+          routeConnection?.accountMode === "hosted"
+            ? asset.permedAccounts?.find((account) => account.id === routeConnection.accountId)
+            : undefined;
+        if (
+          routeConnection?.accountMode === "hosted" &&
+          (!supportsPersonalCredential(hostedAccount) || hostedAccount?.username !== credential.username)
+        ) {
+          throw new Error(t("ConnectError.AccountUnavailable"));
+        }
+        if (!hostedAccount && !asset.permedAccounts?.some((account) => account.alias === "@INPUT")) {
+          throw new Error(t("ConnectError.ManualAccountDenied"));
+        }
+        const preferred =
+          preference?.protocol === protocol ? preference : saved?.protocol === protocol ? saved : undefined;
+        const connectMethod = queryValue(route.query.method) || preferred?.connectMethod || "";
+        const pane = openSession(asset, { protocol, account: credential.username, connectMethod });
+        await confirmConnection(asset, {
+          protocol,
+          account: hostedAccount?.name || "@INPUT",
+          accountId: hostedAccount?.id,
+          accountMode: hostedAccount ? "hosted" : "manual",
+          manualUsername: hostedAccount ? "" : credential.username,
+          manualPassword: "",
+          personalCredentialId: credential.id,
+          personalCredentialVersion: credential.version,
+          personalCredentialSecretType:
+            typeof credential.secret_type === "string" ? credential.secret_type : credential.secret_type.value,
+          savePersonalCredential: false,
+          dynamicPassword: "",
+          rememberSecret: false,
+          preserveStoredSelection: true,
+          connectMethod,
+          connectOptions: preferred?.connectOptions || {},
+          tabId: pane.id
+        });
+        return;
+      }
+
       const connection = { ...(saved || {}), ...(preference || {}), ...(routeConnection || {}) };
+      const reusableSavedConnection =
+        !admin &&
+        hasReusableSavedConnection(asset) &&
+        saved?.protocol === connection.protocol &&
+        (saved?.accountMode || "hosted") === (connection.accountMode || "hosted") &&
+        (connection.accountMode !== "hosted" || saved?.accountId === connection.accountId);
       const queryNeedsNoSecret = routeConnection && ["hosted", "anonymous"].includes(routeConnection.accountMode);
       const canAutoConnect = reusableSavedConnection || queryNeedsNoSecret || admin;
+      const selectedAccount =
+        (connection.accountId && asset.permedAccounts?.find((account) => account.id === connection.accountId)) ||
+        asset.permedAccounts?.find((account) =>
+          [account.name, account.username, account.alias].includes(connection.username || connection.account || "")
+        );
+
+      if (
+        (connection.accountMode || "hosted") === "hosted" &&
+        needsInputSecret(selectedAccount) &&
+        !(reusableSavedConnection && supportsPersonalCredential(selectedAccount) && saved?.personalCredentialId)
+      ) {
+        if (admin) throw new Error(t("ConnectError.SecretRequired"));
+        openSetupSession(asset, { protocol: connection.protocol || "" });
+        return;
+      }
 
       if (canAutoConnect && (!reusableSavedConnection || isSavedConnectionAvailable(asset))) {
         const pane = openSession(asset, {

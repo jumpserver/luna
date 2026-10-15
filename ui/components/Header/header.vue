@@ -4,13 +4,13 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const router = useRouter();
 const localePath = useLocalePath();
 const { t } = useI18n();
-const { isMacOS } = usePlatform();
+const { isMacOS, isWindows } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { exitFocusMode, focusMode, tabs, workspaceFullscreen } = useWorkspaceTabs();
 const hasMacTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value);
-const showWorkspaceHeader = computed(() => !focusMode.value);
+const showTitleBarMenu = computed(() => isDesktopRuntime() && isWindows.value && !loggedIn.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
   return (
@@ -24,19 +24,11 @@ const showSidebarChrome = computed(() => loggedIn.value && !isToolRoute.value);
 const showAssetTabs = computed(
   () => activeWorkspaceMode.value === "assets" && (loggedIn.value || tabs.value.length > 0)
 );
+const showWorkspaceHeader = computed(
+  () => !focusMode.value && (!showTitleBarMenu.value || showAssetTabs.value || isToolRoute.value)
+);
 
 const returnFromTool = async () => {
-  if (!loggedIn.value) {
-    await navigateTo(localePath({ path: "/" }));
-    return;
-  }
-
-  const previousPath = router.options.history.state.back;
-  if (typeof previousPath === "string" && previousPath) {
-    router.back();
-    return;
-  }
-
   await navigateTo(localePath({ path: "/" }));
 };
 
@@ -77,7 +69,13 @@ const pageHeader = computed(() => {
 
 <template>
   <div>
-    <HeaderDesktopTitleBar />
+    <HeaderDesktopTitleBar>
+      <template v-if="showTitleBarMenu" #trailing>
+        <div class="flex items-center px-2" data-desktop-drag-region="false">
+          <SideBarProfile />
+        </div>
+      </template>
+    </HeaderDesktopTitleBar>
     <div
       v-if="hasMacTrafficLightInset && !showWorkspaceHeader && !workspaceFullscreen"
       data-desktop-drag-region
@@ -95,7 +93,7 @@ const pageHeader = computed(() => {
         @click="exitFocusMode"
       />
     </div>
-    <WorkspaceTopHeader v-show="showWorkspaceHeader">
+    <WorkspaceTopHeader v-show="showWorkspaceHeader" :show-profile="!showTitleBarMenu">
       <template v-if="showSidebarChrome" #leading>
         <SideBarTopControls />
       </template>

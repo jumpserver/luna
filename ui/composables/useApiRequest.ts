@@ -32,7 +32,13 @@ export class ApiRequestError extends Error {
     contentType = ""
   ) {
     if (typeof data === "string") data = compactApiErrorBody(data, contentType);
-    super(typeof data === "string" ? data : data?.detail || data?.code || `HTTP ${status}`);
+    const fieldError =
+      data && typeof data === "object"
+        ? Object.values(data)
+            .flat()
+            .find((value) => typeof value === "string" && value.trim())
+        : "";
+    super(typeof data === "string" ? data : data?.detail || data?.code || fieldError || `HTTP ${status}`);
     this.data = data;
     this.name = "ApiRequestError";
   }
@@ -239,14 +245,14 @@ const isAuthFailure = (error: unknown) => {
 };
 
 const handleApiAuthFailure = () => {
-  if (!import.meta.client) return;
+  if (import.meta.server) return;
+
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
 
   const now = Date.now();
   if (now - lastAuthFailureAt < 1500) return;
   lastAuthFailureAt = now;
-
-  const userInfoStore = useUserInfoStore();
-  if (!userInfoStore.loggedIn) return;
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
@@ -473,10 +479,11 @@ export function favoriteAssetsToFolder(assetIds: string[], folderId: string | nu
   });
 }
 
-export function getConnectMethods(): Promise<Record<string, unknown>> {
+export function getConnectMethods(assetId = ""): Promise<Record<string, unknown>> {
   return apiRequest<Record<string, unknown>>({
     method: "GET",
-    path: "/api/v1/terminal/components/connect-methods/"
+    path: "/api/v1/terminal/components/connect-methods/",
+    query: assetId ? { asset_id: assetId } : undefined
   });
 }
 
@@ -719,6 +726,14 @@ export function getAccountDetail(accountId: string, orgId?: string): Promise<Per
   return apiRequest({
     method: "GET",
     path: `/api/v1/accounts/accounts/${encodeURIComponent(accountId)}/`,
+    orgId
+  });
+}
+
+export function getPersonalAssetCredential(credentialId: string, orgId?: string): Promise<PersonalAssetCredential> {
+  return apiRequest({
+    method: "GET",
+    path: `/api/v1/accounts/personal-asset-credentials/${encodeURIComponent(credentialId)}/`,
     orgId
   });
 }

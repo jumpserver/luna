@@ -22,6 +22,36 @@ export function normalizeClientProtocolUrl(raw: unknown): string | undefined {
   if (/^jms2:\/\//i.test(value)) return `${CLIENT_PROTOCOL}:${value.slice(value.indexOf(":") + 1)}`;
 }
 
+export interface ClientProtocolPayload {
+  protocol?: string;
+  asset?: { id?: unknown; [key: string]: unknown };
+  token?: { id?: unknown; protocol?: string; [key: string]: unknown };
+  file?: { content?: unknown; [key: string]: unknown };
+  endpoint?: { host?: unknown; port?: unknown; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+export function decodeClientProtocolPayload(raw: unknown): ClientProtocolPayload {
+  const value = normalizeClientProtocolUrl(raw);
+  const encoded = value?.startsWith(`${CLIENT_PROTOCOL}://`) ? value.slice(`${CLIENT_PROTOCOL}://`.length) : "";
+  if (!encoded) throw new Error("invalid local client URL scheme");
+  try {
+    const payload: unknown = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+    if (!payload || Array.isArray(payload) || typeof payload !== "object") throw new Error("payload must be an object");
+    return payload as ClientProtocolPayload;
+  } catch (error) {
+    throw new Error(`decode local client payload failed: ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+export function isWebAssetClientProtocolPayload(payload: ClientProtocolPayload) {
+  return (
+    ["http", "https"].includes(String(payload.protocol || "").toLowerCase()) &&
+    typeof payload.asset?.id === "string" &&
+    Boolean(payload.asset.id.trim())
+  );
+}
+
 export function findClientProtocolUrl(argv: string[], additionalData?: unknown): string | undefined {
   if (additionalData && typeof additionalData === "object" && "protocolUrl" in additionalData) {
     const forwarded = normalizeClientProtocolUrl(additionalData.protocolUrl);

@@ -91,6 +91,11 @@ const missingPrimaryKey = computed(
       tableMetadata: props.tab.tableMetadata
     })
 );
+const readOnlyNotice = computed(() => {
+  if (editing.editable.value) return "";
+  if (props.dbType.toLowerCase().includes("clickhouse")) return t("Chen.ClickHouseDataViewReadOnly");
+  return missingPrimaryKey.value ? t("Chen.TableWithoutPrimaryKeyNotEditable") : "";
+});
 const indexDdlSupported = computed(
   () =>
     !isViewRelation.value &&
@@ -303,8 +308,8 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
     </div>
 
     <div v-if="tab.activePanel === 'data'" class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div v-if="missingPrimaryKey" class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning">
-        {{ t("Chen.TableWithoutPrimaryKeyNotEditable") }}
+      <div v-if="readOnlyNotice" class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning">
+        {{ readOnlyNotice }}
       </div>
       <div class="flex shrink-0 items-center gap-1.5 border-b border-default px-2 py-1">
         <UButton

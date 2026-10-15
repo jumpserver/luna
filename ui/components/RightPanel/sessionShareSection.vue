@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SuggestionUser } from "@/lion/api";
+import type { SessionShareAdapter, SessionShareUser } from "@jumpserver/connectors-core";
 import { useKokoSessionAdapter } from "#koko";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 
@@ -14,14 +14,13 @@ const activeSessionId = computed(() => {
   return tab?.panes.find((pane) => pane.id === activePaneId.value)?.id || tab?.id || "";
 });
 const kokoAdapter = useKokoSessionAdapter(activeSessionId);
-const lionAdapter = computed(() => getLionWorkspaceSession(activeSessionId.value)?.share || null);
-const onlineUsers = computed(() => lionAdapter.value?.onlineUsers.value || kokoAdapter.onlineUsers.value);
-const shareInfo = computed(() => lionAdapter.value?.shareInfo.value || kokoAdapter.shareInfo.value);
-const userOptions = computed<SuggestionUser[]>(
-  () => (lionAdapter.value?.userOptions.value || kokoAdapter.userOptions.value) as SuggestionUser[]
+const adapter = computed<SessionShareAdapter>(
+  () => getLionWorkspaceSession(activeSessionId.value)?.share || kokoAdapter
 );
-const hasMoreUsers = computed(() => Boolean(lionAdapter.value?.hasMoreUsers.value));
-const adapterKey = computed(() => `${lionAdapter.value ? "lion" : "koko"}:${activeSessionId.value}`);
+const onlineUsers = computed(() => adapter.value.onlineUsers.value);
+const shareInfo = computed(() => adapter.value.shareInfo.value);
+const userOptions = computed(() => adapter.value.userOptions.value);
+const hasMoreUsers = computed(() => adapter.value.hasMoreUsers.value);
 
 const shareModalOpen = ref(false);
 const shareUserMenuOpen = ref(false);
@@ -29,7 +28,7 @@ const searchLoading = ref(false);
 const showLinkResult = ref(false);
 const searchQuery = ref("");
 const selectedUserIds = ref<string[]>([]);
-const selectedUsers = ref<Record<string, SuggestionUser>>({});
+const selectedUsers = ref<Record<string, SessionShareUser>>({});
 
 const shareLinkRequest = reactive({
   expiredTime: 10,
@@ -100,7 +99,7 @@ watch(
   }
 );
 
-watch(adapterKey, () => {
+watch([activeSessionId, adapter], () => {
   shareModalOpen.value = false;
   shareUserMenuOpen.value = false;
   showLinkResult.value = Boolean(shareInfo.value.shareCode);
@@ -129,12 +128,7 @@ watch(selectedUserIds, (ids) => cacheSelectedUsers(ids));
 
 async function runSearch(query: string, loadMore = false) {
   searchLoading.value = true;
-  const lion = lionAdapter.value;
-  if (!lion) {
-    kokoAdapter.searchUsers(query);
-    return;
-  }
-  await lion.searchUsers(query, loadMore);
+  await adapter.value.searchUsers(query, loadMore);
   searchLoading.value = false;
 }
 
@@ -145,10 +139,10 @@ watch(searchQuery, (query) => {
   debouncedSearch(query);
 });
 
-const selectedShareUsers = computed<SuggestionUser[]>(() =>
+const selectedShareUsers = computed<SessionShareUser[]>(() =>
   selectedUserIds.value
     .map((id) => selectedUsers.value[id] || userOptions.value.find((item) => item.id === id))
-    .filter((item): item is SuggestionUser => Boolean(item))
+    .filter((item): item is SessionShareUser => Boolean(item))
 );
 
 function openShareModal() {
@@ -167,20 +161,17 @@ function handleCreateLink() {
     actionPerm: shareLinkRequest.actionPerm,
     users: selectedShareUsers.value
   };
-  if (lionAdapter.value) void lionAdapter.value.createShareLink(request);
-  else kokoAdapter.createShareLink(request);
+  void adapter.value.createShareLink(request);
 }
 
 function handleRemoveShareUser(userId: string) {
   const user = onlineUsers.value.find((item) => item.user_id === userId && !item.primary);
   if (!user) return;
-  if (lionAdapter.value) void lionAdapter.value.removeShareUser(user);
-  else kokoAdapter.removeShareUser(user as any);
+  void adapter.value.removeShareUser(user);
 }
 
 function handleBack() {
-  if (lionAdapter.value) lionAdapter.value.resetShareState();
-  else kokoAdapter.resetShareState();
+  adapter.value.resetShareState();
   showLinkResult.value = false;
   selectedUserIds.value = [];
   selectedUsers.value = {};
@@ -188,8 +179,7 @@ function handleBack() {
 }
 
 function handleCopyShareURL() {
-  if (lionAdapter.value) void lionAdapter.value.copyShareURL();
-  else kokoAdapter.copyShareURL();
+  void adapter.value.copyShareURL();
 }
 </script>
 

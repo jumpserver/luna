@@ -1,30 +1,31 @@
 <script setup lang="ts">
-import { hasFolderBrowserUpload } from "#koko/composables/sftp/file-manager/transfer";
+import type { BrowserUploadSelection } from "#koko/composables/sftp/file-manager/transfer";
+import { collectBrowserUploadSelection } from "#koko/composables/sftp/file-manager/transfer";
 
-const emit = defineEmits<{ upload: [files: File[]] }>();
+const emit = defineEmits<{ upload: [selection: BrowserUploadSelection] }>();
 const { t } = useI18n();
 const toast = useToast();
 
 const dragging = ref(false);
 const uploadInput = ref<HTMLInputElement | null>(null);
+const folderInput = ref<HTMLInputElement | null>(null);
 
-function submit(files: FileList | null, dataTransferItems?: Iterable<DataTransferItem>) {
-  const items = files ? Array.from(files) : [];
-  if (hasFolderBrowserUpload(items, dataTransferItems)) {
-    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-    return;
-  }
-  if (items.length) emit("upload", items);
+async function submit(files: FileList | null, dataTransferItems?: Iterable<DataTransferItem>, isFolderPick = false) {
+  const selection = await collectBrowserUploadSelection(files || [], dataTransferItems);
+  if (selection.items.length) emit("upload", selection);
+  else if (isFolderPick && !selection.failures.length)
+    toast.add({ title: t("koko.fileManagement.emptyFolderSelected"), color: "warning" });
+  if (selection.failures.length) toast.add({ title: t("koko.fileManagement.operationFailed"), color: "warning" });
 }
 
 function onDrop(event: DragEvent) {
   dragging.value = false;
-  submit(event.dataTransfer?.files || null, event.dataTransfer?.items);
+  void submit(event.dataTransfer?.files || null, event.dataTransfer?.items);
 }
 
-function onInput(event: Event) {
+function onInput(event: Event, isFolderPick = false) {
   const input = event.target as HTMLInputElement;
-  submit(input.files);
+  void submit(input.files, undefined, isFolderPick);
   input.value = "";
 }
 </script>
@@ -46,10 +47,19 @@ function onInput(event: Event) {
         <p class="text-sm font-medium">{{ t("koko.fileManagement.dropFiles") }}</p>
         <p class="mt-1 text-xs text-muted">{{ t("koko.fileManagement.dropFilesHint") }}</p>
       </div>
-      <UButton size="sm" color="primary" variant="soft" icon="i-lucide-upload" @click="uploadInput?.click()">
-        {{ t("koko.fileManagement.chooseFiles") }}
-      </UButton>
-      <input ref="uploadInput" type="file" multiple class="hidden" @change="onInput" />
+      <div class="flex flex-wrap justify-center gap-2">
+        <UButton size="sm" color="primary" variant="soft" icon="i-lucide-upload" @click="uploadInput?.click()">
+          {{ t("koko.fileManagement.chooseFiles") }}
+        </UButton>
+        <UButton size="sm" color="neutral" variant="soft" icon="i-lucide-folder-up" @click="folderInput?.click()">
+          {{ t("koko.localFile.chooseFolder") }}
+        </UButton>
+      </div>
+      <input ref="uploadInput" type="file" multiple class="hidden" @change="onInput($event)" />
+      <!-- ponytail: webkitdirectory can't report empty subdirectories the way the drag-and-drop
+           webkitGetAsEntry/readEntries walk does, so an all-empty folder just yields zero items here.
+           Upgrade path: switch to the File System Access API's showDirectoryPicker() once broadly supported. -->
+      <input ref="folderInput" type="file" multiple webkitdirectory class="hidden" @change="onInput($event, true)" />
     </div>
   </div>
 </template>

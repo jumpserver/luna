@@ -29,6 +29,7 @@ const defaultPorts: Record<string, number> = {
   postgresql: 5432,
   redis: 6379,
   oracle: 1521,
+  dameng: 5236,
   sqlserver: 1433,
   mongodb: 27017
 };
@@ -41,6 +42,8 @@ const endpoint = ref<Record<string, any>>({});
 const assetDetail = ref<AssetDetail>();
 const loading = ref(true);
 const passwordVisible = ref(false);
+const copiedKey = ref("");
+let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 const loginUsername = ref("");
 const connectionTokenReusable = ref(false);
 const reusable = ref(false);
@@ -146,10 +149,18 @@ const commands = computed(() => {
   return items;
 });
 
-async function copy(value: unknown) {
+async function copy(value: unknown, key: string) {
   await writeText(String(value ?? ""));
-  toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
+  if (copyResetTimer) clearTimeout(copyResetTimer);
+  copiedKey.value = key;
+  copyResetTimer = setTimeout(() => {
+    copiedKey.value = "";
+  }, 2000);
 }
+
+onBeforeUnmount(() => {
+  if (copyResetTimer) clearTimeout(copyResetTimer);
+});
 
 watch(
   () => token.value?.is_reusable,
@@ -227,8 +238,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="h-full min-h-0 overflow-auto bg-[var(--workspace-surface-background)] px-4 py-4 sm:px-6 sm:py-6">
-    <div class="mx-auto w-full max-w-4xl">
+  <div
+    class="flex h-full min-h-0 flex-col overflow-auto bg-[var(--workspace-surface-background)] px-4 py-3 sm:px-5 sm:py-4"
+  >
+    <div class="m-auto w-full max-w-4xl shrink-0">
       <div v-if="loading" class="grid min-h-64 place-items-center text-[var(--app-muted)]">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
@@ -238,7 +251,7 @@ onMounted(async () => {
           class="overflow-hidden rounded-lg bg-[var(--workspace-surface-panel)] border border-[var(--workspace-surface-border)]"
         >
           <header
-            class="flex items-center gap-3 border-b border-[var(--workspace-surface-border)] bg-[var(--workspace-surface-header)] px-5 py-4 sm:px-6"
+            class="flex items-center gap-3 border-b border-[var(--workspace-surface-border)] bg-[var(--workspace-surface-header)] px-4 py-2.5"
           >
             <div class="grid size-8 shrink-0 place-items-center text-[var(--app-muted)]">
               <UIcon name="i-lucide-key-round" class="size-5" />
@@ -256,25 +269,33 @@ onMounted(async () => {
             </div>
           </header>
 
-          <div class="bg-[var(--workspace-surface-panel)] px-3 py-3 sm:px-5 sm:py-5">
+          <div class="bg-[var(--workspace-surface-panel)] p-3 pb-6">
             <div class="overflow-hidden rounded-lg border border-[var(--workspace-surface-border)]">
               <table class="w-full border-collapse text-sm">
                 <tbody>
                   <tr
                     v-for="row in rows"
                     :key="row.name"
-                    class="group border-b border-[var(--workspace-surface-border)] transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                    class="group/guide-row cursor-pointer border-b border-[var(--workspace-surface-border)] transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                    @dblclick.prevent="copy(row.value, `row:${row.name}`)"
                   >
                     <th
-                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                      class="w-24 bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-32"
                     >
                       {{ row.label }}
                     </th>
-                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-0.5 text-[var(--app-fg)]">
                       <div class="flex min-h-7 items-center gap-1">
-                        <span class="min-w-0 flex-1 break-all font-ui-mono text-[13px] leading-5">
-                          {{ row.name === "password" && !passwordVisible ? "••••••••" : row.value }}
-                        </span>
+                        <UTooltip
+                          :text="t('ConnectionGuide.DoubleClickToCopy')"
+                          :delay-duration="600"
+                          :content="{ side: 'top' }"
+                          :disabled="copiedKey === `row:${row.name}`"
+                        >
+                          <span class="min-w-0 flex-1 break-all font-ui-mono text-[13px] leading-5">
+                            {{ row.name === "password" && !passwordVisible ? "••••••••" : row.value }}
+                          </span>
+                        </UTooltip>
                         <UButton
                           v-if="row.name === 'password'"
                           color="neutral"
@@ -284,15 +305,20 @@ onMounted(async () => {
                           :aria-label="t('ConnectionGuide.ShowPassword')"
                           class="shrink-0 text-[var(--app-muted)]"
                           @click="passwordVisible = !passwordVisible"
+                          @dblclick.stop
                         />
                         <UButton
                           color="neutral"
                           variant="ghost"
                           size="xs"
-                          icon="i-lucide-copy"
-                          :aria-label="t('Common.Copy')"
-                          class="guide-copy-button shrink-0 text-[var(--app-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                          @click="copy(row.value)"
+                          :icon="copiedKey === `row:${row.name}` ? 'i-lucide-check' : 'i-lucide-copy'"
+                          :label="copiedKey === `row:${row.name}` ? t('Common.CopySuccess') : undefined"
+                          :aria-label="t(copiedKey === `row:${row.name}` ? 'Common.CopySuccess' : 'Common.Copy')"
+                          class="guide-copy-button shrink-0 text-[var(--app-muted)] transition-opacity group-hover/guide-row:opacity-100 group-focus-within/guide-row:opacity-100"
+                          :class="copiedKey === `row:${row.name}` ? 'opacity-100' : 'opacity-0'"
+                          aria-live="polite"
+                          @click="copy(row.value, `row:${row.name}`)"
+                          @dblclick.stop
                         />
                       </div>
                     </td>
@@ -303,11 +329,11 @@ onMounted(async () => {
                     :class="showDatabaseHelp ? 'border-b' : ''"
                   >
                     <th
-                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                      class="w-24 bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-32"
                     >
                       {{ t("ConnectionGuide.SetReusable") }}
                     </th>
-                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-0.5 text-[var(--app-fg)]">
                       <div class="flex min-h-7 items-center gap-3">
                         <USwitch
                           :model-value="reusable"
@@ -323,11 +349,11 @@ onMounted(async () => {
                   </tr>
                   <tr v-if="showDatabaseHelp">
                     <th
-                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                      class="w-24 bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-32"
                     >
                       {{ t("ConnectionGuide.HelpText") }}
                     </th>
-                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-0.5 text-[var(--app-fg)]">
                       <p class="text-xs leading-5 text-[var(--app-muted)]">
                         {{ t("ConnectionGuide.DatabaseTokenHelp") }}
                       </p>
@@ -337,8 +363,8 @@ onMounted(async () => {
               </table>
             </div>
 
-            <div v-for="(command, index) in commands" :key="index" class="mt-4">
-              <div class="mb-2 flex items-center gap-2 px-1">
+            <div v-for="(command, index) in commands" :key="index" class="mt-3">
+              <div class="mb-1.5 flex items-center gap-2 px-1">
                 <UIcon name="i-lucide-terminal" class="size-4 text-[var(--app-muted)]" />
                 <h3 class="text-xs font-medium tracking-wide text-[var(--app-muted)]">
                   {{ command.title }}
@@ -347,23 +373,37 @@ onMounted(async () => {
 
               <div
                 v-if="command.value"
-                class="group flex items-center gap-3 rounded-lg border border-[var(--workspace-surface-border)] bg-[var(--app-surface-input)] px-4 py-3 transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                class="group/guide-command flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--workspace-surface-border)] bg-[var(--app-surface-input)] px-3 py-2 transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                @dblclick.prevent="copy(command.value, `command:${index}`)"
               >
                 <span class="select-none font-ui-mono text-xs text-[var(--app-muted)]">$</span>
-                <code class="min-w-0 flex-1 break-all font-ui-mono text-xs leading-5 text-[var(--app-fg)]">
-                  {{ token.value ? command.value.replace(token.value, "••••••••") : command.value }}
-                </code>
+                <UTooltip
+                  :text="t('ConnectionGuide.DoubleClickToCopy')"
+                  :delay-duration="600"
+                  :content="{ side: 'top' }"
+                  :disabled="copiedKey === `command:${index}`"
+                >
+                  <code class="min-w-0 flex-1 break-all font-ui-mono text-xs leading-5 text-[var(--app-fg)]">
+                    {{ token.value ? command.value.replace(token.value, "••••••••") : command.value }}
+                  </code>
+                </UTooltip>
                 <UButton
                   color="neutral"
                   variant="ghost"
                   size="xs"
-                  icon="i-lucide-copy"
-                  :aria-label="t('ConnectionGuide.CopyCommand')"
-                  class="guide-copy-button shrink-0 text-[var(--app-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                  @click="copy(command.value)"
+                  :icon="copiedKey === `command:${index}` ? 'i-lucide-check' : 'i-lucide-copy'"
+                  :label="copiedKey === `command:${index}` ? t('Common.CopySuccess') : undefined"
+                  :aria-label="
+                    t(copiedKey === `command:${index}` ? 'Common.CopySuccess' : 'ConnectionGuide.CopyCommand')
+                  "
+                  class="guide-copy-button shrink-0 text-[var(--app-muted)] transition-opacity group-hover/guide-command:opacity-100 group-focus-within/guide-command:opacity-100"
+                  :class="copiedKey === `command:${index}` ? 'opacity-100' : 'opacity-0'"
+                  aria-live="polite"
+                  @click="copy(command.value, `command:${index}`)"
+                  @dblclick.stop
                 />
               </div>
-              <p v-if="command.help" class="mt-2 px-1 text-xs text-[var(--app-muted)]">{{ command.help }}</p>
+              <p v-if="command.help" class="mt-1.5 px-1 text-xs text-[var(--app-muted)]">{{ command.help }}</p>
             </div>
           </div>
         </section>

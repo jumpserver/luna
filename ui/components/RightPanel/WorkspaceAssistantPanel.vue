@@ -143,8 +143,7 @@ const targetLabel = computed(() => {
   const label = displayedTarget.value?.label;
   if (selectedTarget.value === "workspace")
     return [t("RightPanel.LunaAiWorkspaceOnly"), label].filter(Boolean).join(" · ");
-  if (selectedTarget.value === "auto")
-    return [t("RightPanel.LunaAiAutomatic"), label || localShellPane.value?.assetName].filter(Boolean).join(" · ");
+  if (selectedTarget.value === "auto") return label || localShellPane.value?.assetName || t("RightPanel.AIContext");
   return label || t("RightPanel.LunaAiTargetChanged");
 });
 const approvalOptions = computed<AiSelectOption[]>(() => [
@@ -360,7 +359,7 @@ watch(
               :portal="true"
               :content="{ side: 'top', align: 'start' }"
               :ui="{
-                base: 'ps-6 pe-6',
+                base: 'ps-6 pe-6 text-[11px]',
                 leading: 'ps-1',
                 trailing: 'pe-1',
                 content: 'min-w-64 max-w-[calc(100vw-2rem)]',

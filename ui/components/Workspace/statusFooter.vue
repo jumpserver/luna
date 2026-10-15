@@ -67,7 +67,7 @@ onBeforeUnmount(() => {
 
 <template>
   <footer
-    class="flex h-7 min-w-0 items-center justify-between px-3 text-[11px] backdrop-saturate-150"
+    class="workspace-status-footer flex h-7 min-w-0 items-center justify-between px-3 text-[11px] backdrop-saturate-150"
     :style="{
       backgroundColor: 'var(--app-footer-bg)',
       color: 'var(--app-muted)',

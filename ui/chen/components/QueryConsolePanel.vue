@@ -17,7 +17,7 @@ import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { createChenCompletionSource } from "~/chen/utils/sqlCompletion";
-import { chenPlanRequestSql, chenSqlDialect } from "~/chen/utils/sqlEditor";
+import { chenSqlDialect } from "~/chen/utils/sqlEditor";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
@@ -58,7 +58,6 @@ const sqlEditor = ref<{
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
-const messageOpen = ref(false);
 const saveSnippetDialogOpen = ref(false);
 const selectSnippetDialogOpen = ref(false);
 const queryPanel = ref<HTMLElement | null>(null);
@@ -66,8 +65,6 @@ const editorHeightRatio = ref(58);
 const resizingQueryPanel = ref(false);
 const QUERY_PANEL_MIN_RATIO = 20;
 const QUERY_PANEL_RESIZE_STEP = 5;
-const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
-let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
@@ -117,23 +114,18 @@ const aiItems = computed(() => {
     }
   ];
 });
-const sqlFileItems = computed(() => [
+const sqlItems = computed(() => [
   {
-    label: t("ExecutionPlan.explain"),
-    icon: "i-lucide-git-fork",
-    disabled: contextBusy.value || !(sqlEditor.value?.executionText() || props.tab.statement).trim(),
-    onSelect: () => emit("explainPlan", props.tab, currentPlanSql())
-  },
-  {
-    label: t("Chen.Open"),
+    label: t("Chen.SqlFavorites"),
     icon: "i-lucide-folder-open",
     onSelect: openSnippetDialog
   },
   {
-    label: t("Common.Save"),
+    label: t("Chen.FavoriteCurrentSql"),
     icon: "i-lucide-save",
     onSelect: openSaveSnippetDialog
   },
+  { type: "separator" as const },
   {
     label: t("Chen.UploadSql"),
     icon: "i-lucide-upload",
@@ -156,8 +148,12 @@ const statementValue = computed({
 });
 
 function currentPlanSql() {
-  const snapshot = editorSnapshot();
-  return chenPlanRequestSql(snapshot.documentSql || props.tab.statement, snapshot.selectedSql);
+  return sqlEditor.value?.executionText() || "";
+}
+
+function explainCurrentQuery() {
+  const sql = currentPlanSql();
+  if (sql.trim()) emit("explainPlan", props.tab, sql);
 }
 
 function runCurrentQuery() {
@@ -273,20 +269,8 @@ async function deleteSqlSnippet(snippet: ChenSqlSnippet) {
   }
 }
 
-function clearMessageTimer() {
-  if (messageCloseTimer === null) return;
-  clearTimeout(messageCloseTimer);
-  messageCloseTimer = null;
-}
-
-function dismissMessage() {
-  clearMessageTimer();
-  messageOpen.value = false;
-  if (props.tab.message) emit("dismissMessage", props.tab);
-}
-
 function handleMessageOpen(open: boolean) {
-  if (!open) dismissMessage();
+  if (!open && props.tab.message) emit("dismissMessage", props.tab);
 }
 
 function setEditorHeightRatio(ratio: number) {
@@ -328,24 +312,7 @@ function resizeQueryPanelWithKeyboard(event: KeyboardEvent) {
   event.preventDefault();
 }
 
-watch(
-  () => props.tab.message,
-  (message) => {
-    clearMessageTimer();
-    messageOpen.value = Boolean(message);
-    if (!message) return;
-
-    const closeDelay =
-      typeof message.closeDelay === "number" && message.closeDelay > 0
-        ? message.closeDelay
-        : DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS;
-    messageCloseTimer = setTimeout(dismissMessage, closeDelay * 1000);
-  },
-  { immediate: true }
-);
-
 onBeforeUnmount(() => {
-  clearMessageTimer();
   if (!resizingQueryPanel.value) return;
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
@@ -372,6 +339,16 @@ defineExpose({ editorSnapshot });
           {{ hasSelection ? t("Chen.RunSelected") : t("Chen.RunCurrent") }}
         </UButton>
         <UButton
+          icon="i-lucide-git-fork"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="explainCurrentQuery"
+        >
+          {{ t("ExecutionPlan.explain") }}
+        </UButton>
+        <UButton
           icon="i-lucide-align-left"
           size="sm"
           color="neutral"
@@ -382,7 +359,7 @@ defineExpose({ editorSnapshot });
           {{ t("Chen.Format") }}
         </UButton>
         <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
-        <UDropdownMenu :items="sqlFileItems">
+        <UDropdownMenu :items="sqlItems">
           <UButton
             icon="i-lucide-file-text"
             trailing-icon="i-lucide-chevron-down"
@@ -449,16 +426,6 @@ defineExpose({ editorSnapshot });
         <div v-if="tab.state.loading" class="absolute inset-0 z-10 grid place-items-center rounded-md bg-default/65">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin text-muted" />
         </div>
-        <UAlert
-          v-if="tab.message && messageOpen"
-          class="absolute bottom-3 left-1/2 z-20 max-h-32 w-3/4 -translate-x-1/2 overflow-y-auto"
-          :color="messageColor"
-          variant="subtle"
-          :title="tab.message.title || t('Chen.Message')"
-          :description="tab.message.message"
-          close
-          @update:open="handleMessageOpen"
-        />
       </div>
     </div>
 
@@ -497,6 +464,16 @@ defineExpose({ editorSnapshot });
         >
           {{ t("ExecutionPlan.title") }}
         </button>
+      </div>
+      <div v-if="tab.message" class="mx-2 my-2 max-h-32 shrink-0 overflow-y-auto">
+        <UAlert
+          :color="messageColor"
+          variant="subtle"
+          :title="tab.message.title || t('Chen.Message')"
+          :description="tab.message.message"
+          close
+          @update:open="handleMessageOpen"
+        />
       </div>
       <QueryResultTabs
         v-if="tab.activeBottomPane !== 'plan'"

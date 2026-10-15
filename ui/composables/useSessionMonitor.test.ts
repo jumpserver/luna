@@ -1,6 +1,6 @@
+import { resolveWsUrl } from "@jumpserver/connectors-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import { resolveWsUrl } from "@jumpserver/connectors-core";
 import { monitorEndpointUrl, useSessionMonitor } from "./useSessionMonitor";
 
 const mocks = vi.hoisted(() => ({
@@ -19,7 +19,10 @@ vi.mock("~/lion/hooks/useLionConnectTicket", () => ({ createLionConnectTicket: m
 vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: () => ({ currentSite: "https://desktop.example:8443" })
 }));
-vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => mocks.desktop }));
+vi.mock("~/utils/runtime", () => ({
+  isDesktopRuntime: () => mocks.desktop,
+  pageLocation: () => ({ origin: "https://web.example" })
+}));
 vi.mock("vue", async (original) => ({
   ...(await original<typeof import("vue")>()),
   onMounted: mocks.mounted,
@@ -29,7 +32,6 @@ vi.mock("vue", async (original) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.desktop = false;
-  vi.stubGlobal("window", { location: { origin: "https://web.example" } });
   vi.stubGlobal("fetch", mocks.fetch);
   vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
   vi.stubGlobal("useToast", () => ({ add: mocks.toast }));

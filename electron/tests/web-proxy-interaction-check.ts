@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
-import { BrowserWindow, WebContentsView } from "electron";
+import { BrowserWindow, WebContentsView, nativeImage } from "electron";
 import {
   buildAutofillProbeScript,
   buildAutofillScript,
@@ -41,8 +41,66 @@ slider.onpointerup = () => { start = null; slider.style.cursor='grab'; };
 </script></body></html>`;
 
 export async function run() {
+  await runOptionalSelectorChecks();
   for (const success of ["id=success", ""]) {
     for (const challenge of ["initial", "after-failed", "none"]) await runCase(success, challenge);
+  }
+}
+
+async function runOptionalSelectorChecks() {
+  const host = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  const evaluate = (code: string) => host.webContents.executeJavaScript(code, true);
+  try {
+    for (let mask = 0; mask < 12; mask++) {
+      const selectors = {
+        username: mask & 1 ? "id=username" : "",
+        password: mask & 2 ? "id=password" : "",
+        submit: mask & 4 ? "id=submit" : "",
+        interactive: mask & 8 ? "id=mfa" : "",
+        success: mask & 8 ? "id=success" : ""
+      };
+      const html = `<!doctype html><form>
+        ${selectors.username ? '<input id="username">' : ""}
+        ${selectors.password ? '<input id="password" type="password">' : ""}
+        <input id="untouched" value="user-entered"><button id="${selectors.submit ? "submit" : "manual"}">Login</button>
+        </form><section id="mfa">Verification</section><script>
+        globalThis.submissions = [];
+        document.querySelector('form').onsubmit = event => {
+          event.preventDefault();
+          submissions.push({ username: document.querySelector('#username')?.value || '', password: document.querySelector('#password')?.value || '' });
+        };</script>`;
+      await host.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+      assert.equal(await evaluate(buildAutofillProbeScript(selectors)), true, `optional selectors, mask ${mask}`);
+      assert.equal(
+        await evaluate(buildAutofillScript(selectors, { username: "managed-user", password: "managed-secret" })),
+        true
+      );
+      assert.equal(await evaluate("document.querySelector('#untouched').value"), "user-entered");
+      assert.equal(await evaluate("document.querySelector('[data-jms-secure-login]') === null"), true);
+      if (!selectors.submit) {
+        assert.equal(await evaluate("submissions.length"), 0, "fill-only must not submit implicitly");
+        await evaluate("document.querySelector('#manual').click()");
+      }
+      assert.deepEqual(await evaluate("submissions"), [
+        {
+          username: selectors.username ? "managed-user" : "",
+          password: selectors.password ? "managed-secret" : ""
+        }
+      ]);
+    }
+    const guarded = (code: string) => host.webContents.executeJavaScriptInIsolatedWorld(INTERACTION_WORLD, [{ code }]);
+    await guarded(
+      buildInteractionGuardScript({ username: "id=username", submit: "id=submit", interactive: "id=missing" }, "null")
+    );
+    assert.equal(await guarded("globalThis.__jmsVerification.advanceLogin(false)"), "waiting");
+    await delay(600);
+    assert.equal(
+      await guarded("globalThis.__jmsVerification.advanceLogin(false)"),
+      "waiting",
+      "a username-only form must not be mistaken for a completed login"
+    );
+  } finally {
+    host.destroy();
   }
 }
 
@@ -67,9 +125,11 @@ async function runCase(successSelector: string, challenge: string) {
   host.contentView.addChildView(view);
   view.setBounds({ x: 0, y: 0, width: 800, height: 600 });
   view.setVisible(false);
-  await host.loadURL("data:text/html,<html><body>Web Proxy verification test</body></html>");
+  await host.loadURL('data:text/html,<textarea id="keyboard" autofocus></textarea>');
   host.show();
   host.focus();
+  // Mirror the manager's focus guard while the full target page is hidden.
+  view.webContents.on("focus", () => host.webContents.focus());
   let active = true;
   let frame: any;
   let interaction: WebProxyInteraction | undefined;
@@ -103,12 +163,27 @@ async function runCase(successSelector: string, challenge: string) {
     assert.equal(await input({ type: "mouseUp", ...coords }), true);
     await delay(80);
   };
+  // Inspect the transmitted pixels, not just DOM focus: a hidden page can have
+  // an active input without actually painting its insertion caret.
+  const caretX = () => {
+    if (!frame) return -1;
+    const image = nativeImage.createFromDataURL(frame.image);
+    const pixels = image.toBitmap();
+    const width = image.getSize().width;
+    const positions: number[] = [];
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 2] > 150 && pixels[i + 1] < 110 && pixels[i] < 110) positions.push((i / 4) % width);
+    }
+    return positions.length ? positions.reduce((sum, x) => sum + x, 0) / positions.length : -1;
+  };
   try {
     view.setVisible(true);
     await view.webContents.loadURL(`${origin}?challenge=${challenge}`);
     await delay(200);
     await view.webContents.capturePage();
     view.setVisible(false);
+    host.webContents.focus();
+    await host.webContents.executeJavaScript("document.querySelector('#keyboard').focus()");
     assert.equal(
       await evaluate(buildAutofillProbeScript(selectors)),
       true,
@@ -125,6 +200,10 @@ async function runCase(successSelector: string, challenge: string) {
     await evaluate(buildAutofillScript(selectors, { username: "managed-user", password: "managed-secret" }));
     assert.equal(await evaluate("submissions.length"), 0, "autofill must not click submit before verification");
     assert.equal(await evaluate("passwordField.value"), "managed-secret");
+    view.webContents.debugger.attach("1.3");
+    await view.webContents.debugger.sendCommand("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "dark" }]
+    });
     interaction = new WebProxyInteraction(
       view.webContents,
       selectors,
@@ -181,7 +260,30 @@ async function runCase(successSelector: string, challenge: string) {
     await delay(80);
     assert.equal(await evaluate("sent"), 1, "canceling a press must not click Send");
     await click("#otp");
+    await evaluate("document.querySelector('#otp').style.caretColor='red'");
+    await waitFor(() => caretX() >= 0, "hidden verification input must paint its native caret");
+    const emptyCaretX = caretX();
+    assert.equal(
+      await host.webContents.executeJavaScript("document.activeElement.id"),
+      "keyboard",
+      "caret rendering must preserve the shell's text input"
+    );
+    await host.webContents.insertText("local input");
+    assert.equal(
+      await host.webContents.executeJavaScript("document.querySelector('#keyboard').value.includes('local input')"),
+      true
+    );
+    assert.equal(
+      await evaluate("document.querySelector('#otp').value"),
+      "",
+      "only forwarded input reaches verification"
+    );
     assert.equal(await input({ type: "text", text: "bad" }), true);
+    await waitFor(() => caretX() > emptyCaretX + 2, "caret must follow typed text");
+    const endCaretX = caretX();
+    assert.equal(await input({ type: "key", key: "ArrowLeft" }), true);
+    await waitFor(() => caretX() >= 0 && caretX() < endCaretX - 2, "caret must follow the insertion position");
+    await input({ type: "key", key: "End" });
     await click("#verify");
     assert.equal(await evaluate("document.querySelector('#result').textContent"), "Wrong code");
     assert.equal(await evaluate(buildLoginSuccessProbeScript(selectors.success, true)), false);
@@ -222,6 +324,10 @@ async function runCase(successSelector: string, challenge: string) {
     active = false;
     interaction.invalidate();
     assert.equal(frame, null);
+    await waitFor(
+      async () => !(await evaluate("document.hasFocus()")),
+      "background verification must release emulated focus"
+    );
     assert.equal(await input({ type: "text", text: "background" }), false);
     active = true;
     await waitFor(() => Boolean(frame), "frame not restored on activation");
@@ -286,6 +392,9 @@ async function runCase(successSelector: string, challenge: string) {
       "original credentials cleared before exposing the page"
     );
     await interaction.dispose();
+    assert.equal(await evaluate("document.hasFocus()"), false, "disposing verification must restore real page focus");
+    assert.equal(view.webContents.debugger.isAttached(), true, "keep the shared theme debugger attached");
+    assert.equal(await evaluate("matchMedia('(prefers-color-scheme: dark)').matches"), true);
     assert.equal(
       await view.webContents.executeJavaScriptInIsolatedWorld(INTERACTION_WORLD, [
         { code: "globalThis.__jmsVerification" }

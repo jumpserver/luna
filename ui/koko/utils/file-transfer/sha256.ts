@@ -134,3 +134,19 @@ export async function sha256Hex(bytes: Uint8Array) {
   }
   return sha256HexJs(bytes);
 }
+
+export function emptyTransferChecksumState() {
+  return "0".repeat(64);
+}
+
+export function chainTransferChecksum(state: string, chunkChecksum: string) {
+  if (!/^[0-9a-f]{64}$/i.test(state) || !/^[0-9a-f]{64}$/i.test(chunkChecksum)) {
+    throw new Error("Invalid file transfer checksum state");
+  }
+  const value = state + chunkChecksum;
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index++) {
+    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  return sha256Hex(bytes);
+}

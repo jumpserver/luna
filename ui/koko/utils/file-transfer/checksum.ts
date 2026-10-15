@@ -45,6 +45,10 @@ function send(request: { kind: "update" | "finalize"; state: string; data?: Arra
   });
 }
 
+export function isFileTransferChecksumState(state: string) {
+  return /^[0-9a-f]{64}$/i.test(state);
+}
+
 export async function updateFileTransferChecksum(state: string, bytes: Uint8Array) {
   const copy = bytes.slice();
   const response = await send({ kind: "update", state, data: copy.buffer }, [copy.buffer]);

@@ -7,6 +7,11 @@
       "category": "databases"
     },
     {
+      "id": "macos.dbx",
+      "name": "dbx",
+      "category": "databases"
+    },
+    {
       "id": "macos.dbeaver",
       "name": "dbeaver",
       "category": "databases"

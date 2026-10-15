@@ -26,3 +26,18 @@ export enum KeyboardKey {
   V = "v",
   W = "w"
 }
+
+type TerminalChordEvent = Pick<KeyboardEvent, "key" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey">;
+
+/** Copy chords that must not be sent to the remote terminal. */
+export function isTerminalCopyChord(event: TerminalChordEvent) {
+  if (event.altKey || event.key?.toLowerCase() !== KeyboardKey.C) return false;
+  return (event.metaKey && !event.ctrlKey) || (event.ctrlKey && event.shiftKey);
+}
+
+/** Plain Ctrl+C. Callers must send the interrupt themselves so xterm does not clear the selection. */
+export function isTerminalInterruptChord(event: TerminalChordEvent) {
+  return (
+    event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.key?.toLowerCase() === KeyboardKey.C
+  );
+}

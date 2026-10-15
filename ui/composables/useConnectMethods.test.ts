@@ -16,6 +16,16 @@ vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: vi.fn()
 }));
 
+const appletMethod = (value: string, label: string): ConnectMethod => ({
+  value,
+  label,
+  type: "applet",
+  icon: "",
+  disabled: false,
+  listen: "",
+  component: "tinker"
+});
+
 describe("connection method request reuse", () => {
   const scope = { currentSite: ref("https://site-a.example"), currentAccountId: ref("user-a"), orgId: ref("org-a") };
   const request = vi.fn();
@@ -92,16 +102,63 @@ describe("connection method request reuse", () => {
     await methods.fetchConnectMethods();
     expect(request).toHaveBeenCalledTimes(2);
   });
-});
 
-const appletMethod = (value: string, label: string): ConnectMethod => ({
-  value,
-  label,
-  type: "applet",
-  icon: "",
-  disabled: false,
-  listen: "",
-  component: "tinker"
+  it.each([
+    ["iPhone", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", 5, false, true],
+    ["Android", "Mozilla/5.0 (Linux; Android 15; Pixel 9)", 5, false, true],
+    ["iPad", "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)", 5, false, true],
+    ["iPad desktop mode", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)", 5, false, true],
+    ["Mac", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)", 0, false, false],
+    ["Windows touch laptop", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", 10, false, false],
+    ["Electron", "Mozilla/5.0 (Linux; Android 15)", 5, true, false]
+  ])(
+    "filters local applications for %s without removing browser connection modes",
+    async (_name, userAgent, maxTouchPoints, desktop, mobile) => {
+      vi.stubGlobal("navigator", { userAgent, maxTouchPoints });
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      const nativeMethods = ["native", "client", "local", "desktop", "NATIVE"].map((type) => ({
+        ...appletMethod(`${type}_client`, type),
+        type
+      }));
+      const web = { ...appletMethod("web_cli", "Web terminal"), type: "web", component: "koko" };
+      const remote = appletMethod("remote", "Remote application");
+      const virtual = { ...remote, value: "virtual", type: "virtual_app" };
+      request.mockResolvedValue({
+        ssh: [...nativeMethods, { ...remote, value: "native_app:ssh_client:putty" }, web, remote, virtual],
+        originals: []
+      });
+      const methods = await useConnectMethods().getMethodsForProtocol("ssh");
+      const values = methods.map((method) => method.value);
+      expect(values).toEqual(expect.arrayContaining([WEB_CLI_NATIVE_VALUE, "remote", "virtual"]));
+      for (const method of nativeMethods) expect(values.includes(method.value)).toBe(!mobile);
+      expect(values.includes("native_app:ssh_client:putty")).toBe(!mobile);
+      if (mobile) {
+        for (const remembered of ["native_client", "native_app:ssh_client:putty"]) {
+          expect(pickConnectMethod("ssh", methods, remembered, remembered)).toBe(WEB_CLI_NATIVE_VALUE);
+        }
+      }
+    }
+  );
+
+  it("returns no connection method when a mobile device only has local applications", async () => {
+    vi.stubGlobal("navigator", { userAgent: "iPhone", maxTouchPoints: 5 });
+    request.mockResolvedValue({
+      ssh: [{ ...appletMethod("ssh_client", "Application"), type: "native" }],
+      originals: []
+    });
+    const methods = await useConnectMethods().getMethodsForProtocol("ssh");
+    expect(methods).toEqual([]);
+    expect(pickConnectMethod("ssh", methods, "ssh_client", "ssh_client")).toBe("");
+  });
+
+  it("can read methods outside a browser without navigator", async () => {
+    vi.stubGlobal("navigator", undefined);
+    request.mockResolvedValue({
+      ssh: [{ ...appletMethod("ssh_client", "Application"), type: "native" }],
+      originals: []
+    });
+    expect(await useConnectMethods().getDefaultMethodForProtocol("ssh")).toBe("ssh_client");
+  });
 });
 
 describe("RemoteApp connection modes", () => {
@@ -160,15 +217,31 @@ describe("desktop website connect methods", () => {
     });
   });
 
-  it("hides the desktop-only proxy from the web build", () => {
+  it("keeps the Core web proxy as a client after remote applications in the web build", () => {
     const methods = normalizeWebConnectMethods({ http: [webProxyMethod, weblite], originals: [] }, false).http!;
-    expect(methods).toEqual([weblite]);
+
+    expect(methods.map((item) => item.value)).toEqual(["weblite", "web_proxy"]);
+    expect(methods[1]).toMatchObject({
+      label: "ConnectMethod.ClientProxy",
+      type: "native",
+      component: "koko"
+    });
+    expect(isExternalClientConnectMethod("web_proxy", methods)).toBe(true);
+    expect(pickConnectMethod("http", methods, "", "", undefined, false)).toBe("weblite");
   });
 
-  it("does not borrow an applet method when Core omits the web proxy", () => {
-    const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, true).http!;
+  it.each([true, false])("does not borrow an applet method when Core omits the web proxy (desktop=%s)", (desktop) => {
+    const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, desktop).http!;
     expect(methods).toEqual([weblite]);
     expect(withKokoWebFallback("http", methods)).toEqual([weblite]);
+  });
+
+  it("does not expose a disabled Core web proxy in the web build", () => {
+    const methods = normalizeWebConnectMethods(
+      { http: [{ ...webProxyMethod, disabled: true }, weblite], originals: [] },
+      false
+    ).http!;
+    expect(methods).toEqual([weblite]);
   });
 
   it("keeps koko web cli for clickhouse after stripping iframe methods", () => {

@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
 import { useEventListener, useResizeObserver } from "@vueuse/core";
-import { computed, onScopeDispose, shallowRef } from "vue";
+import { computed, onScopeDispose, shallowRef, watch } from "vue";
 
 export function useConnectionSetupDrag(
   area: Ref<HTMLElement | null>,
@@ -75,6 +75,7 @@ export function useConnectionSetupDrag(
     event.stopPropagation();
   });
   useResizeObserver([area, dialog], () => move(offset.value.x, offset.value.y));
+  watch(handle, stop, { flush: "sync" });
   onScopeDispose(stop);
 
   return {

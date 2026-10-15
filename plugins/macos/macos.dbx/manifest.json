@@ -1,0 +1,17 @@
+{
+  "id": "macos.dbx",
+  "name": "dbx",
+  "display_name": "DBX",
+  "version": "1.0.0",
+  "min_client_version": "5.0.0",
+  "author": "JumpServer",
+  "homepage": "https://dbxio.com",
+  "download_url": "https://dbxio.com",
+  "category": "databases",
+  "protocols": ["mysql", "mariadb", "postgresql", "oracle", "sqlserver", "dameng", "clickhouse", "mongodb", "redis"],
+  "builtin": true,
+  "comment": {
+    "zh": "轻量级跨平台数据库客户端，集成连接管理、SQL 编辑、数据表格和结构工具。请先安装 DBX，确认可执行文件路径后启用；Oracle、达梦需要在 DBX 中安装对应驱动。",
+    "en": "Lightweight cross-platform database client with connection management, SQL editing, data grids and schema tools. Install DBX and verify the executable path before enabling. Oracle and Dameng require their drivers in DBX."
+  }
+}

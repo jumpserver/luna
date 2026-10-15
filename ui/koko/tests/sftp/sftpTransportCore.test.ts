@@ -6,8 +6,10 @@ import { nextTick, ref } from "vue";
 import {
   createSftpMessageId,
   decodeSftpRawBytes,
+  encodeSftpBinaryFrame,
   encodeSftpBytes,
-  joinSftpPath
+  joinSftpPath,
+  parseSftpBinaryFrame
 } from "#koko/composables/sftp/core/codec";
 import { createSerialTaskQueue } from "#koko/composables/sftp/core/queues";
 import { parseSftpTransferState, parseSftpTransferWriteAck } from "#koko/composables/sftp/core/transfer";
@@ -25,6 +27,7 @@ function createSocket(connected = true) {
   } = {
     socket: ref(null),
     connected: ref(connected),
+    hasConnected: ref(connected),
     failure: ref(null),
     close: vi.fn(),
     connect: vi.fn(),
@@ -66,6 +69,24 @@ describe("sftp transport core helpers", () => {
     expect(joinSftpPath("/tmp/", "file.txt")).toBe("/tmp/file.txt");
     expect(decodeSftpRawBytes(encodeSftpBytes(bytes))).toEqual(bytes);
     expect(decodeSftpRawBytes([4, 5, 6])).toEqual(new Uint8Array([4, 5, 6]));
+    expect(decodeSftpRawBytes(bytes)).toEqual(bytes);
+
+    const frame = encodeSftpBinaryFrame({
+      id: "req-1",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({ offset: 0 }),
+      raw: bytes
+    });
+    const parsed = parseSftpBinaryFrame(frame);
+    expect(parsed).toMatchObject({
+      id: "req-1",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({ offset: 0 })
+    });
+    expect(parsed?.raw).toEqual(bytes);
+    expect(parseSftpBinaryFrame(new Uint8Array([2, 0, 0, 0, 0]))).toBeNull();
   });
 
   it("keeps serial queues ordered even after a rejected task", async () => {
@@ -229,6 +250,107 @@ describe("useSftpTransferEndpoint transport core wiring", () => {
     });
     socket.emitMessage({
       id: "request-3",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({ committed_bytes: 3, duplicate: false })
+    });
+    await expect(writePromise).resolves.toEqual({ committedBytes: 3, duplicate: false });
+
+    const commitPromise = endpoint.commitTransfer({
+      transferId: "transfer-a",
+      targetPath: "/remote/demo.txt",
+      totalBytes: 3,
+      sha256: "file-chain",
+      conflictPolicy: "overwrite"
+    });
+    expect(socket.send).toHaveBeenNthCalledWith(4, {
+      id: "request-4",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferCommit,
+      data: JSON.stringify({
+        transfer_id: "transfer-a",
+        path: "/remote/demo.txt",
+        size: 3,
+        sha256: "file-chain",
+        chunk_size: 2 * 1024 * 1024,
+        conflict_policy: "overwrite"
+      }),
+      raw: ""
+    });
+    socket.emitMessage({
+      id: "request-4",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferCommit,
+      data: JSON.stringify({
+        transfer_id: "transfer-a",
+        committed_bytes: 3,
+        total_bytes: 3,
+        state: "completed"
+      })
+    });
+    await expect(commitPromise).resolves.toBeUndefined();
+  });
+
+  it("sends transfer chunks as binary frames when the server advertises it", async () => {
+    const socket = createSocket();
+    const endpoint = useSftpTransferEndpoint(socket, { id: "target", label: "Target" }, undefined, () => true);
+    const data = new Uint8Array([1, 2, 3]);
+
+    const readPromise = endpoint.readChunk({
+      transferId: "transfer-b",
+      path: "/remote/demo.txt",
+      offset: 0,
+      length: 3
+    });
+    expect(socket.send).toHaveBeenCalledWith({
+      id: "request-1",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferRead,
+      data: JSON.stringify({
+        transfer_id: "transfer-b",
+        path: "/remote/demo.txt",
+        offset: 0,
+        length: 3,
+        binary: true
+      }),
+      raw: ""
+    });
+    socket.emitMessage({
+      id: "request-1",
+      type: SftpMessageType.Binary,
+      data: JSON.stringify({ offset: 0, sha256: "chunk-sha", eof: true }),
+      raw: data
+    });
+    await expect(readPromise).resolves.toEqual({
+      offset: 0,
+      sha256: "chunk-sha",
+      eof: true,
+      data
+    });
+
+    const writePromise = endpoint.writeChunk({
+      transferId: "transfer-b",
+      targetPath: "/remote/demo.txt",
+      totalBytes: 3,
+      offset: 0,
+      data,
+      sha256: "chunk-sha"
+    });
+    expect(socket.send).toHaveBeenLastCalledWith({
+      id: "request-2",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({
+        transfer_id: "transfer-b",
+        path: "/remote/demo.txt",
+        size: 3,
+        offset: 0,
+        sha256: "chunk-sha"
+      }),
+      raw: data
+    });
+    socket.emitMessage({
+      id: "request-2",
       type: SftpMessageType.Data,
       cmd: SftpCommand.TransferWrite,
       data: JSON.stringify({ committed_bytes: 3, duplicate: false })

@@ -7,6 +7,8 @@ const props = withDefaults(defineProps<{ showActions?: boolean; showProfile?: bo
 });
 const { collapse, modernIsland } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
+const { isWindows, isLoading } = usePlatform();
+const canDragWindow = computed(() => isDesktopRuntime() && !isLoading.value && !isWindows.value);
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const leadingAreaStyle = computed(() => {
   if (collapse.value || isNarrowScreen.value) return { width: "fit-content" };
@@ -19,7 +21,7 @@ const leadingAreaStyle = computed(() => {
 });
 
 const handleWindowDrag = async (event: MouseEvent) => {
-  if (!isDesktopRuntime()) return;
+  if (!canDragWindow.value) return;
 
   const target = event.target as HTMLElement;
   if (
@@ -43,7 +45,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    data-desktop-drag-region
+    :data-desktop-drag-region="canDragWindow"
     class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center"
     :style="{
       backgroundColor: 'var(--app-header-bg)',

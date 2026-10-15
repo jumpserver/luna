@@ -2,6 +2,51 @@
 
 This directory contains the JumpServer desktop runtime.
 
+Desktop connections first check anonymous
+`GET /api/v1/settings/client/compatibility/` in the main process. Both
+`base(app.getVersion()) >= base(Core.MIN_CLIENT_VERSION)` and
+`base(Core.VERSION) >= MIN_CORE_VERSION` determine compatibility, except that Core's exact
+`dev` version skips the Core minimum check. The client's minimum lives in
+`src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
+server release, including Koko, Chen and Kael. Developers decide whether a
+contract change breaks old clients; reviewers check that decision. Compatible
+releases leave the minimums unchanged. There is no component version matrix,
+automatic updater or automated compatibility gate.
+
+Release builds already run `scripts/set-version.js` to inject the complete
+version into the Electron package. Core's development version defaults to
+`v5.1.0`; Luna's package versions remain `5.1.0`. Compatibility API values and
+client version labels use a single `v` prefix. Release builds still inject their
+actual versions. Do not reuse an existing release number for new capabilities.
+Client and Core minimum comparisons use only the validated base `X.Y.Z`,
+ignoring prerelease and build suffixes on both versions. Thus `5.1.0-rc3`,
+`5.1.0-beta8` and `5.1.0-lts+build.1` share the `5.1.0` baseline. A leading
+`v` is accepted. Compatibility results retain the complete client and Core versions.
+
+Login, saved-account restoration and site switching share the same preflight.
+It uses the same Electron network adapter, proxy configuration and user-entered
+site certificate trust as login. Requests remain anonymous and uncached, and
+normal redirects follow the existing network policy. The final response must
+contain valid compatibility JSON to pass the check. Incompatible versions,
+missing endpoints, invalid responses, timeouts and TLS failures show the shared
+confirmation dialog. Continuing skips the preflight for that connection,
+including restoration retries; cancellation leaves the active session unchanged.
+Confirmation is bound to the site, account and current connection generation.
+A new connection, main-process cancellation or session activation expires it.
+Authentication and profile validation still precede session activation. Checks
+never fall back to the legacy version array.
+After activation, restoration of the same active site and account reuses its
+compatibility decision while still refreshing credentials and validating the
+profile. A new login, site/account switch, logout or client restart requires
+a new check.
+
+Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
+For desktop review, use local test servers and release-versioned test builds:
+check both minimum boundaries, each single failure and both failures, an old Core
+returning 404, continuing or cancelling a failed check, and restoration retries.
+Keep A connected while B awaits confirmation, then rapidly switch B/C and verify
+only the latest confirmation can activate. These checks must not access production accounts.
+
 Run the current development shell with:
 
 ```sh
@@ -11,8 +56,8 @@ pnpm electron:dev
 Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
 On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
 
-The native Face Center has its own uv-managed Python sidecar. Prepare it once,
-then open **My Tools > Face Center** in the desktop client:
+The native face engine has its own uv-managed Python sidecar. For local engine
+checks, prepare it once and open `/face` in the development renderer:
 
 ```sh
 pnpm face:setup

@@ -4,6 +4,7 @@ import { isDesktopRuntime } from "~/utils/runtime";
 export interface KokoTicketRequest {
   baseUrl: string;
   tokenId: string;
+  orgId?: string;
 }
 
 export interface KokoTicketResult {
@@ -22,10 +23,7 @@ export const useWorkspaceConnectors = () => {
   const createKokoTicket = (request: KokoTicketRequest) => {
     // Standalone connector pages do not mount the workspace ticket provider.
     if (!kokoTicketProvider && isDesktopRuntime()) {
-      return desktopInvoke<KokoTicketResult>("create_koko_connect_ticket", {
-        baseUrl: request.baseUrl,
-        tokenId: request.tokenId
-      });
+      return desktopInvoke<KokoTicketResult>("create_koko_connect_ticket", { ...request });
     }
     if (!kokoTicketProvider) return Promise.resolve<KokoTicketResult>({});
     return kokoTicketProvider(request);

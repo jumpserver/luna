@@ -61,7 +61,7 @@ export class WebProxyRecording {
       width > 8192 ||
       height > 8192
     ) {
-      throw new Error("Web 录像尺寸无效");
+      throw new Error("WebProxy.InvalidRecordingDimensions");
     }
     const endpoint = new URL(RECORDING_PATH, proxyUrl);
     let response;
@@ -73,13 +73,13 @@ export class WebProxyRecording {
         body: JSON.stringify({ session_id: sessionId, target_url: targetUrl, width, height })
       });
     } catch (error) {
-      throw new Error(`启动 Koko Web 录像失败: ${error}`);
+      throw new Error(`WebProxy.KokoRecordingStartFailed: ${error}`);
     }
-    const started = await responseJson(response, "启动 Koko Web 录像失败");
-    if (typeof started.id !== "string" || !started.id) throw new Error("Koko 返回的 Web 录像 ID 为空");
+    const started = await responseJson(response, "WebProxy.KokoRecordingStartFailed");
+    if (typeof started.id !== "string" || !started.id) throw new Error("WebProxy.RecordingIdMissing");
 
     const recording = new WebProxyRecording({ label, id: started.id, endpoint, proxyUrl, proxyAuth, capture, emit });
-    recording.emitState("recording", "Web 录像已开始");
+    recording.emitState("recording", "WebProxy.WebRecordingStarted");
     recording.timer = setInterval(() => void recording.capturePeriodic(), CAPTURE_INTERVAL_MS);
     return recording;
   }
@@ -134,7 +134,7 @@ export class WebProxyRecording {
 
   async captureOnce(force) {
     const { jpeg, signature } = await this.capture();
-    if (jpeg.length > 2 << 20) throw new Error("Web 录像截图超过 2 MiB");
+    if (jpeg.length > 2 << 20) throw new Error("WebProxy.RecordingFrameTooLarge");
     const capturedAt = Date.now();
     if (
       !force &&
@@ -155,14 +155,15 @@ export class WebProxyRecording {
         body: jpeg
       });
     } catch (error) {
-      throw new Error(`上传 Web 录像帧失败: ${error}`);
+      throw new Error(`WebProxy.RecordingFrameUploadFailed: ${error}`);
     }
-    const frame = await responseJson(response, "上传 Web 录像帧失败");
-    if (!Number.isInteger(frame.frame_count) || frame.frame_count < 0) throw new Error("解析 Web 录像帧响应失败");
+    const frame = await responseJson(response, "WebProxy.RecordingFrameUploadFailed");
+    if (!Number.isInteger(frame.frame_count) || frame.frame_count < 0)
+      throw new Error("WebProxy.RecordingFrameResponseInvalid");
     this.frameCount = frame.frame_count;
     this.lastSignature = signature;
     this.lastUploadedAt = capturedAt;
-    if (!this.stopped) this.emitState("recording", "正在录制 Website");
+    if (!this.stopped) this.emitState("recording", "WebProxy.RecordingWebsite");
   }
 
   async finish() {
@@ -170,7 +171,7 @@ export class WebProxyRecording {
     this.stopped = true;
     clearInterval(this.timer);
     this.timer = null;
-    this.emitState("finishing", "正在生成 Web 录像");
+    this.emitState("finishing", "WebProxy.PreparingWebRecording");
     if (this.capturePending) await this.capturePending.catch(() => undefined);
     if (!this.pauseReasons.size) {
       try {
@@ -185,7 +186,7 @@ export class WebProxyRecording {
       await fetchWithTimeout(this.proxyUrl, cancelUrl.pathname, { method: "DELETE", proxyAuth: this.proxyAuth }).catch(
         () => undefined
       );
-      return this.emitState("finished", "录像时间过短，未生成文件");
+      return this.emitState("finished", "WebProxy.RecordingTooShort");
     }
 
     const duration = Math.min(Date.now() - this.startedAt, 86_400_000);
@@ -204,11 +205,11 @@ export class WebProxyRecording {
         FINISH_TIMEOUT_MS
       );
     } catch (error) {
-      throw new Error(`结束 Koko Web 录像失败: ${error}`);
+      throw new Error(`WebProxy.KokoRecordingFinishFailed: ${error}`);
     }
-    const finished = await responseJson(response, "结束 Koko Web 录像失败");
+    const finished = await responseJson(response, "WebProxy.KokoRecordingFinishFailed");
     if (Number.isInteger(finished.frame_count)) this.frameCount = finished.frame_count;
-    return this.emitState("finished", "Web 录像已生成", String(finished.path || ""));
+    return this.emitState("finished", "WebProxy.WebRecordingFinished", String(finished.path || ""));
   }
 
   dispose() {

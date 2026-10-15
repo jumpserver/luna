@@ -39,6 +39,13 @@ This document defines a unification plan: protocol handling converges into `koko
 - Nuxt UI based screens should consume Nuxt UI components first and avoid custom theme branching unless a component is not expressive enough
 - custom connector/workspace UIs must not infer colors from `primary` or a single background color; they should only consume semantic tokens such as surface, text, border, hover, selected, and focus
 
+### Mobile layout
+
+- `useMobile()` shares the reactive layout mode; `app.vue` publishes it as `body.mobile`.
+- Mobile layout requires a coarse primary pointer with no hover and a viewport width of at most 767px or height of at most 600px. Desktop resizing alone does not activate it.
+- Use `body.mobile` for mobile styles, including scoped component styles and teleported content; use `useMobile()` for UI behavior. Width-only responsive rules may still adapt constrained desktop layouts.
+- Session and nested tab strips use `--workspace-session-tab-width` and `--workspace-sub-tab-width` for both their ideal strip width and each tab's preferred width, keeping the create control next to the last tab.
+
 ## Theme System
 
 The shared workspace should use one theme pipeline for desktop shell UI and connector workspaces.

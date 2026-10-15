@@ -189,12 +189,6 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: "lucide:repeat-2",
       to: localePath({ path: "/transcode" }),
       disabled: isLoading.value
-    },
-    {
-      label: t("Menu.Face"),
-      icon: "lucide:scan-face",
-      to: localePath({ path: "/face" }),
-      disabled: isLoading.value
     }
   ];
 });
@@ -362,12 +356,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           <SideBarAssetTree
             :search="sidebarSearch"
             :open="true"
-            @select="
-              (asset) => {
-                showAssetSearch = false;
-                handleAssetConnect(asset);
-              }
-            "
+            @select="handleAssetConnect"
             @contextmenu="handleAssetContextMenu"
             @open-multiple="handleOpenMultipleAssets"
             @favorite-multiple="handleFavoriteMultipleAssets"

@@ -9,6 +9,7 @@ import { CLIENT_AUTH_CALLBACK } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
 import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
+import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -18,7 +19,6 @@ const USER_PROFILE = "/api/v1/users/profile/";
 const USER_PERMISSIONS = "/api/v1/users/profile/permissions/";
 const CURRENT_ORG = "/api/v1/orgs/orgs/current/";
 const PUBLIC_SETTINGS = "/api/v1/settings/public/";
-const CLIENT_VERSIONS = "/api/v1/settings/client/versions/";
 const DEV_CALLBACK = "http://127.0.0.1:14876/auth/callback";
 const DEEP_LINK_CALLBACK = CLIENT_AUTH_CALLBACK;
 
@@ -31,6 +31,15 @@ function parseJsonResponse(text: string) {
     return JSON.parse(text);
   } catch (cause) {
     throw new Error("API returned invalid JSON", { cause });
+  }
+}
+
+function parseOAuthError(text: string) {
+  try {
+    const payload = JSON.parse(text);
+    return typeof payload?.error === "string" ? payload.error : "";
+  } catch {
+    return "";
   }
 }
 
@@ -94,11 +103,15 @@ export class DesktopAuthService {
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
+    this.refreshingTokens = new Map();
     this.pendingAuth = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
     this.trustedHosts = new Set();
+    this.connectionGeneration = 0;
+    this.pendingConnection = null;
+    this.pendingCompatibility = null;
   }
 
   trustSite(site) {
@@ -144,13 +157,29 @@ export class DesktopAuthService {
     await rename(tempFile, this.tokenFile);
   }
 
-  setSession({ sessionKey, origin, bearerToken = "", orgId = "" }) {
+  setSession({ sessionKey, origin, connectionId, orgId = "" }) {
     if (!sessionKey || !origin) throw new Error("session key and origin are required");
-    const parsed = parseUrl(origin);
-    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("site must use HTTP or HTTPS");
+    origin = normalizeCompatibilitySite(origin);
+    const current = this.sessions.get(this.currentSessionKey);
+    const pending = this.pendingConnection;
+    const approved =
+      pending &&
+      pending.generation === this.connectionGeneration &&
+      pending.generation === connectionId &&
+      pending.site === origin &&
+      pending.sessionId === sessionKey;
+    if (connectionId !== undefined && !approved) return { status: "stale" };
+    // A renderer can update the active organization, but cannot approve a new connection.
+    if (!approved && (current?.sessionKey !== sessionKey || current?.origin !== origin)) return { status: "stale" };
+    const bearerToken = approved ? pending.bearer : current.bearerToken;
     this.currentSessionKey = sessionKey;
-    this.sessions.set(sessionKey, { sessionKey, origin: origin.replace(/\/+$/, ""), bearerToken, orgId });
-    electronLog.info(`auth session ${parsed.origin}`);
+    this.sessions.set(sessionKey, { sessionKey, origin, bearerToken, orgId });
+    if (approved) {
+      this.pendingConnection = null;
+      this.pendingCompatibility = null;
+    }
+    electronLog.info(`auth session ${parseUrl(origin).origin}`);
+    return { status: "success" };
   }
 
   setCurrentOrg(orgId) {
@@ -225,6 +254,9 @@ export class DesktopAuthService {
   }
 
   cancelAuth() {
+    this.connectionGeneration += 1;
+    this.pendingConnection = null;
+    this.pendingCompatibility = null;
     if (!this.pendingAuth) return;
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -245,8 +277,54 @@ export class DesktopAuthService {
     }
   }
 
-  async getVersionMessage() {
-    return this.requestApiResponse(this.currentSession().origin, CLIENT_VERSIONS, { timeout: 10_000 });
+  checkCompatibility({ site }) {
+    return checkSiteCompatibility(site, app.getVersion(), (url, init) => this.fetchSite(url, init));
+  }
+
+  async prepareConnection(site, sessionId, compatibilityConfirmationId?: number, restoreActiveSession = false) {
+    site = normalizeCompatibilitySite(site);
+    if (compatibilityConfirmationId !== undefined) {
+      const pending = this.pendingCompatibility;
+      if (
+        !pending ||
+        pending.generation !== this.connectionGeneration ||
+        pending.generation !== compatibilityConfirmationId ||
+        pending.site !== site ||
+        pending.sessionId !== sessionId
+      ) {
+        return { status: "stale" };
+      }
+      // Keep confirmation scoped to this connection, including restoration retries.
+      return { status: "ready", generation: pending.generation, site };
+    }
+    this.cancelAuth();
+    const generation = this.connectionGeneration;
+    const current = restoreActiveSession ? this.sessions.get(this.currentSessionKey) : null;
+    // The active connection already passed or confirmed its compatibility check.
+    if (current?.sessionKey === sessionId && current.origin === site && this.tokens[sessionId]) {
+      return { status: "ready", generation, site };
+    }
+    const compatibility = await this.checkCompatibility({ site });
+    if (generation !== this.connectionGeneration) return { status: "stale" };
+    if (compatibility.status !== "compatible") {
+      this.pendingCompatibility = { generation, site, sessionId };
+      return { status: "confirmation-required", compatibility, compatibility_confirmation_id: generation };
+    }
+    return { status: "ready", generation, site: compatibility.site };
+  }
+
+  approveConnection(attempt, sessionId, payload) {
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+    if (!payload.profile?.success) return payload;
+    let profile;
+    try {
+      profile = JSON.parse(payload.profile.data);
+    } catch {
+      return { ...payload, status: "failure" };
+    }
+    if (!profile || typeof profile.id !== "string" || !profile.id.trim()) return { ...payload, status: "failure" };
+    this.pendingConnection = { generation: attempt.generation, site: attempt.site, sessionId, bearer: payload.bearer };
+    return { ...payload, connection_id: attempt.generation };
   }
 
   async syncBackendLanguage({ language }) {
@@ -267,9 +345,13 @@ export class DesktopAuthService {
     }
   }
 
-  async authLogin({ site, sessionId }) {
+  async authLogin({ site, sessionId, compatibilityConfirmationId = undefined }) {
+    const attempt = await this.prepareConnection(site, sessionId, compatibilityConfirmationId);
+    if (attempt.status !== "ready") return attempt;
+    site = attempt.site;
     electronLog.info(`auth login start ${site}`);
     await this.startCallbackServer();
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
     let oauthConfig: { client_id?: string };
     try {
       const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
@@ -282,6 +364,7 @@ export class DesktopAuthService {
         );
       oauthConfig = JSON.parse(text);
     } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const message = `Failed to fetch OAuth config: ${error}`;
       this.emitEvent("login-failed-detected", {
         status: "failure",
@@ -291,6 +374,8 @@ export class DesktopAuthService {
       });
       throw new Error(message);
     }
+
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
 
     const clientId = String(oauthConfig.client_id || "");
     if (!clientId) throw new Error("OAuth config did not provide client_id");
@@ -307,27 +392,39 @@ export class DesktopAuthService {
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("scope", "write read");
 
-    this.cancelAuth();
     const callback = new Promise<ReturnType<typeof parseOAuthCallback>>((resolve) => {
       this.pendingAuth = { state, resolve };
     });
     this.emitEvent("auth_url", authorizeUrl.toString());
     const result = await callback;
+    if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
     if (!result) return null;
     if (result.state !== state) throw new Error("OAuth state mismatch");
     if (result.error) throw new Error(`OAuth authorization failed: ${result.error}`);
 
-    const token = await this.exchangeToken(site, {
-      grant_type: "authorization_code",
-      code: result.code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      code_verifier: verifier
-    });
-    this.tokens[sessionId] = { ...token, client_id: clientId };
-    await this.persistTokens();
-    electronLog.info(`auth login success ${site}`);
-    return this.buildLoginPayload(site, token.access_token);
+    try {
+      const token = await this.exchangeToken(site, {
+        grant_type: "authorization_code",
+        code: result.code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: verifier
+      });
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const payload = await this.buildLoginPayload(site, token.access_token);
+      const approved = this.approveConnection(attempt, sessionId, payload);
+      if (!approved.connection_id) {
+        return approved.status === "success" ? { ...approved, status: "failure" } : approved;
+      }
+      this.tokens[sessionId] = { ...token, client_id: clientId };
+      await this.persistTokens();
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      electronLog.info(`auth login success ${site}`);
+      return approved;
+    } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      throw error;
+    }
   }
 
   async exchangeToken(site, parameters) {
@@ -335,13 +432,17 @@ export class DesktopAuthService {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
       body: new URLSearchParams(parameters).toString(),
-      redirect: "manual"
+      redirect: "manual",
+      signal: AbortSignal.timeout(30_000)
     });
     const text = await response.text();
-    if (!response.ok)
-      throw new Error(
+    if (!response.ok) {
+      const error = new Error(
         `Token exchange failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-      );
+      ) as Error & { oauthError?: string };
+      error.oauthError = parseOAuthError(text);
+      throw error;
+    }
     const payload = parseJsonResponse(text);
     if (!payload.access_token) throw new Error("Token exchange response did not include access_token");
     return {
@@ -351,31 +452,84 @@ export class DesktopAuthService {
     };
   }
 
+  listAuthenticatedAccounts() {
+    const now = Math.floor(Date.now() / 1000);
+    return Object.entries(this.tokens)
+      .filter(([, token]: [string, any]) =>
+        Boolean(token.access_token && (!token.expires_at || token.expires_at > now || token.refresh_token))
+      )
+      .map(([sessionId]) => sessionId);
+  }
+
   async freshToken(site, sessionId, provided = "") {
     const stored = this.tokens[sessionId];
     if (!stored) {
       if (provided) return provided;
-      throw new Error(`no access token available for site ${site}`);
+      throw Object.assign(new Error(`no access token available for site ${site}`), { oauthError: "invalid_grant" });
     }
     if (!stored.expires_at || stored.expires_at > Math.floor(Date.now() / 1000) + 60) return stored.access_token;
-    if (!stored.refresh_token) throw new Error(`refresh_token missing for site ${site}`);
-    const refreshed = await this.exchangeToken(site, {
-      grant_type: "refresh_token",
-      refresh_token: stored.refresh_token,
-      client_id: stored.client_id || ""
-    });
-    this.tokens[sessionId] = {
-      ...refreshed,
-      refresh_token: refreshed.refresh_token || stored.refresh_token,
-      client_id: stored.client_id || ""
-    };
-    await this.persistTokens();
-    return refreshed.access_token;
+    if (!stored.refresh_token)
+      throw Object.assign(new Error(`refresh_token missing for site ${site}`), { oauthError: "invalid_grant" });
+
+    const activeRefresh = this.refreshingTokens.get(sessionId);
+    if (activeRefresh) return activeRefresh;
+
+    const refresh = (async () => {
+      try {
+        const refreshed = await this.exchangeToken(site, {
+          grant_type: "refresh_token",
+          refresh_token: stored.refresh_token,
+          client_id: stored.client_id || ""
+        });
+        const current = this.tokens[sessionId];
+        if (current !== stored) {
+          if (current?.access_token) return current.access_token;
+          throw new Error(`auth session changed for site ${site}`);
+        }
+        this.tokens[sessionId] = {
+          ...refreshed,
+          refresh_token: refreshed.refresh_token || stored.refresh_token,
+          client_id: stored.client_id || ""
+        };
+        await this.persistTokens();
+        return refreshed.access_token;
+      } catch (error) {
+        if (error?.oauthError === "invalid_grant" && this.tokens[sessionId] === stored) {
+          delete this.tokens[sessionId];
+          try {
+            await this.persistTokens();
+          } catch (persistError) {
+            electronLog.warn("failed to remove expired auth token", persistError);
+          }
+          this.emitEvent("auth-session-expired", { sessionId }, "main");
+        }
+        throw error;
+      }
+    })();
+    this.refreshingTokens.set(sessionId, refresh);
+    try {
+      return await refresh;
+    } finally {
+      if (this.refreshingTokens.get(sessionId) === refresh) this.refreshingTokens.delete(sessionId);
+    }
   }
 
-  async bootstrapAuthSession({ site, sessionId }) {
-    const bearer = await this.freshToken(site, sessionId);
-    return this.buildLoginPayload(site, bearer);
+  async bootstrapAuthSession({ site, sessionId, compatibilityConfirmationId = undefined }) {
+    const attempt = await this.prepareConnection(site, sessionId, compatibilityConfirmationId, true);
+    if (attempt.status !== "ready") return attempt;
+    site = attempt.site;
+    try {
+      const bearer = await this.freshToken(site, sessionId);
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const payload = await this.buildLoginPayload(site, bearer);
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (payload.profile?.status === 401 || payload.profile?.status === 403) return { status: "auth-required" };
+      return this.approveConnection(attempt, sessionId, payload);
+    } catch (error) {
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (error?.oauthError === "invalid_grant") return { status: "auth-required" };
+      throw error;
+    }
   }
 
   async buildLoginPayload(site, bearer) {
@@ -498,10 +652,11 @@ export class DesktopAuthService {
     }
   }
 
-  async createKokoConnectTicket({ baseUrl, tokenId }) {
+  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }) {
     const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
+    const ticketOrgId = orgId || session.orgId || "";
 
     const base = parseUrl(baseUrl);
     if (!["http:", "https:"].includes(base.protocol) || !base.hostname || base.username || base.password) {
@@ -515,11 +670,11 @@ export class DesktopAuthService {
         Accept: "application/json",
         Authorization: `Bearer ${bearer}`,
         "Content-Type": "application/json",
-        "X-JMS-ORG": session.orgId || "",
+        "X-JMS-ORG": ticketOrgId,
         "X-TZ": timezoneOffset(),
         Referer: url.origin
       },
-      body: JSON.stringify({ token_id: tokenId, org_id: session.orgId || "" })
+      body: JSON.stringify({ token_id: tokenId, org_id: ticketOrgId })
     });
     const text = await response.text();
     if (response.status !== 201) {
@@ -536,12 +691,16 @@ export class DesktopAuthService {
     electronLog.info(`auth logout ${site}`);
     const token = this.tokens[sessionId];
     delete this.tokens[sessionId];
+    this.sessions.delete(sessionId);
+    if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
+    if (this.pendingConnection?.sessionId === sessionId) this.cancelAuth();
     await this.persistTokens();
     if (!token?.refresh_token) return;
     try {
       await this.fetchSite(endpoint(site, OAUTH_REVOKE), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        signal: AbortSignal.timeout(5_000),
         body: new URLSearchParams({
           token: token.refresh_token,
           token_type_hint: "refresh_token",

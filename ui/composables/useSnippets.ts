@@ -1,6 +1,11 @@
 import type { CommandSnippetPayload } from "~/composables/useApiRequest";
 import type { SnippetVariableDefinition } from "~/utils/snippetVariables";
-import { createCommandSnippet, getCommandSnippetVariableForm, updateCommandSnippet } from "~/composables/useApiRequest";
+import {
+  createCommandSnippet,
+  deleteSqlSnippet as deleteCommandSnippet,
+  getCommandSnippetVariableForm,
+  updateCommandSnippet
+} from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { normalizeSnippetVariableDefinitions, normalizeSnippetVariableFields } from "~/utils/snippetVariables";
 
@@ -73,6 +78,11 @@ export const useSnippets = () => {
     }
   };
 
+  const remove = async (id: string) => {
+    await deleteCommandSnippet(id);
+    snippets.value = snippets.value.filter((snippet) => snippet.id !== id);
+  };
+
   const loadVariableForm = async (id: string) =>
     normalizeSnippetVariableFields(await getCommandSnippetVariableForm(id));
 
@@ -80,5 +90,5 @@ export const useSnippets = () => {
     snippets.value = [];
   });
 
-  return { snippets, loading, saving, load, save, loadVariableForm };
+  return { snippets, loading, saving, load, save, remove, loadVariableForm };
 };

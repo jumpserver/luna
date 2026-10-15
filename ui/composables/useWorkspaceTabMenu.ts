@@ -4,10 +4,12 @@ import type {
   WorkspaceSplitDirection,
   WorkspaceSurfaceSession
 } from "~/composables/useWorkspaceTabs";
-import type { AssetItem } from "~/types";
+import type { AssetItem, TokenResponse } from "~/types";
 
 import { SFTP_FILE_EDITOR_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import { getAssetDetailRequest } from "~/composables/useApiRequest";
+import { needsInputSecret } from "~/utils/connection";
 
 function sessionToAsset(session: WorkspaceSurfaceSession): AssetItem {
   return {
@@ -33,14 +35,30 @@ function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
   return String(tab.payload?.id || tab.payload?.token?.id || "");
 }
 
-async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: Record<string, any>) {
+async function requiresCredentialSetup(tab: WorkspaceSessionTab) {
+  const asset = sessionToAsset(tab);
+  if (tab.protocol.toLowerCase() === "sftp") return { asset, needsSetup: false };
+  const detail = await getAssetDetailRequest(tab.assetId, tab.orgId || "");
+  asset.permedAccounts = detail.permed_accounts || [];
+  asset.permedProtocols = detail.permed_protocols || asset.permedProtocols;
+  const accounts = asset.permedAccounts.filter((item) =>
+    [item.id, item.name, item.username, item.alias].includes(tab.account)
+  );
+  return {
+    asset,
+    needsSetup: accounts.some((item) => !item.alias.startsWith("@") && needsInputSecret(item))
+  };
+}
+
+async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: TokenResponse) {
   let webProxy = tab.payload?.webProxy;
   if (webProxy) {
     // A connect ticket is bound to its token and cannot be reused after exchange.
     if (!webProxy.ticketEndpoint) throw new Error("missing Web Proxy ticket endpoint");
     const { ticket } = await useWorkspaceConnectors().createKokoTicket({
       baseUrl: webProxy.ticketEndpoint,
-      tokenId: token.id
+      tokenId: token.id,
+      orgId: token.org_id
     });
     if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
     webProxy = { ...webProxy, ticket };
@@ -70,20 +88,36 @@ export function useWorkspaceTabMenu() {
     splitWorkspace,
     canSplitWorkspace,
     markSessionConnecting,
+    markSessionDisconnected,
     placePane,
     setActivePane,
     updateSessionPayload
   } = useWorkspaceTabs();
 
-  const reconnectViaConnection = (tab: WorkspaceSessionTab) => {
+  const reconnectViaConnection = async (tab: WorkspaceSessionTab) => {
     const connectMethod = tab.payload?.connectMethod?.value;
+    const match = { tabId: tab.id, assetId: tab.assetId, protocol: tab.protocol, account: tab.account };
+    const { asset, needsSetup } = await requiresCredentialSetup(tab);
+    if (needsSetup) {
+      openSetupSession(asset, { protocol: tab.protocol, paneId: tab.id });
+      return;
+    }
 
-    handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
-      tabId: tab.id,
-      asset: sessionToAsset(tab),
-      orgId: tab.orgId,
-      connectMethod
-    });
+    void handleAssetConnection(
+      tab.account,
+      tab.assetId,
+      tab.protocol,
+      tab.protocol.toLowerCase() === "sftp" ? undefined : asset.permedAccounts,
+      undefined,
+      {
+        tabId: tab.id,
+        asset,
+        orgId: tab.orgId,
+        connectMethod,
+        onSessionReady: (payload) => updateSessionPayload(match, payload),
+        onSessionError: (error) => markSessionDisconnected(tab.id, String(error))
+      }
+    );
   };
 
   const exchangePayload = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
@@ -141,7 +175,7 @@ export function useWorkspaceTabMenu() {
         openSetupSession(sessionToAsset(tab), { protocol: tab.protocol, paneId: tab.id });
         return { status: "user_action_required", reason: "connection_setup", pane_id: tab.id };
       }
-      reconnectViaConnection(tab);
+      void reconnectViaConnection(tab).catch((error) => markSessionDisconnected(tab.id, String(error)));
       return { status: "connection_requested", pane_id: tab.id };
     }
   };
@@ -180,12 +214,26 @@ export function useWorkspaceTabMenu() {
       );
     } catch (error) {
       const connectMethod = workspaceTab.payload?.connectMethod?.value;
-      handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {
-        tabId: pane.id,
-        asset: sessionToAsset(workspaceTab),
-        orgId: workspaceTab.orgId,
-        connectMethod
-      });
+      try {
+        const { asset, needsSetup } = await requiresCredentialSetup(workspaceTab);
+        if (needsSetup) openSetupSession(asset, { protocol: workspaceTab.protocol, paneId: pane.id });
+        else
+          void handleAssetConnection(
+            workspaceTab.account,
+            workspaceTab.assetId,
+            workspaceTab.protocol,
+            workspaceTab.protocol.toLowerCase() === "sftp" ? undefined : asset.permedAccounts,
+            undefined,
+            {
+              tabId: pane.id,
+              asset,
+              orgId: workspaceTab.orgId,
+              connectMethod
+            }
+          );
+      } catch (detailError) {
+        addErrorToast({ title: t("ConnectError.ConnectFailed"), description: String(detailError) });
+      }
       addErrorToast({
         title: t("WorkspacePane.ConnectCurrent"),
         description: String(error)

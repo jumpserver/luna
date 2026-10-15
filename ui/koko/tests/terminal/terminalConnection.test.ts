@@ -1,9 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
-import { describeTerminalClose } from "#koko/composables/terminal/protocol";
+import {
+  createKokoStartupOutputCapture,
+  describeTerminalClose,
+  resolveKokoTerminalCloseMessage
+} from "#koko/composables/terminal/protocol";
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
 import { useKokoTerminalTransport } from "#koko/composables/terminal/useTerminalTransport";
+import { normalizeConnectionFailure } from "~/utils/connectionFailure";
+import terminalSocketSource from "../../composables/terminal/useTerminalSocket.ts?raw";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -24,6 +30,49 @@ it("distinguishes Koko session end, Koko timeout, offline and unexplained closes
   expect(describeTerminalClose(abnormal, undefined, true).source).toBe("transport");
   expect(describeTerminalClose({ code: 1000, reason: "", wasClean: true }, undefined, true).source).toBe("unknown");
   expect(describeTerminalClose(abnormal, "", true).source).toBe("koko");
+});
+
+it("uses sanitized startup bytes for an early close and clears them once ready", () => {
+  const capture = createKokoStartupOutputCapture();
+  const fallback = "Koko 已结束会话：资产连接已结束";
+  const encoded = new TextEncoder().encode("\u001b[31m认证失败\u001b[0m");
+  const prefixBytes = new TextEncoder().encode("\u001b[31m").length;
+  const splitAt = prefixBytes + 1;
+
+  expect(new TextEncoder().encode("认").length).toBeGreaterThan(1);
+  capture.append(encoded.slice(0, splitAt));
+  capture.append(encoded.slice(splitAt));
+  const startup = normalizeConnectionFailure(capture.take());
+
+  expect(startup).toBe("认证失败");
+  expect(normalizeConnectionFailure("开始连接\r\nssh: handshake failed: EOF")).toBe(
+    "开始连接\nssh: handshake failed: EOF"
+  );
+  expect(startup).not.toContain("\u001b");
+  expect(resolveKokoTerminalCloseMessage(startup, fallback)).toBe("认证失败");
+
+  capture.markReady();
+  capture.append(new TextEncoder().encode("must not replace the close reason"));
+  expect(resolveKokoTerminalCloseMessage(normalizeConnectionFailure(capture.take()), fallback)).toBe(fallback);
+});
+
+it("keeps only the last 8 KiB of startup output", () => {
+  const limit = 8 * 1024;
+  const capture = createKokoStartupOutputCapture(limit);
+  const encoder = new TextEncoder();
+
+  capture.append(encoder.encode("x".repeat(limit)));
+  capture.append(encoder.encode("tail"));
+
+  expect(capture.take()).toBe(`${"x".repeat(limit - 4)}tail`);
+});
+
+it("reads sanitized startup bytes on close instead of the xterm buffer", () => {
+  expect(terminalSocketSource).toContain("normalizeConnectionFailure(startupOutput.take())");
+  expect(terminalSocketSource).toContain("socketOpened = true");
+  expect(terminalSocketSource).toContain("{ dismissible: socketOpened }");
+  expect(terminalSocketSource).toContain("onTerminalReady: startupOutput.markReady");
+  expect(terminalSocketSource).not.toContain("getXTerminalLineContent");
 });
 
 it("sends heartbeats only on open sockets, updates send time and stops after close", () => {

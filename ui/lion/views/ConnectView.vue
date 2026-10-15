@@ -21,7 +21,16 @@ import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspace
 
 const props = defineProps<{ tabId?: string }>();
 
-const emit = defineEmits<{ disconnected: [message: string, details?: GuacamoleConnectionErrorDetails] }>();
+const emit = defineEmits<{
+  connected: [];
+  disconnected: [message: string, details?: GuacamoleConnectionErrorDetails, dismissible?: boolean];
+}>();
+
+const { activePaneId, setActivePane } = useWorkspaceTabs();
+const isInputActive = () => !props.tabId || activePaneId.value === props.tabId;
+const activateInputPane = () => {
+  if (props.tabId) setActivePane(props.tabId);
+};
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -298,7 +307,9 @@ onMounted(async () => {
   } catch (error) {
     if (disposed) return;
     loading.value = false;
-    addErrorToast({ title: error instanceof Error ? error.message : String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    addErrorToast({ title: message });
+    emit("disconnected", message, undefined, false);
     return;
   }
   if (disposed) return;
@@ -343,7 +354,7 @@ onMounted(async () => {
   displayEl.addEventListener("drop", fileDrop, false);
   displayEl.addEventListener("contextmenu", preventDefault, false);
 
-  registerMouseAndKeyboardHandler();
+  registerMouseAndKeyboardHandler(isInputActive);
   window.addEventListener("focus", debouncedSendClipboardToRemote);
 });
 
@@ -386,9 +397,10 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
 
-watch(connectStatus, (status) => {
-  if (status === 5 && !disposed) {
-    emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value);
+watch([connectStatus, connectionError], ([status]) => {
+  if (status === 3) emit("connected");
+  else if (status === 5 && !disposed) {
+    emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value, true);
   }
 });
 
@@ -450,6 +462,7 @@ const controller = {
     if (text) sendTextToRemote(text);
   },
   sendCombinationKeys: handleCombineKeys,
+  sendKeyEvent,
   setAutoFit: (value: boolean) => {
     autoFit.value = value;
   },
@@ -482,6 +495,7 @@ watch(
       ref="displayRef"
       class="relative flex h-full w-full min-h-0 justify-center"
       :class="[shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden']"
+      @pointerdown.capture="activateInputPane"
     />
 
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />

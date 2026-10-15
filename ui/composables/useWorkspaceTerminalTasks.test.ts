@@ -2,20 +2,24 @@ import type { KokoTerminalAiSession } from "#koko/composables/terminal/useTermin
 import type { WorkspacePane } from "./useWorkspaceTabs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { markRaw, nextTick, reactive, shallowReactive, shallowRef } from "vue";
+import { validateWorkspaceToolArguments } from "./useWorkspaceAssistantTools";
 import {
   createWorkspaceTerminalTasks,
   resolveWorkspaceTerminalTarget,
   workspaceTerminalTools
 } from "./useWorkspaceTerminalTasks";
-import { validateWorkspaceToolArguments } from "./useWorkspaceAssistantTools";
 
 const mocks = vi.hoisted(() => ({ lookup: vi.fn(), list: vi.fn(), submit: vi.fn() }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({ currentUser: null }) }));
-vi.mock("~/composables/useApiRequest", () => ({ getAssetDetailRequest: vi.fn() }));
+vi.mock("~/composables/useApiRequest", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/composables/useApiRequest")>()),
+  getAssetDetailRequest: vi.fn()
+}));
 vi.mock("#koko/composables/terminal/useTerminalAiSessions", () => ({
   getKokoTerminalAiSession: mocks.lookup,
   getKokoTerminalAiSessions: mocks.list,
-  submitKokoTerminalAiPrompt: mocks.submit
+  submitKokoTerminalAiPrompt: mocks.submit,
+  isKokoTerminalAiInputLocked: vi.fn(() => false)
 }));
 const managers: ReturnType<typeof createWorkspaceTerminalTasks>[] = [];
 

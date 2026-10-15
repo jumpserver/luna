@@ -8,7 +8,7 @@ import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 
 export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const colorMode = useColorMode();
-  const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+  const { markSessionFailed } = useWorkspaceTabs();
 
   const loading = ref(false);
   const error = ref("");
@@ -56,6 +56,15 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
 
     if (!preparedTokenId) {
       error.value = "Missing connection token";
+      markSessionFailed(
+        {
+          tabId: preparedTab.id,
+          assetId: preparedTab.assetId,
+          protocol: preparedTab.protocol,
+          account: preparedTab.account
+        },
+        error.value
+      );
       loading.value = false;
       return null;
     }
@@ -77,7 +86,6 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
         themeType: themeType.value
       };
 
-      markSessionConnected(preparedTab.id);
       return context.value;
     } catch (cause) {
       if (generation !== prepareGeneration) return null;

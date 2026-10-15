@@ -69,13 +69,27 @@ const isManualAccount = computed(() => {
 });
 const canConnect = computed(() => {
   if (!selectedAsset.value || remoteConnecting.value || !draft.value.account) return false;
-  if (!isManualAccount.value) return true;
+  if (isManualAccount.value) {
+    if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
+    if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
+    return Boolean(draft.value.manualUsername.trim() && draft.value.manualPassword.trim());
+  }
+  const accounts = selectedAsset.value.permedAccounts || [];
+  const hosted =
+    accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||
+    accounts.find((item) => !item.alias.startsWith("@") && item.name === draft.value.account);
+  if (hosted?.has_secret !== false) return true;
   if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
-  return Boolean(draft.value.manualUsername.trim() && draft.value.manualPassword);
+  if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
+  return !!draft.value.hostedSecret.trim();
 });
 
 function isFolder(node: AssetTreeNode) {
   return node.meta?.type === "node" || Boolean(node.isParent);
+}
+
+function isUnsupportedAsset(node: AssetTreeNode) {
+  return !isFolder(node) && node.meta?.data?.sftp === false;
 }
 
 function assetAddress(node: AssetTreeNode) {
@@ -123,6 +137,7 @@ function pickNode(node: AssetTreeNode) {
     void enterFolder(node);
     return;
   }
+  if (isUnsupportedAsset(node)) return;
   void selectAsset(treeNodeToAsset(node));
 }
 
@@ -217,6 +232,8 @@ async function connect() {
       accountMode: info.accountMode,
       manualUsername: info.manualUsername,
       manualPassword: info.manualPassword,
+      hostedSecret: info.hostedSecret,
+      inputSecretType: info.inputSecretType,
       personalCredentialId: info.personalCredentialId,
       personalCredentialVersion: info.personalCredentialVersion,
       personalCredentialSecretType: info.personalCredentialSecretType,
@@ -331,27 +348,37 @@ watch(currentOrgId, () => {
                 <p v-if="showEmpty" class="px-2 py-6 text-center text-sm text-muted">
                   {{ searching ? t("AddSession.NoMatchingAssets") : t("Common.NoData") }}
                 </p>
-                <button
+                <UTooltip
                   v-for="node in visibleItems"
                   :key="node.id"
-                  type="button"
-                  class="sftp-pick-row"
-                  @click="pickNode(node)"
+                  :text="t('koko.fileManagement.unsupportedAsset')"
+                  :disabled="!isUnsupportedAsset(node)"
                 >
-                  <span class="sftp-pick-icon">
-                    <UIcon :name="isFolder(node) ? 'i-lucide-folder' : 'i-lucide-monitor'" class="size-4" />
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate text-sm text-highlighted">{{ node.name }}</span>
-                    <span v-if="assetAddress(node)" class="block truncate text-xs text-muted">
-                      {{ assetAddress(node) }}
+                  <button
+                    type="button"
+                    class="sftp-pick-row"
+                    :aria-disabled="isUnsupportedAsset(node) || undefined"
+                    @click="pickNode(node)"
+                  >
+                    <span class="sftp-pick-icon">
+                      <UIcon :name="isFolder(node) ? 'i-lucide-folder' : 'i-lucide-monitor'" class="size-4" />
                     </span>
-                  </span>
-                  <span v-if="!isFolder(node) && lastAccountName(treeNodeToAsset(node).id)" class="sftp-pick-account">
-                    {{ lastAccountName(treeNodeToAsset(node).id) }}
-                  </span>
-                  <UIcon v-else-if="isFolder(node)" name="i-lucide-chevron-right" class="size-4 shrink-0 text-muted" />
-                </button>
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate text-sm text-highlighted">{{ node.name }}</span>
+                      <span v-if="assetAddress(node)" class="block truncate text-xs text-muted">
+                        {{ assetAddress(node) }}
+                      </span>
+                    </span>
+                    <span v-if="!isFolder(node) && lastAccountName(treeNodeToAsset(node).id)" class="sftp-pick-account">
+                      {{ lastAccountName(treeNodeToAsset(node).id) }}
+                    </span>
+                    <UIcon
+                      v-else-if="isFolder(node)"
+                      name="i-lucide-chevron-right"
+                      class="size-4 shrink-0 text-muted"
+                    />
+                  </button>
+                </UTooltip>
               </template>
             </div>
           </div>
@@ -359,6 +386,9 @@ watch(currentOrgId, () => {
             <ConnectAccountFields
               v-if="selectedAssetItem"
               v-model:account="draft.account"
+              v-model:account-id="draft.accountId"
+              v-model:hosted-secret="draft.hostedSecret"
+              v-model:input-secret-type="draft.inputSecretType"
               v-model:manual-username="draft.manualUsername"
               v-model:manual-password="draft.manualPassword"
               v-model:personal-credential-id="draft.personalCredentialId"
@@ -368,6 +398,7 @@ watch(currentOrgId, () => {
               v-model:dynamic-password="draft.dynamicPassword"
               v-model:remember-secret="draft.rememberSecret"
               :accounts="selectedAssetItem.permedAccounts || []"
+              :protocol="draft.protocol"
               :personal-credentials="personalCredentials"
               :personal-credentials-loading="personalCredentialsLoading"
               :personal-credentials-loaded="personalCredentialsLoaded"
@@ -425,6 +456,15 @@ watch(currentOrgId, () => {
 
 .sftp-pick-row:hover {
   background: var(--app-state-hover);
+}
+
+.sftp-pick-row[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sftp-pick-row[aria-disabled="true"]:hover {
+  background: transparent;
 }
 
 .sftp-pick-icon {

@@ -32,6 +32,16 @@ export function rememberSftpConnection(connections: RecentSftpConnection[], entr
   return [entry, ...connections.filter((item) => item.assetId !== entry.assetId)].slice(0, limit);
 }
 
+export function uniqueRemotePanesForSend<T extends { assetId?: string }>(panes: T[]): T[] {
+  const seen = new Set<string>();
+  return panes.filter((pane) => {
+    if (!pane.assetId) return true;
+    if (seen.has(pane.assetId)) return false;
+    seen.add(pane.assetId);
+    return true;
+  });
+}
+
 export function filterSftpDistributionTargets(targets: SftpDistributionTargetOption[], search: string) {
   const query = search.trim().toLowerCase();
   if (!query) return targets;
@@ -41,14 +51,92 @@ export function filterSftpDistributionTargets(targets: SftpDistributionTargetOpt
   );
 }
 
-function joinTransferSourcePath(basePath: string, name: string): string {
+export function isSftpDirectoryAffectedByTransfer(displayedDirectory: string, targetPath: string) {
+  const displayed = displayedDirectory.replace(/\/+$/, "") || "/";
+  const normalizedTarget = targetPath.replace(/\/+$/, "");
+  const separator = normalizedTarget.lastIndexOf("/");
+  const destinationDirectory = normalizedTarget.slice(0, Math.max(separator, 0)) || "/";
+  if (displayed === "/") return true;
+  return destinationDirectory === displayed || destinationDirectory.startsWith(`${displayed}/`);
+}
+
+export function transferFileDisplayPath(source: { name: string; relativeDir?: string }) {
+  const dir = source.relativeDir?.replace(/[\\/]+$/, "").replace(/\\/g, "/");
+  return dir ? `${dir}/${source.name}` : source.name;
+}
+
+export function transferFileBreadcrumbItems(source: { name: string; relativeDir?: string }) {
+  const dir = source.relativeDir?.replace(/[\\/]+$/, "").replace(/\\/g, "/") || "";
+  if (!dir) return [];
+  const parts = [...dir.split("/").filter(Boolean), source.name];
+  if (parts.length <= 3) return parts;
+  return [parts[0]!, "…", parts.at(-1)!];
+}
+
+export const sftpFolderConflictError = "folder_exists";
+
+export function topLevelFolderName(relativeDir?: string) {
+  return (
+    relativeDir
+      ?.replace(/\\/g, "/")
+      .replace(/^\/+|\/+$/g, "")
+      .split("/")
+      .filter(Boolean)[0] || ""
+  );
+}
+
+export function pathBelongsToFolder(path: string | undefined, folder: string) {
+  const relative = path?.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "") || "";
+  return relative === folder || relative.startsWith(`${folder}/`);
+}
+
+export function collidingTopLevelFolders(
+  selectedFolders: string[],
+  destEntries: Array<{ name: string; is_dir?: boolean }>
+) {
+  const destDirs = new Set(
+    destEntries.filter((entry) => entry.is_dir && entry.name !== "..").map((entry) => entry.name)
+  );
+  return [...new Set(selectedFolders.filter((name) => name && name !== ".." && destDirs.has(name)))];
+}
+
+export function nextKeepBothFolderName(name: string, existing: Set<string>) {
+  let index = 1;
+  let candidate = `${name} (${index})`;
+  while (existing.has(candidate)) {
+    index += 1;
+    candidate = `${name} (${index})`;
+  }
+  return candidate;
+}
+
+export function rewriteFolderPrefix(path: string, from: string, to: string) {
+  const relative = path.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  if (relative === from) return to;
+  if (relative.startsWith(`${from}/`)) return `${to}${relative.slice(from.length)}`;
+  return path;
+}
+
+export function destRootFromTask(destinationPath: string, relativeDir?: string) {
+  const dest = destinationPath.replace(/[\\/]+$/, "");
+  const relative = relativeDir?.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "") || "";
+  if (!relative) return dest || "/";
+  const posix = dest.replace(/\\/g, "/");
+  if (posix === relative)
+    return dest.endsWith(relative) ? dest.slice(0, dest.length - relative.length) || "/" : dest || "/";
+  if (posix.endsWith(`/${relative}`)) return dest.slice(0, dest.length - relative.length).replace(/[\\/]+$/, "") || "/";
+  return dest || "/";
+}
+
+export function joinTransferPath(basePath: string, ...parts: string[]): string {
   const base = basePath || "/";
+  const names = parts.filter(Boolean);
   // Local desktop paths (Windows drive / UNC) must keep platform separators.
   if (/^[a-z]:[\\/]/i.test(base) || base.startsWith("\\\\")) {
     const sep = base.includes("\\") ? "\\" : "/";
-    return `${base.replace(/[\\/]+$/, "")}${sep}${name}`;
+    return [base.replace(/[\\/]+$/, ""), ...names.map((name) => name.replace(/\//g, sep))].join(sep);
   }
-  return `${base.replace(/\/+$/, "") || "/"}/${name}`.replace(/\/+/g, "/");
+  return [base.replace(/\/+$/, "") || "/", ...names].join("/").replace(/\/+/g, "/");
 }
 
 export function safeLocalDownloadName(name: string) {
@@ -66,7 +154,7 @@ export function buildSftpTransferInputs(
 
   return payload.entries
     .map((entry) => ({ ...entry, size: Number(entry.size) }))
-    .filter((entry) => entry.name && Number.isFinite(entry.size) && entry.size >= 0)
+    .filter((entry) => !entry.is_dir && entry.name && Number.isFinite(entry.size) && entry.size >= 0)
     .map((entry) => ({
       batchId: "",
       sourceEndpoint: payload.sourceEndpoint,
@@ -74,9 +162,10 @@ export function buildSftpTransferInputs(
       source: {
         name: entry.name,
         size: entry.size,
-        path: joinTransferSourcePath(payload.sourcePath, entry.name)
+        path: joinTransferPath(payload.sourcePath, entry.relativeDir || "", entry.name),
+        ...(entry.relativeDir ? { relativeDir: entry.relativeDir } : {})
       },
-      destinationPath: payload.destinationPath,
+      destinationPath: joinTransferPath(payload.destinationPath, entry.relativeDir || ""),
       conflictPolicy: "ask"
     }));
 }

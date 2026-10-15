@@ -28,6 +28,8 @@ export function getGuideConnectCommand(input: {
       return `redis-cli -h ${host} -p ${port} -a ${input.redisAuth || ""}`;
     case "oracle":
       return `sqlplus ${id}/${secret}@${host}:${port}/${id}`;
+    case "dameng":
+      return `disql ${id}/${secret}@${host}:${port}`;
     case "sqlserver":
       return `sqlcmd -S ${host},${port} -U ${id} -P ${secret} -d ${database}`;
     case "mongodb":

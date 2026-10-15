@@ -72,5 +72,5 @@ export function buildChenCreateTableSql(tableName: string, columns: ChenCreateTa
 
   const orderBy = primaryKeys.length ? `(${primaryKeys.join(", ")})` : "tuple()";
   const primaryKey = primaryKeys.length ? `\nPRIMARY KEY ${orderBy}` : "";
-  return `${statement}\nENGINE = MergeTree${primaryKey}\nORDER BY ${orderBy};`;
+  return `${statement}\nENGINE = MergeTree\nORDER BY ${orderBy}${primaryKey};`;
 }

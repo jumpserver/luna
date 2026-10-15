@@ -27,12 +27,13 @@ import {
 import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import { transformAssetDetail } from "~/utils";
+import { needsInputSecret, resolvePersonalCredentialSecretType, supportsPersonalCredential } from "~/utils/connection";
+import { pageLocation } from "~/utils/runtime";
 
 let desktopListenersInitialized = false;
 let desktopListenersRegistering = false;
 let desktopListenersRefCount = 0;
-let unlistenGetTokenFailure: DesktopUnlistenFn | null = null;
 let unlistenGetTokenSuccess: DesktopUnlistenFn | null = null;
 let unlistenPullUpFailure: DesktopUnlistenFn | null = null;
 let unlistenBuiltinSessionSuccess: DesktopUnlistenFn | null = null;
@@ -60,6 +61,7 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
 const CONNECTION_ERROR_CODES: Record<string, string> = {
+  connect_method_rejected: "ConnectError.MethodUnavailable",
   perm_account_invalid: "ConnectError.AccountUnavailable",
   perm_expired: "ConnectError.PermissionExpired",
   manual_account_permission_denied: "ConnectError.ManualAccountDenied",
@@ -67,6 +69,8 @@ const CONNECTION_ERROR_CODES: Record<string, string> = {
   asset_inactive: "ConnectError.AssetUnavailable",
   invalid_user: "ConnectError.SessionInvalid",
   personal_credential_not_found: "ConnectError.PersonalCredentialNotFound",
+  personal_credential_account_denied: "ConnectError.AccountUnavailable",
+  personal_credential_username_mismatch: "ConnectError.AccountUnavailable",
   personal_credential_version_conflict: "ConnectError.CredentialChanged",
   vault_unavailable: "ConnectError.CredentialServiceUnavailable",
   ssh_certificate_signing_unavailable: "ConnectError.CertificateServiceUnavailable",
@@ -161,11 +165,9 @@ function releaseDesktopEventListeners() {
   if (!desktopListenersInitialized || desktopListenersRegistering) return;
   if (desktopListenersRefCount === 0) {
     unlistenGetTokenSuccess?.();
-    unlistenGetTokenFailure?.();
     unlistenPullUpFailure?.();
     unlistenBuiltinSessionSuccess?.();
     unlistenBuiltinSessionFailure?.();
-    unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenPullUpFailure = null;
     unlistenBuiltinSessionSuccess = null;
@@ -181,8 +183,14 @@ export const useAssetAction = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
-  const { markSessionFailed, markSessionTokenCreated, openSession, setSessionConnectMethod, updateSessionPayload } =
-    useWorkspaceTabs();
+  const {
+    getSessionConnectionAttempt,
+    markSessionFailed,
+    markSessionTokenCreated,
+    openSession,
+    setSessionConnectMethod,
+    updateSessionPayload
+  } = useWorkspaceTabs();
   const { fetchConnectMethods, getMethodsForProtocol } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
@@ -313,7 +321,7 @@ export const useAssetAction = () => {
    * @description 获取连接令牌
    */
   const joinEndpointUrl = (endpointUrl: string, path: string) => {
-    const endpoint = new URL(endpointUrl, window.location.origin);
+    const endpoint = new URL(endpointUrl, pageLocation().origin);
     return new URL(path, endpoint.origin).toString();
   };
 
@@ -322,7 +330,7 @@ export const useAssetAction = () => {
     protocol?: string,
     portField?: Parameters<typeof resolveEndpointUrl>[3]
   ) =>
-    resolveEndpointUrl(endpoint, isDesktopRuntime() ? currentSite.value : window.location.origin, protocol, portField);
+    resolveEndpointUrl(endpoint, isDesktopRuntime() ? currentSite.value : pageLocation().origin, protocol, portField);
 
   const resolveWebEndpointProtocol = (
     method: { component?: string; type?: string; endpoint_protocol?: string } | undefined
@@ -330,7 +338,7 @@ export const useAssetAction = () => {
     const component = method?.component || "";
     const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
     const endpointProtocol = method?.endpoint_protocol?.replace(":", "") || "";
-    const pageProtocol = window.location.protocol.replace(":", "");
+    const pageProtocol = pageLocation().protocol.replace(":", "");
     let siteProtocol = "";
     try {
       siteProtocol = new URL(currentSite.value || "").protocol.replace(":", "");
@@ -371,7 +379,7 @@ export const useAssetAction = () => {
     token: TokenResponse,
     method: { component?: string; value?: string; type?: string; endpoint_protocol?: string } | undefined,
     body: ConnectionBody,
-    endpointUrl = window.location.origin,
+    endpointUrl = pageLocation().origin,
     assetPlatform = ""
   ) => {
     const tokenId = token.id;
@@ -413,7 +421,7 @@ export const useAssetAction = () => {
     scope: PersonalCredentialSessionScope
   ) => {
     const resolvedAssetId = assetId || body.asset;
-    if (!resolvedAssetId || body.account !== "@INPUT" || !token.personal_credential_id) return;
+    if (!resolvedAssetId || !token.personal_credential_id) return;
 
     if (body.save_personal_credential) {
       invalidatePersonalAssetCredentialCache({
@@ -430,11 +438,14 @@ export const useAssetAction = () => {
     if (!currentContextMatches) return;
 
     const saved = userInfoStore.getConnectionInfoForAsset(resolvedAssetId);
-    if (!saved || saved.accountMode !== "manual") return;
+    if (!saved || saved.protocol !== body.protocol) return;
+    if (saved.accountMode === "manual" && body.account !== "@INPUT") return;
+    if (saved.accountMode === "hosted" && saved.accountId !== body.account) return;
+    if (!["manual", "hosted"].includes(saved.accountMode || "")) return;
 
     userInfoStore.setConnectionInfoForAsset(resolvedAssetId, {
       ...saved,
-      manualUsername: body.input_username || saved.manualUsername || "",
+      manualUsername: saved.accountMode === "manual" ? body.input_username || saved.manualUsername || "" : "",
       personalCredentialId: token.personal_credential_id,
       personalCredentialVersion: body.save_personal_credential ? undefined : saved.personalCredentialVersion,
       personalCredentialSecretType: body.input_secret_type || saved.personalCredentialSecretType || "password",
@@ -442,8 +453,8 @@ export const useAssetAction = () => {
     });
   };
 
-  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string) => {
-    const methods = await getMethodsForProtocol(protocol);
+  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string, assetId: string) => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const selected = parseLocalApplicationConnectMethod(connectMethod);
     const method = methods.find((item) => item.value === selected.connectMethod);
     if (!method || method.disabled) throw new Error(t("ConnectError.MethodDisabled"));
@@ -456,7 +467,7 @@ export const useAssetAction = () => {
     if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
 
     try {
-      const methods = await getMethodsForProtocol(body.protocol);
+      const methods = await getMethodsForProtocol(body.protocol, body.asset);
       const injected = methods.find((item) => item.value === body.connect_method);
       if (injected?.origin_value) return injected.origin_value;
 
@@ -517,6 +528,8 @@ export const useAssetAction = () => {
             })
           : undefined;
     const tabId = meta?.tabId || session?.id;
+    const connectionAttempt = tabId ? getSessionConnectionAttempt(tabId) : 0;
+    const isCurrentConnectionAttempt = () => !tabId || getSessionConnectionAttempt(tabId) === connectionAttempt;
 
     let creatingConnectionToken = false;
     try {
@@ -525,8 +538,8 @@ export const useAssetAction = () => {
         ...body,
         connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
       };
-      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
-      const allMethods = await fetchConnectMethods();
+      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod, body.asset);
+      const allMethods = await fetchConnectMethods(body.asset);
       const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
       if (method?.type === "applet") {
         const settings = await getPublicSettings();
@@ -557,10 +570,9 @@ export const useAssetAction = () => {
         admin: meta?.admin
       });
       creatingConnectionToken = false;
+      if (!isCurrentConnectionAttempt()) return;
       if (!token) {
-        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else if (meta)
-          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+        if (meta?.downloadRdp) meta.onSessionError?.(new Error("Connection cancelled"));
         return;
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
@@ -623,12 +635,13 @@ export const useAssetAction = () => {
           meta?.onSessionReady?.(payload);
         } else {
           meta?.onSessionReady?.(payload);
-          window.location.assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
+          pageLocation().assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
         }
         return;
       }
 
       const endpointUrl = await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
+      if (!isCurrentConnectionAttempt()) return;
       const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
 
       const payload = {
@@ -649,19 +662,24 @@ export const useAssetAction = () => {
         globalThis.open(webUrl, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
-      if (meta?.onSessionError) {
-        meta.onSessionError(error);
-      } else if (meta) {
-        markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+      if (!isCurrentConnectionAttempt()) return;
+      const description = creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error);
+      if (meta?.onSessionError) meta.onSessionError(error);
+      else if (meta) {
+        markSessionFailed(
+          { tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account },
+          description
+        );
       }
-
-      addErrorToast({
-        title: t(meta?.downloadRdp ? "ConnectError.DownloadRdpFailed" : "ConnectError.ConnectFailed"),
-        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
+      if (meta?.downloadRdp) {
+        addErrorToast({
+          title: t("ConnectError.DownloadRdpFailed"),
+          description,
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      }
     }
   };
 
@@ -693,9 +711,12 @@ export const useAssetAction = () => {
       requestOrgId: meta.orgId || userInfoStore.currentUser?.org?.id || "",
       site: userInfoStore.currentSite
     };
+    const connectionAttempt = meta.tabId ? getSessionConnectionAttempt(meta.tabId) : 0;
+    const isCurrentConnectionAttempt = () =>
+      !meta.tabId || getSessionConnectionAttempt(meta.tabId) === connectionAttempt;
     let creatingConnectionToken = false;
     try {
-      await assertConnectMethodEnabled(body.protocol, body.connect_method);
+      await assertConnectMethodEnabled(body.protocol, body.connect_method, body.asset);
       const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
       creatingConnectionToken = true;
       const token = await createConnectionTokenWithAcl(serverBody, {
@@ -706,11 +727,8 @@ export const useAssetAction = () => {
         admin: meta.admin
       });
       creatingConnectionToken = false;
-      if (!token) {
-        if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else markSessionFailed(meta);
-        return;
-      }
+      if (!isCurrentConnectionAttempt()) return;
+      if (!token) return;
       syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
       if (meta.tabId) {
         markSessionTokenCreated({
@@ -758,7 +776,8 @@ export const useAssetAction = () => {
           : endpointUrl;
         const { ticket } = await useWorkspaceConnectors().createKokoTicket({
           baseUrl: ticketEndpoint,
-          tokenId: token.id
+          tokenId: token.id,
+          orgId: token.org_id
         });
         if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
         const settings = await getPublicSettings();
@@ -770,6 +789,7 @@ export const useAssetAction = () => {
           recordingSupported: settings.XPACK_LICENSE_IS_VALID === true
         };
       }
+      if (!isCurrentConnectionAttempt()) return;
       const payload = {
         token,
         ...token,
@@ -784,20 +804,15 @@ export const useAssetAction = () => {
       if (meta.onSessionReady) meta.onSessionReady(payload);
       else updateSessionPayload(meta, payload);
     } catch (error) {
+      if (!isCurrentConnectionAttempt()) return;
+      const description = creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error);
       if (meta.onSessionError) meta.onSessionError(error);
-      else markSessionFailed(meta);
-      addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
-        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
+      else markSessionFailed(meta, description);
     }
   };
 
-  const resolveConnectMethod = async (protocol: string) => {
-    const methods = await getMethodsForProtocol(protocol);
+  const resolveConnectMethod = async (protocol: string, assetId: string) => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const preferred = userInfoStore.getConnectionPreferenceForProtocol(protocol)?.connectMethod || "";
 
     if (isConnectMethodAvailable(preferred, methods, protocol, settingManager.appConfig.value)) {
@@ -841,6 +856,8 @@ export const useAssetAction = () => {
       accountId?: string;
       manualUsername?: string;
       manualPassword?: string;
+      hostedSecret?: string;
+      inputSecretType?: string;
       personalCredentialId?: string;
       personalCredentialVersion?: number;
       personalCredentialSecretType?: string;
@@ -870,9 +887,14 @@ export const useAssetAction = () => {
 
     // 根据展示选择反查账号对象（name/username/alias 任意匹配）
     const _accounts = accounts || [];
-    const matchedAccount = _accounts.find(
-      (a) => a.username === selected || a.alias === selected || a.name === selected
-    );
+    const matchedAccount =
+      _accounts.find((account) => account.id === ephemeral?.accountId) ||
+      (selected === saved?.username ? _accounts.find((account) => account.id === saved?.accountId) : undefined) ||
+      _accounts.find(
+        (account) => account.username === selected || account.alias === selected || account.name === selected
+      );
+    const protocol = protocolOverride || displayProtocol;
+    const hostedNeedsInput = needsInputSecret(matchedAccount);
 
     if (effectiveMode === "manual" || selected === "@INPUT" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
@@ -884,19 +906,17 @@ export const useAssetAction = () => {
       selected?.includes("同名账号") ||
       selected?.includes("Dynamic user")
     ) {
-      // 同名账号仅需传递密码
+      // 同名账号由服务端解析用户名，凭据支持密码或私钥。
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
       input_username = "";
       input_secret = "";
     } else {
-      // 托管账号：account 用 ID，input_username 用展示账号名
-      input_username = selected || matchedAccount?.username || "";
-      input_secret = "";
+      // 托管账号：account 用 ID，无保存凭据时提交本次输入的密码或私钥。
+      input_username = matchedAccount?.username || selected || "";
+      input_secret = hostedNeedsInput ? ephemeral?.hostedSecret || "" : "";
     }
-
-    const protocol = protocolOverride || displayProtocol;
 
     const accountForToken = (() => {
       if (
@@ -926,7 +946,7 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const methods = await getMethodsForProtocol(protocol);
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const connectMethod =
       pickConnectMethod(
         protocol,
@@ -934,22 +954,9 @@ export const useAssetAction = () => {
         ephemeral?.connectMethod?.trim() || "",
         saved?.protocol === protocol ? saved?.connectMethod?.trim() || "" : "",
         settingManager.appConfig.value
-      ) || (await resolveConnectMethod(protocol));
+      ) || (await resolveConnectMethod(protocol, assetId));
 
     if (ephemeral?.tabId && !ephemeral.downloadRdp) setSessionConnectMethod(ephemeral.tabId, connectMethod);
-
-    // Every successful attempt updates the lightweight last-used preference.
-    // It must not turn into an auto-connect record unless the user checked
-    // "remember selection" (that record is managed by useAssetConnection).
-    if (!ephemeral?.downloadRdp && !ephemeral?.admin)
-      userInfoStore.setConnectionPreferenceForAsset(assetId, {
-        protocol,
-        username: selected || user,
-        accountId:
-          effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
-        accountMode: effectiveMode,
-        connectMethod
-      });
 
     const mergedConnectOptions = {
       ...generateConnectOptions(),
@@ -966,7 +973,9 @@ export const useAssetAction = () => {
 
     const isManual = accountForToken === "@INPUT";
     const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;
-    const savedPersonalCredentialMatchesProtocol = saved?.protocol?.toLowerCase() === protocol.toLowerCase();
+    const savedPersonalCredentialMatchesProtocol =
+      saved?.protocol?.toLowerCase() === protocol.toLowerCase() &&
+      (isManual ? saved?.accountMode === "manual" : saved?.accountId === accountForToken);
     const personalCredentialId = hasEphemeralPersonalCredential
       ? ephemeral?.personalCredentialId
       : savedPersonalCredentialMatchesProtocol
@@ -978,27 +987,51 @@ export const useAssetAction = () => {
         ? saved?.personalCredentialVersion
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
-    const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
+    const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
+    const canUsePersonalCredential = isManual || (requiresHostedSecret && supportsPersonalCredential(matchedAccount));
+    const useSavedPersonalCredential = canUsePersonalCredential && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       protocol,
-      personalCredentialId
-        ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
+      ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
     );
+    const inputSecretType = ["ssh", "sftp"].includes(protocol.toLowerCase())
+      ? ephemeral?.inputSecretType === "ssh_key"
+        ? "ssh_key"
+        : "password"
+      : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
+    if (requiresHostedSecret && !useSavedPersonalCredential && !input_secret) {
+      const error = new Error(t("ConnectError.SecretRequired"));
+      if (ephemeral?.onSessionError) ephemeral.onSessionError(error);
+      else addErrorToast({ title: t("ConnectError.ConnectFailed"), description: error.message });
+      return;
+    }
+    // Only a valid attempt can update the last-used selection. The secret stays in this request.
+    if (!ephemeral?.downloadRdp && !ephemeral?.admin)
+      userInfoStore.setConnectionPreferenceForAsset(assetId, {
+        protocol,
+        username: selected || user,
+        accountId:
+          effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
+        accountMode: effectiveMode,
+        connectMethod
+      });
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
       ...(!useSavedPersonalCredential ? { input_username, input_secret } : {}),
-      ...(isManual && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
-      ...(isManual && savePersonalCredential
+      ...(isManual && !useSavedPersonalCredential ? { input_secret_type: personalCredentialSecretType } : {}),
+      ...(canUsePersonalCredential && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
+      ...(canUsePersonalCredential && savePersonalCredential
         ? {
             save_personal_credential: true,
-            input_secret_type: personalCredentialSecretType,
             ...(personalCredentialVersion !== undefined
               ? { personal_credential_version: personalCredentialVersion }
               : {})
           }
+        : {}),
+      ...((requiresHostedSecret && !useSavedPersonalCredential) || accountForToken === "@USER"
+        ? { input_secret_type: inputSecretType }
         : {}),
       account: accountForToken,
       connect_method: connectMethod,
@@ -1053,6 +1086,32 @@ export const useAssetAction = () => {
       onSessionError: ephemeral?.onSessionError,
       admin: ephemeral?.admin
     });
+  };
+
+  const handleWebClientProtocolPayload = async (payload: { protocol?: unknown; asset?: { id?: unknown } }) => {
+    const protocol = String(payload.protocol || "").toLowerCase();
+    const assetId = typeof payload.asset?.id === "string" ? payload.asset.id.trim() : "";
+    if (!["http", "https"].includes(protocol) || !assetId) throw new Error("Invalid web client protocol payload");
+
+    const currentOrgId = userInfoStore.currentUser?.org?.id || "";
+    const detail = await getAssetDetailRequest(assetId, currentOrgId);
+    const asset = {
+      ...transformAssetDetail(assetId, detail),
+      org_id: detail.org_id || currentOrgId
+    };
+    await handleAssetConnection(
+      displayUser(assetId, asset.permedAccounts),
+      assetId,
+      protocol,
+      asset.permedAccounts,
+      undefined,
+      {
+        accountMode: "hosted",
+        connectMethod: WEB_PROXY_NATIVE_VALUE,
+        orgId: asset.org_id,
+        asset
+      }
+    );
   };
 
   /**
@@ -1146,9 +1205,7 @@ export const useAssetAction = () => {
     getAssetDetailRequest(assetId)
       .then((assetDetail) => {
         const permedAccounts = assetDetail.permed_accounts ?? [];
-        const permedProtocols = (assetDetail.permed_protocols ?? []).filter(
-          (protocol: PermedProtocol) => protocol?.name !== "winrm"
-        );
+        const permedProtocols = assetDetail.permed_protocols ?? [];
 
         useEventBus().emit("assetDetailUpdated", {
           assetId,
@@ -1186,35 +1243,6 @@ export const useAssetAction = () => {
         if (payload.status === 201) {
           connectToken.value = payload.data.id;
         }
-      });
-
-      unlistenGetTokenFailure = await desktopListen("get-token-failure", (event) => {
-        interface eventPayload {
-          status: number;
-          data: string;
-        }
-
-        const payload = event.payload as eventPayload;
-        const errorData = JSON.parse(payload.data);
-        const errorCode = errorData?.code as string;
-
-        if (errorCode && errorCode.includes("acl")) {
-          return addErrorToast({
-            title: t("ConnectError.ConnectFailed"),
-            description: t("ConnectError.AclFailed"),
-            icon: "line-md:close-circle",
-            progress: true,
-            duration: 4000
-          });
-        }
-
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: errorData.detail,
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
       });
 
       unlistenPullUpFailure = await desktopListen("pull-up-failure", (event) => {
@@ -1288,17 +1316,9 @@ export const useAssetAction = () => {
         }
 
         const meta = pendingBuiltinSessions.shift();
-        if (meta?.onSessionError) meta.onSessionError(event.payload);
-        else if (meta) markSessionFailed(meta);
-
         const payload = event.payload as eventPayload;
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: payload.data || t("ConnectError.ConnectFailed"),
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
+        if (meta?.onSessionError) meta.onSessionError(event.payload);
+        else if (meta) markSessionFailed(meta, payload.data || t("ConnectError.ConnectFailed"));
       });
 
       desktopListenersInitialized = true;
@@ -1326,6 +1346,7 @@ export const useAssetAction = () => {
     handleAssetRename,
     handleAssetFavorite,
     handleAssetUnfavorite,
-    handleAssetConnection
+    handleAssetConnection,
+    handleWebClientProtocolPayload
   };
 };

@@ -19,6 +19,7 @@ describe("connection token reuse helpers", () => {
   it("treats database guide protocols as the Magnus help-text surface", () => {
     expect(isDatabaseGuideProtocol("MySQL")).toBe(true);
     expect(isDatabaseGuideProtocol("mongodb")).toBe(true);
+    expect(isDatabaseGuideProtocol("dameng")).toBe(true);
     expect(isDatabaseGuideProtocol("ssh")).toBe(false);
   });
 

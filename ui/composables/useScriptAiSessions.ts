@@ -41,6 +41,8 @@ export const SCRIPT_AI_MODULES = [
   "oracle"
 ] as const;
 
+const SCRIPT_AI_MAX_CONTENT_LENGTH = 32 * 1024;
+
 export type ScriptAiModule = (typeof SCRIPT_AI_MODULES)[number];
 export type ScriptAiEventData = Record<string, any>;
 export type ScriptAiChatMessage = UIMessage<ScriptAiEventData, Record<string, ScriptAiEventData>>;
@@ -328,7 +330,7 @@ export function scriptAiManifest(resourceSessionId: string, snapshot: ScriptAiSn
             content: {
               type: "string",
               minLength: 1,
-              maxLength: 8192,
+              maxLength: SCRIPT_AI_MAX_CONTENT_LENGTH,
               description: "Complete replacement content for the proposed script draft"
             },
             name: { type: "string", minLength: 1, maxLength: 128, description: "Proposed script name" },
@@ -419,7 +421,8 @@ export function normalizeScriptAiProposal(
     return { error: "The script changed after it was read; read_script must be called again" };
   }
   const content = String(value.content ?? "");
-  if (!content.trim() || content.length > 8192) return { error: "Proposed script content is invalid" };
+  if (!content.trim() || content.length > SCRIPT_AI_MAX_CONTENT_LENGTH)
+    return { error: "Proposed script content is invalid" };
   const module = String(value.module || "");
   if (!SCRIPT_AI_MODULES.includes(module as ScriptAiModule)) return { error: "Proposed script module is invalid" };
   const name = boundedString(value.name, 128).trim();

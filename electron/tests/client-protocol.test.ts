@@ -9,10 +9,47 @@ import test from "node:test";
 import ts from "typescript";
 import {
   CLIENT_AUTH_CALLBACK,
+  decodeClientProtocolPayload,
   findClientProtocolUrl,
+  isWebAssetClientProtocolPayload,
   normalizeClientProtocolUrl,
   registerClientProtocol
 } from "../src/shared/client-protocol.ts";
+
+function loadTestDependency(require: NodeJS.Require, name: string) {
+  switch (name) {
+    case "../../../ui/utils/apiError":
+      return require("../../../ui/utils/apiError");
+    case "../package.json":
+      return require("../package.json");
+    case "../shared/client-protocol":
+      return require("../shared/client-protocol");
+    case "../shared/debug-log":
+      return require("../shared/debug-log");
+    case "../shared/url":
+      return require("../shared/url");
+    case "./oauth-callback":
+      return require("./oauth-callback");
+    case "./compatibility":
+      return require("./compatibility");
+    case "./shared/product-name":
+      return require("./shared/product-name");
+    case "node:child_process":
+      return require("node:child_process");
+    case "node:crypto":
+      return require("node:crypto");
+    case "node:events":
+      return require("node:events");
+    case "node:fs/promises":
+      return require("node:fs/promises");
+    case "node:http":
+      return require("node:http");
+    case "node:path":
+      return require("node:path");
+    default:
+      throw new Error(`Unexpected test dependency: ${name}`);
+  }
+}
 
 // Execute the real entry/service code with Electron replaced; no desktop or OS
 // registration is touched by these Windows lifecycle checks on other platforms.
@@ -25,7 +62,8 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
   const exports: Record<string, any> = {};
   runInNewContext(output.outputText, {
     exports,
-    require: (name: string) => (Object.hasOwn(replacements, name) ? replacements[name] : require(name)),
+    require: (name: string) =>
+      Object.hasOwn(replacements, name) ? replacements[name] : loadTestDependency(require, name),
     process: runtime,
     console,
     Buffer,
@@ -141,6 +179,20 @@ test("extracts Windows cold-start and forwarded URLs without changing their payl
   assert.equal(normalizeClientProtocolUrl("jms2%3A%2F%2Fbad%ZZ"), undefined);
 });
 
+test("routes only HTTP and HTTPS asset payloads to the built-in web proxy", () => {
+  const encode = (payload: unknown) => `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  const http = decodeClientProtocolPayload(
+    encode({ protocol: "http", asset: { id: "asset-1" }, token: { id: "token" } })
+  );
+  const https = decodeClientProtocolPayload(encode({ protocol: "HTTPS", asset: { id: "asset-2" } }));
+  const ssh = decodeClientProtocolPayload(encode({ protocol: "ssh", asset: { id: "asset-3" } }));
+
+  assert.equal(isWebAssetClientProtocolPayload(http), true);
+  assert.equal(isWebAssetClientProtocolPayload(https), true);
+  assert.equal(isWebAssetClientProtocolPayload(ssh), false);
+  assert.equal(isWebAssetClientProtocolPayload({ protocol: "http", asset: {} }), false);
+});
+
 test("registers only jms2 and keeps the Windows development entry path as one argument", () => {
   const calls: unknown[][] = [];
   const app = {
@@ -229,7 +281,7 @@ test("protocol events arriving while the desktop loads are forwarded after initi
 });
 
 function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter) {
-  const app = { getPath: () => "/unused", isPackaged };
+  const app = { getPath: () => "/unused", getVersion: () => "5.1.0", isPackaged };
   const { DesktopAuthService } = loadWithElectronMocks("../src/auth/service.ts", {
     electron: { app, net: {}, safeStorage: {} },
     ...(createServer ? { "node:http": { createServer } } : {})
@@ -242,15 +294,31 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
     resolve: (url: string) => resolveAuthorization(url)
   };
   const service = new DesktopAuthService((_event: string, url: string) => authorized.resolve(url));
+  service.checkCompatibility = async ({ site }: { site: string }) => ({
+    status: "compatible",
+    site,
+    clientVersion: "5.1.0",
+    minCoreVersion: "5.1.0",
+    failures: []
+  });
   service.fetchSite = async () => ({ ok: true, text: async () => JSON.stringify({ client_id: "desktop" }) });
   service.persistTokens = async () => {};
-  service.buildLoginPayload = async () => ({ status: "success" });
+  service.buildLoginPayload = async () => ({
+    status: "success",
+    bearer: "test-token",
+    profile: { success: true, data: '{"id":"test-user"}' }
+  });
   return { service, authorized };
 }
 
 test("desktop API returns explicit text responses without JSON parsing", async () => {
   const { service } = authServiceFixture();
-  service.setSession({ sessionKey: "session", origin: "https://jumpserver.example", bearerToken: "token" });
+  service.sessions.set("session", {
+    sessionKey: "session",
+    origin: "https://jumpserver.example",
+    bearerToken: "token"
+  });
+  service.currentSessionKey = "session";
   service.fetchSite = async () => ({ status: 200, text: async () => "full address:s:rdp.example\r\n" });
 
   assert.equal(
@@ -326,7 +394,7 @@ test("cancelling a login rejects its later callback", async () => {
   const login = service.authLogin({ site: "https://site.example", sessionId: "account" });
   const state = new URL(await authorized.promise).searchParams.get("state");
   service.cancelAuth();
-  assert.equal(await login, null);
+  assert.equal((await login).status, "stale");
   assert.equal(service.handleCallback(`${CLIENT_AUTH_CALLBACK}?code=cancelled&state=${state}`), false);
 });
 

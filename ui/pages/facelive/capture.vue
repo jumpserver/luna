@@ -15,7 +15,7 @@ const siteUrl = computed(() => {
 </script>
 
 <template>
-  <main class="h-dvh min-h-[420px] overflow-hidden bg-default">
+  <main class="h-dvh overflow-y-auto bg-default">
     <FaceTokenCapture :token="token" :site-url="siteUrl" mode="capture" />
   </main>
 </template>
