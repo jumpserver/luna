@@ -5,7 +5,7 @@ on:
     inputs:
       version:
         description: >-
-          Version number (e.g., v4.1.2 or v5.0.0-beta8).
+          Client version or tag (e.g., v5.1.0 or client-v5.1.0-beta8).
           Versions containing beta enable Electron DevTools.
         required: true
         type: string
@@ -17,9 +17,10 @@ on:
         default: ""
         type: string
   push:
-    tags: ["v*"]
+    tags: ["client-v*"]
 
 env:
+  RELEASE_TARGET: client
   VERSION: >-
     ${{ github.event_name == 'workflow_dispatch'
     && inputs.version || github.ref_name }}
@@ -28,13 +29,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-release-${{ github.ref }}
+  group: client-release-${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   quality:
     name: validate shared application
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
 
@@ -52,23 +55,26 @@ jobs:
           go-version-file: electron/ssh-helper/go.mod
           cache-dependency-path: electron/ssh-helper/go.sum
 
+      - name: Sync client version
+        id: version
+        run: node scripts/set-version.js
+
+      - name: Validate release version handling
+        run: node --test --test-concurrency=1 scripts/set-version.test.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Validate source
-        run: pnpm lint:check
+        run: >-
+          pnpm exec oxlint ui packages electron scripts &&
+          pnpm exec eslint "{ui,packages}/**/*.vue"
 
       - name: Validate web application
         run: pnpm typecheck:web && pnpm test:web
 
       - name: Validate Electron client
         run: pnpm typecheck:electron && pnpm test:electron
-
-      - name: Validate WebLite
-        run: >-
-          pnpm weblite:test &&
-          pnpm --dir applets/weblite typecheck &&
-          pnpm weblite:build
 
   build:
     name: package ${{ matrix.name }}
@@ -219,30 +225,6 @@ jobs:
             }
           }
 
-      - name: Build WebLite installer
-        if: startsWith(matrix.os, 'windows')
-        run: pnpm weblite:package
-
-      - name: Verify WebLite MSI layout and runtime
-        if: startsWith(matrix.os, 'windows')
-        shell: pwsh
-        run: |
-          $installer = (Get-ChildItem release/weblite/*.msi -File).FullName
-          $extract = Join-Path $env:RUNNER_TEMP "weblite-msi"
-          $process = Start-Process msiexec.exe -ArgumentList "/a `"$installer`" /qn /norestart TARGETDIR=`"$extract`"" -Wait -PassThru
-          if ($process.ExitCode -ne 0) {
-            throw "WebLite MSI extraction failed: $($process.ExitCode)"
-          }
-          $executables = @(Get-ChildItem $extract -Filter weblite.exe -File -Recurse)
-          if ($executables.Count -ne 1 -or !$executables[0].FullName.EndsWith('\JumpServer\WebLite\weblite.exe')) {
-            throw "WebLite MSI must contain one executable directly in JumpServer\WebLite"
-          }
-          $env:WEBLITE_EXECUTABLE = $executables[0].FullName
-          pnpm --dir applets/weblite test:runtime
-          if ($LASTEXITCODE -ne 0) {
-            throw "WebLite MSI runtime checks failed"
-          }
-
       - name: Upload packaged artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -250,7 +232,6 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           path: |
-            release/weblite/*.msi
             release/electron/make/**/*.dmg
             release/electron/make/**/*.exe
             release/electron/make/**/*.msi
@@ -259,7 +240,7 @@ jobs:
 
   release:
     name: publish client prerelease
-    needs: build
+    needs: [quality, build]
     if: >-
       startsWith(github.ref, 'refs/tags/')
       || github.event_name == 'workflow_dispatch'
@@ -287,7 +268,8 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION }}
+          tag_name: ${{ needs.quality.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: release-assets/**/*
           fail_on_unmatched_files: true
           draft: false

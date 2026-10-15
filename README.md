@@ -37,6 +37,10 @@ Download a package for your platform from [Releases](https://github.com/jumpserv
 | Windows  | `.exe` or `.msi` for x64           |
 | Linux    | `.deb` or `.rpm` for x64 and arm64 |
 
+Desktop releases use `client-v<version>` tags; WebLite releases use `weblite-v<version>` tags.
+They are built independently from `dev`, with package names such as `JumpServer-5.1.0-Setup.exe`
+and `JumpServer-WebLite-5.1.0-x64.msi`. Web image releases continue to use `v<version>` tags.
+
 Enter your JumpServer site address and sign in. The desktop app also provides local shells, external terminal and database client launch, offline recording playback, and MP4 conversion. The FFmpeg plugin for H.264 encoding can be downloaded in Settings.
 
 Browsers can open the client through `jms2://` links. Desktop OAuth uses `jms2://auth/callback`, which must be allowed by the server's OAuth application. The legacy client's `jms://` scheme remains separate.
