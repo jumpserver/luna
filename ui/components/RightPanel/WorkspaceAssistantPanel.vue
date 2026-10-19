@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { AiContextItem, AiSelectOption, AiTimelineAction } from "./ai/types";
-import { getKokoTerminalAiSession } from "#koko/composables/terminal/useTerminalAiSessions";
+import type { AiContextItem, AiTimelineAction } from "./ai/types";
+import { getKokoTerminalAiSession, terminalExecutionMode } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useWorkspaceAssistantPanelSession } from "~/composables/useWorkspaceAssistantPanelSession";
 import {
   assertWorkspaceTerminalTaskCurrent,
@@ -40,10 +40,9 @@ const capabilities = computed(() => [
 ]);
 const available = computed(() => Boolean(session.value?.enabled && session.value.agent.state.available));
 const busy = computed(() => Boolean(session.value && isWorkspaceAssistantBusy(scopeId.value)));
+const activeTerminalTask = computed(() => session.value?.terminalTasks.find((task) => task.active));
 const running = computed(() =>
-  Boolean(
-    session.value?.taskActive || session.value?.inputLocked || session.value?.terminalTasks.some((task) => task.active)
-  )
+  Boolean(session.value?.taskActive || session.value?.inputLocked || activeTerminalTask.value)
 );
 const connection = useAiConnectionNotice(() => session.value?.agent.state, running);
 const connectionNotice = computed(() => (connection.noticeKey.value ? t(connection.noticeKey.value) : ""));
@@ -59,8 +58,25 @@ const currentTarget = computed(() =>
 );
 const approvalSession = computed(() => {
   if (selectedTarget.value === "workspace") return null;
+  if (running.value) {
+    const task = activeTerminalTask.value;
+    if (task) {
+      return task.session.connected && getKokoTerminalAiSession(task.session.paneId) === task.session
+        ? task.session
+        : null;
+    }
+    const capturedTarget = session.value?.runContext?.default_terminal_target as typeof currentTarget.value;
+    const target = terminalTargets.value.find((target) => target.target_id === capturedTarget?.target_id);
+    return target ? getKokoTerminalAiSession(target.session_id) : null;
+  }
   const paneId = currentTarget.value?.session_id || localShellPane.value?.id;
   return paneId ? getKokoTerminalAiSession(paneId) : null;
+});
+const terminalPolicy = computed(() => {
+  const current = approvalSession.value;
+  return current
+    ? terminalAiPanelDomain.describe(current, { paneId: current.paneId, surface: null, now: Date.now(), t }, [])
+    : null;
 });
 const targetOptions = computed(() => [
   { value: "auto", label: t("RightPanel.LunaAiAutomatic"), icon: "i-lucide-sparkles" },
@@ -115,7 +131,7 @@ const statusLabel = computed(() => {
 });
 const displayedTarget = computed(() =>
   running.value
-    ? session.value?.terminalTasks.find((task) => task.active)?.target ||
+    ? activeTerminalTask.value?.target ||
       (session.value?.runContext?.default_terminal_target as typeof currentTarget.value)
     : currentTarget.value
 );
@@ -146,24 +162,6 @@ const targetLabel = computed(() => {
   if (selectedTarget.value === "auto") return label || localShellPane.value?.assetName || t("RightPanel.AIContext");
   return label || t("RightPanel.LunaAiTargetChanged");
 });
-const approvalOptions = computed<AiSelectOption[]>(() => [
-  {
-    label: t("RightPanel.AIAgentApprovalAlwaysShort"),
-    description: t("RightPanel.AIAgentApprovalAlways"),
-    value: "always"
-  },
-  {
-    label: t("RightPanel.AIAgentApprovalAutoShort"),
-    description: t("RightPanel.AIAgentApprovalAuto"),
-    value: "auto"
-  },
-  {
-    label: t("RightPanel.AIAgentApprovalNeverShort"),
-    description: t("RightPanel.AIAgentApprovalNever"),
-    value: "never"
-  }
-]);
-
 function terminalAction(taskId: string, action: AiTimelineAction) {
   const task = session.value?.terminalTasks.find((item) => item.id === taskId);
   if (!task) return;
@@ -220,6 +218,14 @@ function updateApprovalMode(value: unknown) {
     current.errorCode = "policy_failed";
     current.errorText = cause instanceof Error ? cause.message : t("RightPanel.AIApprovalModeUpdateFailed");
   });
+}
+
+function updateExecutionMode(value: unknown) {
+  const current = approvalSession.value;
+  if (!current) return;
+  const mode = terminalExecutionMode(value, current);
+  if (mode === "background" && !current.backgroundExec) return;
+  current.executionMode = mode;
 }
 
 // A shortcut carries a concrete pane; resolve its current binding once before sending.
@@ -335,13 +341,14 @@ watch(
           :interrupt-label="t('RightPanel.AIInterrupt')"
           :placeholder="t('RightPanel.LunaAiPlaceholder')"
           :approval-threshold="approvalSession?.approvalMode || 'auto'"
-          execution-mode="foreground"
-          :threshold-options="approvalOptions"
-          :mode-options="[]"
+          :execution-mode="terminalPolicy?.executionMode || 'auto'"
+          :threshold-options="terminalPolicy?.thresholdOptions || []"
+          :mode-options="terminalPolicy?.modeOptions || []"
           :context-items="contextItems"
           @submit="submit"
           @interrupt="interruptWorkspaceAssistant(scopeId)"
           @update-approval-threshold="updateApprovalMode"
+          @update-execution-mode="updateExecutionMode"
         >
           <template #context>
             <USelect

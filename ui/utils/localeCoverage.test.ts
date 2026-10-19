@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import { createI18n } from "vue-i18n";
 
 import en from "../../i18n/locales/en.json";
-import fr from "../../i18n/locales/fr.json";
-import lionFr from "../lion/locales/modules/fr.json";
 import es from "../../i18n/locales/es.json";
+import fr from "../../i18n/locales/fr.json";
 import ja from "../../i18n/locales/ja.json";
 import ko from "../../i18n/locales/ko.json";
 import ptBr from "../../i18n/locales/pt_br.json";
 import ru from "../../i18n/locales/ru.json";
 import vi from "../../i18n/locales/vi.json";
+import zh from "../../i18n/locales/zh.json";
 import zhHant from "../../i18n/locales/zh_hant.json";
 import lionEn from "../lion/locales/modules/en.json";
 import lionEs from "../lion/locales/modules/es.json";
+import lionFr from "../lion/locales/modules/fr.json";
 import lionJa from "../lion/locales/modules/ja.json";
 import lionKo from "../lion/locales/modules/ko.json";
 import lionPtBr from "../lion/locales/modules/pt_br.json";
@@ -25,6 +26,18 @@ import { APIErrorType, ConvertGuacamoleError, ErrorStatusCodes, GuacamoleErrMsg 
 type Messages = Record<string, unknown>;
 
 const translatedLocales = { fr, zh_hant: zhHant, ja, pt_br: ptBr, es, ru, ko, vi };
+const unsupportedExecutionClaims: Record<string, RegExp> = {
+  en: /interact|without occupying/i,
+  fr: /interaction|interagir|sans occuper/i,
+  es: /interacci|interactuar|sin ocupar/i,
+  pt_br: /intera[çc]|interagir|sem ocupar/i,
+  ja: /操作|占有/,
+  ko: /조작|상호|점유/,
+  ru: /взаимодейств|не занимая/i,
+  vi: /tương tác|chiếm dụng/i,
+  zh: /交互|不占用/,
+  zh_hant: /互動|不占用/
+};
 const translatedLionLocales = {
   fr: lionFr,
   zh_hant: lionZhHant,
@@ -69,6 +82,19 @@ function expectLocaleCoverage(referenceMessages: Messages, messages: Messages) {
 }
 
 describe("translated locale coverage", () => {
+  it.each(Object.entries({ en, zh, ...translatedLocales }))(
+    "keeps terminal mode labels consistent and execution hints neutral in %s",
+    (locale, messages) => {
+      const panel = messages.RightPanel;
+      expect(panel.AIModePtyShort).toBe(panel.AICurrentPty);
+      expect(panel.AIModeBackgroundShort).toBe(panel.AIBackgroundExecution);
+      expect(panel.AIModePtyShort).not.toBe("PTY");
+      for (const key of ["AIModePty", "AIModeBackground", "AIProgressExecutingPty"] as const) {
+        expect(panel[key]).not.toMatch(unsupportedExecutionClaims[locale]!);
+      }
+    }
+  );
+
   it.each(Object.entries(translatedLocales))(
     "keeps every English key, placeholder and HTML tag in %s",
     (_, messages) => {
