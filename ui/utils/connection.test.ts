@@ -39,7 +39,6 @@ describe("connections requiring a one-time secret", () => {
 
   it.each([
     { ...account, username: "" },
-    { ...account, alias: "@USER" },
     { ...account, alias: "@ANON" },
     { ...account, secret_type: "ssh_certificate" }
   ])("rejects personal credentials for an ineligible account: %j", (ineligible) => {

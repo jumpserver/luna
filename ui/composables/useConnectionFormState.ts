@@ -278,7 +278,9 @@ export function useConnectionFormState() {
           (item) => item.name === account || item.username === account || item.alias === account
         )?.id;
     }
-    const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
+    const selectedAccount = asset.permedAccounts?.find((item) =>
+      accountMode === "dynamic" ? item.alias === "@USER" : item.id === accountId
+    );
     const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
     const inputSecretType =
       accountMode === "hosted" || accountMode === "dynamic"
@@ -290,13 +292,13 @@ export function useConnectionFormState() {
         : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      accountMode === "hosted" ? inputSecretType : draft.value.personalCredentialSecretType
+      accountMode === "manual" ? draft.value.personalCredentialSecretType : inputSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
         ? findMatchingPersonalCredential(
             personalCredentials.value,
-            accountMode === "hosted" ? selectedAccount?.username || "" : draft.value.manualUsername,
+            accountMode === "manual" ? draft.value.manualUsername : selectedAccount?.username || "",
             personalCredentialSecretType
           )
         : undefined;
@@ -326,7 +328,10 @@ export function useConnectionFormState() {
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
+      rememberSecret:
+        draft.value.rememberSecret &&
+        !(canUsePersonalCredential && (draft.value.personalCredentialId || draft.value.savePersonalCredential)) &&
+        !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },
