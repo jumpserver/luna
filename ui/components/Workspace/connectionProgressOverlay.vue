@@ -11,14 +11,15 @@ const props = defineProps<{
 const emit = defineEmits<{ cancel: []; edit: []; reconnect: [] }>();
 
 const { t } = useI18n();
-const { close, failFace, findScopeGroup, markFacePageReady, retryFace, submit } = useAclDialog();
+const { close, failFace, findScopeGroup, markFacePageReady, retryFace, retryPreparation, submit } = useAclDialog();
 const group = computed(() => findScopeGroup(props.paneId));
-const { description, isReview } = useAclDialogPresentation(group);
+const { description, isPreparation, isReview } = useAclDialogPresentation(group);
 const item = computed(() => group.value?.items[0]);
 const waitingFace = computed(() => ["acl_face_verify", "acl_face_online"].includes(group.value?.code || ""));
 const waiting = computed(() => {
   const current = item.value;
   if (!current || current.settled) return false;
+  if (isPreparation.value) return ["ready", "submitting", "pending"].includes(current.status);
   if (isReview.value) return ["ready", "submitting", "pending"].includes(current.status);
   if (waitingFace.value) return ["ready", "submitting", "verifying"].includes(current.status);
   return false;
@@ -32,6 +33,9 @@ const failed = computed(() => Boolean(overlayError.value));
 const detailReason = computed(() => {
   const detail = item.value?.detail;
   if (!detail) return "";
+  if (detail.startsWith("AccountProvisioning.Task:"))
+    return t("AccountProvisioning.Task", { id: detail.split(":")[1] });
+  if (detail.startsWith("AccountProvisioning.")) return t(detail);
   return detail.startsWith("AclDialog.") ? t(detail) : detail;
 });
 const copy = computed(() => overlayError.value || (waiting.value ? description.value : "") || detailReason.value);
@@ -157,6 +161,10 @@ async function editConnection() {
 }
 
 async function reconnect() {
+  if (isPreparation.value && group.value) {
+    await retryPreparation(group.value);
+    return;
+  }
   replayWipe();
   if (group.value) await close(group.value);
   emit("reconnect");
@@ -256,6 +264,7 @@ async function reconnect() {
           group?.faceUrl ? 'connection-progress-face-content' : failed ? 'mt-4' : 'absolute inset-x-0 top-full mt-4'
         "
       >
+        <UProgress v-if="isPreparation && waiting" :model-value="null" class="w-full" :aria-label="description" />
         <p
           v-if="copy"
           :key="`copy-${playId}`"
@@ -298,7 +307,7 @@ async function reconnect() {
             {{ t("ConnectionSetup.StartFaceVerify") }}
           </UButton>
           <UButton v-else-if="failed" color="warning" variant="soft" @click="reconnect">
-            {{ t("WorkspacePane.Reconnect") }}
+            {{ isPreparation ? t("AccountProvisioning.Retry") : t("WorkspacePane.Reconnect") }}
           </UButton>
         </div>
         <span v-else class="sr-only">{{ stageLabel }}</span>

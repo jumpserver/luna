@@ -20,6 +20,9 @@ export const findMatchingPersonalCredential = (
       )
     : undefined;
 
+export const isAutoPushAccount = (account?: PermedAccount | null, protocol = "") =>
+  account?.alias === "@USER" && !!account.auto_push_protocols?.some((item) => item === "all" || item === protocol);
+
 export const needsInputSecret = (account?: PermedAccount | null) =>
   account?.has_secret === false && account.alias !== "@ANON";
 
@@ -38,7 +41,14 @@ export const hasReusableSavedConnection = (asset: AssetItem) => {
 
   const mode = saved.accountMode || "hosted";
   if (mode === "manual") return !!(saved.manualUsername && saved.personalCredentialId);
-  if (mode === "dynamic") return !!saved.personalCredentialId || !!(saved.rememberSecret && saved.dynamicPassword);
+  if (mode === "dynamic") {
+    const account = asset.permedAccounts?.find((item) => item.alias === "@USER");
+    return (
+      isAutoPushAccount(account, saved.protocol) ||
+      !!saved.personalCredentialId ||
+      !!(saved.rememberSecret && saved.dynamicPassword)
+    );
+  }
 
   if (mode === "hosted" && asset.permedAccounts?.length) {
     const account =

@@ -318,6 +318,7 @@ export interface Actions {
 }
 
 export interface PermedAccount {
+  auto_push_protocols?: string[];
   alias: string;
   date_expired: string;
   has_secret: boolean;
@@ -509,6 +510,7 @@ export interface ConnectionBody {
 }
 
 export interface TokenResponse {
+  account_preparation_required?: boolean;
   code?: string;
   detail?: string;
   account: string;

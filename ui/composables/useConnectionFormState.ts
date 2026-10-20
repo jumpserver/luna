@@ -13,6 +13,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 import {
   findMatchingPersonalCredential,
+  isAutoPushAccount,
   resolvePersonalCredentialSecretType,
   supportsPersonalCredential
 } from "~/utils/connection";
@@ -281,7 +282,9 @@ export function useConnectionFormState() {
     const selectedAccount = asset.permedAccounts?.find((item) =>
       accountMode === "dynamic" ? item.alias === "@USER" : item.id === accountId
     );
-    const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
+    const autoPushAccount = isAutoPushAccount(selectedAccount, draft.value.protocol);
+    const canUsePersonalCredential =
+      !autoPushAccount && (accountMode === "manual" || supportsPersonalCredential(selectedAccount));
     const inputSecretType =
       accountMode === "hosted" || accountMode === "dynamic"
         ? ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
@@ -327,7 +330,7 @@ export function useConnectionFormState() {
         : undefined,
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
-      dynamicPassword: draft.value.dynamicPassword,
+      dynamicPassword: autoPushAccount ? "" : draft.value.dynamicPassword,
       rememberSecret:
         draft.value.rememberSecret &&
         !(canUsePersonalCredential && (draft.value.personalCredentialId || draft.value.savePersonalCredential)) &&
