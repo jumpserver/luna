@@ -9,6 +9,7 @@ import { useKokoTerminalSocket } from "#koko/composables/terminal/useTerminalSoc
 import { useKokoHostAdapter } from "#koko/host";
 
 const showSearchInput = ref(false);
+const searchInputRef = useTemplateRef<InstanceType<typeof KokoSearchInput>>("searchInput");
 const { t } = useI18n();
 const host = useKokoHostAdapter();
 const sessionContext = inject(connectorSessionKey, null);
@@ -84,6 +85,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => [
 
 onMittEvent(TerminalMittEvent.OpenSearch, () => {
   showSearchInput.value = true;
+  nextTick(() => searchInputRef.value?.focus());
 });
 
 const onUploadChange = (event: Event) => {
@@ -93,7 +95,12 @@ const onUploadChange = (event: Event) => {
 </script>
 
 <template>
-  <KokoSearchInput v-if="showSearchInput && searchAddon" :search-addon="searchAddon" @close="showSearchInput = false" />
+  <KokoSearchInput
+    v-if="showSearchInput && searchAddon"
+    ref="searchInput"
+    :search-addon="searchAddon"
+    @close="showSearchInput = false"
+  />
 
   <UModal
     v-model:open="uploadOpen"
