@@ -440,8 +440,9 @@ export const useAssetAction = () => {
     const saved = userInfoStore.getConnectionInfoForAsset(resolvedAssetId);
     if (!saved || saved.protocol !== body.protocol) return;
     if (saved.accountMode === "manual" && body.account !== "@INPUT") return;
+    if (saved.accountMode === "dynamic" && body.account !== "@USER") return;
     if (saved.accountMode === "hosted" && saved.accountId !== body.account) return;
-    if (!["manual", "hosted"].includes(saved.accountMode || "")) return;
+    if (!["manual", "dynamic", "hosted"].includes(saved.accountMode || "")) return;
 
     userInfoStore.setConnectionInfoForAsset(resolvedAssetId, {
       ...saved,
@@ -449,6 +450,7 @@ export const useAssetAction = () => {
       personalCredentialId: token.personal_credential_id,
       personalCredentialVersion: body.save_personal_credential ? undefined : saved.personalCredentialVersion,
       personalCredentialSecretType: body.input_secret_type || saved.personalCredentialSecretType || "password",
+      dynamicPassword: "",
       rememberSecret: false
     });
   };
@@ -975,7 +977,11 @@ export const useAssetAction = () => {
     const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;
     const savedPersonalCredentialMatchesProtocol =
       saved?.protocol?.toLowerCase() === protocol.toLowerCase() &&
-      (isManual ? saved?.accountMode === "manual" : saved?.accountId === accountForToken);
+      (isManual
+        ? saved?.accountMode === "manual"
+        : accountForToken === "@USER"
+          ? saved?.accountMode === "dynamic"
+          : saved?.accountId === accountForToken);
     const personalCredentialId = hasEphemeralPersonalCredential
       ? ephemeral?.personalCredentialId
       : savedPersonalCredentialMatchesProtocol
@@ -988,7 +994,8 @@ export const useAssetAction = () => {
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
-    const canUsePersonalCredential = isManual || (requiresHostedSecret && supportsPersonalCredential(matchedAccount));
+    const canUsePersonalCredential =
+      isManual || accountForToken === "@USER" || (requiresHostedSecret && supportsPersonalCredential(matchedAccount));
     const useSavedPersonalCredential = canUsePersonalCredential && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(

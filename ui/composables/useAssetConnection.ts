@@ -111,6 +111,7 @@ export function useAssetConnection() {
     const canUsePersonalCredential =
       protocol === connectionInfo.protocol &&
       ((accountMode === "manual" && connectionInfo.accountMode === "manual") ||
+        (accountMode === "dynamic" && connectionInfo.accountMode === "dynamic") ||
         (sameHostedAccount && supportsPersonalCredential(accounts.find((item) => item.id === accountId))));
 
     return {

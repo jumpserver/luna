@@ -26,6 +26,7 @@ export const needsInputSecret = (account?: PermedAccount | null) =>
 export const supportsPersonalCredential = (account?: PermedAccount | null) =>
   !!account &&
   (account.alias === "@INPUT" ||
+    account.alias === "@USER" ||
     (!account.alias.startsWith("@") &&
       needsInputSecret(account) &&
       !!account.username?.trim() &&
@@ -37,7 +38,7 @@ export const hasReusableSavedConnection = (asset: AssetItem) => {
 
   const mode = saved.accountMode || "hosted";
   if (mode === "manual") return !!(saved.manualUsername && saved.personalCredentialId);
-  if (mode === "dynamic") return !!(saved.rememberSecret && saved.dynamicPassword);
+  if (mode === "dynamic") return !!saved.personalCredentialId || !!(saved.rememberSecret && saved.dynamicPassword);
 
   if (mode === "hosted" && asset.permedAccounts?.length) {
     const account =
