@@ -12,6 +12,7 @@ export function getGuideConnectCommand(input: {
   port: string;
   database: string;
   redisAuth?: string;
+  useSysDBA?: boolean;
 }) {
   const { protocol, id, secret, host, port, database } = input;
 
@@ -27,7 +28,7 @@ export function getGuideConnectCommand(input: {
     case "redis":
       return `redis-cli -h ${host} -p ${port} -a ${input.redisAuth || ""}`;
     case "oracle":
-      return `sqlplus ${id}/${secret}@${host}:${port}/${id}`;
+      return `sqlplus ${id}/${secret}@${host}:${port}/${id}${input.useSysDBA ? " as sysdba" : ""}`;
     case "dameng":
       return `disql ${id}/${secret}@${host}:${port}`;
     case "sqlserver":

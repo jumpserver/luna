@@ -28,6 +28,7 @@ function mountGuide(
     detail?: Record<string, unknown>;
     error?: Error;
     orgId?: string;
+    connectOptions?: { use_sysdba?: boolean };
   } = {}
 ) {
   const token = {
@@ -37,7 +38,8 @@ function mountGuide(
     asset: { id: "asset-id", name: "MongoDB", ...options.asset },
     org_id: options.orgId,
     account: options.account || "account",
-    input_username: options.inputUsername || ""
+    input_username: options.inputUsername || "",
+    connect_options: options.connectOptions
   };
   const getAssetDetailRequest = options.error
     ? vi.fn().mockRejectedValue(options.error)
@@ -213,4 +215,13 @@ it("keeps manually entered VNC connections token-only", async () => {
   expect(state.commands.value.map((command) => command.value)).toEqual([
     "vncviewer -UserName=token-id gateway.example.com:5900"
   ]);
+});
+
+
+it.each([false, true])("uses the token SYSDBA role in the displayed Oracle command (%s)", async (use_sysdba) => {
+  const { state } = mountGuide({ protocol: "oracle", connectOptions: { use_sysdba } });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.commands.value[0].value).toBe(
+    `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
+  );
 });
