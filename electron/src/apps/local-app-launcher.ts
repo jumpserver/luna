@@ -142,6 +142,29 @@ function appleScriptString(value) {
   return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+// Reuse the current iTerm2 window when one exists so a connection opens as a tab;
+// only create a window on cold start, then write the command into its first tab.
+function iterm2Script(applicationId, command) {
+  return `tell application id "${applicationId}"
+  activate
+  if (count of windows) > 0 then
+    tell current window
+      set targetTab to create tab with default profile
+    end tell
+  else
+    create window with default profile
+    tell current window
+      set targetTab to current tab
+    end tell
+  end if
+  tell targetTab
+    tell current session
+      write text "${command}"
+    end tell
+  end tell
+end tell`;
+}
+
 async function isFile(candidate) {
   try {
     return (await stat(candidate)).isFile();
@@ -216,7 +239,7 @@ export class LocalApplicationLauncher {
       const escapedCommand = appleScriptString(command);
       const script =
         application.launch_driver === "iterm2"
-          ? `tell application id "${applicationId}"\nactivate\nset targetWindow to (create window with default profile)\ntell current session of targetWindow to write text "${escapedCommand}"\nend tell`
+          ? iterm2Script(applicationId, escapedCommand)
           : `tell application id "${applicationId}"\nactivate\ndo script "${escapedCommand}"\nend tell`;
       return spawnDetached("osascript", ["-s", "h", "-e", script], {}, true);
     }
