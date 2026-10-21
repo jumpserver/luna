@@ -166,6 +166,40 @@ test("macOS protocol launch waits for the terminal handoff and rejects failed Ap
   await rejected;
 });
 
+test("macOS iTerm2 opens a new tab when a window exists and a window on cold start", async () => {
+  const child = Object.assign(new EventEmitter(), { unref() {} });
+  let script = "";
+  const { LocalApplicationLauncher } = loadWithElectronMocks(
+    "../src/apps/local-app-launcher.ts",
+    {
+      "node:child_process": {
+        spawn: (_executable: string, args: string[]) => {
+          script = args[3];
+          return child;
+        }
+      }
+    },
+    { platform: "darwin", env: {} } as NodeJS.Process
+  );
+  const launcher = new LocalApplicationLauncher({}, "", null, null);
+  const launch = launcher.launchTerminal(
+    { application_id: "com.googlecode.iterm2", launch_driver: "iterm2" },
+    'ssh -t "user@host"',
+    false
+  );
+  child.emit("spawn");
+  child.emit("exit", 0, null);
+  await launch;
+
+  assert.match(script, /if \(count of windows\) > 0 then/);
+  assert.match(script, /set targetTab to create tab with default profile/);
+  assert.match(script, /create window with default profile/);
+  assert.match(script, /set targetTab to current tab/);
+  assert.match(script, /tell targetTab/);
+  assert.ok(script.includes('write text "ssh -t \\"user@host\\""'));
+  assert.doesNotMatch(script, /set targetWindow to \(create window with default profile\)/);
+});
+
 test("extracts Windows cold-start and forwarded URLs without changing their payload", () => {
   const url = `${CLIENT_AUTH_CALLBACK}?code=a%2Bb&state=xyz`;
   assert.equal(CLIENT_AUTH_CALLBACK, "jms2://auth/callback");
