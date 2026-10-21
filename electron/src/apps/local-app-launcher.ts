@@ -350,9 +350,15 @@ export class LocalApplicationLauncher {
     if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (application.launch_type === "url") return this.electronShell.openExternal(argumentString);
     if (["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
+      const command =
+        payload.protocol === "oracle" &&
+        payload.connect_options?.use_sysdba === true &&
+        !/\bas\s+sysdba\s*$/i.test(argumentString)
+          ? `${argumentString} as sysdba`
+          : argumentString;
       return this.launchTerminal(
         application,
-        argumentString,
+        command,
         application.use_ssh_helper && !String(template).includes("{helper}")
       );
     }

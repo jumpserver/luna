@@ -65,3 +65,17 @@ describe("connection guide CLI", () => {
     ).toBe("redis-cli -h gateway.example.com -p 6379 -a token-id@s3cret");
   });
 });
+
+
+describe("Oracle connection guide role", () => {
+  it.each([undefined, false, true])("uses the effective SYSDBA option (%s)", (useSysDBA) => {
+    expect(getGuideConnectCommand({ ...database, protocol: "oracle", useSysDBA })).toBe(
+      `sqlplus token-id/s3cret@gateway.example.com:33060/token-id${useSysDBA ? " as sysdba" : ""}`
+    );
+  });
+  it("does not add Oracle roles to other protocols", () => {
+    expect(getGuideConnectCommand({ ...database, protocol: "mysql", useSysDBA: true })).toBe(
+      "mysql -u token-id -ps3cret -h gateway.example.com -P 33060 app"
+    );
+  });
+});

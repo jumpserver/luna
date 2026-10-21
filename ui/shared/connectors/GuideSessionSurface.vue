@@ -118,7 +118,8 @@ const commands = computed(() => {
     host: host.value,
     port: port.value,
     database: database.value,
-    redisAuth: password.value
+    redisAuth: password.value,
+    useSysDBA: token.value.connect_options?.use_sysdba === true
   });
   const tokenPassword = protocol.value === "ssh" || protocol.value === "vnc";
   const items = [];
