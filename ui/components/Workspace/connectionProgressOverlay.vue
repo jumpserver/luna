@@ -26,9 +26,16 @@ const waiting = computed(() => {
 });
 const stageIndex = computed(() => ({ token: 0, session: 1, connected: 2 })[props.stage]);
 const shownIndex = ref(0);
-const overlayError = computed(() =>
-  waiting.value ? undefined : props.error || (group.value ? description.value : undefined)
-);
+const overlayError = computed(() => {
+  if (waiting.value) return undefined;
+  if (props.error) return props.error;
+  const current = item.value;
+  // Successful items remain in the group until its deferred removal.
+  // Only an explicit failure may turn the progress overlay into an error.
+  return current && !current.settled && ["failed", "rejected", "closed"].includes(current.status)
+    ? description.value
+    : undefined;
+});
 const failed = computed(() => Boolean(overlayError.value));
 const detailReason = computed(() => {
   const detail = item.value?.detail;
