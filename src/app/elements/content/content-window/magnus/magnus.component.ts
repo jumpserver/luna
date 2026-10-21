@@ -120,7 +120,8 @@ export class ElementConnectorMagnusComponent implements OnInit {
           `/${passwordHolder}` +
           `@${host}` +
           `:${this.endpoint.getPort(this.protocol)}` +
-          `/${this.token.id}`;
+          `/${this.token.id}` +
+          (this.token.connect_options?.use_sysdba ? ' as sysdba' : '');
         break;
       case 'sqlserver':
         cli = `sqlcmd` +
