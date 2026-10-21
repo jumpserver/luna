@@ -596,6 +596,62 @@ for (const platform of ["macos", "linux"]) {
   });
 }
 
+for (const platform of ["macos", "linux"]) {
+  test(`${platform}/terminal-db applies the Oracle token role through the integrated launcher`, async () => {
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.terminal-db`, "connect.json"), "utf8")
+    );
+    const application = {
+      name: "terminal-db",
+      protocol: ["oracle"],
+      is_set: true,
+      match_first: ["oracle"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: { ...config.launch.protocol_templates }
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    const command = "sqlplus token-id/secret@gateway.example.com:5525/token-id";
+    for (const useSysDBA of [undefined, false, true]) {
+      const payload = {
+        protocol: "oracle",
+        endpoint: { host: "gateway.example.com", port: 5525 },
+        token: { id: "token-id", value: "secret" },
+        asset: { info: { db_name: "ORCLCDB" } },
+        connect_options: useSysDBA === undefined ? {} : { use_sysdba: useSysDBA }
+      };
+      let launches = 0;
+      launcher.launchTerminal = async (selected, argumentString) => {
+        assert.equal(selected, application);
+        assert.equal(argumentString, `${command}${useSysDBA ? " as sysdba" : ""}`);
+        launches++;
+      };
+      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      assert.equal(launches, 1);
+    }
+    application.protocol_templates.oracle += " as sysdba";
+    launcher.launchTerminal = async (_selected, argumentString) => {
+      assert.equal(argumentString, `${command} as sysdba`);
+    };
+    const payload = {
+      protocol: "oracle",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "secret" },
+      connect_options: { use_sysdba: true }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    await launcher.launch(
+      `jms2://${Buffer.from(JSON.stringify({ ...payload, command: `${command} as sysdba` })).toString("base64")}`
+    );
+  });
+}
+
 for (const [platform, plugin, expected] of [
   ["macos", "dbeaver", "driver=mysql"],
   ["linux", "dbeaver", "driver=mysql"],
