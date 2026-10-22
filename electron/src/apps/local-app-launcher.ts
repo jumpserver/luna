@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
+import { launchNavicatSQLServer } from "./navicat-sqlserver";
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -311,6 +313,27 @@ export class LocalApplicationLauncher {
     return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
   }
 
+  async launchNavicatSQLServer(application, values) {
+    const executable = await this.resolveExecutable(application);
+    // Native dialogs belong to one desktop process. Queue our own launches so
+    // simultaneous tokens cannot populate one another's connection form.
+    const pending = (this.navicatConnectionQueue || Promise.resolve())
+      .catch(() => {})
+      .then(() =>
+        launchNavicatSQLServer({
+          executable,
+          name: `JMS_${values.name.slice(0, 48)}_${randomUUID()}`,
+          host: values.host,
+          port: values.port,
+          username: values.username,
+          password: values.value,
+          database: values.dbname
+        })
+      );
+    this.navicatConnectionQueue = pending;
+    return pending;
+  }
+
   async launch(raw) {
     const payload = decodePayload(raw);
     if (!payload.protocol || !payload.token?.id) {
@@ -333,6 +356,9 @@ export class LocalApplicationLauncher {
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
     const values = valuesFor(payload);
+    if (payload.protocol === "sqlserver" && application.plugin_id === "windows.navicat17") {
+      return this.launchNavicatSQLServer(application, values);
+    }
     if (application.launch_type === "args" && application.launch_driver === "resp") {
       return this.launchResp(application, payload, values);
     }
