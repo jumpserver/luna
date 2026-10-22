@@ -14,6 +14,97 @@ import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
+test("Windows Navicat uses its native SQL Server adapter without changing other database launches", async () => {
+  const application = {
+    name: "navicat17",
+    plugin_id: "windows.navicat17",
+    protocol: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
+    enabled_protocols: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
+    is_set: true,
+    match_first: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
+    launch_type: "args",
+    arg_format: "{url}"
+  };
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    { getConfig: async () => ({ databases: [application] }) },
+    null
+  );
+  let nativeCalls = 0;
+  let argumentCalls = 0;
+  launcher.launchNavicatSQLServer = async (selected, values) => {
+    assert.equal(selected, application);
+    assert.equal(values.username, "selector-token");
+    assert.equal(values.value, `secret with spaces * \" ' $()`);
+    assert.equal(values.dbname, "application database");
+    nativeCalls++;
+  };
+  launcher.launchExecutable = async (selected, args) => {
+    assert.equal(selected, application);
+    assert.ok(args.startsWith("navicat://conn."));
+    argumentCalls++;
+  };
+  for (const protocol of application.protocol) {
+    const payload = {
+      protocol,
+      client: "navicat17",
+      name: "SQL Server test",
+      endpoint: { host: "gateway.example.test", port: 5525 },
+      token: { id: "selector-token", value: `secret with spaces * \" ' $()` },
+      asset: { info: { db_name: "application database" } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(payload.protocol, protocol);
+  }
+  assert.equal(nativeCalls, 1);
+  assert.equal(argumentCalls, 4);
+});
+
+test("SQL Server applications other than the bundled Navicat plugin retain their argument launch", async () => {
+  for (const [name, pluginId] of [
+    ["dbeaver", "windows.dbeaver"],
+    ["ssms17", "windows.ssms17"],
+    ["navicat17", "custom.navicat17"]
+  ]) {
+    const application = {
+      name,
+      plugin_id: pluginId,
+      protocol: ["sqlserver"],
+      enabled_protocols: ["sqlserver"],
+      match_first: ["sqlserver"],
+      is_set: true,
+      launch_type: "args",
+      arg_format: "{username}|{value}|{dbname}"
+    };
+    const launcher = new LocalApplicationLauncher(
+      {},
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    launcher.launchNavicatSQLServer = async () => {
+      throw new Error("must not use the Navicat adapter");
+    };
+    let args;
+    launcher.launchExecutable = async (_selected, value) => {
+      args = value;
+    };
+    await launcher.launch(
+      `jms2://${Buffer.from(
+        JSON.stringify({
+          protocol: "sqlserver",
+          name: "Test",
+          endpoint: { host: "gateway.example.test", port: 5525 },
+          token: { id: "selector", value: "test-secret" },
+          asset: { info: { db_name: "application" } }
+        })
+      ).toString("base64")}`
+    );
+    assert.equal(args, "selector|test-secret|application");
+  }
+});
+
 test("RESP receives a private connection config through its settings directory", async (context) => {
   const appData = await mkdtemp(path.join(os.tmpdir(), "jms RESP config "));
   context.after(() => rm(appData, { recursive: true, force: true }));
@@ -25,9 +116,17 @@ test("RESP receives a private connection config through its settings directory",
     category: "databases",
     protocol: "redis",
     name: "resp",
+    pluginId: undefined,
     path: process.execPath
   });
-  await service.updateSelection({ category: "databases", protocol: "redis", name: "resp", makeDefault: true });
+  await service.updateSelection({
+    category: "databases",
+    protocol: "redis",
+    name: "resp",
+    pluginId: undefined,
+    path: undefined,
+    makeDefault: true
+  });
   const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
   const payload = {
     protocol: "redis",
