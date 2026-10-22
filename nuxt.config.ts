@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
@@ -286,6 +287,15 @@ export default defineNuxtConfig({
     }
   },
   hooks: {
+    ready() {
+      execFileSync(
+        process.execPath,
+        [fileURLToPath(new URL("./packages/guacamole/scripts/build.mjs", import.meta.url))],
+        {
+          stdio: "inherit"
+        }
+      );
+    },
     "build:manifest": function (manifest) {
       for (const item of Object.values(manifest)) {
         if (!item || typeof item !== "object") continue;

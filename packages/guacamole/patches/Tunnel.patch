@@ -1,0 +1,208 @@
+--- a/modules/Tunnel.js
++++ b/modules/Tunnel.js
+@@ -1287,76 +1287,149 @@
+         // Do nothing
+     };
+ 
++    // JumpServer: retain local dumps, raw gzip, and cancellation/error handling.
+     this.connect = function connect(data) {
+-
+-        // Ensure any existing connection is killed
+         tunnel.disconnect();
+ 
+-        // Connection is now starting
++        var controller = new AbortController();
++        abortController = controller;
++        var signal = controller.signal;
++        var reader = null;
++        var parser = new Guacamole.Parser();
++        var decoder = new TextDecoder("utf-8");
++
+         tunnel.setState(Guacamole.Tunnel.State.CONNECTING);
+-
+-        // Create Guacamole protocol and UTF-8 parsers specifically for this
+-        // connection
+-        var parser = new Guacamole.Parser();
+-        var utf8Parser = new Guacamole.UTF8Parser();
+-
+-        // Invoke tunnel's oninstruction handler for each parsed instruction
++        if (signal.aborted)
++            return;
+         parser.oninstruction = function instructionReceived(opcode, args) {
+-            if (tunnel.oninstruction)
++            if (!signal.aborted && tunnel.oninstruction)
+                 tunnel.oninstruction(opcode, args);
+         };
+ 
+-        // Allow new request to be aborted
+-        abortController = new AbortController();
+-
+-        // Stream using the Fetch API
+-        fetch(url, {
+-            headers : extraHeaders,
+-            credentials : crossDomain ? 'include' : 'same-origin',
+-            signal : abortController.signal
+-        })
+-        .then(function gotResponse(response) {
+-
+-            // Reset state and close upon error
+-            if (!response.ok) {
+-
++        signal.addEventListener("abort", function cancelReader() {
++            if (reader)
++                reader.cancel().catch(function ignoreCancellation() {});
++        }, { once: true });
++
++        var close = function close() {
++            // An old request must never close a replacement connection.
++            if (abortController === controller)
++                tunnel.disconnect();
++        };
++
++        var fail = function fail(error) {
++            if (signal.aborted)
++                return;
++            var status = error instanceof Guacamole.Status ? error : new Guacamole.Status(
++                Guacamole.Status.Code.SERVER_ERROR,
++                error && error.message ? error.message : String(error)
++            );
++            try {
+                 if (tunnel.onerror)
+-                    tunnel.onerror(new Guacamole.Status(
+-                        Guacamole.Status.Code.fromHTTPCode(response.status), response.statusText));
+-
+-                tunnel.disconnect();
++                    tunnel.onerror(status);
++            }
++            finally {
++                close();
++            }
++        };
++
++        // Offline callers already have the decoded Guacamole protocol text.
++        if (!url) {
++            try {
++                tunnel.setState(Guacamole.Tunnel.State.OPEN);
++                if (data && !signal.aborted)
++                    parser.receive(data);
++                close();
++            }
++            catch (error) {
++                fail(error);
++            }
++            return;
++        }
++
++        var streamRecording = async function streamRecording() {
++            var response = await fetch(url, {
++                headers: extraHeaders,
++                credentials: crossDomain ? "include" : "same-origin",
++                signal: signal
++            });
++            if (signal.aborted)
+                 return;
+-
+-            }
+-
+-            // Report overall size of stream in bytes, if known
+-            tunnel.size = response.headers.get('Content-Length');
+-
+-            // Connection is open
++            if (!response.ok)
++                throw new Guacamole.Status(
++                    Guacamole.Status.Code.fromHTTPCode(response.status), response.statusText
++                );
++
++            tunnel.size = response.headers.get("Content-Length");
+             tunnel.setState(Guacamole.Tunnel.State.OPEN);
+-
+-            var reader = response.body.getReader();
+-            var processReceivedText = function processReceivedText(result) {
+-
+-                // Clean up and close when done
++            if (signal.aborted)
++                return;
++            if (!response.body) {
++                close();
++                return;
++            }
++
++            reader = response.body.getReader();
++            var firstChunks = [];
++            var prefix = [];
++
++            // The gzip signature may be split across network chunks. Sniff the
++            // actual body: HTTP Content-Encoding may already have been decoded.
++            while (prefix.length < 2) {
++                var first = await reader.read();
++                if (signal.aborted)
++                    return;
++                if (first.done)
++                    break;
++                if (first.value.length) {
++                    firstChunks.push(first.value);
++                    for (var i = 0; i < first.value.length && prefix.length < 2; i++)
++                        prefix.push(first.value[i]);
++                }
++            }
++
++            if (prefix[0] === 0x1f && prefix[1] === 0x8b) {
++                var sourceReader = reader;
++                var compressed = new ReadableStream({
++                    pull: async function pull(streamController) {
++                        if (firstChunks.length) {
++                            streamController.enqueue(firstChunks.shift());
++                            return;
++                        }
++                        var chunk = await sourceReader.read();
++                        if (chunk.done)
++                            streamController.close();
++                        else
++                            streamController.enqueue(chunk.value);
++                    },
++                    cancel: function cancel(reason) {
++                        return sourceReader.cancel(reason);
++                    }
++                });
++                reader = compressed.pipeThrough(new DecompressionStream("gzip")).getReader();
++            }
++            else {
++                firstChunks.forEach(function feedFirst(chunk) {
++                    if (!signal.aborted)
++                        parser.receive(decoder.decode(chunk, { stream: true }));
++                });
++                firstChunks = [];
++            }
++
++            while (!signal.aborted) {
++                var result = await reader.read();
++                if (signal.aborted)
++                    return;
+                 if (result.done) {
+-                    tunnel.disconnect();
++                    parser.receive(decoder.decode());
++                    close();
+                     return;
+                 }
+-
+-                // Parse only the portion of data which is newly received
+-                parser.receive(utf8Parser.decode(result.value));
+-
+-                // Continue parsing when next chunk is received
+-                reader.read().then(processReceivedText);
+-
+-            };
+-
+-            // Schedule parse of first chunk
+-            reader.read().then(processReceivedText);
+-
+-        });
+-
++                parser.receive(decoder.decode(result.value, { stream: true }));
++            }
++        };
++
++        streamRecording().catch(fail);
+     };
+ 
+     this.disconnect = function disconnect() {

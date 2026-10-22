@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "generatedSha256": "02f8ff18e4700eeedfa4818bfb25bf6d29740c9733addf663b4cdf91cf88b25d",
+  "upstream": {
+    "repository": "https://github.com/apache/guacamole-client",
+    "release": "1.5.5",
+    "commit": "df6f9f335842db3c8156146196fafc4f2a14e410",
+    "sourceRoot": "guacamole-common-js/src/main/webapp",
+    "artifact": {
+      "url": "https://repo.maven.apache.org/maven2/org/apache/guacamole/guacamole-common-js/1.5.5/guacamole-common-js-1.5.5.zip",
+      "sha256": "ca6c921f162ce1bcbe4a5e45b0bc592983ffbda032f543078b900eaf4a811e00",
+      "allJsSha256": "d174d60af4952c3f6627d301f28cfd5db36615b1a8166a646c3666e9e5293d14"
+    }
+  },
+  "sources": [
+    {
+      "path": "common/license.js",
+      "sha256": "5a46a010b083e9a5d7cbf535785625ab55fabc04c99e3b8e5af888e14b149d3e",
+      "gitBlob": "042f3ce1f396680d43f30fb524121bcd4a50ff23"
+    },
+    {
+      "path": "modules/ArrayBufferReader.js",
+      "sha256": "3bd599280913886fe49a6c8d9a5cae1558c9bd2eb394f2d3fc637884fee0d745",
+      "gitBlob": "2d542a6dd8031b65df6173e13595ad479ec288ef"
+    },
+    {
+      "path": "modules/ArrayBufferWriter.js",
+      "sha256": "379578c2a037d964f2876760871a41e4037c9169e1cfa2fc30faa433a0bdc0b3",
+      "gitBlob": "2aada142c7f29fcb32aecfc99dff69c4aae0347a"
+    },
+    {
+      "path": "modules/AudioContextFactory.js",
+      "sha256": "255faf492f45e55028840c4bd812fad8bd064916365d6482c01726f0632e8145",
+      "gitBlob": "f39ea35d9772d5bacffd81698dc8db1cf9a407f2"
+    },
+    {
+      "path": "modules/AudioPlayer.js",
+      "sha256": "05e862d3487ea03593374176d23b24baef0d374b9d165b0620da9dc3ea9017e7",
+      "gitBlob": "af8d279e392a5c8fb91c80c27561c5dd4f09350b"
+    },
+    {
+      "path": "modules/AudioRecorder.js",
+      "sha256": "8ecd121acbe88cee46e9094036ff662ae1da37c57d3af7c73b59a662e532cf21",
+      "gitBlob": "89d2dbe712aa9827be15824572c7e18cd6aa2439"
+    },
+    {
+      "path": "modules/BlobReader.js",
+      "sha256": "0fc23dc73b3c7a425c5cf7c5d1881ebfa7a95430e0f593fbbd8754f09c367c3d",
+      "gitBlob": "03a2e32f1d2d241916cf89b1912f024401598619"
+    },
+    {
+      "path": "modules/BlobWriter.js",
+      "sha256": "612d853123afc69022df3e5f39cc36b6d94f55dacffdf6512208c157ba49bdc6",
+      "gitBlob": "177f705ff0dee90c9ba0c50c6c13c8a2c616739c"
+    },
+    {
+      "path": "modules/Client.js",
+      "sha256": "ff86a9011297db589d876c54d7f6882af8c99c90f70345fecfea18b32ddf4262",
+      "gitBlob": "56fe4341becbb1fcc8d67d0456823311e75b353c"
+    },
+    {
+      "path": "modules/DataURIReader.js",
+      "sha256": "edd8b7d2f3414bd59cf25607ac4ee63e1093fa207d2e3844d9afbb3626ca01f5",
+      "gitBlob": "e95f79a317af2aaf4c1e5f1618720786d94626ce"
+    },
+    {
+      "path": "modules/Display.js",
+      "sha256": "28dfa79f1a26c16cf33f31be037a415c2615b4a613aaff1ad14b79fd94d9121d",
+      "gitBlob": "8baa6b7d723275b1aec6ed872f46d16b4211785c"
+    },
+    {
+      "path": "modules/Event.js",
+      "sha256": "bf09e46fd07c7a4864ee501a21d018817aaa93e9eb42115af6bf81f90ff67305",
+      "gitBlob": "04a4148b98cb2f5940a1723bc6c8822fc36bce29"
+    },
+    {
+      "path": "modules/InputSink.js",
+      "sha256": "ce49229c0e5bf526e0b0fbdc5fbfbb9ea2ead49c64851f8fa29d9fe2207c372f",
+      "gitBlob": "616fe2628109ac426d81aeb06d2dd4d2e6de7b64"
+    },
+    {
+      "path": "modules/InputStream.js",
+      "sha256": "d43f4a63e2060dbd2419a0177cbd099648a2c3e808f5750c5aa9e6a064235b66",
+      "gitBlob": "7bda1330bce5f6a1f3d3c1df416d074751cc94c5"
+    },
+    {
+      "path": "modules/IntegerPool.js",
+      "sha256": "f7c249a673063bb64792d312b984caf232cf7811d4306693e0cba38e8a57d0df",
+      "gitBlob": "6916cab14debcc703975ae7a60e6f4e19758cd64"
+    },
+    {
+      "path": "modules/JSONReader.js",
+      "sha256": "b50a5bf6db3f2c9585c0481c625fd559b84626864620cc9148f9ef659284888b",
+      "gitBlob": "ef71d786a8109b3797a9dc1f5e9da7b1c3c1acb7"
+    },
+    {
+      "path": "modules/Keyboard.js",
+      "sha256": "5d4a69bb1c5fd85e724de1c734efd40478c9ca410d69b37cba289a04edf8efd8",
+      "gitBlob": "748cab3cc95c7f6673cbf2bb3025a5e4e10dcce2"
+    },
+    {
+      "path": "modules/Layer.js",
+      "sha256": "fffe3e9fd01bda5bb5afca8aade963f7d51969ad3bf9c90126160d3cd7ba061b",
+      "gitBlob": "271a225dc34f408cc9b93b0972d3899de65f3b1d"
+    },
+    {
+      "path": "modules/Mouse.js",
+      "sha256": "e2a44533028bcdb33dc8652d0b95e6e414d0faa47fb66a8bd9e9352f96dc3dea",
+      "gitBlob": "2f8bc28b50626647c1feec16c05f2c0962e3563c"
+    },
+    {
+      "path": "modules/Namespace.js",
+      "sha256": "56f80c003d66b351a3c6d8be95c020a90b5209a90bf89b6be857850365f14b9b",
+      "gitBlob": "227096f407df9e8b0183ba49d66b6ba2724e068a"
+    },
+    {
+      "path": "modules/Object.js",
+      "sha256": "320da28d8cb5888407d7b793e4232523e022891a19be489104bea4fdb9f22223",
+      "gitBlob": "5d65f57538ae2f5a997041020bd067697c207dac"
+    },
+    {
+      "path": "modules/OnScreenKeyboard.js",
+      "sha256": "2436f5e14a0f517cd170a809f3b0741081043809d8c5c43a68444d249bc395ff",
+      "gitBlob": "221f3b2b37bbea8d7d5bb45ab2417be55d1c547d"
+    },
+    {
+      "path": "modules/OutputStream.js",
+      "sha256": "5f62a846cf11c7e3fbaae5b6573b2d18a14ae12d12d561111f030fc3d3423387",
+      "gitBlob": "bb9bad60b0b92a1662df26a7ce4d2fe48099d4a6"
+    },
+    {
+      "path": "modules/Parser.js",
+      "sha256": "1dba29d19f35899b924162eddd0b746afccb459166e6b67acdaff72eed2a2478",
+      "gitBlob": "aa3dbe5ee40e19dfb7929f12f3a2d689fac69fdc"
+    },
+    {
+      "path": "modules/Position.js",
+      "sha256": "1f14bf64fdd6682abad69beeb40de8032cab02a7a41ce5ffccab9f9e0a5d598f",
+      "gitBlob": "8c5c4fc37ae6e5af64af34e5263295ce8ee3bd47"
+    },
+    {
+      "path": "modules/RawAudioFormat.js",
+      "sha256": "1c4d34d3296cc11fa0bcc49dc7de2bf33e1af71c743bf9e2d9633a7545447c50",
+      "gitBlob": "b2fd6ce0d84fb0cad70c77d53c0e29edba656337"
+    },
+    {
+      "path": "modules/SessionRecording.js",
+      "sha256": "baa1d6fd5a72dc1f4e4996dbd1edcb414a427044189c15385952a80cc6562735",
+      "gitBlob": "ce8968f2b8a691e939ca5fc85215f266e7aa48fa"
+    },
+    {
+      "path": "modules/Status.js",
+      "sha256": "48a27c431a85a8b505144bec69c5bf7165ce48475f9dce9045e2f056f9d41002",
+      "gitBlob": "19b872f599a101dd232c95e7dd1c8fb1a8020e4b"
+    },
+    {
+      "path": "modules/StringReader.js",
+      "sha256": "3492cadffcc69e098522b1b12b5a43e79335c7086e47ff952f164c013f19733a",
+      "gitBlob": "37b555c06abd8ef627e03eebe3102c727cd3b89c"
+    },
+    {
+      "path": "modules/StringWriter.js",
+      "sha256": "c65bd837e33be92c2660be0ef5eb9a0afc9a6b428b672fcd51dd61647bc3d202",
+      "gitBlob": "6daeed229b0ff8263f02079de70a31d8e3b214da"
+    },
+    {
+      "path": "modules/Touch.js",
+      "sha256": "2590f818227423ddbedc0628a4b6f86e62716b8cf027abc04a37a338a002b091",
+      "gitBlob": "19aa76b884074c771d3dcb52fdadaf9a5784c35c"
+    },
+    {
+      "path": "modules/Tunnel.js",
+      "sha256": "34f87a93920d480d523da3205655a45a5e37d982dc4af433be9ed0080b8b2423",
+      "gitBlob": "7f2ee0fa5a9042d396641cd2fee9b9e07471608e"
+    },
+    {
+      "path": "modules/UTF8Parser.js",
+      "sha256": "91dd7f7b29945815e473fa1abde19047d5a841ae638f2879d2e54143b40386ea",
+      "gitBlob": "e5fd9458518c8f653f64a67e0fba393231a3071f"
+    },
+    {
+      "path": "modules/Version.js",
+      "sha256": "ed8331d49f75c33469a731c551fa0e958a8bd9aa1464a6aa7727632a04f8258b",
+      "gitBlob": "8a07363473c05f7c10e0931aa1cf508a1cc82954"
+    },
+    {
+      "path": "modules/VideoPlayer.js",
+      "sha256": "38d2dee4158dac775e72d4f39ea5edbcb742329b4bf19966381bdbb59b7c9374",
+      "gitBlob": "2f82125ef9b686356b7cc498022a98dad26b0b2c"
+    }
+  ],
+  "patches": [
+    {
+      "source": "modules/Client.js",
+      "path": "patches/Client.patch",
+      "sha256": "a029ae5f2ab6d7dab715c809e86aded1b0e0292efcb15e8462f17251ba832bf4",
+      "resultSha256": "61fc3c3b5c5306dde0f8575d9a419a2c56d2d72be44df9fca970ab9020ecb7b1"
+    },
+    {
+      "source": "modules/Display.js",
+      "path": "patches/Display.patch",
+      "sha256": "aaf1669c2614578b4a9e1968c5d8c311226b6d828732c2e752acabfb9188a492",
+      "resultSha256": "8b69625299346a1c9ab5719c4ed97f5eb879cb0dedadd2bafdcba8b636eb05ef"
+    },
+    {
+      "source": "modules/SessionRecording.js",
+      "path": "patches/SessionRecording.patch",
+      "sha256": "1d95c39a3da9c316754b2b087b2dbb57feb32647b3a32b767110b26b28c03667",
+      "resultSha256": "eb62b65f65e12b091d163585bbd2f90742106e90874d77bf747edc181919db4e"
+    },
+    {
+      "source": "modules/Tunnel.js",
+      "path": "patches/Tunnel.patch",
+      "sha256": "5765e1c132d3c325963186f53ab9dab0e4fa3c1dafe4cfb8a429731b2e3287ba",
+      "resultSha256": "d3560a778467db37b92222ff560cba4a43ac421e17b88a5b83bfae697beb7340"
+    }
+  ],
+  "licenses": [
+    {
+      "path": "LICENSE",
+      "sha256": "3c7f148c26065e0a581b5dda114e68e16243bf5ae0b4f6209749a0e3373201d5",
+      "gitBlob": "3fa304c53e83b59003c204a85f37ed4edc84e8ca"
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "9f1ec0252c59b209f5470b739039fcb5d29f51d832cef643000bf5e1d3dd29ff",
+      "gitBlob": "b0fa030e69ca200a0669cd3b41973c2a22588b84"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@jumpserver/guacamole",
+  "version": "1.5.5-jumpserver.1",
+  "private": true,
+  "type": "module",
+  "license": "(Apache-2.0 AND MIT)",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./dist/guacamole.js"
+    },
+    "./recording-source": {
+      "types": "./recording-source.ts",
+      "default": "./recording-source.ts"
+    }
+  },
+  "types": "./index.d.ts",
+  "files": [
+    "dist/",
+    "types/",
+    "index.d.ts",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "recording-source.ts",
+    "upstream/",
+    "patches/",
+    "source-manifest.json",
+    "scripts/"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build.mjs --check",
+    "test:build": "node --test --test-concurrency=1 scripts/build.test.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.json --module ESNext --moduleResolution Bundler"
+  }
+}

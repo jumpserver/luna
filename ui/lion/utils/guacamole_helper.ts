@@ -1,8 +1,8 @@
-import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
+import Guacamole from "@jumpserver/guacamole";
 
-const supportImages: any[] = [];
-const pendingTests: any[] = [];
-const testImages: any = {
+const supportImages: string[] = [];
+const pendingTests: Promise<void>[] = [];
+const testImages: Record<string, string> = {
   /**
    * Test JPEG image, encoded as base64.
    */
@@ -26,7 +26,7 @@ const testImages: any = {
    */
   "image/webp": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
 }; // 测试单个图片格式
-async function testImageFormat(mimeType: string, base64Data: any): Promise<boolean> {
+async function testImageFormat(mimeType: string, base64Data: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const image = new Image();
 
