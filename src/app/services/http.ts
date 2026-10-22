@@ -76,7 +76,7 @@ export class HttpService {
 
   renewSessionOnActivity(): void {
     const now = performance.now();
-    if (this.sessionRenewalInFlight || now - this.lastSessionRenewalAt < 30000) {
+    if (this.sessionRenewalInFlight || now - this.lastSessionRenewalAt < 10000) {
       return;
     }
 
