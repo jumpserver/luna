@@ -62,6 +62,9 @@ jobs:
       - name: Validate release version handling
         run: node --test --test-concurrency=1 scripts/set-version.test.mjs
 
+      - name: Test Guacamole source build
+        run: node --test --test-concurrency=1 packages/guacamole/scripts/build.test.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -72,6 +75,14 @@ jobs:
 
       - name: Validate web application
         run: pnpm typecheck:web && pnpm test:web
+
+      - name: Install Chromium headless shell for Guacamole tests
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Validate Guacamole in Chromium
+        env:
+          NODE_OPTIONS: --max-old-space-size=2560
+        run: pnpm test:guacamole
 
       - name: Validate Electron client
         run: pnpm typecheck:electron && pnpm test:electron
