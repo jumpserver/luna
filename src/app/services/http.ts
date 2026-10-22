@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Browser, User } from '@app/globals';
-import { catchError, map, mergeMap, retry } from 'rxjs/operators';
+import { catchError, finalize, map, mergeMap, retry, timeout } from 'rxjs/operators';
 import {
   AdminConnectData,
   Asset,
@@ -14,7 +14,7 @@ import {
   User as _User
 } from '@app/model';
 import { getCsrfTokenFromCookie, getQueryParamFromURL } from '@app/utils/common';
-import { from, Observable, throwError } from 'rxjs';
+import { EMPTY, from, Observable, throwError } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
 import { LoginExpiredDialogService } from '@app/services/dialog/login-expired.service';
 import { CookieService } from 'ngx-cookie-service';
@@ -24,6 +24,8 @@ import { withSitePrefix } from '@app/utils/path';
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
+  private lastSessionRenewalAt = -Infinity;
+  private sessionRenewalInFlight = false;
   constructor(
     private http: HttpClient,
     private _i18n: I18nService,
@@ -70,6 +72,28 @@ export class HttpService {
     const resolvedUrl = this.resolveUrl(url);
     options = this.setOrgIDToRequestHeader(resolvedUrl, options);
     return this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
+  }
+
+  renewSessionOnActivity(): void {
+    const now = performance.now();
+    if (this.sessionRenewalInFlight || now - this.lastSessionRenewalAt < 30000) {
+      return;
+    }
+
+    // All views share this limit; idle time never schedules another request.
+    this.lastSessionRenewalAt = now;
+    this.sessionRenewalInFlight = true;
+    this.get('/api/v1/health/', {
+      headers: new HttpHeaders({ 'Cache-Control': 'no-cache' })
+    })
+      .pipe(
+        timeout(10000),
+        catchError(() => EMPTY),
+        finalize(() => {
+          this.sessionRenewalInFlight = false;
+        })
+      )
+      .subscribe();
   }
 
   handleError(error: HttpErrorResponse): Observable<never> {

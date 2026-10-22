@@ -18,14 +18,12 @@ import {
   ViewService,
   IframeCommunicationService
 } from '@app/services';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { environment } from '@src/environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaceService } from '@app/services/face';
 import { DrawerStateService } from '@app/services/drawer';
 import { Protocol } from '@app/model';
-import { withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -42,7 +40,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   @Output() createFileConnectToken: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
-  private renewalTrigger = new Subject<void>();
   private subscription: Subscription;
   iframeWindow: Window;
   showIframe = false;
@@ -74,10 +71,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       }, 5000);
     }
 
-    this.renewalTrigger.pipe(debounceTime(2000)).subscribe(() => {
-      this._http.get(withSitePrefix('/api/v1/health/')).subscribe();
-    });
-
     this.id = 'window-' + Math.random().toString(36).substr(2);
 
     this.trustedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.src);
@@ -90,7 +83,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.eventHandler = function (e: any) {
       const msg = e.data;
 
-      if (msg.id !== this.id) {
+      if (
+        !msg ||
+        msg.id !== this.id ||
+        e.source !== this.iframeWindow ||
+        e.origin !== new URL(this.src, window.location.href).origin
+      ) {
         return;
       }
 
@@ -125,7 +123,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           }
           break;
         case 'CLICK':
-          this.renewalTrigger.next();
+          this._http.renewSessionOnActivity();
 
           document.body.click();
           document.dispatchEvent(
@@ -136,6 +134,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           );
           break;
         case 'KEYEVENT':
+          this._http.renewSessionOnActivity();
           window.focus();
           setTimeout(() => {
             this._viewSvc.keyboardSwitchTab(msg.data);
@@ -157,7 +156,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'KEYBOARDEVENT':
         case 'MOUSEEVENT':
         case 'INPUT_ACTIVE':
-          this.renewalTrigger.next();
+          this._http.renewSessionOnActivity();
           // KOKO 新定义的 input 事件，给所有其他 view 发送 sendInputActive 函数续期
           this.sendInputActiveToOtherViews();
       }
