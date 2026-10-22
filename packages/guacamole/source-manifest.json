@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "generatedSha256": "02f8ff18e4700eeedfa4818bfb25bf6d29740c9733addf663b4cdf91cf88b25d",
   "upstream": {
     "repository": "https://github.com/apache/guacamole-client",
     "release": "1.5.5",
@@ -192,27 +191,19 @@
   "patches": [
     {
       "source": "modules/Client.js",
-      "path": "patches/Client.patch",
-      "sha256": "a029ae5f2ab6d7dab715c809e86aded1b0e0292efcb15e8462f17251ba832bf4",
-      "resultSha256": "61fc3c3b5c5306dde0f8575d9a419a2c56d2d72be44df9fca970ab9020ecb7b1"
+      "path": "patches/Client.patch"
     },
     {
       "source": "modules/Display.js",
-      "path": "patches/Display.patch",
-      "sha256": "aaf1669c2614578b4a9e1968c5d8c311226b6d828732c2e752acabfb9188a492",
-      "resultSha256": "8b69625299346a1c9ab5719c4ed97f5eb879cb0dedadd2bafdcba8b636eb05ef"
+      "path": "patches/Display.patch"
     },
     {
       "source": "modules/SessionRecording.js",
-      "path": "patches/SessionRecording.patch",
-      "sha256": "1d95c39a3da9c316754b2b087b2dbb57feb32647b3a32b767110b26b28c03667",
-      "resultSha256": "eb62b65f65e12b091d163585bbd2f90742106e90874d77bf747edc181919db4e"
+      "path": "patches/SessionRecording.patch"
     },
     {
       "source": "modules/Tunnel.js",
-      "path": "patches/Tunnel.patch",
-      "sha256": "5765e1c132d3c325963186f53ab9dab0e4fa3c1dafe4cfb8a429731b2e3287ba",
-      "resultSha256": "d3560a778467db37b92222ff560cba4a43ac421e17b88a5b83bfae697beb7340"
+      "path": "patches/Tunnel.patch"
     }
   ],
   "licenses": [

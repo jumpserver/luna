@@ -112,7 +112,7 @@ test("dry-run prepares only upstream inputs without changing current files", asy
   const candidate = JSON.parse(await readFile(join(report.candidate, "source-manifest.json"), "utf8"));
   assert.equal(candidate.upstream.release, "1.6.0");
   assert.deepEqual(candidate.patches, manifest.patches);
-  assert.equal(candidate.generatedSha256, manifest.generatedSha256);
+  assert.equal(Object.hasOwn(candidate, "generatedSha256"), false);
   assert.match(JSON.stringify(report.remainingChecks), /patch/i);
   assert.deepEqual(await snapshot(root), before);
 });
@@ -164,13 +164,12 @@ test("invalid releases never load upstream and importing the command stays inert
   assert.deepEqual(await snapshot(root), before);
 });
 
-test("apply updates upstream while preserving independently edited patches and runtime metadata", async (t) => {
+test("apply updates upstream while preserving independently edited patches and local metadata", async (t) => {
   const root = await fixture(t);
   await cleanGit(root);
   const manifestPath = join(root, "source-manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.patches[0].sha256 = "0".repeat(64);
-  manifest.generatedSha256 = "pending-independent-patch-maintenance";
+  manifest.patches[0].notes = "Pending independent patch maintenance";
   manifest.maintainer = { notes: "Preserve independent patch metadata" };
   await writeFile(manifestPath, JSON.stringify(manifest));
   await writeFile(join(root, "patches/Client.patch"), "Unfinished manually maintained patch.\n");
@@ -242,7 +241,7 @@ test("apply preserves patch metadata saved while the release is loading", async 
         const loaded = await releaseFrom(root, release, (path, bytes) =>
           path === "modules/Client.js" ? `// Upstream source update.\n${bytes.toString("utf8")}` : bytes
         );
-        manifest.patches[0].resultSha256 = "1".repeat(64);
+        manifest.patches[0].notes = "Patch metadata saved during download";
         await writeFile(manifestPath, JSON.stringify(manifest));
         afterSave = await snapshot(root);
         return loaded;

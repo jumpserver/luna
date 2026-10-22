@@ -157,7 +157,7 @@ export async function upgrade({ release, root = PACKAGE_ROOT, dryRun = false, lo
     checks: [],
     warnings: [],
     remainingChecks: [
-      "Maintain patches separately, including their input/result hashes and the final generatedSha256.",
+      "Maintain patches separately, then build to verify exact application and generate the runtime digest.",
       "The workspace package version and dist are unchanged; finish integration before building/releasing.",
       "Reconcile the preserved local type declarations against the new upstream APIs.",
       "Run strict package/Web/Electron typechecks, generator tests and Chromium Guacamole regressions.",
