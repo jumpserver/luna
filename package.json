@@ -18,6 +18,7 @@
     "generate:client": "node scripts/generate-client.js",
     "build:guacamole": "pnpm --filter @jumpserver/guacamole build",
     "check:guacamole": "pnpm --filter @jumpserver/guacamole build:check",
+    "guacamole:update": "pnpm --filter @jumpserver/guacamole run upgrade",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "nuxt prepare",
     "prepare": "husky",

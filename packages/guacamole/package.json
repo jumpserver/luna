@@ -32,6 +32,8 @@
     "build": "node scripts/build.mjs",
     "build:check": "node scripts/build.mjs --check",
     "test:build": "node --test --test-concurrency=1 scripts/build.test.mjs",
+    "upgrade": "node scripts/upgrade.mjs",
+    "test:upgrade": "node --test --test-concurrency=1 scripts/upgrade-source.test.mjs scripts/upgrade.test.mjs",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.json --module ESNext --moduleResolution Bundler"
   }
 }
