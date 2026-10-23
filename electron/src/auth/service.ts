@@ -585,7 +585,9 @@ export class DesktopAuthService {
     if (hasBody) headers["Content-Type"] = "application/json";
     const response = await this.fetchSite(url.toString(), {
       method: request.method,
-      ...(request.service === "kael" ? { signal: AbortSignal.timeout(15_000) } : {}),
+      ...(request.timeoutMs !== undefined || request.service === "kael"
+        ? { signal: AbortSignal.timeout(request.timeoutMs ?? 15_000) }
+        : {}),
       headers,
       body: hasBody ? JSON.stringify(request.body) : undefined
     });
