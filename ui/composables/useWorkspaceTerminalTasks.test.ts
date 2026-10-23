@@ -95,9 +95,32 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
   managers.splice(0).forEach((manager) => manager.dispose());
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("unified assistant terminal task bridge", () => {
+  it.each([{}, undefined])("lists targets and starts tasks without randomUUID (crypto: %j)", async (crypto) => {
+    vi.stubGlobal("crypto", crypto);
+    const { manager, session } = setup();
+    const target = manager.list()[0]!;
+    expect(target.target_id).toEqual(expect.any(String));
+    expect(target.target_id).not.toBe("");
+    expect(manager.list()[0]?.target_id).toBe(target.target_id);
+
+    const started = await manager.start(target.target_id, "Inspect the disk");
+    expect(started.task_id).toEqual(expect.any(String));
+    expect(started.task_id).not.toBe("");
+    expect(started.task_id).not.toBe(target.target_id);
+    expect(mocks.submit).toHaveBeenCalledWith(session.paneId, "Inspect the disk");
+    complete(session);
+    await nextTick();
+    expect(await manager.read(started.task_id, 0, new AbortController().signal)).toMatchObject({
+      status: "completed",
+      done: true,
+      summary: "Disk usage is 46%."
+    });
+  });
+
   it("lists only terminals in the current organization and keeps bindings stable", () => {
     const { manager, panes, pane, registry } = setup();
     const other = terminal("other");
