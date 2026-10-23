@@ -1347,6 +1347,8 @@
     "RdpFullScreen": "Plein écran",
     "RdpMultiScreen": "Plusieurs écrans",
     "RdpDrivesRedirect": "Redirection des lecteurs",
+    "RdpPrintersRedirect": "Redirection des imprimantes",
+    "RdpPrintersRedirectDescription": "Redirige les imprimantes des connexions RDP. Les sessions web téléchargent les documents imprimés au format PDF.",
     "RdpLocalClientDescription": "S’applique uniquement au client RDP local, et non au bureau distant web.",
     "RemoteMicrophone": "Microphone distant",
     "RdpFileReusable": "Fichier RDP réutilisable",

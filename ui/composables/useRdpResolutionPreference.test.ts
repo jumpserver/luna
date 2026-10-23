@@ -165,3 +165,30 @@ it("toggles drive redirect without dropping other RDP client options", async () 
   );
   expect(clientLocal.value).toEqual(["remote_microphone", "full_screen", "drives_redirect"]);
 });
+
+it("defaults printer redirection to off and resets it when the account changes", async () => {
+  const preference = start();
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(preference.printersRedirect.value).toBe(false);
+  api.getLunaPreferences.mockResolvedValue({ graphics: { printers_redirect: true } });
+  user.currentAccountId = "another-user";
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(preference.printersRedirect.value).toBe(true);
+  api.getLunaPreferences.mockResolvedValue({ graphics: {} });
+  user.currentAccountId = "third-user";
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(preference.printersRedirect.value).toBe(false);
+});
+
+it.each([true, false])("saves printer redirection as %s independently of client flags", async (enabled) => {
+  api.getLunaPreferences.mockResolvedValue({
+    graphics: { printers_redirect: !enabled, rdp_client_option: ["full_screen"] }
+  });
+  const preference = start();
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  preference.printersRedirect.value = enabled;
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(api.updateLunaPreferences).toHaveBeenCalledExactlyOnceWith({ graphics: { printers_redirect: enabled } });
+  expect(preference.printersRedirect.value).toBe(enabled);
+  expect(preference.fullScreen.value).toBe(true);
+});

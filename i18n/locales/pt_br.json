@@ -1346,6 +1346,8 @@
     "RdpFullScreen": "Tela cheia",
     "RdpMultiScreen": "Várias telas",
     "RdpDrivesRedirect": "Redirecionar unidades",
+    "RdpPrintersRedirect": "Redirecionamento de impressoras",
+    "RdpPrintersRedirectDescription": "Redireciona impressoras em conexões RDP. As sessões web baixam os documentos impressos como PDF.",
     "RdpLocalClientDescription": "Aplica-se apenas ao cliente RDP local, não à área de trabalho remota na web.",
     "RemoteMicrophone": "Microfone remoto",
     "RdpFileReusable": "Arquivo RDP reutilizável",

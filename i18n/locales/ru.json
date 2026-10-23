@@ -1346,6 +1346,8 @@
     "RdpFullScreen": "Полный экран",
     "RdpMultiScreen": "Несколько экранов",
     "RdpDrivesRedirect": "Перенаправление дисков",
+    "RdpPrintersRedirect": "Перенаправление принтеров",
+    "RdpPrintersRedirectDescription": "Перенаправляет принтеры для подключений RDP. Веб-сеансы скачивают напечатанные документы в формате PDF.",
     "RdpLocalClientDescription": "Действует только для локального клиента RDP, не для веб-удалённого рабочего стола.",
     "RemoteMicrophone": "Удалённый микрофон",
     "RdpFileReusable": "Многоразовый файл RDP",

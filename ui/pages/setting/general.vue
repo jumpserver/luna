@@ -173,7 +173,8 @@ const {
   smartSize: selectedSmartSize,
   fullScreen: selectedFullScreen,
   multiScreen: selectedMultiScreen,
-  drivesRedirect: selectedDrivesRedirect
+  drivesRedirect: selectedDrivesRedirect,
+  printersRedirect: selectedPrintersRedirect
 } = useRdpResolutionPreference();
 const hasXPack = computed(() => currentUser.value?.xpackLicenseValid === true);
 
@@ -363,6 +364,14 @@ async function clearCommandHistory() {
           :aria-label="t('Setting.RdpSmartSize')"
           size="sm"
           class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpPrintersRedirect')" :description="t('Setting.RdpPrintersRedirectDescription')">
+        <USwitch
+          v-model="selectedPrintersRedirect"
+          :disabled="graphicsBusy"
+          :aria-label="t('Setting.RdpPrintersRedirect')"
         />
       </SettingsRow>
 
