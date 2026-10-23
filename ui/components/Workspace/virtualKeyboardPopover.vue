@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useEventListener, useMediaQuery } from "@vueuse/core";
 import { sendKokoTerminalData } from "#koko";
+import { getKeyboardCharacter, getKeyboardCharacterRows } from "~/lion/utils/keyboard";
 import { getLionWorkspaceSession } from "~/lion/workspaces/useLionWorkspaceSessionRegistry";
 
-type Modifier = "ctrl" | "alt" | "shift" | "win" | "caps";
+type Modifier = "ctrl" | "alt" | "shift" | "win" | "caps" | "altgr";
 
 interface VirtualKey {
   label: string;
@@ -35,7 +36,8 @@ const modifiers = reactive<Record<Modifier, boolean>>({
   alt: false,
   shift: false,
   win: false,
-  caps: false
+  caps: false,
+  altgr: false
 });
 const modifierReleases = new Map<Modifier, () => void>();
 const pressedKeys = reactive(new Map<number, { value: string; release: () => void }>());
@@ -137,6 +139,10 @@ const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id 
 const terminalProtocols = new Set(["ssh", "telnet", "kubernetes", "k8s", "local-shell"]);
 const windowsProtocols = new Set(["rdp", "vnc"]);
 const isWindowsSession = computed(() => windowsProtocols.has(activePane.value?.protocol.toLowerCase() || ""));
+const keyboardLayout = computed(() =>
+  isWindowsSession.value ? getLionWorkspaceSession(activePane.value?.id || "")?.keyboardLayout.value : undefined
+);
+const characterRows = computed(() => (keyboardLayout.value ? getKeyboardCharacterRows(keyboardLayout.value) : null));
 const available = computed(() => {
   const pane = activePane.value;
   const protocol = pane?.protocol.toLowerCase() || "";
@@ -196,16 +202,21 @@ const keyboardRows = computed<VirtualKey[][]>(() => [
     ),
     { label: "Del", value: "\x1b[3~", width: 10 }
   ],
-  [...characterKeys("`1234567890-="), { label: "⌫", value: "\x7f", width: 12 }],
-  [{ label: "Tab", value: "\t", width: 6 }, ...characterKeys("qwertyuiop[]"), { label: "\\", value: "\\", width: 10 }],
+  [...characterKeys(characterRows.value?.[0] || "`1234567890-="), { label: "⌫", value: "\x7f", width: 12 }],
+  [
+    { label: "Tab", value: "\t", width: 6 },
+    ...(characterRows.value
+      ? characterKeys(characterRows.value[1]!)
+      : [...characterKeys("qwertyuiop[]"), { label: "\\", value: "\\", width: 10 }])
+  ],
   [
     { label: "CapsLock", value: "caps", modifier: "caps", width: 7 },
-    ...characterKeys("asdfghjkl;'"),
+    ...characterKeys(characterRows.value?.[2] || "asdfghjkl;'"),
     { label: t("koko.terminal.enter"), value: "\r", width: 13 }
   ],
   [
     { label: "Shift", value: "shift", modifier: "shift", width: 9 },
-    ...characterKeys("zxcvbnm,./"),
+    ...characterKeys(characterRows.value?.[3] || "zxcvbnm,./"),
     { label: "Shift", value: "shift-right", modifier: "shift", width: 7 },
     { label: "↑", value: "\x1b[A" }
   ],
@@ -215,7 +226,9 @@ const keyboardRows = computed<VirtualKey[][]>(() => [
     { label: "Win/Cmd", value: "win", modifier: "win", width: 8, disabled: !isWindowsSession.value },
     { label: "Alt", value: "alt", modifier: "alt", width: 6 },
     { label: t("koko.terminal.space"), value: " ", width: 26 },
-    { label: "Alt", value: "alt-right", modifier: "alt", width: 6 },
+    keyboardLayout.value && keyboardLayout.value !== "en-us-qwerty"
+      ? { label: "AltGr", value: "altgr", modifier: "altgr", width: 6 }
+      : { label: "Alt", value: "alt-right", modifier: "alt", width: 6 },
     { label: "←", value: "\x1b[D" },
     { label: "↓", value: "\x1b[B" },
     { label: "→", value: "\x1b[C" }
@@ -246,12 +259,22 @@ const shiftedCharacters: Record<string, string> = {
   "/": "?"
 };
 
+function graphicalCharacter(value: string) {
+  return keyboardLayout.value
+    ? getKeyboardCharacter(keyboardLayout.value, value, { ...modifiers, "alt-gr": modifiers.altgr })
+    : undefined;
+}
+
 function characterValue(value: string) {
+  const character = graphicalCharacter(value);
+  if (character) return character.title;
   if (/^[a-z]$/i.test(value)) return modifiers.caps !== modifiers.shift ? value.toUpperCase() : value.toLowerCase();
   return modifiers.shift ? shiftedCharacters[value] || value : value;
 }
 
 function keyLabel(key: VirtualKey) {
+  const character = graphicalCharacter(key.value);
+  if (character) return character.title;
   if (/^[a-z]$/i.test(key.value)) return characterValue(key.value);
   return modifiers.shift ? shiftedCharacters[key.value] || key.label : key.label;
 }
@@ -264,7 +287,7 @@ function resetKeyboard() {
   for (const modifier of Object.keys(modifiers) as Modifier[]) modifiers[modifier] = false;
 }
 
-const modifierKeysyms = { ctrl: 65507, alt: 65513, shift: 65505, win: 65515 };
+const modifierKeysyms = { ctrl: 65507, alt: 65513, shift: 65505, win: 65515, altgr: 65027 };
 
 function toggleModifier(modifier: Modifier) {
   if (!available.value || (modifier === "win" && !isWindowsSession.value)) return;
@@ -344,7 +367,8 @@ function press(value: string): (() => void) | undefined {
     if (isWindowsSession.value) {
       const controller = getLionWorkspaceSession(paneId);
       if (controller) {
-        const keysym = Number(windowsSpecialKeys[value]) || characterValue(value).charCodeAt(0);
+        const character = graphicalCharacter(value);
+        const keysym = Number(windowsSpecialKeys[value]) || character?.keysym || characterValue(value).charCodeAt(0);
         controller.sendKeyEvent(1, keysym);
         return () => controller.sendKeyEvent(0, keysym);
       }
@@ -404,7 +428,9 @@ watch(
   { flush: "sync" }
 );
 
-watch([open, selectedPanel, activePaneId, compactLandscape, narrowPortrait], resetKeyboard, { flush: "sync" });
+watch([open, selectedPanel, activePaneId, keyboardLayout, compactLandscape, narrowPortrait], resetKeyboard, {
+  flush: "sync"
+});
 watch([open, compactLandscape, narrowPortrait], resetPanelPosition, { flush: "sync" });
 useEventListener("resize", resetPanelPosition);
 useEventListener(() => globalThis.window?.visualViewport, ["resize", "scroll"], resetPanelPosition);
@@ -525,7 +551,16 @@ onScopeDispose(stopPanelDrag);
               {{ t("koko.terminal.keyboardModifiersHint") }}
             </p>
             <div class="virtual-keyboard-rows">
-              <div v-for="(row, index) in keyboardRows" :key="index" class="virtual-keyboard-row">
+              <div
+                v-for="(row, index) in keyboardRows"
+                :key="index"
+                class="virtual-keyboard-row"
+                :style="{
+                  gridTemplateColumns: characterRows
+                    ? `repeat(${row.reduce((width, key) => width + (key.width || 4), 0)}, minmax(0, 1fr))`
+                    : undefined
+                }"
+              >
                 <UButton
                   v-for="key in row"
                   :key="key.value"

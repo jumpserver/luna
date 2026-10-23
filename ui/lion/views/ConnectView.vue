@@ -15,10 +15,14 @@ import { useLionEndpoint } from "@/lion/hooks/useLionEndpoint";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionWsUrl } from "@/lion/utils/base";
 import { getCurrentConnectParams } from "@/lion/utils/common";
+import { resolveKeyboardLayout } from "@/lion/utils/keyboard";
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ErrorStatusCodes } from "@/lion/utils/status";
 import { useLionSessionShareAdapter } from "@/lion/workspaces/useLionSessionShareAdapter";
 import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+import { getLunaPreferences } from "~/composables/useApiRequest";
+import { useSettingManager } from "~/composables/useSettingManager";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tabId?: string }>();
 
@@ -127,19 +131,23 @@ const createUploadId = () => {
   return globalThis.crypto?.randomUUID?.() || `lion-drop-${Date.now()}-${uploadSequence}`;
 };
 
-function getKeyboardLayout() {
-  if (!import.meta.client) return "en-us-qwerty";
-  const lunaSetting = localStorage.getItem("LunaSetting");
-  if (lunaSetting) {
-    const setting = JSON.parse(lunaSetting);
-    const graphics = setting.graphics || {};
-    const layout = graphics.keyboard_layout || setting.keyboard_layout;
-    if (layout) return layout;
+const user = useUserInfoStore();
+const { keyboardLayout: localKeyboardLayout, hydrationPromise } = useSettingManager();
+
+async function getKeyboardLayout() {
+  await hydrationPromise.value;
+  if (user.loggedIn) {
+    try {
+      const preferences = await getLunaPreferences();
+      return resolveKeyboardLayout(preferences.graphics?.keyboard_layout || localKeyboardLayout.value);
+    } catch (error) {
+      addErrorToast({ title: t("Common.OperationFailed"), error });
+    }
   }
-  return "en-us-qwerty";
+  return resolveKeyboardLayout(localKeyboardLayout.value);
 }
 
-const keyboardLayout = ref<string>(getKeyboardLayout());
+const keyboardLayout = shallowRef("en-us-qwerty");
 const shouldEnableScroll = ref(false);
 
 const refreshConnectTicket = async () => {
@@ -295,6 +303,9 @@ onMounted(async () => {
 
   let connectConfig: Awaited<ReturnType<typeof resolveConnectConfig>>;
   try {
+    // RDP chooses its keymap at connection time; keep the soft keyboard on that same layout.
+    keyboardLayout.value = await getKeyboardLayout();
+    if (disposed) return;
     connectConfig = await resolveConnectConfig();
   } catch (error) {
     if (disposed) return;

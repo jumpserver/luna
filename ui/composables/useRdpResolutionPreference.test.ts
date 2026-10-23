@@ -27,10 +27,12 @@ vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => user }));
 vi.mock("~/composables/useSettingManager", () => ({
   useSettingManager: () => ({
     rdpResolution: local,
+    keyboardLayout: ref("en-us-qwerty"),
     rdpColorQuality: colorLocal,
     rdpSmartSize: smartLocal,
     rdpClientOption: clientLocal,
     setRdpResolutionPreference: persist,
+    setKeyboardLayoutPreference: vi.fn(),
     setRdpColorQualityPreference: persistColor,
     setRdpSmartSizePreference: persistSmart,
     setRdpClientOptionPreference: persistClient
