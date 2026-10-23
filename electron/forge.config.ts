@@ -60,11 +60,10 @@ async function verifyMacPackageSignatures(outputPaths: string[]) {
 }
 
 async function signWindowsPackage(directory: string) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const file = path.join(directory, entry.name);
-    if (entry.isDirectory()) await signWindowsPackage(file);
-    else if (/\.(exe|dll|msi|node)$/i.test(entry.name)) await windowsSigner.signFile(file);
-  }
+  await windowsSigner.signFile(path.join(directory, `${executableName}.exe`));
+  await windowsSigner.signFile(path.join(directory, "resources", "bin", "jms-ssh.exe"));
+  const faceWorker = path.join(directory, "resources", "face-engine", "facelive-worker.exe");
+  if (existsSync(faceWorker)) await windowsSigner.signFile(faceWorker);
 }
 
 async function copyRuntimeNativeModules(buildPath: string) {
@@ -199,7 +198,13 @@ const config: ForgeConfig = {
           signtoolOptions: windowsSigner.enabled
             ? {
                 signingHashAlgorithms: ["sha256"],
-                sign: async ({ path: file }) => windowsSigner.signFile(file)
+                sign: async ({ path: file }, packager) => {
+                  // NSIS also requests signing of the third-party resources/elevate.exe.
+                  const outputDirectory = packager?.config.directories?.output;
+                  if (outputDirectory && path.relative(outputDirectory, path.dirname(file)) === "") {
+                    await windowsSigner.signFile(file);
+                  }
+                }
               }
             : undefined
         },

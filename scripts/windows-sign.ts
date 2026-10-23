@@ -51,7 +51,7 @@ export function createWindowsSigner({
     mode,
     enabled,
     async signFile(file: string) {
-      if (!enabled) return;
+      if (!enabled || file.split(/[\\/]/).some((part) => part.toLowerCase() === "node_modules")) return;
       const input = await stat(file);
       if (!input.isFile() || input.size === 0) throw new Error(`Missing or empty Windows signing input: ${file}`);
       // SignPanel accepts .exe/.msi/.dll; native .node modules still use local signing when configured.

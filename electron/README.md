@@ -67,12 +67,14 @@ mode stops the build on missing credentials, signing failures, or invalid signat
 Off mode skips all Windows signing. Signed files replace their originals only after
 download integrity and Authenticode verification succeed.
 
-Forge signs packaged `.exe`, `.dll`, and `.msi` files before making installers, including
-`JumpServer.exe` and `resources/bin/jms-ssh.exe`. NSIS signs its uninstaller and setup
-executable during creation; WiX MSI signing follows filename normalization. SignPanel
-does not support `.node` files. When SignPanel is not configured, signing in Actions still
-supports `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or
-`WINDOWS_SIGN_WITH_PARAMS`, including native `.node` modules, under the same mode policy.
+Forge signs only the project executables `JumpServer.exe`, `resources/bin/jms-ssh.exe`,
+and the optional `resources/face-engine/facelive-worker.exe` before making installers.
+NSIS signs only its generated uninstaller and setup executable; WiX MSI signing follows
+filename normalization. Bundled third-party binaries, including Electron runtime DLLs,
+plugins, NSIS `elevate.exe`, and all `node_modules` files, are excluded from signing.
+When SignPanel is not configured, signing in Actions still supports
+`WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or
+`WINDOWS_SIGN_WITH_PARAMS` under the same mode policy.
 
 The client release Action maps the existing SignPanel secrets (the URL may also be a
 repository variable). Manual builds expose `windows_sign_mode`; tag builds use the
