@@ -1,11 +1,13 @@
 import { gzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assignPartTotals,
   classifyOfflineName,
   isTarBuffer,
   isTarPackageName,
+  openOfflineMediaStream,
   parsePartIndex,
+  readOfflineMediaHeader,
   resolvePlayableMedia,
   stripOfflineExtension,
   stripReplayJsonExtension
@@ -30,6 +32,63 @@ function mp4Bytes() {
 
 const CAST = new TextEncoder().encode('{"version":2,"width":80,"height":24}\n');
 const GUA = new TextEncoder().encode("4.size,1024,768;");
+
+describe("readOfflineMediaHeader", () => {
+  it("only reads a bounded prefix of plain and compressed recordings", async () => {
+    const content = new Uint8Array(4096).fill(0x20);
+    content.set(GUA);
+    for (const bytes of [content, gzipSync(content), gzipSync(gzipSync(content))]) {
+      const header = await readOfflineMediaHeader(new Blob([toBuffer(bytes)]));
+      expect(header.byteLength).toBe(512);
+      expect(new Uint8Array(header)).toEqual(content.subarray(0, 512));
+    }
+  });
+
+  it("identifies a gzip archive from its header without unpacking its entries", async () => {
+    const tar = new Uint8Array(4096);
+    tar.set([0x75, 0x73, 0x74, 0x61, 0x72], 257);
+    expect(isTarBuffer(await readOfflineMediaHeader(new Blob([toBuffer(gzipSync(tar))])))).toBe(true);
+  });
+
+  it("inspects stored entry streams and cancels before reading the full entry", async () => {
+    let blocks = 0;
+    const cancel = vi.fn();
+    const header = await readOfflineMediaHeader({
+      stream: () =>
+        new ReadableStream({
+          pull(controller) {
+            if (blocks === 8) controller.close();
+            else {
+              const chunk = new Uint8Array(64 * 1024).fill(32);
+              if (blocks++ === 0) chunk.set(GUA);
+              controller.enqueue(chunk);
+            }
+          },
+          cancel
+        })
+    });
+    expect(header.byteLength).toBe(512);
+    expect(new Uint8Array(header).slice(0, GUA.length)).toEqual(GUA);
+    expect(blocks).toBeLessThan(8);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("decodes stored gzip streams, handles split signatures and rejects extra wrapping", async () => {
+    const input = (bytes: Uint8Array) => ({
+      stream: () =>
+        new ReadableStream<Uint8Array<ArrayBuffer>>({
+          start(controller) {
+            controller.enqueue(new Uint8Array(bytes.slice(0, 1)));
+            controller.enqueue(new Uint8Array(bytes.slice(1)));
+            controller.close();
+          }
+        })
+    });
+    const twice = gzipSync(gzipSync(GUA));
+    expect(new Uint8Array(await readOfflineMediaHeader(input(twice)))).toEqual(GUA);
+    await expect(openOfflineMediaStream(input(gzipSync(twice)))).rejects.toThrow("Too many gzip layers");
+  });
+});
 
 describe("classifyOfflineName", () => {
   it.each([

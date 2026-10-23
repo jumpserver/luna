@@ -11,6 +11,8 @@
     "node": true
   },
   "ignorePatterns": [
+    "packages/guacamole/upstream/**",
+    "packages/guacamole/types/**",
     "**/.DS_Store",
     "**/.idea/",
     "**/.vscode",

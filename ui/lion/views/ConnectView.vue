@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { GuacamoleFile } from "@/lion/hooks/useGuacamoleClient";
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
 import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
@@ -107,15 +108,6 @@ const debouncedResize = useDebounceFn(() => {
 }, 300);
 
 let resizeObserver: ResizeObserver | null = null;
-
-interface GuacamoleFile {
-  mimetype?: any;
-  streamName?: any;
-  type: "DIRECTORY" | "FILE";
-  name: string;
-  parent?: GuacamoleFile | null;
-  is_dir?: boolean;
-}
 
 interface UploadItem {
   uploadOptions: LionUploadCustomRequestOptions;
@@ -335,7 +327,7 @@ onMounted(async () => {
   );
 
   const displayEl = displayRef.value;
-  if (!displayEl) {
+  if (!displayEl || !guaDisplay.value) {
     loading.value = false;
     disconnectGuaclient();
     return;
@@ -373,7 +365,7 @@ onUnmounted(() => {
   window.removeEventListener("focus", debouncedSendClipboardToRemote);
 });
 
-const handleScreenKeyboard = (name: string, keysym: any) => {
+const handleScreenKeyboard = (name: "keydown" | "keyup", keysym: number) => {
   if (name === "keydown") sendKeyEvent(1, keysym);
   else if (name === "keyup") sendKeyEvent(0, keysym);
 };
@@ -390,7 +382,7 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
     addErrorToast({ title: error instanceof Error ? error.message : String(error) });
     return;
   }
-  currentGuacFsObject.value.requestInputStream(file.streamName, (stream: any, mimetype: any) => {
+  currentGuacFsObject.value?.requestInputStream(file.streamName, (stream, mimetype) => {
     clientFileReceived(stream, mimetype, file.name);
   });
 };
@@ -413,12 +405,13 @@ watch(
 );
 
 const handleCombineKeys = (keys: string[]) => {
-  keys.forEach((keysym: any) => sendKeyEvent(1, keysym));
-  setTimeout(() => keys.forEach((keysym: any) => sendKeyEvent(0, keysym)), 100);
+  const keysyms = keys.map(Number);
+  keysyms.forEach((keysym) => sendKeyEvent(1, keysym));
+  setTimeout(() => keysyms.forEach((keysym) => sendKeyEvent(0, keysym)), 100);
 };
 
 const scaleGuaDisplay = (value: number) => {
-  if (value <= 0) return;
+  if (value <= 0 || !guaDisplay.value) return;
   const newScale = value / 100;
   if (newScale > scale.value) shouldEnableScroll.value = true;
   else if (newScale <= 1) shouldEnableScroll.value = false;

@@ -23,6 +23,103 @@ export function isGzipBuffer(buffer: ArrayBuffer) {
   return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
+export interface OfflineMediaStream {
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>>;
+}
+
+/** Decode at most two historical gzip layers, preserving upstream backpressure. */
+export async function openOfflineMediaStream(
+  input: OfflineMediaStream
+): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
+  let reader = input.stream().getReader();
+  try {
+    for (let layer = 0; layer <= 2; layer++) {
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      const prefix: number[] = [];
+      while (prefix.length < 2) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        if (chunk.value.length) {
+          chunks.push(chunk.value);
+          for (const byte of chunk.value) {
+            prefix.push(byte);
+            if (prefix.length === 2) break;
+          }
+        }
+      }
+      const gzip = prefix[0] === 0x1f && prefix[1] === 0x8b;
+      if (gzip && layer === 2) throw new Error("Too many gzip layers in recording.");
+      if (gzip && typeof DecompressionStream !== "function") {
+        throw new Error("This browser does not support streaming gzip recordings.");
+      }
+      const upstream = reader;
+      let ended = false;
+      const joined = new ReadableStream<Uint8Array<ArrayBuffer>>({
+        async pull(controller) {
+          if (ended) return;
+          if (chunks.length) controller.enqueue(chunks.shift()!);
+          else {
+            try {
+              const chunk = await upstream.read();
+              if (ended) return;
+              if (chunk.done) {
+                ended = true;
+                controller.close();
+                upstream.releaseLock();
+              } else controller.enqueue(chunk.value);
+            } catch (error) {
+              if (ended) return;
+              ended = true;
+              upstream.releaseLock();
+              throw error;
+            }
+          }
+        },
+        async cancel(reason) {
+          ended = true;
+          chunks.length = 0;
+          try {
+            await upstream.cancel(reason);
+          } finally {
+            upstream.releaseLock();
+          }
+        }
+      });
+      if (!gzip) return joined;
+      reader = joined.pipeThrough(new DecompressionStream("gzip")).getReader();
+    }
+    throw new Error("Too many gzip layers in recording.");
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+    throw error;
+  }
+}
+
+/** Inspect a bounded decoded prefix; archive entries never need a complete Blob. */
+export async function readOfflineMediaHeader(input: Blob | OfflineMediaStream) {
+  if (input instanceof Blob) {
+    const header = await input.slice(0, 512).arrayBuffer();
+    if (!isGzipBuffer(header)) return header;
+  }
+  const reader = (await openOfflineMediaStream(input)).getReader();
+  const bytes = new Uint8Array(512);
+  let length = 0;
+  try {
+    while (length < bytes.length) {
+      const result = await reader.read();
+      if (result.done) break;
+      const remaining = Math.min(result.value.length, bytes.length - length);
+      bytes.set(result.value.subarray(0, remaining), length);
+      length += remaining;
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  return bytes.buffer.slice(0, length);
+}
+
 export function isTarBuffer(buffer: ArrayBuffer) {
   if (buffer.byteLength < 262) return false;
 

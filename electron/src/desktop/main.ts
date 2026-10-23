@@ -1399,6 +1399,7 @@ async function registerProtocols() {
       const responseLength = fileLength === 0 ? 0 : end - start + 1;
       const headers = {
         "access-control-allow-origin": "*",
+        "access-control-expose-headers": "Content-Range, Accept-Ranges",
         "accept-ranges": "bytes",
         "content-length": String(responseLength),
         "content-type": contentType
