@@ -469,6 +469,7 @@ export interface RdpGraphics {
   resolution?: string;
   keyboard_layout?: string;
   rdp_client_option?: string[];
+  printers_redirect?: boolean;
   rdp_color_quality?: string;
   rdp_smart_size?: string;
   applet_connection_method?: string;

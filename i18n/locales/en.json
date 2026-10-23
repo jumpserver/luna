@@ -1347,6 +1347,8 @@
     "RdpFullScreen": "Full screen",
     "RdpMultiScreen": "Multiple screens",
     "RdpDrivesRedirect": "Redirect drives",
+    "RdpPrintersRedirect": "Printer redirection",
+    "RdpPrintersRedirectDescription": "Redirect printers for RDP connections. Web sessions download printed documents as PDFs.",
     "RdpLocalClientDescription": "Applies only to the local RDP client, not the web remote desktop.",
     "RemoteMicrophone": "Remote microphone",
     "RdpFileReusable": "Reusable RDP file",

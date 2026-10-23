@@ -1346,6 +1346,8 @@
     "RdpFullScreen": "全螢幕",
     "RdpMultiScreen": "多螢幕",
     "RdpDrivesRedirect": "磁碟掛載",
+    "RdpPrintersRedirect": "印表機重新導向",
+    "RdpPrintersRedirectDescription": "適用於 RDP 連線；網頁遠端桌面會將列印結果下載為 PDF。",
     "RdpLocalClientDescription": "僅套用於本機 RDP 用戶端，不影響網頁遠端桌面。",
     "RemoteMicrophone": "遠端麥克風",
     "RdpFileReusable": "RDP 檔案重複使用",

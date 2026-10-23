@@ -1346,6 +1346,8 @@
     "RdpFullScreen": "전체 화면",
     "RdpMultiScreen": "다중 화면",
     "RdpDrivesRedirect": "드라이브 리디렉션",
+    "RdpPrintersRedirect": "프린터 리디렉션",
+    "RdpPrintersRedirectDescription": "RDP 연결에서 프린터를 리디렉션합니다. 웹 세션에서는 인쇄된 문서를 PDF로 다운로드합니다.",
     "RdpLocalClientDescription": "로컬 RDP 클라이언트에만 적용되며 웹 원격 데스크톱에는 영향을 주지 않습니다.",
     "RemoteMicrophone": "원격 마이크",
     "RdpFileReusable": "RDP 파일 재사용",

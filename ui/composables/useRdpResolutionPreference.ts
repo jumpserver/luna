@@ -6,7 +6,12 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type GraphicsFields = Pick<
   RdpGraphics,
-  "rdp_resolution" | "keyboard_layout" | "rdp_color_quality" | "rdp_smart_size" | "rdp_client_option"
+  | "rdp_resolution"
+  | "keyboard_layout"
+  | "rdp_color_quality"
+  | "rdp_smart_size"
+  | "rdp_client_option"
+  | "printers_redirect"
 >;
 
 export function useRdpResolutionPreference() {
@@ -59,6 +64,7 @@ export function useRdpResolutionPreference() {
           keyboard_layout: resolveKeyboardLayout(preferences.graphics?.keyboard_layout),
           rdp_color_quality: preferences.graphics?.rdp_color_quality || "32",
           rdp_smart_size: preferences.graphics?.rdp_smart_size || "0",
+          printers_redirect: preferences.graphics?.printers_redirect ?? false,
           rdp_client_option: Array.isArray(preferences.graphics?.rdp_client_option)
             ? [...preferences.graphics.rdp_client_option]
             : []
@@ -143,6 +149,12 @@ export function useRdpResolutionPreference() {
       void patchGraphics({ rdp_smart_size: value || "0" });
     }
   });
+  const printersRedirect = computed({
+    get: () => serverGraphics.value.printers_redirect ?? false,
+    set: (value: boolean) => {
+      void patchGraphics({ printers_redirect: value });
+    }
+  });
 
   return {
     resolution,
@@ -151,6 +163,7 @@ export function useRdpResolutionPreference() {
     setResolution,
     colorQuality,
     smartSize,
+    printersRedirect,
     fullScreen: bindFlag("full_screen"),
     multiScreen: bindFlag("multi_screen"),
     drivesRedirect: bindFlag("drives_redirect")
