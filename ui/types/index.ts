@@ -463,6 +463,7 @@ export interface RdpGraphics {
   charset?: CharsetType;
   backspaceAsCtrlH?: boolean;
   disableautohash?: boolean;
+  use_sysdba?: boolean;
   rdp_resolution?: string;
   resolution?: string;
   keyboard_layout?: string;
