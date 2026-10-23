@@ -55,6 +55,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       buildTime,
+      // Opt in before exchanging the one-use connection token; never fall back after authentication.
+      chenGoV1Protocols: process.env.NUXT_PUBLIC_CHEN_GO_V1_PROTOCOLS || "",
       faceLiveSocketBaseUrl: process.env.NUXT_PUBLIC_FACE_LIVE_SOCKET_BASE_URL || ""
     }
   },

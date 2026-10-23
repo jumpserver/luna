@@ -1,0 +1,499 @@
+<script lang="ts" setup>
+import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
+import type { LangType, LanguagePreference } from "~/types";
+import { agentClient } from "#koko/composables/agent/agentClient";
+
+import defaultFavicon from "~/assets/facio.ico";
+import AppWatermark from "~/components/AppWatermark.vue";
+import FaceOnlineMonitorHost from "~/components/Face/FaceOnlineMonitorHost.vue";
+import AclDialog from "~/components/Modal/aclDialog.vue";
+import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
+import { confirmAiTaskLeave, useAiTaskLeave } from "~/composables/useAiTaskLeave";
+import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDebugLog";
+import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
+import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
+import { useWorkspaceFeatures } from "~/composables/useWorkspaceFeatures";
+import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
+import {
+  COMMUNITY_WORKSPACE_BRAND,
+  formatWorkspaceTitle,
+  WORKSPACE_BRAND_STATE_KEY,
+  WORKSPACE_FAVICON_STATE_KEY
+} from "~/utils/pageTitle";
+import { getCookieValue, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
+import { getUiLocale } from "../../i18n/ui";
+
+useApplicationConfig();
+
+let applyLanguageSeq = 0;
+const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
+
+const route = useRoute();
+const authSession = useAuthSession();
+const userInfoStore = useUserInfoStore();
+const { handleWebClientProtocolPayload } = useAssetAction();
+useWorkspaceFeatures(authSession.authReady);
+const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
+const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
+
+const { isMacOS, isWindows } = usePlatform();
+const isMobile = useMobile();
+const { locale, setLocale, t } = useI18n();
+const uiLocale = computed(() => getUiLocale(locale.value));
+watch(locale, (value) => agentClient.setResponseLanguage(normalizeLanguageCode(value)), {
+  immediate: true,
+  flush: "sync"
+});
+const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
+
+const { applyPrimaryColor } = useColor();
+const settingManager = useSettingManager();
+
+const {
+  language,
+  fontFamily,
+  uiFontSize,
+  codeFontSize,
+  primaryColorLight,
+  primaryColorDark,
+  lightThemePreset,
+  darkThemePreset,
+  codeMirrorThemePreset,
+  terminalThemePreset,
+  hydrationPromise,
+  isHydrated,
+  uiRadius,
+  debugLog
+} = settingManager;
+
+const unlistenPrimaryColor = ref<DesktopUnlistenFn | null>(null);
+const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
+const unlistenFont = ref<DesktopUnlistenFn | null>(null);
+const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
+const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
+const unlistenAuthSessionExpired = ref<DesktopUnlistenFn | null>(null);
+const { openSettings } = useSettingsWindow();
+const {
+  confirmOpen: siteLeaveConfirmOpen,
+  leaveKind: siteLeaveKind,
+  confirmLeave: confirmSiteLeave
+} = useSiteAccountSwitch();
+const { confirmOpen: aiTaskLeaveOpen, leaveKind: aiTaskLeaveKind, confirmLeave: confirmAiLeave } = useAiTaskLeave();
+const aiTaskLeaveDescription = computed(() => {
+  if (aiTaskLeaveKind.value === "logout") return t("TerminalAi.LeaveLogout");
+  if (aiTaskLeaveKind.value === "account") return t("TerminalAi.LeaveAccount");
+  if (aiTaskLeaveKind.value === "org") return t("TerminalAi.LeaveOrg");
+  return t("TerminalAi.LeaveTab");
+});
+let unregisterAiTaskTabCloseConfirm: (() => void) | null = null;
+
+const backgroundColor = computed(() => {
+  const isDark = userTheme.value === "dark";
+
+  // 只在 macOS 下设置透明度
+  if (isMacOS.value) {
+    return isDark
+      ? "color-mix(in srgb, var(--app-frame-bg) 82%, transparent)"
+      : "color-mix(in srgb, var(--app-frame-bg) 72%, transparent)";
+  } else {
+    return isDark
+      ? "color-mix(in srgb, var(--app-frame-bg) 84%, transparent)"
+      : "color-mix(in srgb, var(--app-frame-bg) 92%, transparent)";
+  }
+});
+
+const pageKey = computed(() => route.path.replace(LOCALE_PREFIX_RE, ""));
+
+const platformClass = computed(() => {
+  const platformKey = isMacOS.value ? "darwin" : "windows";
+  return `platform-${platformKey}`;
+});
+const micaClass = computed(() => (isDesktopRuntime() && isWindows.value ? "runtime-windows-mica" : ""));
+const vibrancyClass = computed(() =>
+  isDesktopRuntime() && isMacOS.value && userTheme.value === "light" ? "runtime-macos-vibrancy" : ""
+);
+const appTitle = computed(() => {
+  const webTitle = formatWorkspaceTitle(webWorkspaceBrand.value, t("Common.Workspace"));
+  return import.meta.client && !isDesktopRuntime() ? webTitle : "JumpServer";
+});
+
+// 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。
+useHead({
+  title: appTitle,
+  link: computed(() => {
+    if (!import.meta.client || isDesktopRuntime()) return [];
+    return [{ key: "workspace-favicon", rel: "icon", href: webWorkspaceFavicon.value || defaultFavicon }];
+  }),
+  bodyAttrs: {
+    class: computed(
+      () =>
+        `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} ${isMobile.value ? "mobile" : ""} font-sans antialiased h-screen w-screen`
+    ),
+    style: computed(
+      () => `
+        background-color: ${backgroundColor.value};
+      `
+    )
+  }
+});
+
+function applyCurrentThemeColor() {
+  const mode = userTheme.value === "dark" ? "dark" : "light";
+  const hex = mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
+
+  if (hex) {
+    applyPrimaryColor(hex);
+  }
+}
+
+function applyThemePreset() {
+  if (!import.meta.client) return;
+
+  const mode = userTheme.value === "dark" ? "dark" : "light";
+  const preset =
+    mode === "dark"
+      ? darkThemePreset.value || DEFAULT_DARK_THEME_PRESET
+      : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET;
+
+  document.documentElement.dataset.themePreset = preset;
+  document.documentElement.dataset.codeMirrorThemePreset = codeMirrorThemePreset.value;
+  document.documentElement.dataset.terminalThemePreset = terminalThemePreset.value;
+}
+
+watch(() => [userTheme.value, primaryColorLight.value, primaryColorDark.value], applyCurrentThemeColor, {
+  immediate: true
+});
+
+watch(
+  () => [
+    userTheme.value,
+    lightThemePreset.value,
+    darkThemePreset.value,
+    codeMirrorThemePreset.value,
+    terminalThemePreset.value
+  ],
+  applyThemePreset,
+  { immediate: true }
+);
+watch(
+  () => fontFamily.value,
+  (val) => applyFont(val),
+  { immediate: true }
+);
+
+watch(
+  () => [uiFontSize.value, codeFontSize.value] as const,
+  ([uiSize, codeSize]) => applyFontSizes(uiSize, codeSize),
+  { immediate: true }
+);
+
+watch(
+  () => uiRadius.value,
+  (radius) => applyUiRadius(isUiRadius(radius) ? radius : "small"),
+  { immediate: true }
+);
+
+watch(
+  () => debugLog.value,
+  (enabled) => {
+    if (enabled) installDebugLogHook();
+    else uninstallDebugLogHook();
+    if (!isDesktopRuntime()) return;
+    if (!enabled && !isHydrated.value) return;
+    void desktopInvoke("debug_log_set_enabled", { enabled }).catch(() => undefined);
+  },
+  { immediate: true }
+);
+
+let languageReady = false;
+
+watch(
+  () => language.value,
+  (pref) => {
+    if (!languageReady) return;
+    applyLanguagePreference(pref);
+  }
+);
+
+watch(
+  () => isHydrated.value,
+  (ready) => {
+    if (ready) void applyAfterHydration();
+  },
+  { immediate: true }
+);
+
+function readDjangoLanguage(): LangType | null {
+  const raw = getCookieValue("django_language");
+  if (!raw) return null;
+  try {
+    return normalizeLanguageCode(decodeURIComponent(raw));
+  } catch {
+    return normalizeLanguageCode(raw);
+  }
+}
+
+function applyFont(font: string) {
+  if (!font) return;
+
+  document.documentElement.style.setProperty("--font-sans", font);
+  document.documentElement.style.setProperty("--font-heading", font);
+}
+
+function applyFontSizes(uiSize: number, codeSize: number) {
+  if (!import.meta.client) return;
+
+  document.documentElement.style.setProperty("--app-ui-font-size", `${uiSize}px`);
+  document.documentElement.style.setProperty("--app-code-font-size", `${codeSize}px`);
+}
+
+async function resolveEffectiveLanguage(pref: LanguagePreference): Promise<LangType> {
+  if (pref === "system") {
+    return await resolveLanguageFromSystem();
+  }
+
+  return pref;
+}
+
+function syncBackendLanguage(lang: LangType) {
+  if (!import.meta.client) return;
+  const code = toDjangoLanguageCode(lang);
+  document.cookie = `django_language=${encodeURIComponent(code)}; Path=/; SameSite=Lax; Max-Age=31536000`;
+  const request = isDesktopRuntime()
+    ? desktopInvoke("sync_backend_language", { language: code })
+    : fetch(withWebSitePrefix(`/core/i18n/${code}/`), { credentials: "include", redirect: "manual" });
+  void request.catch(() => undefined);
+}
+
+async function applyLanguagePreference(pref: LanguagePreference) {
+  const seq = ++applyLanguageSeq;
+
+  try {
+    const next = await resolveEffectiveLanguage(pref);
+
+    if (seq !== applyLanguageSeq) return;
+    if ((locale.value as string) !== next) {
+      await setLocale(next as any);
+    }
+    if (seq !== applyLanguageSeq) return;
+    syncBackendLanguage(next);
+  } catch (err) {
+    console.error("apply language failed", err);
+  }
+}
+
+let drainingWebProtocols = false;
+let webProtocolDrainRequested = false;
+
+async function drainWebProtocolPayloads() {
+  webProtocolDrainRequested = true;
+  if (drainingWebProtocols || !isDesktopRuntime() || !userInfoStore.loggedIn) return;
+
+  drainingWebProtocols = true;
+  try {
+    while (webProtocolDrainRequested && userInfoStore.loggedIn) {
+      webProtocolDrainRequested = false;
+      const payloads =
+        await desktopInvoke<Array<{ protocol?: unknown; asset?: { id?: unknown } }>>("take_web_protocol_payloads");
+      for (const payload of payloads) {
+        try {
+          await handleWebClientProtocolPayload(payload);
+        } catch (error) {
+          console.error("open web asset from client protocol failed", error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("drain web client protocols failed", error);
+  } finally {
+    drainingWebProtocols = false;
+    if (webProtocolDrainRequested && userInfoStore.loggedIn) void drainWebProtocolPayloads();
+  }
+}
+
+watch(
+  () => userInfoStore.loggedIn,
+  (loggedIn) => {
+    if (loggedIn) void drainWebProtocolPayloads();
+  }
+);
+
+async function applyAfterHydration() {
+  if (hydrationPromise.value) {
+    try {
+      await hydrationPromise.value;
+    } catch (err) {
+      console.error("wait hydration failed", err);
+    }
+  }
+
+  applyCurrentThemeColor();
+  applyUiRadius(isUiRadius(uiRadius.value) ? uiRadius.value : "small");
+
+  const fromCookie = !isDesktopRuntime() ? readDjangoLanguage() : null;
+  if (fromCookie) {
+    if ((locale.value as string) !== fromCookie) {
+      await setLocale(fromCookie as any);
+    }
+  } else {
+    await applyLanguagePreference(language.value);
+  }
+  languageReady = true;
+}
+
+onMounted(async () => {
+  unregisterAiTaskTabCloseConfirm = registerAiTaskTabCloseConfirm((tabIds) => confirmAiTaskLeave("tab", tabIds));
+
+  if (isDesktopRuntime()) {
+    try {
+      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string }>(
+        "auth-session-expired",
+        ({ payload }) => {
+          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""));
+        }
+      );
+    } catch (err) {
+      console.error("listen auth-session-expired failed", err);
+    }
+  }
+
+  if (!route.path.startsWith("/facelive/")) void authSession.bootstrapPersistedSession();
+
+  if (!isDesktopRuntime()) return;
+
+  // 初始化 HTTP 回调服务器 (开发环境)
+  try {
+    await desktopInvoke("init_http_callback_server");
+  } catch (error) {
+    // 忽略错误，生产环境不需要此服务
+    console.debug("HTTP callback server initialization:", error);
+  }
+
+  try {
+    unlistenPrimaryColor.value = await desktopListen("primary-color-changed", (event: any) => {
+      const hex = (event?.payload?.hex || event?.payload || "").toString();
+      const mode = (event?.payload?.mode || "").toString();
+
+      if (hex) {
+        if (!mode || mode === (userTheme.value as string)) {
+          applyPrimaryColor(hex);
+        }
+      }
+    });
+  } catch (err) {
+    console.error("listen primary-color-changed failed", err);
+  }
+
+  try {
+    unlistenTheme.value = await desktopListen("theme-changed", async (event: any) => {
+      const mode = (event?.payload?.mode || event?.payload || "").toString();
+
+      if (mode === "withSystem") {
+        await applySystemThemePreference();
+      } else if (mode === "light" || mode === "dark") {
+        applyThemePreference(mode as any);
+      }
+
+      // 应用当前主题对应的主色
+      applyCurrentThemeColor();
+    });
+  } catch (err) {
+    console.error("listen theme-changed failed", err);
+  }
+
+  try {
+    unlistenFont.value = await desktopListen("font-changed", (event: any) => {
+      const value = (event?.payload?.value || event?.payload || "").toString();
+
+      if (!value) return;
+
+      applyFont(value);
+    });
+  } catch (err) {
+    console.error("listen font-changed failed", err);
+  }
+
+  try {
+    unlistenSettingsNavigate.value = await desktopListen<string>("settings-navigate", ({ payload }) => {
+      if (payload?.startsWith("/setting/")) void openSettings(payload);
+    });
+  } catch (err) {
+    console.error("listen settings-navigate failed", err);
+  }
+
+  try {
+    unlistenWebProtocolUrl.value = await desktopListen("web-protocol-url", () => {
+      void drainWebProtocolPayloads();
+    });
+    void drainWebProtocolPayloads();
+  } catch (err) {
+    console.error("listen web-protocol-url failed", err);
+  }
+});
+
+onBeforeUnmount(() => {
+  unregisterAiTaskTabCloseConfirm?.();
+  unlistenPrimaryColor.value?.();
+  unlistenTheme.value?.();
+  unlistenFont.value?.();
+  unlistenSettingsNavigate.value?.();
+  unlistenWebProtocolUrl.value?.();
+  unlistenAuthSessionExpired.value?.();
+});
+</script>
+
+<template>
+  <Html class="overflow-x-hidden overflow-y-hidden">
+    <Body class="font-sans antialiased h-screen w-screen">
+      <UApp :locale="uiLocale">
+        <NuxtLayout>
+          <NuxtPage :page-key="pageKey" />
+        </NuxtLayout>
+        <ConnectionFormModal />
+        <ClientCompatibilityDialog v-if="isDesktopRuntime()" />
+        <AclDialog />
+        <FaceOnlineMonitorHost />
+        <UModal
+          v-model:open="siteLeaveConfirmOpen"
+          :title="siteLeaveKind === 'logout' ? t('Login.Logout') : t('Login.SwitchSite')"
+          :description="
+            siteLeaveKind === 'logout' ? t('Login.LogoutSessionsDescription') : t('Login.SwitchSiteSessionsDescription')
+          "
+          :dismissible="false"
+          :close="false"
+          :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
+        >
+          <template #footer>
+            <UButton color="neutral" variant="ghost" @click="siteLeaveConfirmOpen = false">
+              {{ t("Common.Cancel") }}
+            </UButton>
+            <UButton color="warning" @click="confirmSiteLeave">
+              {{ t("Common.Confirm") }}
+            </UButton>
+          </template>
+        </UModal>
+        <UModal
+          v-model:open="aiTaskLeaveOpen"
+          :title="t('TerminalAi.LeaveTitle')"
+          :description="aiTaskLeaveDescription"
+          :dismissible="false"
+          :close="false"
+          :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
+        >
+          <template #footer>
+            <UButton color="neutral" variant="ghost" @click="aiTaskLeaveOpen = false">
+              {{ t("Common.Cancel") }}
+            </UButton>
+            <UButton color="warning" @click="confirmAiLeave">
+              {{ t("Common.Confirm") }}
+            </UButton>
+          </template>
+        </UModal>
+        <AppWatermark />
+      </UApp>
+    </Body>
+  </Html>
+</template>
