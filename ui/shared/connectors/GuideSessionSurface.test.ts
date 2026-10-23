@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import type { TokenResponse } from "~/types";
 import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
 import * as Vue from "vue";
@@ -28,7 +29,7 @@ function mountGuide(
     detail?: Record<string, unknown>;
     error?: Error;
     orgId?: string;
-    connectOptions?: { use_sysdba?: boolean };
+    connectOptions?: TokenResponse["connect_options"];
   } = {}
 ) {
   const token = {
@@ -217,10 +218,16 @@ it("keeps manually entered VNC connections token-only", async () => {
   ]);
 });
 
-it.each([false, true])("uses the token SYSDBA role in the displayed Oracle command (%s)", async (use_sysdba) => {
-  const { state } = mountGuide({ protocol: "oracle", connectOptions: { use_sysdba } });
-  await vi.waitFor(() => expect(state.loading.value).toBe(false));
-  expect(state.commands.value[0]?.value).toBe(
-    `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
-  );
-});
+it.each([undefined, false, true])(
+  "uses the token SYSDBA role in the displayed Oracle command (%s)",
+  async (use_sysdba) => {
+    const { state } = mountGuide({
+      protocol: "oracle",
+      connectOptions: use_sysdba === undefined ? undefined : { use_sysdba }
+    });
+    await vi.waitFor(() => expect(state.loading.value).toBe(false));
+    expect(state.commands.value.map((command) => command.value)).toEqual([
+      `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
+    ]);
+  }
+);
