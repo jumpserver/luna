@@ -8,10 +8,10 @@ import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerDMG } from "@electron-forge/maker-dmg";
 import { MakerRpm } from "@electron-forge/maker-rpm";
 import { MakerWix } from "@electron-forge/maker-wix";
-import { sign } from "@electron/windows-sign";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { buildSshHelper } from "../scripts/build-ssh-helper.mjs";
+import { createWindowsSigner } from "../scripts/windows-sign";
 import { CLIENT_PROTOCOL } from "./src/shared/client-protocol";
 import { MakerNsis } from "./maker-nsis";
 
@@ -27,18 +27,7 @@ const appleTeamId = process.env.APPLE_TEAM_ID || "";
 const macSigningIdentity = process.env.CSC_NAME || "";
 const macSigningAvailable = process.platform === "darwin" && Boolean(macSigningIdentity);
 const macNotarizationAvailable = macSigningAvailable && Boolean(appleId && appleIdPassword && appleTeamId);
-const windowsCertificateFile = process.env.WINDOWS_CERTIFICATE_FILE || "";
-const windowsCertificatePassword = process.env.WINDOWS_CERTIFICATE_PASSWORD || "";
-const windowsSignWithParams = process.env.WINDOWS_SIGN_WITH_PARAMS || "";
-const windowsSigningAvailable =
-  process.platform === "win32" && Boolean(windowsCertificateFile || windowsSignWithParams);
-const windowsSignOptions = windowsSigningAvailable
-  ? {
-      certificateFile: windowsCertificateFile || undefined,
-      certificatePassword: windowsCertificatePassword || undefined,
-      signWithParams: windowsSignWithParams || undefined
-    }
-  : undefined;
+const windowsSigner = createWindowsSigner();
 
 function commandOutput(command: string, args: string[]) {
   return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
@@ -70,20 +59,11 @@ async function verifyMacPackageSignatures(outputPaths: string[]) {
   }
 }
 
-async function verifyWindowsHelperSignatures(outputPaths: string[]) {
-  if (!windowsSigningAvailable) return;
-  for (const outputPath of outputPaths) {
-    const helperPath = path.join(outputPath, "resources", "bin", "jms-ssh.exe");
-    const result = await commandOutput("powershell.exe", [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      "(Get-AuthenticodeSignature -LiteralPath $args[0]).Status.ToString()",
-      helperPath
-    ]);
-    if (result.stdout.trim() !== "Valid") {
-      throw new Error(`packaged jms-ssh helper has invalid Authenticode status: ${result.stdout.trim()}`);
-    }
+async function signWindowsPackage(directory: string) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) await signWindowsPackage(file);
+    else if (/\.(exe|dll|msi|node)$/i.test(entry.name)) await windowsSigner.signFile(file);
   }
 }
 
@@ -156,8 +136,7 @@ const config: ForgeConfig = {
           appleIdPassword,
           teamId: appleTeamId
         }
-      : undefined,
-    windowsSign: windowsSignOptions
+      : undefined
   },
   rebuildConfig: {},
   hooks: {
@@ -169,7 +148,9 @@ const config: ForgeConfig = {
     },
     async postPackage(_config, { platform, outputPaths }) {
       if (platform === "darwin") await verifyMacPackageSignatures(outputPaths);
-      if (platform === "win32") await verifyWindowsHelperSignatures(outputPaths);
+      if (platform === "win32" && windowsSigner.enabled) {
+        for (const outputPath of outputPaths) await signWindowsPackage(outputPath);
+      }
     },
     async postMake(_config, results) {
       for (const result of results) {
@@ -187,6 +168,7 @@ const config: ForgeConfig = {
           );
           if (artifact !== destination) await rename(artifact, destination);
           result.artifacts[index] = destination;
+          if (platform === "win32" && extension === ".msi") await windowsSigner.signFile(destination);
         }
       }
       return results;
@@ -213,10 +195,11 @@ const config: ForgeConfig = {
         win: {
           executableName,
           icon: path.join(iconsRoot, "icon.ico"),
-          signtoolOptions: windowsSigningAvailable
+          signExecutable: windowsSigner.enabled,
+          signtoolOptions: windowsSigner.enabled
             ? {
                 signingHashAlgorithms: ["sha256"],
-                sign: async ({ path: file }) => sign({ ...windowsSignOptions, files: [file] })
+                sign: async ({ path: file }) => windowsSigner.signFile(file)
               }
             : undefined
         },
@@ -241,8 +224,7 @@ const config: ForgeConfig = {
       nestedFolderName: "JumpServer",
       language: 1033,
       manufacturer: "JumpServer",
-      ui: { chooseDirectory: true },
-      windowsSign: windowsSignOptions
+      ui: { chooseDirectory: true }
     }),
     new MakerDeb({
       options: {
