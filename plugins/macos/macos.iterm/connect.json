@@ -9,14 +9,13 @@
     "default": "/Applications/iTerm.app"
   },
   "launch": {
-    "type": "args",
-    "driver": "iterm2",
-    "application_id": "com.googlecode.iterm2",
+    "type": "script",
+    "script": "scripts/launch.macos.applescript",
+    "interpreter": "/usr/bin/osascript",
     "use_ssh_helper": true,
     "protocol_aliases": {
       "telnet": "ssh"
-    },
-    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+    }
   },
   "display_name": "iTerm2"
 }

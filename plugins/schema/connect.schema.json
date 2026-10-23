@@ -99,6 +99,11 @@
         "interpreter": {
           "type": "string",
           "description": "Optional interpreter override, e.g. pwsh, bash"
+        },
+        "use_ssh_helper": { "type": "boolean" },
+        "protocol_aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
         }
       }
     },

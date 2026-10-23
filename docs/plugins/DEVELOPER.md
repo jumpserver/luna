@@ -130,7 +130,8 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
       "executable": { "type": "system", "default": "osascript" },
       "launch": {
         "type": "script",
-        "script": "scripts/launch.macos.applescript"
+        "script": "scripts/launch.macos.applescript",
+        "interpreter": "/usr/bin/osascript"
       }
     }
   }
@@ -140,8 +141,11 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 脚本约定：
 
 - 通过环境变量 `JMS_CONNECT_JSON` 接收连接上下文（JSON 字符串）
-- 退出码 `0` 表示成功，非 `0` 表示失败
-- 标准错误输出会显示在客户端日志中
+- 启动器等待脚本退出：退出码 `0` 表示交接成功，非 `0` 表示失败；脚本应启动目标程序后退出
+- `launch.use_ssh_helper: true` 时，`helper` 是已做 shell 引号转义的 SSH helper 命令；连接参数仍需脚本分别转义
+- `launch.protocol_aliases` 可转换上下文中的协议，例如将 `telnet` 映射为 `ssh`
+- `command` 非空时是服务端下发的完整命令，终端插件应直接执行，不再添加 helper
+- iTerm2 的完整示例见 `plugins/macos/macos.iterm/`；窗口和标签页行为由插件脚本维护
 
 脚本接收的 JSON 示例：
 

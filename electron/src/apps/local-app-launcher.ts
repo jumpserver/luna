@@ -142,29 +142,6 @@ function appleScriptString(value) {
   return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-// Reuse the current iTerm2 window when one exists so a connection opens as a tab;
-// only create a window on cold start, then write the command into its first tab.
-function iterm2Script(applicationId, command) {
-  return `tell application id "${applicationId}"
-  activate
-  if (count of windows) > 0 then
-    tell current window
-      set targetTab to create tab with default profile
-    end tell
-  else
-    create window with default profile
-    tell current window
-      set targetTab to current tab
-    end tell
-  end if
-  tell targetTab
-    tell current session
-      write text "${command}"
-    end tell
-  end tell
-end tell`;
-}
-
 async function isFile(candidate) {
   try {
     return (await stat(candidate)).isFile();
@@ -237,10 +214,7 @@ export class LocalApplicationLauncher {
     if (process.platform === "darwin") {
       const applicationId = appleScriptString(application.application_id);
       const escapedCommand = appleScriptString(command);
-      const script =
-        application.launch_driver === "iterm2"
-          ? iterm2Script(applicationId, escapedCommand)
-          : `tell application id "${applicationId}"\nactivate\ndo script "${escapedCommand}"\nend tell`;
+      const script = `tell application id "${applicationId}"\nactivate\ndo script "${escapedCommand}"\nend tell`;
       return spawnDetached("osascript", ["-s", "h", "-e", script], {}, true);
     }
     if (process.platform === "linux") {
@@ -318,22 +292,25 @@ export class LocalApplicationLauncher {
     if (!scriptPath.startsWith(`${path.resolve(application.plugin_dir)}${path.sep}`) || !(await isFile(scriptPath))) {
       throw new Error(`plugin script not found for '${application.display_name}'`);
     }
+    const command = String(payload.command || "");
     const env = {
       ...process.env,
       JMS_CONNECT_JSON: JSON.stringify({
         name: sanitizedName(payload.name),
-        protocol: payload.protocol,
+        protocol: values.protocol,
         username: username(payload),
         value: payload.token?.value || "",
         host: payload.endpoint.host,
         port: payload.endpoint.port,
+        helper: values.helper || "",
+        command: command.trim() ? command : "",
         asset: { info: { db_name: payload.asset?.info?.db_name || "" } },
         file: { name: payload.file?.name || "", content: payload.file?.content || "" }
       })
     };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
     const interpreter = String(application.script_interpreter || "").trim();
-    return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
+    return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env }, true);
   }
 
   async launchNavicatSQLServer(application, values) {
@@ -388,17 +365,17 @@ export class LocalApplicationLauncher {
     if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])
       values.protocol = application.protocol_aliases[payload.protocol];
+    if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (String(payload.command || "").trim()) {
-      if (!["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
+      if (!["terminal", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
         throw new Error("selected application cannot open command payloads");
       }
       return this.launchTerminal(application, payload.command, false);
     }
     const template = application.protocol_templates?.[payload.protocol] || application.arg_format;
     const argumentString = render(template, values);
-    if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (application.launch_type === "url") return this.electronShell.openExternal(argumentString);
-    if (["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
+    if (["terminal", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
       const command =
         payload.protocol === "oracle" &&
         (payload.connect_options as { use_sysdba?: boolean } | undefined)?.use_sysdba === true &&
