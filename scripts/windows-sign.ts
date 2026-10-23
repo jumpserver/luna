@@ -16,7 +16,8 @@ const verifySignature =
 
 const runPowerShell: RunPowerShell = (args, env) =>
   new Promise((resolve, reject) => {
-    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
+    // Match the Actions PowerShell edition so inherited module paths remain compatible.
+    const child = spawn("pwsh", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
       env,
       stdio: "inherit",
       windowsHide: true,
