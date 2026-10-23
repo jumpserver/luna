@@ -146,6 +146,11 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 - `launch.protocol_aliases` 可转换上下文中的协议，例如将 `telnet` 映射为 `ssh`
 - `command` 非空时是服务端下发的完整命令，终端插件应直接执行，不再添加 helper
 - iTerm2 的完整示例见 `plugins/macos/macos.iterm/`；窗口和标签页行为由插件脚本维护
+- `launch.interpreter: "node"` 使用 Electron 自带的 Node 运行时，不依赖用户安装 Node.js；入口脚本使用标准 JavaScript（例如 `.mjs`）
+- `launch.input: "stdin"` 将 JSON 写入脚本的标准输入并关闭输入流，环境变量中不设置 `JMS_CONNECT_JSON`；默认仍使用环境变量
+- `launch.serialize: true` 按脚本路径排队执行，前一次交接成功或失败后才启动下一次
+- 上下文还提供已解析的 `executable`、数据库名 `dbname` 和连接 URL `url`
+- Windows Navicat 的完整示例见 `plugins/windows/windows.navicat17/`；版本检查、SQL Server 对话框操作和成功确认均在插件内完成
 
 脚本接收的 JSON 示例：
 

@@ -98,7 +98,18 @@
         },
         "interpreter": {
           "type": "string",
-          "description": "Optional interpreter override, e.g. pwsh, bash"
+          "description": "Optional interpreter override. node uses Electron's bundled Node runtime."
+        },
+        "input": {
+          "type": "string",
+          "enum": ["env", "stdin"],
+          "default": "env",
+          "description": "Pass connection JSON via JMS_CONNECT_JSON or stdin"
+        },
+        "serialize": {
+          "type": "boolean",
+          "default": false,
+          "description": "Queue launches of this script until the previous handoff finishes"
         },
         "use_ssh_helper": { "type": "boolean" },
         "protocol_aliases": {

@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
@@ -30,8 +31,6 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("../shared/debug-log");
     case "../shared/url":
       return require("../shared/url");
-    case "./navicat-sqlserver":
-      return require("./navicat-sqlserver");
     case "./oauth-callback":
       return require("./oauth-callback");
     case "./compatibility":
@@ -77,46 +76,76 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
   return exports;
 }
 
-test("Navicat native dialogs serialize connection tokens and recover after a failed launch", async () => {
+test("serialized Node plugin scripts keep credentials on stdin and recover after failure", async () => {
   const calls = [];
-  const finishes = [];
-  const { LocalApplicationLauncher } = loadWithElectronMocks("../src/apps/local-app-launcher.ts", {
-    "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
-    "./navicat-sqlserver": {
-      launchNavicatSQLServer: (connection) => {
-        calls.push(connection);
-        return new Promise<void>((resolve, reject) => finishes.push({ resolve, reject }));
+  const children = [];
+  const { LocalApplicationLauncher } = loadWithElectronMocks(
+    "../src/apps/local-app-launcher.ts",
+    {
+      "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
+      "node:child_process": {
+        spawn: (executable, args, options) => {
+          const child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), unref() {} });
+          let input = "";
+          child.stdin.on("data", (chunk) => {
+            input += chunk;
+          });
+          child.stdin.on("finish", () => {
+            calls.push({ executable, args, options, input: JSON.parse(input) });
+          });
+          children.push(child);
+          return child;
+        }
       }
-    }
-  });
+    },
+    {
+      platform: "win32",
+      execPath: "C:/JumpServer/JumpServer.exe",
+      env: { JMS_CONNECT_JSON: "stale secret" }
+    } as unknown as NodeJS.Process
+  );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const values = {
-    name: "SQLServer",
-    host: "gateway.example.test",
-    port: "5525",
-    username: "first",
-    value: "first-secret",
-    dbname: "first-db"
+  const application = {
+    path: "C:/Navicat/navicat.exe",
+    plugin_dir: "/plugins/example",
+    script_path: "launch.mjs",
+    script_interpreter: "node",
+    script_input: "stdin",
+    script_serialize: true
   };
-  const first = launcher.launchNavicatSQLServer({ path: "navicat.exe" }, values);
-  const failure = assert.rejects(first, /native failure/);
-  const second = launcher.launchNavicatSQLServer(
-    { path: "navicat.exe" },
-    { ...values, username: "second", value: "second-secret", dbname: "second-db" }
+  const payload = {
+    protocol: "sqlserver",
+    endpoint: { host: "gateway.example", port: 5525 },
+    token: { id: "first", value: "first-secret" }
+  };
+  const values = { protocol: "sqlserver", dbname: "first-db" };
+  const first = launcher.launchScript(application, payload, values);
+  const failure = assert.rejects(first, /failed to launch client.*exit code 1/);
+  const second = launcher.launchScript(
+    application,
+    { ...payload, token: { id: "second", value: "second-secret" } },
+    { ...values, dbname: "second-db" }
   );
   await new Promise(setImmediate);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].username, "first");
-  finishes[0].reject(new Error("native failure"));
+  assert.equal(calls[0].executable, "C:/JumpServer/JumpServer.exe");
+  assert.deepEqual(Array.from(calls[0].args), ["/plugins/example/launch.mjs"]);
+  assert.equal(calls[0].options.env.ELECTRON_RUN_AS_NODE, "1");
+  assert.equal(calls[0].options.env.JMS_CONNECT_JSON, undefined);
+  assert.equal(calls[0].input.executable, application.path);
+  assert.equal(calls[0].input.username, "first");
+  children[0].emit("spawn");
+  children[0].emit("exit", 1, null);
   await failure;
   await new Promise(setImmediate);
   assert.equal(calls.length, 2);
-  assert.equal(calls[1].username, "second");
-  assert.equal(calls[1].password, "second-secret");
-  assert.equal(calls[1].database, "second-db");
-  assert.notEqual(calls[0].name, calls[1].name);
-  finishes[1].resolve();
+  assert.equal(calls[1].input.username, "second");
+  assert.equal(calls[1].input.value, "second-secret");
+  assert.equal(calls[1].input.dbname, "second-db");
+  children[1].emit("spawn");
+  children[1].emit("exit", 0, null);
   await second;
+  assert.equal(launcher.scriptQueues.size, 0);
 });
 
 test("Windows RDP launch preserves a connection file path containing spaces and waits for spawn", async () => {

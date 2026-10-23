@@ -14,51 +14,51 @@ import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-test("Windows Navicat uses its native SQL Server adapter without changing other database launches", async () => {
-  const application = {
-    name: "navicat17",
-    plugin_id: "windows.navicat17",
-    protocol: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    enabled_protocols: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    is_set: true,
-    match_first: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    launch_type: "args",
-    arg_format: "{url}"
-  };
-  const launcher = new LocalApplicationLauncher(
-    { isPackaged: false },
-    projectRoot,
-    { getConfig: async () => ({ databases: [application] }) },
-    null
-  );
-  let nativeCalls = 0;
-  let argumentCalls = 0;
-  launcher.launchNavicatSQLServer = async (selected, values) => {
-    assert.equal(selected, application);
-    assert.equal(values.username, "selector-token");
-    assert.equal(values.value, `secret with spaces * \" ' $()`);
-    assert.equal(values.dbname, "application database");
-    nativeCalls++;
-  };
-  launcher.launchExecutable = async (selected, args) => {
-    assert.equal(selected, application);
-    assert.ok(args.startsWith("navicat://conn."));
-    argumentCalls++;
-  };
-  for (const protocol of application.protocol) {
+test("Windows Navicat launch behavior comes entirely from its plugin configuration", async () => {
+  const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  const id = "windows.navicat17";
+  for (const protocol of ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"]) {
+    const application = await service.buildItem(
+      {
+        id,
+        category: "databases",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins/windows", id)
+      },
+      { selections: { [`databases:${protocol}`]: id } }
+    );
+    assert.equal(application.launch_type, "script");
+    assert.equal(application.script_interpreter, "node");
+    assert.equal(application.script_input, "stdin");
+    assert.equal(application.script_serialize, true);
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    let launches = 0;
+    launcher.launchScript = async (selected, payload, values) => {
+      assert.equal(selected, application);
+      assert.equal(payload.protocol, protocol === "mariadb" ? "mysql" : protocol);
+      assert.equal(values.username, "selector-token");
+      assert.equal(values.value, "test-secret");
+      assert.equal(values.dbname, protocol === "oracle" ? "selector-token" : "application database");
+      assert.ok(values.url.startsWith("navicat://conn."));
+      launches++;
+    };
     const payload = {
       protocol,
       client: "navicat17",
       name: "SQL Server test",
       endpoint: { host: "gateway.example.test", port: 5525 },
-      token: { id: "selector-token", value: `secret with spaces * \" ' $()` },
+      token: { id: "selector-token", value: "test-secret" },
       asset: { info: { db_name: "application database" } }
     };
     await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launches, 1);
     assert.equal(payload.protocol, protocol);
   }
-  assert.equal(nativeCalls, 1);
-  assert.equal(argumentCalls, 4);
 });
 
 test("SQL Server applications other than the bundled Navicat plugin retain their argument launch", async () => {
@@ -83,9 +83,6 @@ test("SQL Server applications other than the bundled Navicat plugin retain their
       { getConfig: async () => ({ databases: [application] }) },
       null
     );
-    launcher.launchNavicatSQLServer = async () => {
-      throw new Error("must not use the Navicat adapter");
-    };
     let args;
     launcher.launchExecutable = async (_selected, value) => {
       args = value;

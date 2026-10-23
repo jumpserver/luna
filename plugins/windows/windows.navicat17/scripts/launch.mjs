@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 // Navicat 16 has no connection URI, and 17/18 do not accept one as a bare
 // executable argument. Use the native connection dialog in all three versions.
@@ -246,7 +248,7 @@ export function launchNavicatSQLServer(connection, start = spawn, platform = pro
   ) {
     throw new Error("Navicat SQL Server connection information is incomplete or invalid");
   }
-  return new Promise<void>((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const child = start(
       path.win32.join(
         process.env.SystemRoot || "C:\\Windows",
@@ -293,3 +295,54 @@ export function launchNavicatSQLServer(connection, start = spawn, platform = pro
     child.stdin?.end(`${JSON.stringify({ script: navicatSQLServerScript, connection })}\n`);
   });
 }
+
+export function launchNavicat(context, start = spawn, platform = process.platform) {
+  if (platform !== "win32") throw new Error("The Windows Navicat plugin can only run on Windows");
+  if (String(context.command || "").trim()) throw new Error("Navicat cannot open command payloads");
+  if (typeof context.executable !== "string" || !path.win32.isAbsolute(context.executable)) {
+    throw new Error("Navicat executable path is invalid");
+  }
+  if (context.protocol === "sqlserver") {
+    return launchNavicatSQLServer(
+      {
+        executable: context.executable,
+        name: `JMS_${String(context.name || "").slice(0, 48)}_${randomUUID()}`,
+        host: context.host,
+        port: context.port,
+        username: context.username,
+        password: context.value,
+        database: context.dbname
+      },
+      start,
+      platform
+    );
+  }
+  const schemes = { mysql: "mysql", mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
+  const scheme = schemes[context.protocol];
+  if (!scheme || typeof context.url !== "string" || !context.url.startsWith(`navicat://conn.${scheme}?`)) {
+    throw new Error("Navicat connection URL is invalid");
+  }
+  return new Promise((resolve, reject) => {
+    const child = start(context.executable, [context.url], { detached: true, stdio: "ignore" });
+    child.once("error", () => reject(new Error("Navicat launch failed")));
+    child.once("spawn", () => {
+      child.unref();
+      resolve();
+    });
+  });
+}
+
+async function main() {
+  try {
+    process.stdin.setEncoding("utf8");
+    let input = "";
+    for await (const chunk of process.stdin) input += chunk;
+    await launchNavicat(JSON.parse(input));
+  } catch {
+    // Exception messages and spawn arguments can contain credentials.
+    console.error("Navicat connection failed. Check the connection dialog, client version and privilege levels.");
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) void main();

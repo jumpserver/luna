@@ -1,10 +1,8 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-import { launchNavicatSQLServer } from "./navicat-sqlserver";
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -112,13 +110,18 @@ function splitArguments(input) {
   return args.flatMap((argument) => argument.split("*"));
 }
 
-function spawnDetached(executable, args, options = {}, waitForExit = false) {
+function spawnDetached(executable, args, options = {}, waitForExit = false, input?: string) {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, args, { detached: !waitForExit, stdio: "ignore", ...options });
-    // Do not include spawnargs in errors: connection arguments can contain credentials.
-    child.once("error", (error: NodeJS.ErrnoException) => {
-      reject(new Error(`failed to launch client '${executable}': ${error.code || "spawn failed"}`));
+    const child = spawn(executable, args, {
+      detached: !waitForExit,
+      stdio: input === undefined ? "ignore" : ["pipe", "ignore", "ignore"],
+      ...options
     });
+    // Do not include spawnargs in errors: connection arguments can contain credentials.
+    const fail = (error: NodeJS.ErrnoException) => {
+      reject(new Error(`failed to launch client '${executable}': ${error.code || "spawn failed"}`));
+    };
+    child.once("error", fail);
     child.once("spawn", () => {
       if (waitForExit) return;
       child.unref();
@@ -129,6 +132,10 @@ function spawnDetached(executable, args, options = {}, waitForExit = false) {
         if (code === 0) resolve();
         else reject(new Error(`failed to launch client '${executable}': ${signal || `exit code ${code}`}`));
       });
+    }
+    if (input !== undefined) {
+      child.stdin.once("error", fail);
+      child.stdin.end(input);
     }
   });
 }
@@ -293,45 +300,46 @@ export class LocalApplicationLauncher {
       throw new Error(`plugin script not found for '${application.display_name}'`);
     }
     const command = String(payload.command || "");
-    const env = {
-      ...process.env,
-      JMS_CONNECT_JSON: JSON.stringify({
-        name: sanitizedName(payload.name),
-        protocol: values.protocol,
-        username: username(payload),
-        value: payload.token?.value || "",
-        host: payload.endpoint.host,
-        port: payload.endpoint.port,
-        helper: values.helper || "",
-        command: command.trim() ? command : "",
-        asset: { info: { db_name: payload.asset?.info?.db_name || "" } },
-        file: { name: payload.file?.name || "", content: payload.file?.content || "" }
-      })
-    };
+    const input = JSON.stringify({
+      name: sanitizedName(payload.name),
+      protocol: values.protocol,
+      username: username(payload),
+      value: payload.token?.value || "",
+      host: payload.endpoint.host,
+      port: payload.endpoint.port,
+      executable: await this.resolveExecutable(application),
+      dbname: values.dbname || "",
+      url: values.url || "",
+      helper: values.helper || "",
+      command: command.trim() ? command : "",
+      asset: { info: { db_name: payload.asset?.info?.db_name || "" } },
+      file: { name: payload.file?.name || "", content: payload.file?.content || "" }
+    });
+    const env = { ...process.env };
+    const useStdin = application.script_input === "stdin";
+    if (useStdin) delete env.JMS_CONNECT_JSON;
+    else env.JMS_CONNECT_JSON = input;
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
     const interpreter = String(application.script_interpreter || "").trim();
-    return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env }, true);
-  }
-
-  async launchNavicatSQLServer(application, values) {
-    const executable = await this.resolveExecutable(application);
-    // Native dialogs belong to one desktop process. Queue our own launches so
-    // simultaneous tokens cannot populate one another's connection form.
-    const pending = (this.navicatConnectionQueue || Promise.resolve())
-      .catch(() => {})
-      .then(() =>
-        launchNavicatSQLServer({
-          executable,
-          name: `JMS_${values.name.slice(0, 48)}_${randomUUID()}`,
-          host: values.host,
-          port: values.port,
-          username: values.username,
-          password: values.value,
-          database: values.dbname
-        })
+    const useNode = interpreter === "node";
+    if (useNode) env.ELECTRON_RUN_AS_NODE = "1";
+    const run = () =>
+      spawnDetached(
+        useNode ? process.execPath : interpreter || scriptPath,
+        interpreter ? [scriptPath] : [],
+        { env, windowsHide: true },
+        true,
+        useStdin ? `${input}\n` : undefined
       );
-    this.navicatConnectionQueue = pending;
-    return pending;
+    if (!application.script_serialize) return run();
+    this.scriptQueues ||= new Map();
+    const pending = (this.scriptQueues.get(scriptPath) || Promise.resolve()).catch(() => {}).then(run);
+    this.scriptQueues.set(scriptPath, pending);
+    try {
+      await pending;
+    } finally {
+      if (this.scriptQueues.get(scriptPath) === pending) this.scriptQueues.delete(scriptPath);
+    }
   }
 
   async launch(raw) {
@@ -356,9 +364,6 @@ export class LocalApplicationLauncher {
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
     const values = valuesFor(payload);
-    if (payload.protocol === "sqlserver" && application.plugin_id === "windows.navicat17") {
-      return this.launchNavicatSQLServer(application, values);
-    }
     if (application.launch_type === "args" && application.launch_driver === "resp") {
       return this.launchResp(application, payload, values);
     }
