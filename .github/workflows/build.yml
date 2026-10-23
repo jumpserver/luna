@@ -16,6 +16,15 @@ on:
         required: false
         default: ""
         type: string
+      windows_sign_mode:
+        description: Windows signing policy (optional continues unsigned on signing failure).
+        required: false
+        default: optional
+        type: choice
+        options:
+          - optional
+          - required
+          - "off"
   push:
     tags: ["client-v*"]
 
@@ -114,6 +123,7 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      WINDOWS_SIGN_MODE: ${{ inputs.windows_sign_mode || vars.WINDOWS_SIGN_MODE || 'optional' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -146,6 +156,8 @@ jobs:
 
       - name: Validate packaging configuration
         if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'macos')
+        env:
+          WINDOWS_SIGN_MODE: "off"
         run: pnpm --dir electron exec node --import tsx --test tests/forge-artifacts.test.ts
 
       - name: Sync version
@@ -219,6 +231,9 @@ jobs:
         run: pnpm electron:prepare
 
       - name: Build Electron artifacts
+        env:
+          SIGNPANEL_URL: ${{ secrets.SIGNPANEL_URL || vars.SIGNPANEL_URL }}
+          SIGNPANEL_API_TOKEN: ${{ secrets.SIGNPANEL_API_TOKEN }}
         run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
       - name: Verify Windows installers
@@ -233,6 +248,17 @@ jobs:
             $files = @(Get-ChildItem -Path $pattern -File -ErrorAction Stop)
             if ($files.Count -ne 1 -or $files[0].Length -eq 0) {
               throw "Expected one non-empty installer matching $pattern"
+            }
+            if ($env:WINDOWS_SIGN_MODE -ne "off") {
+              try {
+                $signature = Get-AuthenticodeSignature -LiteralPath $files[0].FullName -ErrorAction Stop
+                if ($signature.Status -ne "Valid") {
+                  throw "Invalid Authenticode signature for $($files[0].Name): $($signature.Status)"
+                }
+              } catch {
+                if ($env:WINDOWS_SIGN_MODE -eq "required") { throw }
+                Write-Warning "$_"
+              }
             }
           }
 
