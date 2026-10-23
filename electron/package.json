@@ -33,7 +33,7 @@
     "@electron-forge/plugin-vite": "7.11.2",
     "@electron-forge/shared-types": "7.11.2",
     "@electron/windows-sign": "2.0.1",
-    "electron": "44.0.0",
+    "electron": "44.5.0",
     "electron-builder": "26.15.3",
     "tsx": "^4.23.13",
     "vite": "8.1.5"
