@@ -208,12 +208,17 @@ test("native launcher reports spawn errors without leaking connection arguments"
     { platform: "linux", env: {} } as NodeJS.Process
   );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const launch = launcher.launchTerminal({ path: "Terminal" }, "ssh -P test-secret", false);
+  const launch = launcher.launchExecutable(
+    { path: "x-terminal-emulator", executable_type: "system" },
+    ["ssh", "-P", "test-secret"],
+    {}
+  );
   const rejected = assert.rejects(launch, (error: Error) => {
     assert.match(error.message, /failed to launch client.*ENOENT/);
     assert.doesNotMatch(error.message, /test-secret/);
     return true;
   });
+  await new Promise(setImmediate);
   assert.equal(executable, "x-terminal-emulator");
   child.emit("error", Object.assign(new Error("spawn failed with test-secret"), { code: "ENOENT" }));
   await rejected;
@@ -224,16 +229,27 @@ test("macOS protocol launch waits for the terminal handoff and rejects failed Ap
   const { LocalApplicationLauncher } = loadWithElectronMocks(
     "../src/apps/local-app-launcher.ts",
     {
-      "node:child_process": { spawn: () => child }
+      "node:child_process": { spawn: () => child },
+      "node:fs/promises": { stat: async () => ({ isFile: () => true }) }
     },
     { platform: "darwin", env: {} } as NodeJS.Process
   );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
   let finished = false;
-  const launch = launcher.launchTerminal({ application_id: "com.apple.Terminal" }, "ssh test", false);
+  const launch = launcher.launchScript(
+    {
+      plugin_dir: "/plugins/terminal",
+      script_path: "launch.applescript",
+      script_interpreter: "osascript",
+      path: "Terminal"
+    },
+    { protocol: "ssh", endpoint: { host: "example", port: 22 }, token: { id: "test", value: "secret" } },
+    { protocol: "ssh" }
+  );
   const rejected = assert.rejects(launch, /failed to launch client.*exit code 1/).then(() => {
     finished = true;
   });
+  await new Promise(setImmediate);
   child.emit("spawn");
   await new Promise(setImmediate);
   assert.equal(finished, false);

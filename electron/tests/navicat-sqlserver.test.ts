@@ -124,15 +124,20 @@ test("Navicat plugin creates unique SQL Server names and maps the standard scrip
   assert.notEqual(names[0], names[1]);
 });
 
-test("Navicat plugin preserves URL launches for other databases and rejects arbitrary URLs", async () => {
+test("Navicat plugin builds and encodes its own URLs for other databases", async () => {
   for (const protocol of ["mysql", "mariadb", "oracle", "postgresql"]) {
     const aliases = { mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
-    const url = `navicat://conn.${aliases[protocol] || protocol}?Conn.Name=example`;
     const result = launchNavicat(
-      { ...connection, protocol, url },
+      { ...connection, protocol, name: "name & 中文", url: "file:///ignored" },
       (executable, args, options) => {
         assert.equal(executable, connection.executable);
-        assert.deepEqual(args, [url]);
+        assert.equal(args.length, 1);
+        const url = new URL(args[0]);
+        assert.equal(url.protocol, "navicat:");
+        assert.equal(url.hostname, `conn.${aliases[protocol] || protocol}`);
+        assert.equal(url.searchParams.get("Conn.Host"), connection.host);
+        assert.equal(url.searchParams.get("Conn.Name"), "name & 中文");
+        assert.equal(url.searchParams.get("Conn.Username"), connection.username);
         assert.equal(options.detached, true);
         const child = Object.assign(new EventEmitter(), { unref() {} });
         setImmediate(() => child.emit("spawn"));
@@ -142,10 +147,7 @@ test("Navicat plugin preserves URL launches for other databases and rejects arbi
     );
     await result;
   }
-  assert.throws(
-    () => launchNavicat({ ...connection, protocol: "mysql", url: "file:///untrusted" }, undefined, "win32"),
-    /URL is invalid/
-  );
+  assert.throws(() => launchNavicat({ ...connection, protocol: "unknown" }, undefined, "win32"), /protocol is invalid/);
 });
 
 test("starting Navicat without confirmed connection is not reported as success", async () => {

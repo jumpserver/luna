@@ -15,7 +15,8 @@
     "use_ssh_helper": true,
     "protocol_aliases": {
       "telnet": "ssh"
-    }
+    },
+    "accepts_command": true
   },
   "display_name": "iTerm2"
 }

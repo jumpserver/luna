@@ -79,6 +79,7 @@ export interface ConfigItem {
   builtin?: boolean;
   icon_path?: string;
   use_ssh_helper?: boolean;
+  uses_terminal_host?: boolean;
   path_display?: string;
   path_copyable?: boolean;
   path_selectable?: boolean;

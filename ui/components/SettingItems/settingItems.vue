@@ -61,7 +61,7 @@ const commentText = computed(() => {
 });
 
 const displayName = computed(() => {
-  if (props.item?.name === "terminal" && props.item?.type === "databases") {
+  if (props.item?.uses_terminal_host) {
     return t("Setting.TerminalSettings");
   }
   return props.item?.display_name || "";
@@ -70,13 +70,10 @@ const displayName = computed(() => {
 const bundledIconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()] || "");
 
 const iconSrc = computed(() => {
-  if (bundledIconSrc.value) {
-    return bundledIconSrc.value;
-  }
   if (props.item?.icon_path && isDesktopRuntime()) {
     return desktopConvertFileSrc(props.item.icon_path);
   }
-  return imagesMap.terminal || "";
+  return bundledIconSrc.value || imagesMap.terminal || "";
 });
 const isBuiltInTerminal = computed(() => props.item?.name === "builtin_client");
 

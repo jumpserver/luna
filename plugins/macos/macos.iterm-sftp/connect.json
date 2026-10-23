@@ -12,7 +12,8 @@
     "type": "script",
     "script": "scripts/launch.macos.applescript",
     "interpreter": "/usr/bin/osascript",
-    "use_ssh_helper": true
+    "use_ssh_helper": true,
+    "accepts_command": true
   },
   "display_name": "iTerm2"
 }

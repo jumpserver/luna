@@ -317,13 +317,17 @@ export function launchNavicat(context, start = spawn, platform = process.platfor
       platform
     );
   }
-  const schemes = { mysql: "mysql", mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
-  const scheme = schemes[context.protocol];
-  if (!scheme || typeof context.url !== "string" || !context.url.startsWith(`navicat://conn.${scheme}?`)) {
-    throw new Error("Navicat connection URL is invalid");
-  }
+  const aliases = { mysql: "mysql", mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
+  if (!Object.hasOwn(aliases, context.protocol)) throw new Error("Navicat protocol is invalid");
+  const query = new URLSearchParams({
+    "Conn.Host": context.host,
+    "Conn.Name": context.name,
+    "Conn.Port": String(context.port),
+    "Conn.Username": context.username
+  });
+  const url = `navicat://conn.${aliases[context.protocol]}?${query}`;
   return new Promise((resolve, reject) => {
-    const child = start(context.executable, [context.url], { detached: true, stdio: "ignore" });
+    const child = start(context.executable, [url], { detached: true, stdio: "ignore" });
     child.once("error", () => reject(new Error("Navicat launch failed")));
     child.once("spawn", () => {
       child.unref();
