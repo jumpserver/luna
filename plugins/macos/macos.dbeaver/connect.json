@@ -10,11 +10,8 @@
     "required": false
   },
   "launch": {
-    "type": "args",
-    "template": "-con name={name}|driver={dbeaver_protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
-    "protocol_templates": {
-      "dameng": "-con name={name}|driver=dameng|user={username}|password={value}|host={host}|port={port}|save=false|connect=true"
-    }
+    "type": "module",
+    "module": "scripts/launch.mjs"
   },
   "display_name": "DBeaver Community"
 }

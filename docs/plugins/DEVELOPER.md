@@ -130,7 +130,8 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
       "executable": { "type": "system", "default": "osascript" },
       "launch": {
         "type": "script",
-        "script": "scripts/launch.macos.applescript"
+        "script": "scripts/launch.macos.applescript",
+        "interpreter": "/usr/bin/osascript"
       }
     }
   }
@@ -140,8 +141,16 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 脚本约定：
 
 - 通过环境变量 `JMS_CONNECT_JSON` 接收连接上下文（JSON 字符串）
-- 退出码 `0` 表示成功，非 `0` 表示失败
-- 标准错误输出会显示在客户端日志中
+- 启动器等待脚本退出：退出码 `0` 表示交接成功，非 `0` 表示失败；脚本应启动目标程序后退出
+- `launch.use_ssh_helper: true` 时，`helper` 是已做 shell 引号转义的 SSH helper 命令；连接参数仍需脚本分别转义
+- `launch.protocol_aliases` 可转换上下文中的协议，例如将 `telnet` 映射为 `ssh`
+- `command` 非空时是服务端下发的完整命令，终端插件应直接执行，不再添加 helper
+- iTerm2 的完整示例见 `plugins/macos/macos.iterm/`；窗口和标签页行为由插件脚本维护
+- `launch.interpreter: "node"` 使用 Electron 自带的 Node 运行时，不依赖用户安装 Node.js；入口脚本使用标准 JavaScript（例如 `.mjs`）
+- `launch.input: "stdin"` 将 JSON 写入脚本的标准输入并关闭输入流，环境变量中不设置 `JMS_CONNECT_JSON`；默认仍使用环境变量
+- `launch.serialize: true` 按脚本路径排队执行，前一次交接成功或失败后才启动下一次
+- 上下文还提供已解析的 `executable`、数据库名 `dbname`；连接 URL 由插件自行构造
+- Windows Navicat 的完整示例见 `plugins/windows/windows.navicat17/`；版本检查、SQL Server 对话框操作和成功确认均在插件内完成
 
 脚本接收的 JSON 示例：
 
@@ -156,6 +165,32 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
   "asset": { "id": "...", "name": "...", "address": "10.0.0.1" }
 }
 ```
+
+### 参数构造模块（module）
+
+复杂参数和配置文件准备放在插件的 JavaScript 模块内。客户端使用 Electron 自带的 Node 子进程调用模块，连接上下文通过 stdin 传递；模块默认导出一个接收上下文的函数，可返回 Promise。
+
+```json
+{
+  "launch": {
+    "type": "module",
+    "module": "scripts/launch.mjs"
+  }
+}
+```
+
+```js
+export default function (context) {
+  return { type: "args", args: ["--host", context.host, "--port", String(context.port)] };
+}
+```
+
+- `args` 中每项是一个完整参数，不经过 shell 拆分。模块可以先准备私有配置文件，再返回启动参数；RESP、DBeaver 和 DBX 提供完整示例。
+- 数据库命令模块声明 `target: "terminal"`，返回 `{ type: "terminal", command }`。客户端会将命令交给设置中所选的终端宿主，而不是插件固定指定的终端。
+- 能接收完整命令的宿主脚本或模块声明 `accepts_command: true`，优先使用 `context.command`。自定义 SSH 参数模板在没有明确命令模板时不支持此能力，客户端会报错，避免静默改用其他宿主。
+- 上下文包含 `connect_options`，用于 SYSDBA 等连接选项；`helper_executable` 是未做 shell 转义的 helper 路径，适合直接放进参数数组。
+- 模块最多运行 30 秒，返回的 JSON 最大为 1 MiB；错误不会回显连接凭据。模块代码须使用标准 JavaScript 和 Node 内置模块，客户端不会为插件安装第三方依赖。
+- 各平台插件独立打包，不能从其他插件目录导入运行时文件。
 
 ### URL Scheme 模式（url）
 

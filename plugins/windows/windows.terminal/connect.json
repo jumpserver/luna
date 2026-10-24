@@ -9,13 +9,13 @@
     "default": "wt.exe"
   },
   "launch": {
-    "type": "args",
-    "driver": "windows-terminal",
+    "type": "module",
+    "module": "scripts/launch.mjs",
+    "accepts_command": true,
     "use_ssh_helper": true,
     "protocol_aliases": {
       "telnet": "ssh"
-    },
-    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+    }
   },
   "display_name": "Windows Terminal"
 }

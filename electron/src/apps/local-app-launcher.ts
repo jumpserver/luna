@@ -1,10 +1,8 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-import { launchNavicatSQLServer } from "./navicat-sqlserver";
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -22,43 +20,7 @@ function username(payload) {
     : String(payload.token?.id || "");
 }
 
-function navicatUrl(payload) {
-  const aliases = { oracle: "ora", sqlserver: "mssql", postgresql: "pgsql" };
-  const protocol = aliases[payload.protocol] || payload.protocol;
-  return `navicat://conn.${protocol}?Conn.Host=${payload.endpoint.host}&Conn.Name=${sanitizedName(payload.name)}&Conn.Port=${payload.endpoint.port}&Conn.Username=${username(payload)}`;
-}
-
-function dbxUrl(payload) {
-  const aliases = { postgresql: "postgres", sqlserver: "mssql", dameng: "dm", mariadb: "mysql" };
-  const query = new URLSearchParams({
-    name: sanitizedName(payload.name),
-    type: aliases[payload.protocol] || payload.protocol,
-    host: String(payload.endpoint?.host || ""),
-    port: String(payload.endpoint?.port || ""),
-    user: username(payload),
-    password: String(payload.token?.value || ""),
-    // Magnus routes Oracle connections by the token supplied as the service name.
-    database: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
-    one_time: "true"
-  });
-  if (payload.protocol === "mongodb") {
-    query.set("url_params", "authSource=admin&loadBalanced=true&retryWrites=false");
-  }
-  // The legacy argument splitter treats '*' as an argument separator, even inside quotes.
-  return `dbx://connection/new?${query.toString().replaceAll("*", "%2A")}`;
-}
-
-function mongodbUri(payload) {
-  const user = encodeURIComponent(username(payload));
-  const password = encodeURIComponent(String(payload.token?.value || ""));
-  const database = encodeURIComponent(String(payload.asset?.info?.db_name || ""));
-  const host = String(payload.endpoint?.host || "");
-  const port = String(payload.endpoint?.port || "");
-  return `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
-}
-
 function valuesFor(payload): Record<string, string> {
-  const dmConnection = `${username(payload)}/${String(payload.token?.value || "")}@${String(payload.endpoint?.host || "")}:${String(payload.endpoint?.port || "")}`;
   return {
     name: sanitizedName(payload.name),
     protocol: payload.protocol,
@@ -66,12 +28,7 @@ function valuesFor(payload): Record<string, string> {
     value: String(payload.token?.value || ""),
     host: String(payload.endpoint?.host || ""),
     port: String(payload.endpoint?.port || ""),
-    dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
-    dameng_disql: shellQuote(dmConnection),
-    mongodb_shell_uri: payload.protocol === "mongodb" ? shellQuote(mongodbUri(payload)) : "",
-    dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
-    dbx_url: dbxUrl(payload),
-    url: navicatUrl(payload)
+    dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || "")
   };
 }
 
@@ -112,13 +69,18 @@ function splitArguments(input) {
   return args.flatMap((argument) => argument.split("*"));
 }
 
-function spawnDetached(executable, args, options = {}, waitForExit = false) {
+function spawnDetached(executable, args, options = {}, waitForExit = false, input?: string) {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, args, { detached: !waitForExit, stdio: "ignore", ...options });
-    // Do not include spawnargs in errors: connection arguments can contain credentials.
-    child.once("error", (error: NodeJS.ErrnoException) => {
-      reject(new Error(`failed to launch client '${executable}': ${error.code || "spawn failed"}`));
+    const child = spawn(executable, args, {
+      detached: !waitForExit,
+      stdio: input === undefined ? "ignore" : ["pipe", "ignore", "ignore"],
+      ...options
     });
+    // Do not include spawnargs in errors: connection arguments can contain credentials.
+    const fail = (error: NodeJS.ErrnoException) => {
+      reject(new Error(`failed to launch client '${executable}': ${error.code || "spawn failed"}`));
+    };
+    child.once("error", fail);
     child.once("spawn", () => {
       if (waitForExit) return;
       child.unref();
@@ -130,39 +92,63 @@ function spawnDetached(executable, args, options = {}, waitForExit = false) {
         else reject(new Error(`failed to launch client '${executable}': ${signal || `exit code ${code}`}`));
       });
     }
+    if (input !== undefined) {
+      child.stdin.once("error", fail);
+      child.stdin.end(input);
+    }
+  });
+}
+
+const pluginModuleRunner = String.raw`
+const { pathToFileURL } = require("node:url");
+(async () => {
+  let input = "";
+  process.stdin.setEncoding("utf8");
+  for await (const chunk of process.stdin) input += chunk;
+  const plugin = await import(pathToFileURL(process.argv[1]).href);
+  process.stdout.write(JSON.stringify(await plugin.default(JSON.parse(input))));
+})().catch(() => process.exit(1));
+`;
+
+function runPluginModule(filename, input): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
+    delete env.JMS_CONNECT_JSON;
+    const child = spawn(process.execPath, ["-e", pluginModuleRunner, filename], {
+      env,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "ignore"]
+    });
+    let output = "";
+    const timer = setTimeout(fail, 30_000);
+    function fail() {
+      clearTimeout(timer);
+      child.kill();
+      reject(new Error("Plugin could not prepare the connection"));
+    }
+    child.once("error", fail);
+    child.stdin.once("error", fail);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+      if (Buffer.byteLength(output) > 1024 * 1024) fail();
+    });
+    child.once("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) return fail();
+      try {
+        resolve(JSON.parse(output));
+      } catch {
+        fail();
+      }
+    });
+    child.stdin.end(input);
   });
 }
 
 function shellQuote(value) {
   if (process.platform === "win32") return `"${String(value).replaceAll('"', '\\"')}"`;
   return `'${String(value).replaceAll("'", "'\\''")}'`;
-}
-
-function appleScriptString(value) {
-  return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-// Reuse the current iTerm2 window when one exists so a connection opens as a tab;
-// only create a window on cold start, then write the command into its first tab.
-function iterm2Script(applicationId, command) {
-  return `tell application id "${applicationId}"
-  activate
-  if (count of windows) > 0 then
-    tell current window
-      set targetTab to create tab with default profile
-    end tell
-  else
-    create window with default profile
-    tell current window
-      set targetTab to current tab
-    end tell
-  end if
-  tell targetTab
-    tell current session
-      write text "${command}"
-    end tell
-  end tell
-end tell`;
 }
 
 async function isFile(candidate) {
@@ -194,9 +180,12 @@ export class LocalApplicationLauncher {
   }
 
   helperCommand() {
+    return shellQuote(this.helperExecutable());
+  }
+
+  helperExecutable() {
     const resourceRoot = this.isPackaged ? this.projectRoot : path.join(this.projectRoot, ".electron-resources");
-    const executable = process.platform === "win32" ? "jms-ssh.exe" : "jms-ssh";
-    return shellQuote(path.join(resourceRoot, "bin", executable));
+    return path.join(resourceRoot, "bin", process.platform === "win32" ? "jms-ssh.exe" : "jms-ssh");
   }
 
   async resolveApplication(payload) {
@@ -221,6 +210,7 @@ export class LocalApplicationLauncher {
 
   async resolveExecutable(application) {
     const configured = String(application.path || "").trim();
+    if (configured.includes("\0")) throw new Error("Invalid application path");
     if (await isFile(configured)) return configured;
     if (application.executable_type === "application_bundle" && (await isDirectory(configured))) return configured;
     if (application.is_internal) {
@@ -232,46 +222,28 @@ export class LocalApplicationLauncher {
     throw new Error(`configured application '${application.display_name}' not found at '${configured}'`);
   }
 
-  async launchTerminal(application, argumentString, useHelper) {
-    const command = useHelper ? `${this.helperCommand()} ${argumentString}` : argumentString;
-    if (process.platform === "darwin") {
-      const applicationId = appleScriptString(application.application_id);
-      const escapedCommand = appleScriptString(command);
-      const script =
-        application.launch_driver === "iterm2"
-          ? iterm2Script(applicationId, escapedCommand)
-          : `tell application id "${applicationId}"\nactivate\ndo script "${escapedCommand}"\nend tell`;
-      return spawnDetached("osascript", ["-s", "h", "-e", script], {}, true);
-    }
-    if (process.platform === "linux") {
-      const executable = application.path && application.path !== "Terminal" ? application.path : "x-terminal-emulator";
-      return spawnDetached(executable, ["-e", "bash", "-lc", command]);
-    }
-    const executable = await this.resolveExecutable(application);
-    if (useHelper) {
-      return spawnDetached(executable, ["new-tab", "cmd.exe", "/d", "/s", "/c", command]);
-    }
-    const args = splitArguments(argumentString);
-    return spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
-  }
-
-  async launchExecutable(application, argumentString, values, payload?) {
+  async launchExecutable(application, argumentString, values) {
     const executable = await this.resolveExecutable(application);
     const args = Array.isArray(argumentString) ? argumentString : splitArguments(argumentString);
-    if (
-      application.name === "dbeaver" &&
-      payload?.protocol === "oracle" &&
-      payload.connect_options?.use_sysdba === true
-    ) {
-      const connectionIndex = args.indexOf("-con") + 1;
-      if (!connectionIndex || !args[connectionIndex] || args[connectionIndex].startsWith("-")) {
-        throw new Error("DBeaver connection arguments are missing");
-      }
-      args[connectionIndex] += "|auth=oracle_native|authProp.oracle.logon-as=SYSDBA";
+    if (!args.every((arg) => typeof arg === "string" && !arg.includes("\0"))) {
+      throw new Error("Invalid application arguments");
     }
     const env = { ...process.env };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
     return spawnDetached(executable, args, { env });
+  }
+
+  async launchInTerminal(command, payload) {
+    const config = await this.configService.getConfig();
+    const hosts = (config.terminal || []).filter((item) => item.use_ssh_helper);
+    const host =
+      hosts.find((item) => item.match_first.includes("ssh")) ||
+      hosts.find((item) => (item.enabled_protocols || item.match_first).includes("ssh"));
+    // ponytail: custom SSH templates cannot safely embed arbitrary commands; add an explicit command template before enabling command support.
+    if (!host?.is_set || !host.accepts_command || host.uses_terminal_host) {
+      throw new Error("The selected terminal host cannot open command payloads");
+    }
+    return this.launchApplication(host, { ...payload, command });
   }
 
   async launchFile(application, payload) {
@@ -287,74 +259,83 @@ export class LocalApplicationLauncher {
     await this.launchExecutable(application, args, {});
   }
 
-  async launchResp(application, payload, values) {
-    await mkdir(this.configService.configDir, { recursive: true });
-    const settingsDir = await mkdtemp(path.join(this.configService.configDir, "resp-"));
-    const configDir = path.join(settingsDir, ".rdm");
-    await mkdir(configDir, { mode: 0o700 });
-    await writeFile(
-      path.join(configDir, "connections.json"),
-      JSON.stringify([
-        {
-          name: values.name,
-          host: values.host,
-          port: Number(values.port),
-          auth: `${values.username}@${values.value}`,
-          timeout_connect: 60000,
-          timeout_execute: 60000
-        }
-      ]),
-      { mode: 0o600 }
-    );
-    // Expand the path after splitting so spaces and Windows backslashes remain intact.
-    const args = splitArguments(application.arg_format).map((argument) =>
-      render(argument, { ...values, config_file: settingsDir })
-    );
-    return this.launchExecutable(application, args, values, payload);
+  async resolvePluginFile(application, relativePath) {
+    const pluginRoot = path.resolve(application.plugin_dir);
+    const filename = path.resolve(pluginRoot, relativePath || "");
+    if (!filename.startsWith(pluginRoot + path.sep) || !(await isFile(filename))) {
+      throw new Error("Plugin entry point was not found");
+    }
+    return filename;
+  }
+
+  async connectionContext(application, payload, values) {
+    const command = String(payload.command || "");
+    return {
+      ...valuesFor(payload),
+      ...values,
+      port: payload.endpoint.port,
+      executable: await this.resolveExecutable(application),
+      config_dir: this.configService?.configDir || "",
+      helper: values.helper || "",
+      helper_executable: values.helper_executable || "",
+      command: command.trim() ? command : "",
+      connect_options: payload.connect_options || {},
+      asset: { info: { db_name: payload.asset?.info?.db_name || "" } },
+      file: { name: payload.file?.name || "", content: payload.file?.content || "" }
+    };
+  }
+
+  async launchModule(application, payload, values) {
+    const filename = await this.resolvePluginFile(application, application.module_path);
+    const context = await this.connectionContext(application, payload, values);
+    const plan = await runPluginModule(filename, JSON.stringify(context));
+    if (
+      plan?.type === "args" &&
+      Array.isArray(plan.args) &&
+      plan.args.every((arg) => typeof arg === "string" && !arg.includes("\0"))
+    ) {
+      return this.launchExecutable(application, plan.args, values);
+    }
+    if (
+      plan?.type === "terminal" &&
+      application.uses_terminal_host &&
+      typeof plan.command === "string" &&
+      plan.command.trim() &&
+      !plan.command.includes("\0")
+    ) {
+      return this.launchInTerminal(plan.command, payload);
+    }
+    throw new Error("Plugin returned an invalid launch plan");
   }
 
   async launchScript(application, payload, values) {
-    const scriptPath = path.resolve(application.plugin_dir, application.script_path || "");
-    if (!scriptPath.startsWith(`${path.resolve(application.plugin_dir)}${path.sep}`) || !(await isFile(scriptPath))) {
-      throw new Error(`plugin script not found for '${application.display_name}'`);
-    }
-    const env = {
-      ...process.env,
-      JMS_CONNECT_JSON: JSON.stringify({
-        name: sanitizedName(payload.name),
-        protocol: payload.protocol,
-        username: username(payload),
-        value: payload.token?.value || "",
-        host: payload.endpoint.host,
-        port: payload.endpoint.port,
-        asset: { info: { db_name: payload.asset?.info?.db_name || "" } },
-        file: { name: payload.file?.name || "", content: payload.file?.content || "" }
-      })
-    };
+    const scriptPath = await this.resolvePluginFile(application, application.script_path);
+    const input = JSON.stringify(await this.connectionContext(application, payload, values));
+    const env = { ...process.env };
+    const useStdin = application.script_input === "stdin";
+    if (useStdin) delete env.JMS_CONNECT_JSON;
+    else env.JMS_CONNECT_JSON = input;
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
     const interpreter = String(application.script_interpreter || "").trim();
-    return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
-  }
-
-  async launchNavicatSQLServer(application, values) {
-    const executable = await this.resolveExecutable(application);
-    // Native dialogs belong to one desktop process. Queue our own launches so
-    // simultaneous tokens cannot populate one another's connection form.
-    const pending = (this.navicatConnectionQueue || Promise.resolve())
-      .catch(() => {})
-      .then(() =>
-        launchNavicatSQLServer({
-          executable,
-          name: `JMS_${values.name.slice(0, 48)}_${randomUUID()}`,
-          host: values.host,
-          port: values.port,
-          username: values.username,
-          password: values.value,
-          database: values.dbname
-        })
+    const useNode = interpreter === "node";
+    if (useNode) env.ELECTRON_RUN_AS_NODE = "1";
+    const run = () =>
+      spawnDetached(
+        useNode ? process.execPath : interpreter || scriptPath,
+        interpreter ? [scriptPath] : [],
+        { env, windowsHide: true },
+        true,
+        useStdin ? `${input}\n` : undefined
       );
-    this.navicatConnectionQueue = pending;
-    return pending;
+    if (!application.script_serialize) return run();
+    this.scriptQueues ||= new Map();
+    const pending = (this.scriptQueues.get(scriptPath) || Promise.resolve()).catch(() => {}).then(run);
+    this.scriptQueues.set(scriptPath, pending);
+    try {
+      await pending;
+    } finally {
+      if (this.scriptQueues.get(scriptPath) === pending) this.scriptQueues.delete(scriptPath);
+    }
   }
 
   async launch(raw) {
@@ -378,41 +359,27 @@ export class LocalApplicationLauncher {
     electronLog.info(
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
+    return this.launchApplication(application, payload);
+  }
+
+  async launchApplication(application, payload) {
     const values = valuesFor(payload);
-    if (payload.protocol === "sqlserver" && application.plugin_id === "windows.navicat17") {
-      return this.launchNavicatSQLServer(application, values);
+    if (application.use_ssh_helper) {
+      values.helper = this.helperCommand();
+      values.helper_executable = this.helperExecutable();
     }
-    if (application.launch_type === "args" && application.launch_driver === "resp") {
-      return this.launchResp(application, payload, values);
-    }
-    if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])
       values.protocol = application.protocol_aliases[payload.protocol];
-    if (String(payload.command || "").trim()) {
-      if (!["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
-        throw new Error("selected application cannot open command payloads");
-      }
-      return this.launchTerminal(application, payload.command, false);
+    if (String(payload.command || "").trim() && !application.accepts_command) {
+      throw new Error("Selected application cannot open command payloads");
     }
+    if (application.launch_type === "module") return this.launchModule(application, payload, values);
+    if (application.launch_type === "script") return this.launchScript(application, payload, values);
     const template = application.protocol_templates?.[payload.protocol] || application.arg_format;
     const argumentString = render(template, values);
-    if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (application.launch_type === "url") return this.electronShell.openExternal(argumentString);
-    if (["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
-      const command =
-        payload.protocol === "oracle" &&
-        (payload.connect_options as { use_sysdba?: boolean } | undefined)?.use_sysdba === true &&
-        !/\bas\s+sysdba\s*$/i.test(argumentString)
-          ? `${argumentString} as sysdba`
-          : argumentString;
-      return this.launchTerminal(
-        application,
-        command,
-        application.use_ssh_helper && !String(template).includes("{helper}")
-      );
-    }
-    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values, payload);
-    throw new Error(`unsupported application launch type: ${application.launch_type}`);
+    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values);
+    throw new Error("Unsupported application launch type");
   }
 }
 

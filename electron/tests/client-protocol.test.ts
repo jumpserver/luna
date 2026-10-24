@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 import ts from "typescript";
+import { ApplicationConfigService } from "../src/apps/application-config.ts";
 import {
   CLIENT_AUTH_CALLBACK,
   decodeClientProtocolPayload,
@@ -28,8 +31,6 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("../shared/debug-log");
     case "../shared/url":
       return require("../shared/url");
-    case "./navicat-sqlserver":
-      return require("./navicat-sqlserver");
     case "./oauth-callback":
       return require("./oauth-callback");
     case "./compatibility":
@@ -75,46 +76,76 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
   return exports;
 }
 
-test("Navicat native dialogs serialize connection tokens and recover after a failed launch", async () => {
+test("serialized Node plugin scripts keep credentials on stdin and recover after failure", async () => {
   const calls = [];
-  const finishes = [];
-  const { LocalApplicationLauncher } = loadWithElectronMocks("../src/apps/local-app-launcher.ts", {
-    "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
-    "./navicat-sqlserver": {
-      launchNavicatSQLServer: (connection) => {
-        calls.push(connection);
-        return new Promise<void>((resolve, reject) => finishes.push({ resolve, reject }));
+  const children = [];
+  const { LocalApplicationLauncher } = loadWithElectronMocks(
+    "../src/apps/local-app-launcher.ts",
+    {
+      "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
+      "node:child_process": {
+        spawn: (executable, args, options) => {
+          const child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), unref() {} });
+          let input = "";
+          child.stdin.on("data", (chunk) => {
+            input += chunk;
+          });
+          child.stdin.on("finish", () => {
+            calls.push({ executable, args, options, input: JSON.parse(input) });
+          });
+          children.push(child);
+          return child;
+        }
       }
-    }
-  });
+    },
+    {
+      platform: "win32",
+      execPath: "C:/JumpServer/JumpServer.exe",
+      env: { JMS_CONNECT_JSON: "stale secret" }
+    } as unknown as NodeJS.Process
+  );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const values = {
-    name: "SQLServer",
-    host: "gateway.example.test",
-    port: "5525",
-    username: "first",
-    value: "first-secret",
-    dbname: "first-db"
+  const application = {
+    path: "C:/Navicat/navicat.exe",
+    plugin_dir: "/plugins/example",
+    script_path: "launch.mjs",
+    script_interpreter: "node",
+    script_input: "stdin",
+    script_serialize: true
   };
-  const first = launcher.launchNavicatSQLServer({ path: "navicat.exe" }, values);
-  const failure = assert.rejects(first, /native failure/);
-  const second = launcher.launchNavicatSQLServer(
-    { path: "navicat.exe" },
-    { ...values, username: "second", value: "second-secret", dbname: "second-db" }
+  const payload = {
+    protocol: "sqlserver",
+    endpoint: { host: "gateway.example", port: 5525 },
+    token: { id: "first", value: "first-secret" }
+  };
+  const values = { protocol: "sqlserver", dbname: "first-db" };
+  const first = launcher.launchScript(application, payload, values);
+  const failure = assert.rejects(first, /failed to launch client.*exit code 1/);
+  const second = launcher.launchScript(
+    application,
+    { ...payload, token: { id: "second", value: "second-secret" } },
+    { ...values, dbname: "second-db" }
   );
   await new Promise(setImmediate);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].username, "first");
-  finishes[0].reject(new Error("native failure"));
+  assert.equal(calls[0].executable, "C:/JumpServer/JumpServer.exe");
+  assert.deepEqual(Array.from(calls[0].args), ["/plugins/example/launch.mjs"]);
+  assert.equal(calls[0].options.env.ELECTRON_RUN_AS_NODE, "1");
+  assert.equal(calls[0].options.env.JMS_CONNECT_JSON, undefined);
+  assert.equal(calls[0].input.executable, application.path);
+  assert.equal(calls[0].input.username, "first");
+  children[0].emit("spawn");
+  children[0].emit("exit", 1, null);
   await failure;
   await new Promise(setImmediate);
   assert.equal(calls.length, 2);
-  assert.equal(calls[1].username, "second");
-  assert.equal(calls[1].password, "second-secret");
-  assert.equal(calls[1].database, "second-db");
-  assert.notEqual(calls[0].name, calls[1].name);
-  finishes[1].resolve();
+  assert.equal(calls[1].input.username, "second");
+  assert.equal(calls[1].input.value, "second-secret");
+  assert.equal(calls[1].input.dbname, "second-db");
+  children[1].emit("spawn");
+  children[1].emit("exit", 0, null);
   await second;
+  assert.equal(launcher.scriptQueues.size, 0);
 });
 
 test("Windows RDP launch preserves a connection file path containing spaces and waits for spawn", async () => {
@@ -177,12 +208,17 @@ test("native launcher reports spawn errors without leaking connection arguments"
     { platform: "linux", env: {} } as NodeJS.Process
   );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const launch = launcher.launchTerminal({ path: "Terminal" }, "ssh -P test-secret", false);
+  const launch = launcher.launchExecutable(
+    { path: "x-terminal-emulator", executable_type: "system" },
+    ["ssh", "-P", "test-secret"],
+    {}
+  );
   const rejected = assert.rejects(launch, (error: Error) => {
     assert.match(error.message, /failed to launch client.*ENOENT/);
     assert.doesNotMatch(error.message, /test-secret/);
     return true;
   });
+  await new Promise(setImmediate);
   assert.equal(executable, "x-terminal-emulator");
   child.emit("error", Object.assign(new Error("spawn failed with test-secret"), { code: "ENOENT" }));
   await rejected;
@@ -193,16 +229,27 @@ test("macOS protocol launch waits for the terminal handoff and rejects failed Ap
   const { LocalApplicationLauncher } = loadWithElectronMocks(
     "../src/apps/local-app-launcher.ts",
     {
-      "node:child_process": { spawn: () => child }
+      "node:child_process": { spawn: () => child },
+      "node:fs/promises": { stat: async () => ({ isFile: () => true }) }
     },
     { platform: "darwin", env: {} } as NodeJS.Process
   );
   const launcher = new LocalApplicationLauncher({}, "", null, null);
   let finished = false;
-  const launch = launcher.launchTerminal({ application_id: "com.apple.Terminal" }, "ssh test", false);
+  const launch = launcher.launchScript(
+    {
+      plugin_dir: "/plugins/terminal",
+      script_path: "launch.applescript",
+      script_interpreter: "osascript",
+      path: "Terminal"
+    },
+    { protocol: "ssh", endpoint: { host: "example", port: 22 }, token: { id: "test", value: "secret" } },
+    { protocol: "ssh" }
+  );
   const rejected = assert.rejects(launch, /failed to launch client.*exit code 1/).then(() => {
     finished = true;
   });
+  await new Promise(setImmediate);
   child.emit("spawn");
   await new Promise(setImmediate);
   assert.equal(finished, false);
@@ -210,38 +257,140 @@ test("macOS protocol launch waits for the terminal handoff and rejects failed Ap
   await rejected;
 });
 
-test("macOS iTerm2 opens a new tab when a window exists and a window on cold start", async () => {
-  const child = Object.assign(new EventEmitter(), { unref() {} });
-  let script = "";
+test("iTerm2 SSH, telnet and SFTP use plugin scripts and report handoff failures", async () => {
+  const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
+  const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  let spawned;
+  let onSpawn: () => void;
+  let child;
   const { LocalApplicationLauncher } = loadWithElectronMocks(
     "../src/apps/local-app-launcher.ts",
     {
+      "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
       "node:child_process": {
-        spawn: (_executable: string, args: string[]) => {
-          script = args[3];
+        spawn: (executable: string, args: string[], options) => {
+          spawned = { executable, args, options };
+          onSpawn();
           return child;
         }
       }
     },
     { platform: "darwin", env: {} } as NodeJS.Process
   );
-  const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const launch = launcher.launchTerminal(
-    { application_id: "com.googlecode.iterm2", launch_driver: "iterm2" },
-    'ssh -t "user@host"',
-    false
-  );
-  child.emit("spawn");
-  child.emit("exit", 0, null);
-  await launch;
+  for (const protocol of ["ssh", "telnet", "sftp"]) {
+    const category = protocol === "sftp" ? "filetransfer" : "terminal";
+    const id = protocol === "sftp" ? "macos.iterm-sftp" : "macos.iterm";
+    const pluginDir = path.join(projectRoot, "plugins/macos", id);
+    const application = await service.buildItem(
+      { id, category, pluginDir, builtin: true },
+      { selections: { [`${category}:${protocol}`]: id } }
+    );
+    assert.equal(application.launch_type, "script");
+    assert.equal(application.launch_driver, "");
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      "/Applications/JumpServer Test",
+      { getConfig: async () => ({ [category]: [application] }) },
+      null
+    );
+    for (const command of ["", '  ssh -t "user@host"\necho done  ']) {
+      child = Object.assign(new EventEmitter(), { unref() {} });
+      const didSpawn = new Promise<void>((resolve) => {
+        onSpawn = resolve;
+      });
+      const payload = {
+        protocol,
+        client: "iterm",
+        command,
+        endpoint: { host: "gateway.example", port: 2222 },
+        token: { id: "test-token", value: "test-secret" }
+      };
+      let finished = false;
+      const launch = launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      const result = command
+        ? launch.then(() => {
+            finished = true;
+          })
+        : assert.rejects(launch, (error: Error) => {
+            assert.match(error.message, /failed to launch client.*exit code 1/);
+            assert.doesNotMatch(error.message, /test-secret/);
+            finished = true;
+            return true;
+          });
+      await didSpawn;
+      assert.equal(spawned.executable, "/usr/bin/osascript");
+      assert.deepEqual(Array.from(spawned.args), [path.join(pluginDir, "scripts/launch.macos.applescript")]);
+      assert.equal(spawned.options.detached, false);
+      const connection = JSON.parse(spawned.options.env.JMS_CONNECT_JSON);
+      assert.equal(connection.protocol, protocol === "telnet" ? "ssh" : protocol);
+      assert.equal(connection.helper, "'/Applications/JumpServer Test/.electron-resources/bin/jms-ssh'");
+      assert.equal(connection.command, command);
+      assert.equal(connection.username, "JMS-test-token");
+      assert.equal(connection.value, "test-secret");
+      child.emit("spawn");
+      await new Promise(setImmediate);
+      assert.equal(finished, false);
+      child.emit("exit", command ? 0 : 1, null);
+      await result;
+    }
+  }
+});
 
-  assert.match(script, /if \(count of windows\) > 0 then/);
-  assert.match(script, /set targetTab to create tab with default profile/);
-  assert.match(script, /create window with default profile/);
-  assert.match(script, /set targetTab to current tab/);
-  assert.match(script, /tell targetTab/);
-  assert.ok(script.includes('write text "ssh -t \\"user@host\\""'));
-  assert.doesNotMatch(script, /set targetWindow to \(create window with default profile\)/);
+test("iTerm2 plugin commands quote connection arguments and retain the new-tab policy", (context) => {
+  if (process.platform !== "darwin") return context.skip("requires macOS AppleScript");
+  for (const plugin of ["macos.iterm", "macos.iterm-sftp"]) {
+    const script = readFileSync(
+      new URL(`../../plugins/macos/${plugin}/scripts/launch.macos.applescript`, import.meta.url),
+      "utf8"
+    );
+    assert.match(script, /if \(count of windows\) > 0 then/);
+    assert.match(script, /set targetTab to create tab with default profile/);
+    assert.match(script, /create window with default profile/);
+    assert.match(script, /set targetTab to current tab/);
+    assert.match(script, /write text commandText/);
+
+    // Run the real JSON and quoting handler without opening or requiring iTerm2.
+    const source = `${script.split("\non run\n")[0]}\nreturn connectionCommand()\n`;
+    const connection = {
+      protocol: plugin === "macos.iterm" ? "ssh" : "sftp",
+      username: "JMS-test",
+      host: "gateway.example",
+      port: 2222,
+      value: "space ' quote \" $() \\ 中文\nnext line",
+      helper: "'/Applications/JumpServer Test/jms-ssh'",
+      command: ""
+    };
+    const run = (payload) =>
+      spawnSync("/usr/bin/osascript", ["-"], {
+        input: source,
+        encoding: "utf8",
+        env: { ...process.env, JMS_CONNECT_JSON: JSON.stringify(payload) }
+      });
+    const rendered = run(connection);
+    assert.equal(rendered.status, 0, rendered.stderr);
+    // Let a real shell decode the command as argv, without executing a connection.
+    const decoded = spawnSync("/bin/sh", ["-c", `set -- ${rendered.stdout.trimEnd()}; printf "%s\\0" "$@"`], {
+      encoding: "utf8"
+    });
+    assert.equal(decoded.status, 0, decoded.stderr);
+    assert.deepEqual(decoded.stdout.split("\0"), [
+      "/Applications/JumpServer Test/jms-ssh",
+      connection.protocol,
+      "JMS-test@gateway.example",
+      "-p",
+      "2222",
+      "-P",
+      connection.value,
+      ""
+    ]);
+    const direct = "ssh -t \"user@host\"\necho '中文'";
+    const result = run({ ...connection, helper: "", command: direct });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trimEnd(), direct);
+    const missingHelper = run({ ...connection, helper: "" });
+    assert.notEqual(missingHelper.status, 0);
+    assert.match(missingHelper.stderr, /SSH helper is missing/);
+  }
 });
 
 test("extracts Windows cold-start and forwarded URLs without changing their payload", () => {

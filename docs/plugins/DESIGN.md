@@ -147,14 +147,15 @@ my-terminal-plugin/
 
 按平台描述如何启动。`launch.type` 决定执行器：
 
-| type     | 说明                                         | 典型场景                |
-| -------- | -------------------------------------------- | ----------------------- |
-| `args`   | 模板替换后作为命令行参数                     | PuTTY、DBX、DBeaver     |
-| `script` | 执行 `scripts/` 下平台脚本，传入 JSON 上下文 | iTerm2、复杂 GUI 自动化 |
-| `url`    | 构建 URL Scheme 并 `open`                    | Navicat                 |
-| `file`   | 先写临时文件再打开                           | RDP `.rdp`              |
-| `autoit` | Windows AutoIt 步骤序列（兼容现有配置）      | Navicat 填表            |
-| `system` | 调用 OS 内置能力                             | macOS `open` RDP 文件   |
+| type     | 说明                                             | 典型场景                       |
+| -------- | ------------------------------------------------ | ------------------------------ |
+| `args`   | 模板替换后作为命令行参数                         | PuTTY、DBX、DBeaver            |
+| `script` | 执行 `scripts/` 下平台脚本，传入 JSON 上下文     | iTerm2、复杂 GUI 自动化        |
+| `module` | 在 Node 子进程中构造参数或准备配置，返回启动计划 | DBX、DBeaver、RESP、数据库 CLI |
+| `url`    | 构建 URL Scheme 并 `open`                        | Navicat                        |
+| `file`   | 先写临时文件再打开                               | RDP `.rdp`                     |
+| `autoit` | Windows AutoIt 步骤序列（兼容现有配置）          | Navicat 填表                   |
+| `system` | 调用 OS 内置能力                                 | macOS `open` RDP 文件          |
 
 **模板变量**（与现 `arg_format` 一致）：
 
@@ -168,7 +169,6 @@ my-terminal-plugin/
 | `{port}`               | 端口                           |
 | `{file}`               | 临时文件路径（`file` 类型）    |
 | `{dbname}`             | 数据库名                       |
-| `{dbx_url}`            | URL 编码的 DBX 一次性连接链接   |
 | `{use_ssl}`            | 是否 SSL                       |
 | `{allow_invalid_cert}` | 是否允许无效证书               |
 
@@ -248,9 +248,9 @@ sequenceDiagram
 
 ### 阶段 2：启动器插件化（已完成）
 
-- Node 启动器按配置分发 `args` / `file` 和可选 driver
+- Node 启动器按配置分发参数、URL、文件、脚本和模块启动计划；工具专属参数、URL 和自动化逻辑保留在插件包内
 - 终端是否调用 SSH helper 由 `use_ssh_helper` 显式声明
-- SSH helper 由 Electron 自带的 Node 运行时执行，不参与第三方应用启动
+- SSH helper 随客户端分发，路径和连接上下文由客户端提供，不参与第三方应用启动
 
 ### 阶段 3：插件市场（可选）
 

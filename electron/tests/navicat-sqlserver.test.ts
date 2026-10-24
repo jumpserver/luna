@@ -5,7 +5,12 @@ import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
 import { PassThrough } from "node:stream";
 import test from "node:test";
-import { launchNavicatSQLServer, navicatSQLServerScript } from "../src/apps/navicat-sqlserver.ts";
+import { fileURLToPath } from "node:url";
+import {
+  launchNavicat,
+  launchNavicatSQLServer,
+  navicatSQLServerScript
+} from "../../plugins/windows/windows.navicat17/scripts/launch.mjs";
 
 const connection = {
   executable: String.raw`C:\Program Files\PremiumSoft\Navicat Premium 18\navicat.exe`,
@@ -94,6 +99,57 @@ test("Navicat helper receives literal credentials over stdin, not executable arg
   );
 });
 
+test("Navicat plugin creates unique SQL Server names and maps the standard script context", async () => {
+  const names = [];
+  for (let index = 0; index < 2; index++) {
+    await launchNavicat(
+      {
+        ...connection,
+        protocol: "sqlserver",
+        name: "SQLServer",
+        value: connection.password,
+        dbname: connection.database
+      },
+      fakeStart((child, message) => {
+        assert.equal(message.connection.password, connection.password);
+        assert.equal(message.connection.database, connection.database);
+        assert.ok(message.connection.name.startsWith("JMS_SQLServer_"));
+        names.push(message.connection.name);
+        child.stdout.emit("data", "OK\n");
+        child.emit("close", 0);
+      }),
+      "win32"
+    );
+  }
+  assert.notEqual(names[0], names[1]);
+});
+
+test("Navicat plugin builds and encodes its own URLs for other databases", async () => {
+  for (const protocol of ["mysql", "mariadb", "oracle", "postgresql"]) {
+    const aliases = { mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
+    const result = launchNavicat(
+      { ...connection, protocol, name: "name & 中文", url: "file:///ignored" },
+      (executable, args, options) => {
+        assert.equal(executable, connection.executable);
+        assert.equal(args.length, 1);
+        const url = new URL(args[0]);
+        assert.equal(url.protocol, "navicat:");
+        assert.equal(url.hostname, `conn.${aliases[protocol] || protocol}`);
+        assert.equal(url.searchParams.get("Conn.Host"), connection.host);
+        assert.equal(url.searchParams.get("Conn.Name"), "name & 中文");
+        assert.equal(url.searchParams.get("Conn.Username"), connection.username);
+        assert.equal(options.detached, true);
+        const child = Object.assign(new EventEmitter(), { unref() {} });
+        setImmediate(() => child.emit("spawn"));
+        return child;
+      },
+      "win32"
+    );
+    await result;
+  }
+  assert.throws(() => launchNavicat({ ...connection, protocol: "unknown" }, undefined, "win32"), /protocol is invalid/);
+});
+
 test("starting Navicat without confirmed connection is not reported as success", async () => {
   for (const code of [0, 1, null]) {
     await assert.rejects(
@@ -122,6 +178,26 @@ test("native launch errors cannot disclose credentials through spawnargs", async
       assert.ok(!error.message.includes(connection.password));
       return true;
     }
+  );
+});
+
+test("Navicat script entry rejects invalid stdin without disclosing connection details", () => {
+  const scriptPath = fileURLToPath(
+    new URL("../../plugins/windows/windows.navicat17/scripts/launch.mjs", import.meta.url)
+  );
+  const result = spawnSync(process.execPath, [scriptPath], {
+    input: JSON.stringify({ ...connection, protocol: "sqlserver", port: 0, value: connection.password }),
+    encoding: "utf8",
+    timeout: 5000
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Navicat connection failed/);
+  for (const value of [connection.password, connection.username, connection.host]) {
+    assert.ok(!result.stderr.includes(value));
+  }
+  assert.throws(
+    () => launchNavicat({ ...connection, command: "unrelated command" }, undefined, "win32"),
+    /cannot open command/
   );
 });
 
