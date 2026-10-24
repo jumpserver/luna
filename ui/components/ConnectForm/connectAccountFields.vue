@@ -3,6 +3,7 @@ import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, PermedAccount, PersonalAssetCredential } from "~/types/index";
 import {
   findMatchingPersonalCredential,
+  isAutoPushAccount,
   resolvePersonalCredentialSecretType,
   supportsPersonalCredential
 } from "~/utils/connection";
@@ -67,8 +68,9 @@ const selectedAccountEntry = computed(() => {
   if (showDynamicUserArea.value) return props.accounts.find((item) => item.alias === "@USER");
   return selectedHostedAccount.value;
 });
+const autoPushAccount = computed(() => isAutoPushAccount(selectedAccountEntry.value, props.protocol));
 const canUsePersonalCredential = computed(
-  () => showManualInputArea.value || supportsPersonalCredential(selectedAccountEntry.value)
+  () => !autoPushAccount.value && (showManualInputArea.value || supportsPersonalCredential(selectedAccountEntry.value))
 );
 const availablePersonalCredentials = computed(() =>
   canUsePersonalCredential.value
@@ -409,7 +411,8 @@ onBeforeUnmount(() => {
       </UInput>
     </UFormField>
 
-    <template v-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
+    <p v-if="autoPushAccount" class="text-sm text-muted">{{ t("AccountProvisioning.FormHint") }}</p>
+    <template v-else-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
       <div class="credentials-fields">
         <UFormField
           :label="

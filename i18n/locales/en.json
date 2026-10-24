@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "Preparing login account",
+    "FormHint": "Your same-name account will be created and configured automatically on first connection.",
+    "Queued": "Waiting to push your same-name account…",
+    "Running": "Creating your account and configuring login credentials…",
+    "Failed": "Account preparation failed. Retry or contact an administrator.",
+    "TimedOut": "Account preparation is taking longer than expected. Retry to check the task again.",
+    "Task": "Task ID: {id}",
+    "Retry": "Retry account preparation"
+  },
   "Monitor": {
     "Unavailable": "This session has ended or cannot be monitored.",
     "PauseSent": "Pause task has been sent",

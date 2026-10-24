@@ -3,11 +3,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
-import {
-  findMatchingPersonalCredential,
-  resolvePersonalCredentialSecretType,
-  supportsPersonalCredential
-} from "~/utils/connection";
+import * as connectionUtils from "~/utils/connection";
 import source from "./connectAccountFields.vue?raw";
 
 const privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\nkey-data\n-----END OPENSSH PRIVATE KEY-----";
@@ -63,13 +59,7 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     "require",
     ...Object.keys(globals),
     `const exports = {};\n${outputText}\nreturn exports.default;`
-  )(
-    (name: string) =>
-      name === "vue"
-        ? Vue
-        : { findMatchingPersonalCredential, resolvePersonalCredentialSecretType, supportsPersonalCredential },
-    ...Object.values(globals)
-  );
+  )((name: string) => (name === "vue" ? Vue : connectionUtils), ...Object.values(globals));
   let state!: {
     secretType: WritableComputedRef<string>;
     editableSecret: WritableComputedRef<string>;

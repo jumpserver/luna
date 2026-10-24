@@ -21,13 +21,12 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { submit, close, copyTicketLink, retryFace, markFacePageReady, failFace } = useAclDialog();
+const { submit, close, copyTicketLink, retryFace, retryPreparation, markFacePageReady, failFace } = useAclDialog();
 const { closePane } = useWorkspaceTabs();
 const faceFrame = ref<HTMLIFrameElement | null>(null);
 
-const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } = useAclDialogPresentation(
-  () => props.group
-);
+const { description, hasPending, isActionable, isBatch, isBusy, isPreparation, isReview, title } =
+  useAclDialogPresentation(() => props.group);
 
 const statusColor = (status: string) => {
   if (status === "approved") return "success";
@@ -39,7 +38,12 @@ const hasFaceFailure = computed(
   () => props.group.code.startsWith("acl_face_") && props.group.items.some((item) => item.status === "failed")
 );
 const isFaceGroup = computed(() => props.group.code.startsWith("acl_face_"));
-const visibleDetail = (detail: string) => localizeFaceLiveDetail(detail, t);
+const visibleDetail = (detail: string) => {
+  if (detail.startsWith("AccountProvisioning.Task:"))
+    return t("AccountProvisioning.Task", { id: detail.split(":")[1] });
+  if (detail.startsWith("AccountProvisioning.")) return t(detail);
+  return localizeFaceLiveDetail(detail, t);
+};
 
 const handleFaceMessage = (event: MessageEvent) => {
   if (!isFaceLiveHostMessage(event.data)) return;
@@ -111,6 +115,15 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
     </p>
     <div v-if="!isBatch && hasPending" class="acl-wait-bar mt-3" />
     <AclErrorDetail v-if="!isBatch && group.items[0]?.detail" :detail="visibleDetail(group.items[0].detail)" />
+
+    <UButton
+      v-if="isPreparation && group.items.some((item) => item.status === 'failed')"
+      class="mt-3"
+      icon="i-lucide-refresh-cw"
+      @click="retryPreparation(group)"
+    >
+      {{ t("AccountProvisioning.Retry") }}
+    </UButton>
 
     <iframe
       v-if="group.faceUrl"
