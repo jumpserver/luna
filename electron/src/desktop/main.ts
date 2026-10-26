@@ -59,6 +59,7 @@ import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
+import { chenExportTarget, saveChenDownload } from "./chen-export";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -82,7 +83,7 @@ const shortcutEnvironment = { mac: process.platform === "darwin", desktop: true 
 const localShellSessions = new Map();
 const apiStreams = new Map();
 const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
-const allowedChenOrigins = new Set();
+const allowedChenOrigins = new Set<string>();
 const allowedKokoOrigins = new Set();
 const configuredConnectorSessions = new WeakSet();
 const allowedPaths = new Set([
@@ -1260,6 +1261,21 @@ async function handleInvoke(event, request) {
   }
   if (command === "face_engine_process_frame") return faceEngine.processFrame(event.sender.id, args);
   if (command === "face_engine_stop_session") return faceEngine.stopSession(event.sender.id, args.sessionId);
+  if (command === "download_chen_export") {
+    const target = chenExportTarget(String(args.url || ""), allowedChenOrigins);
+    const ticket = String(args.ticket || "");
+    if (!ticket || ticket.length > 1024) throw new Error("Invalid export download ticket");
+    if (!args.filePath) throw new Error("Export destination is required");
+    const filePath = normalizePath(args.filePath);
+    const response = await electronSession.defaultSession.fetch(target, {
+      method: "POST",
+      redirect: "error",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ticket }).toString()
+    });
+    await saveChenDownload(response, filePath);
+    return "saved";
+  }
   if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
   if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
   if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);

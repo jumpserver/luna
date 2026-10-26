@@ -1,14 +1,16 @@
+import { isChenSingleRoute } from "~/chen/v1/standalone";
 import { apiRequest } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export default defineNuxtPlugin((nuxtApp) => {
+  const route = useRoute();
   const userInfoStore = useUserInfoStore();
   const controller = new AbortController();
   let lastRenewalAt = -Infinity;
   let inFlight = false;
 
   function onActivity(event: Event) {
-    if (!event.isTrusted || !userInfoStore.loggedIn) return;
+    if (isChenSingleRoute(route.path) || !event.isTrusted || !userInfoStore.loggedIn) return;
 
     const now = performance.now();
     if (inFlight || now - lastRenewalAt < 10_000) return;

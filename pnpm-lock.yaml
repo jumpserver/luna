@@ -167,6 +167,9 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
+      monaco-editor:
+        specifier: 0.57.0
+        version: 0.57.0
       nuxt:
         specifier: ^4.4.6
         version: 4.5.0(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7))(@parcel/watcher@2.6.0)(@types/node@26.1.1)(@vue/compiler-sfc@3.5.40)(cac@7.0.0)(db0@0.3.4)(esbuild@0.28.1)(eslint@10.8.0(jiti@2.7.0))(ioredis@5.11.1)(lightningcss@1.33.0)(magicast@0.5.3)(optionator@0.9.4)(oxc-parser@0.140.0)(oxlint@1.79.0)(pinia@3.0.4(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rollup-plugin-visualizer@7.0.1(rolldown@1.2.0)(rollup@4.62.3))(rollup@4.62.3)(sass-embedded@1.100.0)(sass@1.100.0)(srvx@0.11.22)(terser@5.51.2)(tsx@4.23.13)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))(vue-tsc@3.2.4(typescript@6.0.3))(webpack@5.110.1(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.23))(yaml@2.9.0)
@@ -5271,6 +5274,9 @@ packages:
   dompurify@3.4.16:
     resolution: {integrity: sha512-sqo+pNp3qRhCIpbgRi1y8Tgk27Bo2Ry7w0dC1NBeNTdZChWjz9Xb/KOoZbRP/R6pQZ80Qw8YhXw13hWWBbMRnQ==}
 
+  dompurify@3.4.15:
+    resolution: {integrity: sha512-EUBjM+B+lkDE41iE82DDSCfkoPGfXx8IxFxPMjNzm/Uk4xDet77rTN9wqlxlVg71kK7XGuUMv6wUxJUwwv+Xyw==}
+
   domutils@3.0.1:
     resolution: {integrity: sha512-z08c1l761iKhDFtfXO04C7kTdPBLi41zwOZl00WS8b5eiaebNpY00HKbztwBq+e3vyqWNwWF3mP9YLUeqIrF+Q==}
 
@@ -6917,6 +6923,11 @@ packages:
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
 
+  marked@14.0.0:
+    resolution: {integrity: sha512-uIj4+faQ+MgHgwUW1l2PsPglZLOLOT1uErt06dAPtx2kjteLAkbsd/0FiYg/MGS+i7ZKLb7w2WClxHkzOOuryQ==}
+    engines: {node: '>= 18'}
+    hasBin: true
+
   marked@17.0.6:
     resolution: {integrity: sha512-gB0gkNafnonOw0obSTEGZTT86IuhILt2Wfx0mWH/1Au83kybTayroZ/V6nS25mN7u8ASy+5fMhgB3XPNrOZdmA==}
     engines: {node: '>= 20'}
@@ -7212,6 +7223,9 @@ packages:
 
   module-replacements@3.1.0:
     resolution: {integrity: sha512-MSTNGqlp2q0seRlrAA/FK3SUkGnmPeexeKWuCjeJ7HobD2RCjk4f8ry8lJ+nUQFDVBAHSdC4TdjyJSaocnR7Uw==}
+
+  monaco-editor@0.57.0:
+    resolution: {integrity: sha512-5BkI9KGoqrNvBGUe15/QlZq3OooZ8WLg1AxTpaqHRCP3HNpzPPZKE2EDz8M7c+VRmCeUw1Brp4cx/PWm3kI/5A==}
 
   motion-dom@13.1.1:
     resolution: {integrity: sha512-XSf8VYWSB6G/0IY3rWVbyLcxWXtAVHkN1PQE2agTaCv3u8RGvbwu56TyyR/MNzBqqNavEBTZzErcxI1TxBrjcA==}
@@ -15632,6 +15646,10 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
+  dompurify@3.4.15:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
+
   domutils@3.0.1:
     dependencies:
       dom-serializer: 2.0.0
@@ -17553,6 +17571,8 @@ snapshots:
 
   markdown-table@3.0.4: {}
 
+  marked@14.0.0: {}
+
   marked@17.0.6: {}
 
   matcher@3.0.0:
@@ -18002,6 +18022,11 @@ snapshots:
   mocked-exports@0.1.1: {}
 
   module-replacements@3.1.0: {}
+
+  monaco-editor@0.57.0:
+    dependencies:
+      dompurify: 3.4.15
+      marked: 14.0.0
 
   motion-dom@13.1.1:
     dependencies:

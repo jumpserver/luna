@@ -10,6 +10,9 @@ node_modules
 .electron-resources
 electron
 native
+src-tauri
+output
+*.tsbuildinfo
 release
 coverage
 playwright-report
