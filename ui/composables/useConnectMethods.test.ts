@@ -400,3 +400,20 @@ describe("desktop website connect methods", () => {
     }
   );
 });
+
+it.each(["oceanbase", "oceanbase-mysql", "oceanbase-oracle"])("keeps an authorized %s workbench entry", (protocol) => {
+  const origin = {
+    value: "web_db",
+    label: "Database",
+    type: "web",
+    component: "chen",
+    icon: "",
+    listen: "",
+    disabled: false
+  };
+  const methods = normalizeWebConnectMethods({ [protocol]: [origin], originals: [] }, false)[protocol];
+  expect(methods).toEqual([
+    expect.objectContaining({ value: "web_db_native", origin_value: "web_db", component: "chen" })
+  ]);
+  expect(normalizeWebConnectMethods({ [protocol]: [], originals: [] }, false)[protocol]).toEqual([]);
+});

@@ -1,3 +1,4 @@
+import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 export interface ChenCreateIndexInput {
   schema: string;
   table: string;
@@ -17,10 +18,9 @@ function identifier(value: string, label: string) {
 }
 
 function quoteIdentifier(value: string, dbType: string) {
-  const dialect = dbType.toLowerCase();
-  if (dialect.includes("mysql") || dialect.includes("mariadb")) return `\`${value.replaceAll("`", "``")}\``;
-  if (dialect.includes("sqlserver")) return `[${value.replaceAll("]", "]]")}]`;
-  return `"${value.replaceAll('"', '""')}"`;
+  const quote = chenSqlDialect(dbType).quote;
+  const end = quote === "[" ? "]" : quote;
+  return `${quote}${value.replaceAll(end, end + end)}${end}`;
 }
 
 function qualifiedName(schema: string, name: string, dbType: string) {

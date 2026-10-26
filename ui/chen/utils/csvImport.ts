@@ -60,11 +60,10 @@ export function parseChenCsv(source: string): ChenParsedCsv {
   }
 
   if (quoted) throw new Error("CSV contains an unclosed quoted value");
-  if (value || record.length || !records.length) pushRecord();
-  while (records.length > 1 && records.at(-1)?.every((cell) => cell === "")) records.pop();
+  if (value || closedQuote || record.length || !records.length) pushRecord();
 
   const headers = (records.shift() || []).map((header) => header.trim());
-  const rows = records.filter((row) => row.some((cell) => cell !== ""));
+  const rows = records;
   const parsed = dropHistoricalTrailingEmptyColumn(headers, rows);
   if (!parsed.headers.length || parsed.headers.every((header) => !header)) throw new Error("CSV header row is empty");
   if (parsed.headers.some((header) => !header)) throw new Error("CSV contains an empty column header");
@@ -121,6 +120,7 @@ export function mapChenCsvRows(
     const matches = aliases.get(header.toLocaleLowerCase()) || [];
     if (!matches.length) throw new Error(`CSV column “${header}” does not match a table column`);
     if (matches.length > 1) throw new Error(`CSV column “${header}” matches more than one table column`);
+    if (!isChenCsvInsertableField(matches[0]!)) throw new Error(`CSV column “${header}” cannot be inserted`);
     return matches[0]!;
   });
   if (new Set(mappedFields).size !== mappedFields.length) {

@@ -1,3 +1,4 @@
+import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import type { ChenCreateTableColumn } from "~/chen/types";
 
 const COMMON_TYPES = ["INTEGER", "BIGINT", "VARCHAR", "TEXT", "DECIMAL", "BOOLEAN", "DATE", "TIMESTAMP"];
@@ -23,10 +24,9 @@ export function chenCreateTableTypes(dbType: string) {
 }
 
 function quoteIdentifier(value: string, dbType: string) {
-  const dialect = dbType.toLowerCase();
-  if (dialect.includes("mysql") || dialect.includes("mariadb")) return `\`${value.replaceAll("`", "``")}\``;
-  if (dialect.includes("sqlserver")) return `[${value.replaceAll("]", "]]")}]`;
-  return `"${value.replaceAll('"', '""')}"`;
+  const quote = chenSqlDialect(dbType).quote;
+  const end = quote === "[" ? "]" : quote;
+  return `${quote}${value.replaceAll(end, end + end)}${end}`;
 }
 
 function normalizedIdentifier(value: string, label: string) {

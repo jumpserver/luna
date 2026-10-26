@@ -40,20 +40,20 @@ describe("csv import", () => {
     );
   });
 
-  it("ignores auto-increment id while importing insertable columns", () => {
+  it("rejects auto-increment columns rather than silently dropping their values", () => {
     const csv = parseChenCsv("id,name\n1,Alice\n");
     const fields = [field("id", { insertable: false, primaryKey: true }), field("name")];
-    expect(mapChenCsvRows(csv, fields, "empty-string")).toEqual([{ name: "Alice" }]);
+    expect(() => mapChenCsvRows(csv, fields, "empty-string")).toThrow("cannot be inserted");
   });
 
-  it("ignores generated and read-only columns instead of treating them as unknown", () => {
+  it("rejects generated and read-only columns explicitly", () => {
     const csv = parseChenCsv("username,display_name,status_code\nalice,Alice,active\n");
     const fields = [
       field("username"),
       field("display_name", { insertable: false }),
       field("status_code", { insertable: false })
     ];
-    expect(mapChenCsvRows(csv, fields, "empty-string")).toEqual([{ username: "alice" }]);
+    expect(() => mapChenCsvRows(csv, fields, "empty-string")).toThrow("cannot be inserted");
   });
 
   it("still rejects CSV columns that do not match any table field", () => {
@@ -63,22 +63,29 @@ describe("csv import", () => {
     );
   });
 
-  it("reimports a Chen-exported CSV that includes every table field", () => {
+  it("requires removal of generated columns before reimporting an exported CSV", () => {
     const csv = parseChenCsv("id,name,display_name\n1,Alice,Alice Display\n");
     const fields = [
       field("id", { insertable: false, primaryKey: true }),
       field("name"),
       field("display_name", { insertable: false })
     ];
-    expect(mapChenCsvRows(csv, fields, "empty-string")).toEqual([{ name: "Alice" }]);
+    expect(() => mapChenCsvRows(csv, fields, "empty-string")).toThrow("cannot be inserted");
   });
 
   it("drops a historical trailing empty column so the remaining columns can import", () => {
     const csv = parseChenCsv("id,name,\n1,Alice,\n");
     expect(csv).toEqual({ headers: ["id", "name"], rows: [["1", "Alice"]] });
-    expect(mapChenCsvRows(csv, [field("id", { insertable: false }), field("name")], "empty-string")).toEqual([
-      { name: "Alice" }
+    expect(mapChenCsvRows(csv, [field("id"), field("name")], "empty-string")).toEqual([{ id: "1", name: "Alice" }]);
+  });
+
+  it("preserves empty records, including a quoted final empty cell", () => {
+    expect(parseChenCsv('value\n""').rows).toEqual([[""]]);
+    expect(parseChenCsv('a,b\n,\n"",""\n').rows).toEqual([
+      ["", ""],
+      ["", ""]
     ]);
+    expect(mapChenCsvRows(parseChenCsv('value\n""'), [field("value")], "null")).toEqual([{ value: null }]);
   });
 
   it("keeps duplicate, ambiguous, and invalid CSV checks", () => {

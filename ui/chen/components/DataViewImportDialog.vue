@@ -2,13 +2,18 @@
 import type { ChenDataViewField } from "~/chen/types";
 import type { ChenCsvEmptyValue, ChenParsedCsv } from "~/chen/utils/csvImport";
 
-import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { mapChenCsvRows, parseChenCsv } from "~/chen/utils/csvImport";
 
-const props = defineProps<{
-  open: boolean;
-  fields: ChenDataViewField[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    fields: ChenDataViewField[];
+    maxRows?: number;
+  }>(),
+  { maxRows: 10_000 }
+);
 
 const emit = defineEmits<{
   "update:open": [open: boolean];
@@ -19,9 +24,7 @@ const { t } = useI18n();
 
 // ponytail: CSV is staged in the browser for the existing Save preview flow; move large imports to a streamed Chen API.
 const MAX_CSV_BYTES = 10 * 1024 * 1024;
-const MAX_CSV_ROWS = 10_000;
 
-const fileInput = ref<HTMLInputElement | null>(null);
 const fileName = ref("");
 const parsed = ref<ChenParsedCsv | null>(null);
 const error = ref("");
@@ -39,8 +42,7 @@ const mapped = computed(() => {
   try {
     return { rows: mapChenCsvRows(parsed.value, props.fields, emptyValue.value), error: "" };
   } catch (cause) {
-    console.warn("[chen] CSV column mapping failed:", cause instanceof Error ? cause.message : cause);
-    return { rows: [], error: t("Chen.MapCsvColumnsFailed") };
+    return { rows: [], error: cause instanceof Error ? cause.message : t("Chen.MapCsvColumnsFailed") };
   }
 });
 
@@ -71,13 +73,13 @@ async function selectFile(event: Event) {
   }
 
   try {
-    const result = parseChenCsv(await file.text());
-    if (result.rows.length > MAX_CSV_ROWS) {
-      throw new Error(t("Chen.CsvRowLimit", { count: result.rows.length, limit: MAX_CSV_ROWS }));
+    const result = parseChenCsv(new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()));
+    if (result.rows.length > props.maxRows) {
+      throw new Error(t("Chen.CsvRowLimit", { count: result.rows.length, limit: props.maxRows }));
     }
     parsed.value = result;
-  } catch {
-    error.value = t("Chen.InvalidCsvFile");
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : t("Chen.InvalidCsvFile");
   }
 }
 
@@ -89,19 +91,22 @@ function submit() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.ImportCsv')" :ui="{ content: 'sm:max-w-2xl' }">
+  <UModal v-model:open="visible" :title="t('Chen.ImportCsv')" :dismissible="false" :ui="{ content: 'sm:max-w-2xl' }">
     <template #body>
       <div class="space-y-4">
-        <input ref="fileInput" type="file" accept=".csv,text/csv" class="hidden" @change="selectFile" />
         <div class="rounded-lg border border-dashed border-default p-4 text-center">
           <UIcon name="i-lucide-file-spreadsheet" class="mx-auto mb-2 size-7 text-muted" />
           <p class="text-sm text-highlighted">{{ fileName || t("Chen.ChooseCsvFile") }}</p>
           <p class="mt-1 text-xs text-muted">
-            {{ t("Chen.CsvImportHint") }}
+            {{ t("Chen.GoWriteCsvLimit", { count: maxRows }) }}
           </p>
-          <UButton class="mt-3" size="sm" color="neutral" variant="soft" @click="fileInput?.click()">
-            {{ t("Chen.ChooseFile") }}
-          </UButton>
+          <UInput
+            class="mt-3"
+            type="file"
+            accept=".csv,text/csv"
+            :aria-label="t('Chen.ChooseFile')"
+            @change="selectFile"
+          />
         </div>
 
         <UAlert
@@ -150,5 +155,5 @@ function submit() {
         </UButton>
       </div>
     </template>
-  </ChenWorkspaceModal>
+  </UModal>
 </template>

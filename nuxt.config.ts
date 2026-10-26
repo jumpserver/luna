@@ -1,11 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { chenSqlDialects } from "./ui/chen/utils/sqlDialect";
 
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
+const chenGoTarget = process.env.JMS_CHEN_GO_DEV_URL || chenTarget;
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
@@ -56,6 +58,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       buildTime,
+      // Choose before consuming the one-use token. An explicit empty override retains legacy routes.
+      chenGoV1Protocols: process.env.NUXT_PUBLIC_CHEN_GO_V1_PROTOCOLS ?? Object.keys(chenSqlDialects).join(","),
       faceLiveSocketBaseUrl: process.env.NUXT_PUBLIC_FACE_LIVE_SOCKET_BASE_URL || ""
     }
   },
@@ -233,6 +237,12 @@ export default defineNuxtConfig({
           secure: false,
           changeOrigin: true,
           configure: rewriteProxyOrigin(jumpServerTarget)
+        },
+        "/chen/api/v1": {
+          target: chenGoTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: configureHttpProxy("chen-go", chenGoTarget)
         },
         "/chen": {
           target: chenTarget,
