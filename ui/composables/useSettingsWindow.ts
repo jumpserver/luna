@@ -5,6 +5,11 @@ export const useSettingsWindow = () => {
   const open = useState("settings-open", () => false);
   const activeSection = useState<SettingsSection>("settings-active-section", () => "general");
   const activeApplicationProtocol = useState("settings-active-application-protocol", () => "ssh");
+  const activeApplicationView = useState<"applications" | "protocols">(
+    "settings-active-application-view",
+    () => "protocols"
+  );
+  const activeApplicationId = useState("settings-active-application-id", () => "");
 
   const openSettings = async (path = "/setting/general") => {
     const [, section, protocol] =
@@ -15,6 +20,7 @@ export const useSettingsWindow = () => {
     }
     if (section === "application" && protocol) {
       activeApplicationProtocol.value = decodeURIComponent(protocol);
+      activeApplicationView.value = "protocols";
     }
 
     open.value = true;
@@ -35,6 +41,8 @@ export const useSettingsWindow = () => {
     open,
     activeSection,
     activeApplicationProtocol,
+    activeApplicationView,
+    activeApplicationId,
     openSettings,
     closeSettings
   };
