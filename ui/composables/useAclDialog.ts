@@ -30,6 +30,7 @@ export interface AclDialogItem {
   detail?: string;
   token?: TokenResponse;
   assignees?: string;
+  preparationStage?: "queued" | "running";
   resolve: (token: TokenResponse | null) => void;
   settled?: boolean;
   timer?: ReturnType<typeof setInterval>;
@@ -61,6 +62,7 @@ function aclCodeMessage(code: string) {
 export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialogGroup | undefined>) {
   const { t } = useI18n();
   const group = computed(() => toValue(groupSource));
+  const isPreparation = computed(() => group.value?.code === "acl_account_provisioning");
   const isReview = computed(() => group.value?.code === "acl_review");
   const isFace = computed(() => group.value?.code.startsWith("acl_face_") || false);
   const isActionable = computed(() =>
@@ -74,15 +76,23 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
     () => group.value?.items.some((item) => ["submitting", "pending", "verifying"].includes(item.status)) || false
   );
   const title = computed(() =>
-    isReview.value
-      ? t("AclDialog.LoginReview")
-      : isFace.value
-        ? t("AclDialog.FaceVerify")
-        : t("AclDialog.LoginReminder")
+    isPreparation.value
+      ? t("AccountProvisioning.Title")
+      : isReview.value
+        ? t("AclDialog.LoginReview")
+        : isFace.value
+          ? t("AclDialog.FaceVerify")
+          : t("AclDialog.LoginReminder")
   );
   const description = computed(() => {
     const current = group.value;
     if (!current) return "";
+    if (isPreparation.value) {
+      if (current.items.some((item) => item.status === "failed")) return t("AccountProvisioning.Failed");
+      return t(
+        current.items[0]?.preparationStage === "running" ? "AccountProvisioning.Running" : "AccountProvisioning.Queued"
+      );
+    }
     if (current.items.length === 1) {
       const item = current.items[0];
       if (isReview.value) {
@@ -105,7 +115,7 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
     return t("AclDialog.ErrorGroupDescription");
   });
 
-  return { description, hasPending, isActionable, isBatch, isBusy, isReview, title };
+  return { description, hasPending, isActionable, isBatch, isBusy, isPreparation, isReview, title };
 }
 
 const groups = ref<AclDialogGroup[]>([]);
@@ -169,10 +179,21 @@ function requestAcl(
     scopeId?: string;
     batchId?: string;
     admin?: boolean;
+    token?: TokenResponse;
   }
 ): Promise<TokenResponse | null> | null {
   const code = aclCode(error);
   if (!code) return null;
+  if (code === "acl_account_provisioning") {
+    // Finished batch approvals give way to account preparation automatically.
+    groups.value = groups.value.filter(
+      (group) =>
+        !(
+          group.items.every((item) => item.settled) &&
+          (input.batchId ? group.batchId === input.batchId : group.items.some((item) => item.scopeId === input.scopeId))
+        )
+    );
+  }
 
   return new Promise((resolve) => {
     const groupId = input.batchId
@@ -193,11 +214,17 @@ function requestAcl(
       body: input.body,
       orgId: input.orgId,
       admin: input.admin,
+      token: input.token,
       status: actionable ? "ready" : "failed",
       detail: actionable || aclCodeMessage(code) ? undefined : errorDetail(error),
       resolve
     });
     group.items.push(item);
+    if (code === "acl_account_provisioning") {
+      group.submitted = true;
+      void prepareAccountItem(item);
+      return;
+    }
     if (group.submitted) {
       if (code === "acl_review") void submitReviewItem(item);
       if (["acl_face_verify", "acl_face_online"].includes(code)) void verifyNextFace(group);
@@ -305,6 +332,16 @@ export function useAclDialog() {
     await verifyNextFace(group);
   };
 
+  const retryPreparation = async (target?: AclDialogGroup) => {
+    const group = target || globalGroup.value || activeGroup.value;
+    if (group?.code !== "acl_account_provisioning") return;
+    await Promise.all(
+      group.items
+        .filter((item) => item.status === "failed" && !item.settled)
+        .map((item) => prepareAccountItem(item, true))
+    );
+  };
+
   const markFacePageReady = (target: AclDialogGroup) => {
     const item = target.items.find((candidate) => candidate.status === "verifying" && !candidate.settled);
     if (item?.pageTimer) clearTimeout(item.pageTimer);
@@ -329,6 +366,7 @@ export function useAclDialog() {
     closeScope,
     copyTicketLink,
     retryFace,
+    retryPreparation,
     markFacePageReady,
     failFace
   };
@@ -484,19 +522,66 @@ async function callTicketApi(api: { method: string; url: string }) {
   return apiRequest<any>({ method: api.method.toUpperCase() as any, path });
 }
 
+async function prepareAccountItem(item: AclDialogItem, retry = false) {
+  if (!item.token || item.settled) return;
+  if (item.timer) clearInterval(item.timer);
+  item.timer = undefined;
+  item.status = "pending";
+  item.detail = undefined;
+  item.preparationStage = "queued";
+  const startedAt = Date.now();
+  const poll = async (retryPush: boolean) => {
+    try {
+      const result = await prepareConnectionAccount(item.token!.id, item.orgId, retryPush);
+      if (item.settled) return;
+      if (result.status === "ready") {
+        item.status = "approved";
+        item.token!.account_preparation_required = false;
+        finishItem(item, item.token!);
+        return;
+      }
+      if (result.status === "failed") {
+        item.status = "failed";
+        item.detail = result.execution_id
+          ? `AccountProvisioning.Task:${result.execution_id}`
+          : "AccountProvisioning.Failed";
+        return;
+      }
+      item.preparationStage = result.status;
+      if (Date.now() - startedAt >= 12 * 60_000) {
+        item.status = "failed";
+        item.detail = "AccountProvisioning.TimedOut";
+        return;
+      }
+      // Schedule after each response so slow requests never overlap.
+      item.timer = setTimeout(() => void poll(false), 1500);
+    } catch (error) {
+      if (item.settled) return;
+      item.status = "failed";
+      item.detail = errorDetail(error);
+    }
+  };
+  await poll(retry);
+}
+
 export async function createConnectionTokenWithAcl(
   body: ConnectionBody,
   meta: { orgId?: string; assetName: string; scopeId?: string; batchId?: string; admin?: boolean }
 ) {
+  let token: TokenResponse | null;
   try {
-    const token = await createConnectionToken(body, meta.orgId, { admin: meta.admin });
-    const pending = requestAcl(token, { body, ...meta });
-    if (pending) return pending;
-    if (!token.id) throw new Error(token.detail || "Missing connection token");
-    return token;
+    const response = await createConnectionToken(body, meta.orgId, { admin: meta.admin });
+    const pending = requestAcl(response, { body, ...meta });
+    token = pending ? await pending : response;
   } catch (error) {
     const pending = requestAcl(error, { body, ...meta });
     if (!pending) throw error;
-    return pending;
+    token = await pending;
   }
+  if (!token) return null;
+  if (!token.id) throw new Error(token.detail || "Missing connection token");
+  if (token.account_preparation_required && !meta.admin) {
+    return requestAcl({ code: "acl_account_provisioning" }, { body, ...meta, token });
+  }
+  return token;
 }

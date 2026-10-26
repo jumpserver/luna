@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "正在準備登入帳號",
+    "FormHint": "首次連線時會自動建立同名帳號並設定登入憑證。",
+    "Queued": "正在等待推送同名帳號…",
+    "Running": "正在建立帳號並設定登入憑證…",
+    "Failed": "帳號準備失敗，請重試或聯絡管理員。",
+    "TimedOut": "帳號準備時間較長，請重試以重新檢查任務狀態。",
+    "Task": "任務編號：{id}",
+    "Retry": "重試帳號準備"
+  },
   "Monitor": {
     "Unavailable": "工作階段已結束或不支援監控。",
     "PauseSent": "暫停任務已傳送",

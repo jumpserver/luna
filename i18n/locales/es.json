@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "Preparando la cuenta de acceso",
+    "FormHint": "Se creará y configurará automáticamente una cuenta con tu nombre de usuario en la primera conexión.",
+    "Queued": "Esperando la creación de la cuenta con tu nombre de usuario…",
+    "Running": "Creando la cuenta y configurando las credenciales de acceso…",
+    "Failed": "No se pudo preparar la cuenta. Vuelve a intentarlo o contacta con un administrador.",
+    "TimedOut": "La preparación de la cuenta está tardando más de lo previsto. Vuelve a intentarlo para consultar el estado de la tarea.",
+    "Task": "ID de la tarea: {id}",
+    "Retry": "Reintentar la preparación de la cuenta"
+  },
   "Monitor": {
     "Unavailable": "La sesión ha finalizado o no se puede supervisar.",
     "PauseSent": "Se ha enviado la tarea de pausa",

@@ -603,6 +603,19 @@ export function createConnectionToken(
   });
 }
 
+export function prepareConnectionAccount(tokenId: string, orgId?: string, retry = false) {
+  return apiRequest<{
+    status: "queued" | "running" | "failed" | "ready";
+    detail: string;
+    execution_id?: string;
+  }>({
+    method: "POST",
+    path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/prepare-account/`,
+    body: { retry },
+    orgId
+  });
+}
+
 export function getFaceVerifyState(
   token: string
 ): Promise<{ is_finished: boolean; success: boolean; error_message?: string }> {

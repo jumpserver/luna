@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "Đang chuẩn bị tài khoản đăng nhập",
+    "FormHint": "Tài khoản có cùng tên người dùng sẽ được tạo và cấu hình tự động trong lần kết nối đầu tiên.",
+    "Queued": "Đang chờ tạo tài khoản cùng tên người dùng…",
+    "Running": "Đang tạo tài khoản và cấu hình thông tin đăng nhập…",
+    "Failed": "Chuẩn bị tài khoản thất bại. Hãy thử lại hoặc liên hệ quản trị viên.",
+    "TimedOut": "Việc chuẩn bị tài khoản đang mất nhiều thời gian hơn dự kiến. Hãy thử lại để kiểm tra trạng thái tác vụ.",
+    "Task": "ID tác vụ: {id}",
+    "Retry": "Thử chuẩn bị tài khoản lại"
+  },
   "Monitor": {
     "Unavailable": "Phiên đã kết thúc hoặc không thể giám sát.",
     "PauseSent": "Đã gửi tác vụ tạm dừng",

@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "正在准备登录账号",
+    "FormHint": "首次连接时会自动创建同名账号并配置登录凭据。",
+    "Queued": "正在等待推送同名账号…",
+    "Running": "正在创建账号并配置登录凭据…",
+    "Failed": "账号准备失败，请重试或联系管理员。",
+    "TimedOut": "账号准备时间较长，请重试以重新检查任务状态。",
+    "Task": "任务编号：{id}",
+    "Retry": "重试账号准备"
+  },
   "Monitor": {
     "Unavailable": "会话已结束或不支持监控。",
     "PauseSent": "暂停任务已发送",

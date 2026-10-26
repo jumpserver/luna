@@ -1,4 +1,14 @@
 {
+  "AccountProvisioning": {
+    "Title": "Préparation du compte de connexion",
+    "FormHint": "Un compte portant votre nom d’utilisateur sera créé et configuré automatiquement lors de la première connexion.",
+    "Queued": "En attente de la création de votre compte…",
+    "Running": "Création du compte et configuration des identifiants de connexion…",
+    "Failed": "La préparation du compte a échoué. Réessayez ou contactez un administrateur.",
+    "TimedOut": "La préparation du compte prend plus de temps que prévu. Réessayez pour vérifier l’état de la tâche.",
+    "Task": "Identifiant de la tâche : {id}",
+    "Retry": "Réessayer la préparation du compte"
+  },
   "Monitor": {
     "Unavailable": "Cette session est terminée ou ne peut pas être surveillée.",
     "PauseSent": "La tâche de suspension a été envoyée",
