@@ -28,7 +28,12 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { needsInputSecret, resolvePersonalCredentialSecretType, supportsPersonalCredential } from "~/utils/connection";
+import {
+  isAutoPushAccount,
+  needsInputSecret,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 import { pageLocation } from "~/utils/runtime";
 
 let desktopListenersInitialized = false;
@@ -994,8 +999,15 @@ export const useAssetAction = () => {
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
+    const autoPushAccount =
+      accountForToken === "@USER" &&
+      isAutoPushAccount(
+        _accounts.find((account) => account.alias === "@USER"),
+        protocol
+      );
     const canUsePersonalCredential =
-      isManual || accountForToken === "@USER" || (requiresHostedSecret && supportsPersonalCredential(matchedAccount));
+      !autoPushAccount &&
+      (isManual || accountForToken === "@USER" || (requiresHostedSecret && supportsPersonalCredential(matchedAccount)));
     const useSavedPersonalCredential = canUsePersonalCredential && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
@@ -1026,7 +1038,8 @@ export const useAssetAction = () => {
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
-      ...(!useSavedPersonalCredential ? { input_username, input_secret } : {}),
+      ...(isManual && !useSavedPersonalCredential ? { input_username } : {}),
+      ...(!autoPushAccount && !useSavedPersonalCredential && input_secret ? { input_secret } : {}),
       ...(isManual && !useSavedPersonalCredential ? { input_secret_type: personalCredentialSecretType } : {}),
       ...(canUsePersonalCredential && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
       ...(canUsePersonalCredential && savePersonalCredential
@@ -1037,7 +1050,7 @@ export const useAssetAction = () => {
               : {})
           }
         : {}),
-      ...((requiresHostedSecret && !useSavedPersonalCredential) || accountForToken === "@USER"
+      ...((requiresHostedSecret && !useSavedPersonalCredential) || (accountForToken === "@USER" && !autoPushAccount)
         ? { input_secret_type: inputSecretType }
         : {}),
       account: accountForToken,

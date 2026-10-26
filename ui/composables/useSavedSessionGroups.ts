@@ -1,10 +1,11 @@
-import type { AssetItem, ConnectionInfo } from "~/types";
 import type {
   WorkspacePane,
   WorkspacePaneLayoutMode,
   WorkspaceSessionTab,
   WorkspaceTabGroup
 } from "./useWorkspaceTabs";
+import type { AssetItem, ConnectionInfo } from "~/types";
+import { trackAclBatchConnection } from "~/composables/useAclDialog";
 import { apiRequest, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isConnectMethodAvailable, isExternalClientConnectMethod } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -276,12 +277,15 @@ export function useSavedSessionGroups() {
       });
     group.restoring = true;
     const opened = workspace.restoreSessionGroup(saved, group);
+    const aclBatchId = crypto.randomUUID();
     const failures: string[] = [];
     try {
       await Promise.all(
         opened.flatMap((tab) =>
           tab.panes.map(async (pane, paneIndex) => {
             const source = saved.tabs.find((item) => item.id === tab.savedTabId)!.panes[paneIndex]!;
+            const releaseBatch =
+              source.kind === "asset" ? trackAclBatchConnection(aclBatchId, source.asset.id, pane.id) : () => {};
             const attempt = workspace.getSessionConnectionAttempt(pane.id);
             const assertCurrent = () => {
               if (
@@ -356,7 +360,7 @@ export function useSavedSessionGroups() {
                   rememberSelection: false,
                   preserveStoredSelection: true
                 },
-                { paneId: pane.id, aclBatchId: key, assertCurrent }
+                { paneId: pane.id, aclBatchId, assertCurrent }
               );
               if (!success) throw new Error(t("SavedGroups.ConnectionFailed"));
             } catch (error) {
@@ -371,6 +375,8 @@ export function useSavedSessionGroups() {
                 { tabId: pane.id, assetId: pane.assetId, protocol: pane.protocol, account: pane.account },
                 reason
               );
+            } finally {
+              releaseBatch();
             }
           })
         )

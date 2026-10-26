@@ -306,12 +306,12 @@ describe("opening assets in local applications", () => {
         expect.objectContaining({
           account: "account-id",
           protocol,
-          input_username: "root",
           input_secret: "-----BEGIN OPENSSH PRIVATE KEY-----",
           input_secret_type: "ssh_key"
         }),
         expect.anything()
       );
+      expect(mocks.createToken.mock.calls[0]![0]).not.toHaveProperty("input_username");
     }
   );
 
@@ -375,13 +375,14 @@ describe("opening assets in local applications", () => {
         expect.objectContaining({
           account: alias,
           protocol,
-          input_username: accountMode === "manual" ? "root" : "",
+          ...(accountMode === "manual" ? { input_username: "root" } : {}),
           input_secret: privateKey,
           input_secret_type: "ssh_key",
           ...(savePersonalCredential ? { save_personal_credential: true } : {})
         }),
         expect.anything()
       );
+      if (accountMode === "dynamic") expect(mocks.createToken.mock.calls[0]![0]).not.toHaveProperty("input_username");
     }
   );
 
@@ -514,14 +515,13 @@ describe("opening assets in local applications", () => {
       expect(failed).not.toHaveBeenCalled();
       const body = mocks.createToken.mock.calls[0]![0];
       expect(body).toMatchObject({ account: "account-id", protocol });
+      expect(body).not.toHaveProperty("input_username");
       if (operation === "use") {
         expect(body.personal_credential_id).toBe("saved-key");
-        expect(body).not.toHaveProperty("input_username");
         expect(body).not.toHaveProperty("input_secret");
         expect(body).not.toHaveProperty("input_secret_type");
       } else {
         expect(body).toMatchObject({
-          input_username: "root",
           input_secret: "replacement-key",
           input_secret_type: "ssh_key",
           save_personal_credential: true

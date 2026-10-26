@@ -221,7 +221,9 @@ it("keeps manually entered VNC connections token-only", async () => {
 it.each([false, true])("uses the token SYSDBA role in the displayed Oracle command (%s)", async (use_sysdba) => {
   const { state } = mountGuide({ protocol: "oracle", connectOptions: { use_sysdba } });
   await vi.waitFor(() => expect(state.loading.value).toBe(false));
-  expect(state.commands.value[0].value).toBe(
-    `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
-  );
+  expect(state.commands.value).toEqual([
+    expect.objectContaining({
+      value: `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
+    })
+  ]);
 });

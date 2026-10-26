@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WorkspaceConnectionProgressStage } from "~/composables/workspaceConnectionProgress";
+import AclPaneHost from "~/components/Workspace/aclPaneHost.vue";
 import { isFaceLiveHostMessage } from "~/utils/faceLive";
 
 const props = defineProps<{
@@ -165,6 +166,13 @@ async function reconnect() {
 
 <template>
   <div
+    v-if="group?.code === 'acl_controls' && paneId"
+    class="absolute inset-0 z-20 bg-[var(--workspace-surface-background)]"
+  >
+    <AclPaneHost :scope-id="paneId" />
+  </div>
+  <div
+    v-else
     v-show="!dismissed"
     :role="failed ? 'alert' : 'status'"
     aria-live="polite"

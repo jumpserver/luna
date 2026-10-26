@@ -1,4 +1,13 @@
 {
+  "AccountProvisioning": {
+    "Title": "Préparation du compte de connexion",
+    "FormHint": "Un compte portant votre nom d’utilisateur sera créé et configuré automatiquement lors de la première connexion.",
+    "Queued": "En attente de création du compte portant votre nom d’utilisateur…",
+    "Running": "Création de votre compte et configuration des identifiants de connexion…",
+    "Failed": "La préparation du compte a échoué. Contactez un administrateur.",
+    "TimedOut": "La préparation du compte a expiré. Contactez un administrateur.",
+    "Task": "ID de la tâche : {id}"
+  },
   "Monitor": {
     "Unavailable": "Cette session est terminée ou ne peut pas être surveillée.",
     "PauseSent": "La tâche de suspension a été envoyée",
@@ -1484,6 +1493,13 @@
     "DbAppFailed": "Impossible de démarrer l’application de base de données."
   },
   "AclDialog": {
+    "SendMfaCode": "Envoyer le code",
+    "MfaCodeSent": "Code de vérification envoyé",
+    "ConnectionControls": "Vérifications de connexion",
+    "ConnectionReason": "Motif de connexion",
+    "MfaMethod": "Méthode MFA",
+    "MfaCode": "Code MFA",
+    "EnrollMfa": "Configurez MFA dans votre profil avant de vous connecter.",
     "LoginReview": "Validation de connexion",
     "FaceVerify": "Vérification faciale",
     "LoginReminder": "Rappel de connexion",
@@ -1527,7 +1543,45 @@
       "rejected": "Rejeté",
       "closed": "Fermé",
       "failed": "Échec"
-    }
+    },
+    "ReviewPartialResult": "{approved} demandes approuvées, {declined} non approuvées. Les actifs des demandes non approuvées seront ignorés.",
+    "TicketNumber": "Demande {number}",
+    "ApprovalTicket": "Demande d’approbation",
+    "ReviewersUnavailable": "Aucun approbateur disponible",
+    "ViewTicket": "Voir la demande",
+    "ReviewPlan": "Une approbation est requise pour {assets} actifs répartis dans {tickets} demandes. Les envoyer maintenant ?",
+    "ReviewSummary": "Cette approbation couvre {assets} actifs répartis dans {tickets} demandes.",
+    "TicketReviewers": "Approbateurs : {names}",
+    "ApplicableAssets": "Actifs",
+    "AssetCount": "{count} actifs",
+    "AffectedAssets": "S’applique à {count} actifs",
+    "ReasonProgress": "Motifs {done}/{total}",
+    "SelectAsset": "Sélectionner un actif",
+    "NextAsset": "Enregistrer et passer à l’actif suivant",
+    "PushReady": "Le compte est prêt. Vous pouvez poursuivre la connexion.",
+    "PushStatus": {
+      "queued": "En attente",
+      "running": "Préparation du compte",
+      "ready": "Terminé",
+      "failed": "Échec"
+    },
+    "MfaVerify": "Vérification MFA",
+    "ReviewStep": "Approbation",
+    "PushAccount": "Préparer le compte",
+    "FaceOnline": "Surveillance faciale en ligne",
+    "NextStep": "Suivant",
+    "ContinueConnection": "Se connecter",
+    "SubmitReview": "Demander une approbation",
+    "Processing": "Traitement en cours",
+    "StepProgress": "Étape {current} / {total}",
+    "FaceInstructions": "Regardez la caméra pour vérifier votre identité.",
+    "FaceOnlineNotice": "Cette connexion nécessite une surveillance faciale en ligne. Gardez votre caméra allumée et votre visage bien visible pendant toute la session.",
+    "StepIncomplete": "Cette étape est incomplète. Réessayez.",
+    "ConnectionReasonRequired": "Saisissez un motif de connexion",
+    "ReasonLength": "{count} / {max} caractères",
+    "ApplyReasonToAll": "Appliquer à tous les actifs en attente d’un motif de connexion",
+    "ReasonTooLong": "Le motif de connexion ne peut pas dépasser {max} caractères",
+    "MfaCodeRequired": "Saisissez un code MFA"
   },
   "Update": {
     "FoundNewVersion": "Nouvelle version disponible",

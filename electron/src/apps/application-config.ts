@@ -364,7 +364,23 @@ export class ApplicationConfigService {
     );
   }
 
-  async updateSelection({ category, protocol, name, pluginId, path: newPath, enabled = true, makeDefault = false }) {
+  async updateSelection({
+    category,
+    protocol,
+    name,
+    pluginId,
+    path: newPath,
+    enabled = true,
+    makeDefault = false
+  }: {
+    category: string;
+    protocol: string;
+    name?: string;
+    pluginId?: string;
+    path?: string;
+    enabled?: boolean;
+    makeDefault?: boolean;
+  }) {
     if (!categories.includes(category)) throw new Error(`invalid application category '${category}'`);
     const entry = await this.findEntry({ category, name, pluginId });
     const state = await this.loadState();

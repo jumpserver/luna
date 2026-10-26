@@ -24,6 +24,7 @@ export function normalizeClientProtocolUrl(raw: unknown): string | undefined {
 
 export interface ClientProtocolPayload {
   protocol?: string;
+  connect_options?: { use_sysdba?: boolean; [key: string]: unknown };
   asset?: { id?: unknown; [key: string]: unknown };
   token?: { id?: unknown; protocol?: string; [key: string]: unknown };
   file?: { content?: unknown; [key: string]: unknown };
