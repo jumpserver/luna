@@ -461,6 +461,8 @@ export interface ConnectMethod {
   is_internal: boolean;
 }
 
+export type RdpSecurity = "default" | "any" | "rdp" | "tls" | "nla";
+
 export interface RdpGraphics {
   charset?: CharsetType;
   backspaceAsCtrlH?: boolean;
@@ -480,6 +482,7 @@ export interface RdpGraphics {
   token_reusable?: boolean;
   remote_microphone?: boolean;
   rdp_connection_speed?: "auto" | "low_speed_broadband" | "high_speed_broadband";
+  rdp_security?: RdpSecurity;
   file_name_conflict_resolution?: string;
 }
 
