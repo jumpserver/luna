@@ -105,7 +105,7 @@
     "asciinema-player": "^3.10.0",
     "clipboard-polyfill": "^4.1.1",
     "codemirror": "^6.0.2",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "driver.js": "^1.8.0",
     "fflate": "^0.8.2",
     "marked": "17.0.6",
