@@ -1130,7 +1130,7 @@
     "DuplicateSiteNameError": "站點名稱已存在，請使用其他名稱",
     "LoginFailedDescription": "登入失敗, 當前帳號登入已失效，請重新登入",
     "InvalidUrlError": "站點地址格式不正確，請輸入包含 http:// 或 https:// 的完整地址",
-    "InvalidSiteError": "登入失敗：站點不可用或地址不正確，請檢查後重試",
+    "InvalidSiteError": "無法存取此站點，請手動開啟測試",
     "AddAccount": "新增站點",
     "SwitchSite": "切換站點",
     "SavedSites": "已儲存的站點",

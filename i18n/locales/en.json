@@ -1130,7 +1130,7 @@
     "DuplicateSiteNameError": "This site name already exists. Use a different name",
     "LoginFailedDescription": "Login failed, the current account has expired, please log in again",
     "InvalidUrlError": "Invalid site address. Enter a full address that includes http:// or https://",
-    "InvalidSiteError": "Login failed: site is unreachable or invalid. Please check and try again.",
+    "InvalidSiteError": "Unable to access this site. Please open it manually to test.",
     "AddAccount": "Add Site",
     "SwitchSite": "Switch Site",
     "SavedSites": "Saved sites",

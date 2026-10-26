@@ -1125,7 +1125,7 @@
     "EmptySiteNameError": "请输入站点名称",
     "DuplicateSiteNameError": "站点名称已存在，请使用其他名称",
     "InvalidUrlError": "站点地址格式不正确，请输入包含 http:// 或 https:// 的完整地址",
-    "InvalidSiteError": "登录失败：站点不可用或地址不正确，请检查后重试",
+    "InvalidSiteError": "无法访问此站点，请手动打开测试",
     "AddAccount": "新增站点",
     "SwitchSite": "切换站点",
     "SavedSites": "已保存的站点",
