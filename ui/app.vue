@@ -26,7 +26,7 @@ import {
 import { getCookieValue, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
 import { getUiLocale } from "../i18n/ui";
 
-useApplicationConfig();
+useApplicationConfig({ refreshOnMount: true });
 
 let applyLanguageSeq = 0;
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
