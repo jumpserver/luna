@@ -2636,5 +2636,42 @@
     "invalid-site": "站點位址無效，請輸入不含憑據、查詢參數或片段的 HTTP 或 HTTPS 位址。",
     "invalid-client-version": "執行中的客戶端版本無效，請使用已注入發行版本的客戶端。",
     "Continue": "繼續連線"
+  },
+  "Shortcuts": {
+    "Title": "快速鍵",
+    "Description": "自訂應用程式快速鍵，避開與遠端工作階段的按鍵衝突。",
+    "Search": "搜尋操作或快速鍵",
+    "ResetAll": "還原全部預設",
+    "Hint": "變更在目前裝置立即生效，應用程式快速鍵在對應範圍內優先回應。部分組合可能被瀏覽器或作業系統佔用。編輯器和遠端工作階段自身的按鍵配置保持原有行為。",
+    "DesktopOnly": "僅桌面版",
+    "Disabled": "已停用",
+    "Change": "修改快速鍵：{action}",
+    "Disable": "停用快速鍵：{action}",
+    "Restore": "還原預設：{action}",
+    "Reserved": "此組合由系統、瀏覽器或編輯器保留，請選擇其他快速鍵。",
+    "Conflict": "此組合已指派給「{action}」，請先修改或停用該快速鍵。",
+    "ModifierRequired": "請使用 Ctrl、Command 或 Alt 搭配其他按鍵，不能只使用 Shift。",
+    "RecordHint": "按下組合鍵後儲存。Esc 取消，Tab 切換控制項。",
+    "PressKeys": "請按下組合鍵",
+    "RecordingFailed": "無法開始錄入，請關閉對話框後重試。",
+    "NoResults": "沒有符合的快速鍵",
+    "DigitTabs": "數字鍵切換工作階段",
+    "DigitTabsHint": "{modifier}+1–8 選擇工作階段，{modifier}+9 選擇最後一個。在文字框或編輯器內輸入時不生效。",
+    "ResetConfirm": "還原全部快速鍵，並啟用數字鍵切換工作階段？",
+    "Actions": {
+      "previousTab": "上一個工作階段",
+      "nextTab": "下一個工作階段",
+      "closeTab": "關閉目前工作階段",
+      "focus": "切換專注模式",
+      "fullscreen": "切換全螢幕",
+      "rightPanel": "顯示或隱藏右側面板",
+      "terminalAi": "開啟終端機 AI",
+      "localShell": "新增本機終端機"
+    },
+    "Scopes": {
+      "workspace": "工作區 · 有作用中工作階段時",
+      "application": "應用程式 · 設定和對話框以外",
+      "terminal": "終端機 · 聚焦且終端機 AI 可用時"
+    }
   }
 }

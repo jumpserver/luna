@@ -2636,5 +2636,42 @@
     "invalid-site": "URL của trang không hợp lệ. Nhập URL HTTP hoặc HTTPS không có thông tin đăng nhập, truy vấn hoặc phân đoạn.",
     "invalid-client-version": "Phiên bản máy khách đang chạy không hợp lệ. Dùng máy khách được xây dựng với phiên bản phát hành.",
     "Continue": "Tiếp tục kết nối"
+  },
+  "Shortcuts": {
+    "Title": "Phím tắt",
+    "Description": "Tùy chỉnh phím tắt của ứng dụng để tránh xung đột với các phiên từ xa.",
+    "Search": "Tìm thao tác hoặc phím tắt",
+    "ResetAll": "Khôi phục tất cả mặc định",
+    "Hint": "Thay đổi có hiệu lực ngay trên thiết bị này. Phím tắt của ứng dụng được ưu tiên trong phạm vi tương ứng. Một số phím tắt của trình duyệt và hệ điều hành có thể không khả dụng. Cấu hình phím của trình soạn thảo và phiên từ xa không thay đổi.",
+    "DesktopOnly": "Chỉ dành cho ứng dụng máy tính",
+    "Disabled": "Đã tắt",
+    "Change": "Đổi phím tắt: {action}",
+    "Disable": "Tắt phím tắt: {action}",
+    "Restore": "Khôi phục mặc định: {action}",
+    "Reserved": "Tổ hợp này được hệ thống, trình duyệt hoặc trình soạn thảo dành riêng. Hãy chọn phím tắt khác.",
+    "Conflict": "Tổ hợp này đã được gán cho “{action}”. Hãy đổi hoặc tắt phím tắt đó trước.",
+    "ModifierRequired": "Dùng Ctrl, Command hoặc Alt cùng với một phím khác. Chỉ dùng Shift là chưa đủ.",
+    "RecordHint": "Nhấn tổ hợp phím rồi lưu. Esc để hủy. Tab để chuyển giữa các điều khiển.",
+    "PressKeys": "Nhấn một tổ hợp phím",
+    "RecordingFailed": "Không thể bắt đầu ghi nhận phím. Hãy đóng hộp thoại này và thử lại.",
+    "NoResults": "Không có phím tắt phù hợp",
+    "DigitTabs": "Chuyển phiên bằng phím số",
+    "DigitTabsHint": "{modifier}+1–8 chọn một phiên; {modifier}+9 chọn phiên cuối cùng. Không hoạt động khi nhập trong ô văn bản hoặc trình soạn thảo.",
+    "ResetConfirm": "Khôi phục tất cả phím tắt và bật chuyển phiên bằng phím số?",
+    "Actions": {
+      "previousTab": "Phiên trước",
+      "nextTab": "Phiên tiếp theo",
+      "closeTab": "Đóng phiên hiện tại",
+      "focus": "Chuyển chế độ tập trung",
+      "fullscreen": "Chuyển chế độ toàn màn hình",
+      "rightPanel": "Hiện hoặc ẩn bảng bên phải",
+      "terminalAi": "Mở AI của terminal",
+      "localShell": "Terminal cục bộ mới"
+    },
+    "Scopes": {
+      "workspace": "Không gian làm việc · khi có phiên đang hoạt động",
+      "application": "Ứng dụng · ngoài phần cài đặt và hộp thoại",
+      "terminal": "Terminal · khi AI của terminal khả dụng và terminal đang được lấy nét"
+    }
   }
 }

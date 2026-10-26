@@ -2636,5 +2636,42 @@
     "invalid-site": "站点地址无效，请输入不含凭据、查询参数或片段的 HTTP 或 HTTPS 地址。",
     "invalid-client-version": "运行中的客户端版本无效，请使用已注入发布版本的客户端。",
     "Continue": "继续连接"
+  },
+  "Shortcuts": {
+    "Title": "快捷键",
+    "Description": "自定义应用快捷键，避开与远程会话的按键冲突。",
+    "Search": "搜索操作或快捷键",
+    "ResetAll": "恢复全部默认",
+    "Hint": "修改在当前设备立即生效，应用快捷键在对应范围内优先响应。部分组合可能被浏览器或操作系统占用。编辑器和远程会话自身的键位保持原有行为。",
+    "DesktopOnly": "仅桌面端",
+    "Disabled": "已禁用",
+    "Change": "修改快捷键：{action}",
+    "Disable": "禁用快捷键：{action}",
+    "Restore": "恢复默认：{action}",
+    "Reserved": "此组合由系统、浏览器或编辑器保留，请选择其他快捷键。",
+    "Conflict": "此组合已分配给“{action}”，请先修改或禁用该快捷键。",
+    "ModifierRequired": "请使用 Ctrl、Command 或 Alt 搭配其他按键，不能只使用 Shift。",
+    "RecordHint": "按下组合键后保存。Esc 取消，Tab 切换控件。",
+    "PressKeys": "请按下组合键",
+    "RecordingFailed": "无法开始录入，请关闭对话框后重试。",
+    "NoResults": "没有匹配的快捷键",
+    "DigitTabs": "数字键切换会话",
+    "DigitTabsHint": "{modifier}+1–8 选择会话，{modifier}+9 选择最后一个。在文本框或编辑器内输入时不生效。",
+    "ResetConfirm": "恢复全部快捷键，并启用数字键切换会话？",
+    "Actions": {
+      "previousTab": "上一个会话",
+      "nextTab": "下一个会话",
+      "closeTab": "关闭当前会话",
+      "focus": "切换专注模式",
+      "fullscreen": "切换全屏",
+      "rightPanel": "显示或隐藏右侧面板",
+      "terminalAi": "打开终端 AI",
+      "localShell": "新建本地终端"
+    },
+    "Scopes": {
+      "workspace": "工作区 · 有活动会话时",
+      "application": "应用 · 设置和对话框以外",
+      "terminal": "终端 · 聚焦且终端 AI 可用时"
+    }
   }
 }
