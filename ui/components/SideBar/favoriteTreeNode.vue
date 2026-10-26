@@ -137,7 +137,7 @@ watch(
         >
           <span class="app-tree-icon-slot grid shrink-0 place-items-center" />
           <AppAssetIcon :src="resolveAssetIcon(asset).src" :fallback="resolveAssetIcon(asset).fallback" />
-          <span class="sidebar-tree-label truncate font-medium font-ui-mono tracking-[0.01em]">
+          <span class="sidebar-tree-label truncate font-medium tracking-[0.01em]">
             {{ asset.name }}
           </span>
         </button>
