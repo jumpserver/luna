@@ -7,7 +7,7 @@ import type {
 import type { AssetItem, TokenResponse } from "~/types";
 
 import { SFTP_FILE_EDITOR_VALUE } from "~/composables/useConnectMethods";
-import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import { ConnectionChecksCancelledError, exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { needsInputSecret } from "~/utils/connection";
 
@@ -77,6 +77,7 @@ export function useWorkspaceTabMenu() {
   const { addErrorToast } = useErrorToast();
   const { handleAssetConnection } = useAssetAction();
   const {
+    tabs,
     activePaneId,
     activeTabId,
     getTabById,
@@ -88,13 +89,15 @@ export function useWorkspaceTabMenu() {
     splitWorkspace,
     canSplitWorkspace,
     markSessionConnecting,
+    markSessionConnected,
+    getSessionConnectionAttempt,
     markSessionDisconnected,
     placePane,
     setActivePane,
     updateSessionPayload
   } = useWorkspaceTabs();
 
-  const reconnectViaConnection = async (tab: WorkspaceSessionTab) => {
+  const reconnectViaConnection = async (tab: WorkspaceSessionTab, onCancelled: () => void) => {
     const connectMethod = tab.payload?.connectMethod?.value;
     const match = { tabId: tab.id, assetId: tab.assetId, protocol: tab.protocol, account: tab.account };
     const { asset, needsSetup } = await requiresCredentialSetup(tab);
@@ -103,7 +106,8 @@ export function useWorkspaceTabMenu() {
       return;
     }
 
-    void handleAssetConnection(
+    let settled = false;
+    await handleAssetConnection(
       tab.account,
       tab.assetId,
       tab.protocol,
@@ -114,10 +118,18 @@ export function useWorkspaceTabMenu() {
         asset,
         orgId: tab.orgId,
         connectMethod,
-        onSessionReady: (payload) => updateSessionPayload(match, payload),
-        onSessionError: (error) => markSessionDisconnected(tab.id, String(error))
+        onSessionReady: (payload) => {
+          settled = true;
+          updateSessionPayload(match, payload);
+        },
+        onSessionError: (error) => {
+          settled = true;
+          markSessionDisconnected(tab.id, String(error));
+        }
       }
     );
+    // The initial-token path resolves without publishing a payload on ACL cancel.
+    if (!settled) onCancelled();
   };
 
   const exchangePayload = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
@@ -140,6 +152,10 @@ export function useWorkspaceTabMenu() {
       setActiveSession(newPane.id);
       return { status: "session_started", pane_id: newPane.id };
     } catch (error) {
+      if (error instanceof ConnectionChecksCancelledError) {
+        assertCurrent?.();
+        return { status: "cancelled" };
+      }
       if (assertCurrent) {
         assertCurrent();
         return { status: "failed" };
@@ -153,7 +169,16 @@ export function useWorkspaceTabMenu() {
   };
 
   const reconnectSession = async (tab: WorkspaceSessionTab, assertCurrent?: () => void) => {
+    const wasConnected = tab.status === "connected";
     if (!assertCurrent) markSessionConnecting(tab.id);
+    const attempt = getSessionConnectionAttempt(tab.id);
+    const restoreAfterCancellation = () => {
+      const currentPane = tabs.value.flatMap((workspace) => workspace.panes).find((pane) => pane.id === tab.id);
+      if (!assertCurrent && getSessionConnectionAttempt(tab.id) === attempt && currentPane?.status === "connecting") {
+        if (wasConnected) markSessionConnected(tab.id);
+        else markSessionDisconnected(tab.id);
+      }
+    };
 
     try {
       const payload = await exchangePayload(tab);
@@ -169,13 +194,22 @@ export function useWorkspaceTabMenu() {
         payload
       );
       return { status: "session_started", pane_id: tab.id };
-    } catch {
+    } catch (error) {
+      if (error instanceof ConnectionChecksCancelledError) {
+        assertCurrent?.();
+        // The exchange never replaced the old session. Preserve it unless its
+        // connector has closed meanwhile or a newer connection attempt began.
+        restoreAfterCancellation();
+        return { status: "cancelled", pane_id: tab.id };
+      }
       if (assertCurrent) {
         assertCurrent();
         openSetupSession(sessionToAsset(tab), { protocol: tab.protocol, paneId: tab.id });
         return { status: "user_action_required", reason: "connection_setup", pane_id: tab.id };
       }
-      void reconnectViaConnection(tab).catch((error) => markSessionDisconnected(tab.id, String(error)));
+      void reconnectViaConnection(tab, restoreAfterCancellation).catch((error) =>
+        markSessionDisconnected(tab.id, String(error))
+      );
       return { status: "connection_requested", pane_id: tab.id };
     }
   };
@@ -195,6 +229,7 @@ export function useWorkspaceTabMenu() {
       return;
     }
 
+    let attempt: number | undefined;
     try {
       markSessionConnecting(pane.id);
       openSession(sessionToAsset(workspaceTab), {
@@ -202,6 +237,7 @@ export function useWorkspaceTabMenu() {
         account: workspaceTab.account,
         paneId: pane.id
       });
+      attempt = getSessionConnectionAttempt(pane.id);
       const payload = await exchangePayload(workspaceTab);
       updateSessionPayload(
         {
@@ -213,6 +249,10 @@ export function useWorkspaceTabMenu() {
         payload
       );
     } catch (error) {
+      if (error instanceof ConnectionChecksCancelledError) {
+        if (getSessionConnectionAttempt(pane.id) === attempt) markSessionDisconnected(pane.id);
+        return;
+      }
       const connectMethod = workspaceTab.payload?.connectMethod?.value;
       try {
         const { asset, needsSetup } = await requiresCredentialSetup(workspaceTab);
