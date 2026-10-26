@@ -3,6 +3,9 @@
   "compilerOptions": {
     "baseUrl": "src",
     "paths": {
+      "@guacamole": [
+        "../vendor/guacamole"
+      ],
       "@src/*": [
         "*"
       ],
@@ -24,6 +27,7 @@
     ],
     "lib": [
       "es2017",
+      "es2018.asynciterable",
       "dom"
     ],
     "module": "es2015",

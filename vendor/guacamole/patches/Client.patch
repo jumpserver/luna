@@ -1,0 +1,29 @@
+--- a/modules/Client.js
++++ b/modules/Client.js
+@@ -201,7 +201,6 @@
+ 
+                 var index = parseInt(key);
+                 var layer = layersSnapshot[key];
+-                var canvas = layer.toCanvas();
+ 
+                 // Store layer/buffer dimensions
+                 var exportLayer = {
+@@ -210,8 +209,16 @@
+                 };
+ 
+                 // Store layer/buffer image data, if it can be generated
+-                if (layer.width && layer.height)
+-                    exportLayer.url = canvas.toDataURL('image/png');
++                if (layer.width && layer.height) {
++                    var canvas = layer.toCanvas();
++                    try {
++                        exportLayer.url = canvas.toDataURL('image/png');
++                    }
++                    finally {
++                        // JumpServer: this copy is only needed while encoding the snapshot.
++                        canvas.width = canvas.height = 0;
++                    }
++                }
+ 
+                 // Add layer properties if not a buffer nor the default layer
+                 if (index > 0) {

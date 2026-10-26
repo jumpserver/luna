@@ -1,0 +1,134 @@
+--- a/modules/Display.js
++++ b/modules/Display.js
+@@ -650,16 +650,46 @@
+         // Prefer createImageBitmap() over blob URLs if available
+         if (window.createImageBitmap) {
+ 
+-            var bitmap;
++            // JumpServer: release decoded image resources as soon as their task finishes or is cancelled.
++            var bitmap = null;
++            var cancelled = false;
++
++            function releaseBitmap() {
++                if (bitmap) {
++                    bitmap.close();
++                    bitmap = null;
++                }
++            }
+ 
+             // Draw image once loaded
+             task = scheduleTask(function drawImageBitmap() {
+-                layer.drawImage(x, y, bitmap);
++                try {
++                    if (bitmap)
++                        layer.drawImage(x, y, bitmap);
++                }
++                finally {
++                    releaseBitmap();
++                }
+             }, true);
++
++            // JumpServer: cover both already-decoded and still-pending images when a frame is discarded.
++            var cancelTask = task.cancel;
++            task.cancel = function cancelBitmap() {
++                cancelled = true;
++                cancelTask();
++                releaseBitmap();
++            };
+ 
+             // Load image from provided blob
+             window.createImageBitmap(blob).then(function bitmapLoaded(decoded) {
++                if (cancelled) {
++                    decoded.close();
++                    return;
++                }
+                 bitmap = decoded;
++                task.unblock();
++            }, function bitmapFailed() {
++                // JumpServer: failed decoding must not permanently block this frame or subsequent frames.
+                 task.unblock();
+             });
+ 
+@@ -671,21 +701,36 @@
+ 
+             // Create URL for blob
+             var url = URL.createObjectURL(blob);
++            var image = new Image();
++
++            function releaseImage() {
++                image.onload = image.onerror = null;
++                image.removeAttribute('src');
++                if (url !== null) {
++                    URL.revokeObjectURL(url);
++                    url = null;
++                }
++            }
+ 
+             // Draw and free blob URL when ready
+             task = scheduleTask(function __display_drawBlob() {
+-
+-                // Draw the image only if it loaded without errors
+-                if (image.width && image.height)
+-                    layer.drawImage(x, y, image);
+-
+-                // Blob URL no longer needed
+-                URL.revokeObjectURL(url);
+-
++                try {
++                    // Draw the image only if it loaded without errors
++                    if (image.width && image.height)
++                        layer.drawImage(x, y, image);
++                }
++                finally {
++                    releaseImage();
++                }
+             }, true);
+ 
++            var cancelTask = task.cancel;
++            task.cancel = function cancelImage() {
++                cancelTask();
++                releaseImage();
++            };
++
+             // Load image from URL
+-            var image = new Image();
+             image.onload = task.unblock;
+             image.onerror = task.unblock;
+             image.src = url;
+@@ -758,15 +803,30 @@
+      */
+     this.draw = function(layer, x, y, url) {
+ 
++        var image = new Image();
++        function releaseImage() {
++            image.onload = image.onerror = null;
++            image.removeAttribute('src');
++        }
++
+         var task = scheduleTask(function __display_draw() {
+-
+-            // Draw the image only if it loaded without errors
+-            if (image.width && image.height)
+-                layer.drawImage(x, y, image);
+-
++            try {
++                // Draw the image only if it loaded without errors
++                if (image.width && image.height)
++                    layer.drawImage(x, y, image);
++            }
++            finally {
++                // JumpServer: release data URIs and decoded images after their pixels are copied.
++                releaseImage();
++            }
+         }, true);
+ 
+-        var image = new Image();
++        var cancelTask = task.cancel;
++        task.cancel = function cancelImage() {
++            cancelTask();
++            releaseImage();
++        };
++
+         image.onload = task.unblock;
+         image.onerror = task.unblock;
+         image.src = url;

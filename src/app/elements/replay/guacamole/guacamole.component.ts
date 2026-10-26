@@ -1,5 +1,5 @@
-import {Component, OnInit, Input} from '@angular/core';
-import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
+import {Component, OnInit, OnDestroy, Input, NgZone} from '@angular/core';
+import Guacamole from '@guacamole';
 import {Replay, Command} from '@app/model';
 import {HttpService} from '@app/services';
 import {formatTime} from '@app/utils/common';
@@ -7,6 +7,7 @@ import {TranslateService} from '@ngx-translate/core';
 import {Observable, fromEvent, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 import 'rxjs/Observable';
+import {createRecordingSource} from './recording-source';
 
 
 @Component({
@@ -14,13 +15,14 @@ import 'rxjs/Observable';
   templateUrl: './guacamole.component.html',
   styleUrls: ['./guacamole.component.scss']
 })
-export class ElementReplayGuacamoleComponent implements OnInit {
+export class ElementReplayGuacamoleComponent implements OnInit, OnDestroy {
   isPlaying = false;
-  recording: any;
+  recording: Guacamole.SessionRecording;
   playerRef: any;
   displayRef: any;
   screenRef: any;
-  recordingDisplay: any;
+  recordingDisplay: Guacamole.Display;
+  recordingError = '';
   max = 100;
   percent = 0;
   duration = '00:00';
@@ -28,13 +30,21 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   @Input() replay: Replay;
   startTime = null;
   startTimeStamp = null;
-  commands: Command[];
+  commands: Command[] = [];
   page = 0;
   leftInfo = null;
   winSizeChange$: Observable<any>;
   winSizeSub: Subscription;
+  private subscriptions = new Subscription();
+  private playbackIntent = true;
+  private recordingLoaded = false;
+  private seeking = false;
+  private pendingSeek: number = null;
+  private seekSequence = 0;
+  private durationUpdatedAt = 0;
+  private positionUpdatedAt = 0;
 
-  constructor(private _http: HttpService, private _translate: TranslateService) {}
+  constructor(private _http: HttpService, private _translate: TranslateService, private _zone: NgZone) {}
 
   ngOnInit() {
     if (!this.replay.src) {
@@ -48,48 +58,65 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
-    const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
-    this.recording = new Guacamole.SessionRecording(tunnel);
-    this.recordingDisplay = this.recording.getDisplay();
-    const recordingElement = this.recordingDisplay.getElement();
-    recordingElement.style.margin = '0 auto';
-    this.screenRef.appendChild(recordingElement);
-    this.initRecording();
+    try {
+      this._zone.runOutsideAngular(() => {
+        this.recording = new Guacamole.SessionRecording(createRecordingSource(this.replay.src));
+        this.recordingDisplay = this.recording.getDisplay();
+        const recordingElement = this.recordingDisplay.getElement();
+        recordingElement.style.margin = '0 auto';
+        this.screenRef.appendChild(recordingElement);
+        this.initRecording();
+      });
+    } catch (error) {
+      this.onRecordingError(error.message || String(error));
+    }
     this.getCommands(this.page);
-    this._translate.get('LeftInfo').subscribe((res: string) => {
+    this.subscriptions.add(this._translate.get('LeftInfo').subscribe((res: string) => {
       this.leftInfo = res;
-    });
+    }));
     this.winSizeChange$ = fromEvent(window, 'resize').pipe(
       debounceTime(300),
       distinctUntilChanged(),
     );
     this.winSizeSub = this.winSizeChange$
       .subscribe(() => {
-        this.recordingDisplay.scale(this.getPropScale());
+        if (this.recordingDisplay && !this.recordingError) {
+          this.recordingDisplay.scale(this.getPropScale());
+        }
       });
+    this.subscriptions.add(this.winSizeSub);
   }
 
   initRecording() {
-    this.recording.connect('');
     this.recording.onplay = () => {
-      this.isPlaying = true;
+      this._zone.run(() => this.isPlaying = true);
     };
 
     this.recording.onseek = (millis) => {
-      this.position = formatTime(millis);
-      this.percent = millis;
+      this.updatePosition(millis);
     };
 
     this.recording.onprogress = (millis) => {
-      this.duration = formatTime(millis);
-      this.max = millis;
-      this.play();
+      this.updateDuration(millis);
+      this.flushPendingSeek();
+      this.tryPlay();
     };
 
-    // If paused, the play/pause button should read "Play"
     this.recording.onpause = () => {
-      this.isPlaying = false;
+      this._zone.run(() => this.isPlaying = false);
+      if (!this.seeking) {
+        this.updatePosition(this.recording.getPosition(), true);
+      }
     };
+
+    this.recording.onload = () => {
+      this.recordingLoaded = true;
+      this.updateDuration(this.recording.getDuration(), true);
+      this.flushPendingSeek();
+      this.tryPlay();
+    };
+
+    this.recording.onerror = (message) => this.onRecordingError(message);
 
     this.recordingDisplay.onresize = (width, height) => {
       // Do not scale if displayRef has no width
@@ -98,6 +125,103 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       }
       this.recordingDisplay.scale(this.getPropScale());
     };
+  }
+
+  private updateDuration(millis: number, force = false) {
+    const now = Date.now();
+    if (!force && now - this.durationUpdatedAt < 100) {
+      return;
+    }
+    this.durationUpdatedAt = now;
+    this._zone.run(() => {
+      this.duration = formatTime(millis);
+      this.max = millis;
+    });
+  }
+
+  private updatePosition(millis: number, force = false) {
+    const now = Date.now();
+    if (!force && now - this.positionUpdatedAt < 100) {
+      return;
+    }
+    this.positionUpdatedAt = now;
+    this._zone.run(() => {
+      this.position = formatTime(millis);
+      this.percent = millis;
+    });
+  }
+
+  private tryPlay() {
+    if (this.recording && !this.recordingError && this.playbackIntent && !this.seeking && !this.recording.isPlaying()) {
+      this._zone.runOutsideAngular(() => this.recording.play());
+    }
+  }
+
+  private flushPendingSeek() {
+    if (this.pendingSeek === null || !this.recording || this.recordingError) {
+      return;
+    }
+    const duration = this.recording.getDuration();
+    if (!this.recordingLoaded && duration < this.pendingSeek) {
+      return;
+    }
+    const target = Math.min(this.pendingSeek, duration);
+    const sequence = this.seekSequence;
+    this.pendingSeek = null;
+    const complete = () => {
+      if (!this.recording || sequence !== this.seekSequence) {
+        return;
+      }
+      this.finishSeek();
+      this.updatePosition(this.recording.getPosition(), true);
+      this.tryPlay();
+    };
+    if (duration <= 0) {
+      complete();
+    } else {
+      this._zone.runOutsideAngular(() => this.recording.seek(target, complete));
+    }
+  }
+
+  private finishSeek() {
+    this.seeking = false;
+    this.pendingSeek = null;
+    if (this.playerRef) {
+      this.playerRef.className = '';
+    }
+  }
+
+  private onRecordingError(message: string) {
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
+    this._zone.run(() => {
+      this.recordingError = message || 'Failed to load recording.';
+      this.isPlaying = false;
+    });
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
+    if (this.recordingDisplay) {
+      this.recordingDisplay.onresize = null;
+    }
+    if (this.recording) {
+      this.recording.onload = this.recording.onplay = this.recording.onpause = null;
+      this.recording.onseek = this.recording.onprogress = this.recording.onerror = null;
+      this.recording.dispose();
+      this.recording = null;
+    }
+    if (this.recordingDisplay) {
+      const element = this.recordingDisplay.getElement();
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      this.recordingDisplay = null;
+    }
   }
 
   getPropScale () {
@@ -133,36 +257,46 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     return date_s.split('/').join('-');
   }
   runFrom() {
-    this.recording.seek(this.percent, () =>
-      this.playerRef.className = ''
-    );
-
-      // Seek is in progress
+    if (!this.recording || this.recordingError) {
+      return;
+    }
+    this.seekSequence++;
+    // Keep the user's playback intent separate from the paused seek operation.
+    const target = Math.max(0, Number(this.percent) || 0);
+    this.seeking = true;
+    this.recording.pause();
+    this.pendingSeek = target;
     this.playerRef.className = 'seeking';
+    this.flushPendingSeek();
   }
 
   cancelSeek(e) {
-    this.recording.play();
-    this.playerRef.className = '';
+    this.seekSequence++;
+    if (this.recording && !this.recordingError) {
+      this.recording.cancel();
+      this.updatePosition(this.recording.getPosition(), true);
+    }
+    this.finishSeek();
+    this.tryPlay();
     e.stopPropagation();
   }
 
   play() {
-    if (!this.recording.isPlaying()) {
-      this.recording.play();
-      this.isPlaying = true;
-    }
+    this.playbackIntent = true;
+    this.tryPlay();
   }
 
   pause() {
-    if (this.recording.isPlaying()) {
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
+    if (this.recording && !this.recordingError) {
       this.recording.pause();
-      this.isPlaying = false;
     }
   }
 
   toggle() {
-    if (!this.recording.isPlaying()) {
+    if (!this.isPlaying && !(this.seeking && this.playbackIntent)) {
       this.play();
     } else {
       this.pause();
@@ -173,7 +307,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     if (!this.startTimeStamp) {
       return;
     }
-    this._http.getCommandsData(this.replay.id, page)
+    this.subscriptions.add(this._http.getCommandsData(this.replay.id, page)
     .subscribe(
       data => {
         const results = data.results;
@@ -185,7 +319,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       err => {
         alert('没找到命令记录');
       }
-    );
+    ));
   }
 
   onScroll() {

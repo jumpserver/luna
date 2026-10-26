@@ -4144,11 +4144,6 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.1.6
   resolved "https://registry.npmmirror.com/graceful-fs/-/graceful-fs-4.2.10.tgz#147d3a006da4ca3ce14728c7aefc287c367d7a6c"
   integrity sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==
 
-guacamole-common-js@1.1.0:
-  version "1.1.0"
-  resolved "https://registry.npmmirror.com/guacamole-common-js/-/guacamole-common-js-1.1.0.tgz#5d61c5b45d6462b5d1c6110372c34ad98292decb"
-  integrity sha512-X0BOOGL5DWirKk0Q+2tpr1r3yvoRlF4A76T6CfKMNWSWz3goD2/aSCQcY3I07XSop0SCjOZRNCmPPETmV/6ayg==
-
 handle-thing@^2.0.0:
   version "2.0.1"
   resolved "https://registry.npmmirror.com/handle-thing/-/handle-thing-2.0.1.tgz#857f79ce359580c340d43081cc648970d0bb234e"
