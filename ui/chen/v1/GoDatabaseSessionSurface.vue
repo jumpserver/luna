@@ -66,12 +66,29 @@ const userInfo = props.tab ? useUserInfoStore() : null;
 // Freeze the authenticated Core site for this workspace; a Chen endpoint or renderer URL is not a Core site.
 const reviewCoreSite = userInfo?.currentSite || undefined;
 const single = props.selector !== undefined;
-const endpoint =
-  String(props.tab?.payload?.endpointUrl || "").trim() ||
-  (props.tab?.payload?.webUrl ? new URL(String(props.tab.payload.webUrl), window.location.origin).origin : "") ||
-  (isDesktopRuntime() ? userInfo?.currentSite : "") ||
-  window.location.origin;
-const api = createChenGoApi(endpoint, fetch, { mode: single ? "single" : "managed" });
+const endpoint = computed(
+  () =>
+    String(props.tab?.payload?.endpointUrl || "").trim() ||
+    (props.tab?.payload?.webUrl ? new URL(String(props.tab.payload.webUrl), window.location.origin).origin : "") ||
+    (isDesktopRuntime() ? userInfo?.currentSite : "") ||
+    window.location.origin
+);
+const credential = computed(() => {
+  const token = props.tab?.payload?.token as { id?: string } | undefined;
+  return single ? props.selector || "" : String(token?.id || props.tab?.payload?.id || "");
+});
+interface SessionConnection {
+  identity: string;
+  credential: string;
+  api: ReturnType<typeof createChenGoApi>;
+  controller: AbortController;
+  session: GoSession | null;
+  connecting?: Promise<void>;
+}
+let api = createChenGoApi(endpoint.value, fetch, { mode: single ? "single" : "managed" });
+let connection: SessionConnection | null = null;
+let replacement = 0;
+let replacementConfirmation: Promise<boolean> | null = null;
 const session = ref<GoSession | null>(null);
 const tabs = ref<ChenWorkspaceTab[]>([]);
 const activeId = ref("");
@@ -114,7 +131,7 @@ const sidebarResize = usePaneResize({
   pixelsPerUnit: () => 1,
   enabled: treeVisible
 });
-const eventController = new AbortController();
+let eventController = new AbortController();
 interface QueryPaneHandle {
   focus: () => void;
   run: () => void;
@@ -325,6 +342,13 @@ function tabMenu(tab: ChenWorkspaceTab) {
 function isCurrent(query: QueryWorkspaceTab) {
   return !disposed && !query.closed;
 }
+function isConnectionCurrent(scope: SessionConnection) {
+  return !disposed && connection === scope;
+}
+function retireConnection(scope: SessionConnection | null) {
+  scope?.controller.abort();
+  if (scope?.session && scope.session.state !== "closed") void scope.api.closeSession(scope.session.id).catch(() => {});
+}
 
 async function loadRows(
   query: QueryWorkspaceTab,
@@ -455,19 +479,26 @@ async function syncExecution(query: QueryWorkspaceTab) {
     return;
   acceptExecution(query, snapshot);
 }
-async function watchEvents() {
+async function watchEvents(scope: SessionConnection) {
+  const { api, controller } = scope;
   let delay = 1000;
-  while (true) {
-    if (eventController.signal.aborted || disposed || !session.value) break;
+  while (isConnectionCurrent(scope) && !controller.signal.aborted && scope.session) {
     try {
-      const stream = await api.events(session.value.id, sequence, eventController.signal);
+      const stream = await api.events(scope.session.id, sequence, controller.signal);
+      if (!isConnectionCurrent(scope) || controller.signal.aborted) break;
       eventConnected.value = true;
       // State reads must not delay lock/close events already available on the stream.
       void Promise.allSettled(queries.value.flatMap((query) => [syncExecution(query), syncExport(query)]));
       delay = 1000;
-      await readChenEvents(stream, acceptEvent, eventController.signal);
+      await readChenEvents(
+        stream,
+        (event) => {
+          if (isConnectionCurrent(scope) && !controller.signal.aborted) acceptEvent(event);
+        },
+        controller.signal
+      );
     } catch (cause) {
-      if (eventController.signal.aborted) break;
+      if (!isConnectionCurrent(scope) || controller.signal.aborted) break;
       if (cause instanceof ChenGoError && [401, 403, 404, 410].includes(cause.status)) {
         error.value = failureText(cause);
         if (session.value) session.value.state = "closed";
@@ -476,18 +507,18 @@ async function watchEvents() {
         break;
       }
     } finally {
-      eventConnected.value = false;
+      if (isConnectionCurrent(scope)) eventConnected.value = false;
     }
-    if (eventController.signal.aborted) break;
+    if (!isConnectionCurrent(scope) || controller.signal.aborted) break;
     await new Promise<void>((resolve) => {
       let timer: ReturnType<typeof setTimeout>;
       const done = () => {
         clearTimeout(timer);
-        eventController.signal.removeEventListener("abort", done);
+        controller.signal.removeEventListener("abort", done);
         resolve();
       };
       timer = setTimeout(done, delay);
-      eventController.signal.addEventListener("abort", done, { once: true });
+      controller.signal.addEventListener("abort", done, { once: true });
     });
     delay = Math.min(delay * 2, 10_000);
   }
@@ -495,15 +526,16 @@ async function watchEvents() {
 async function connectQuery(query: QueryWorkspaceTab) {
   if (!sessionReady.value || !session.value || query.busy) return;
   const sessionId = session.value.id;
+  const queryApi = api;
   query.busy = true;
   query.error = "";
   try {
-    const console = await api.openConsole(sessionId, {
+    const console = await queryApi.openConsole(sessionId, {
       database: query.context.database || undefined,
       schema: query.context.schema || undefined
     });
     if (!isCurrent(query)) {
-      await api.closeConsole(console.id);
+      await queryApi.closeConsole(console.id);
       return;
     }
     if (session.value?.id !== sessionId || session.value.state === "closed" || eventController.signal.aborted) {
@@ -545,6 +577,7 @@ async function newQuery(
   activeId.value = query.id;
   drawer.value = false;
   await connectQuery(query);
+  if (!isCurrent(query)) return;
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
 }
@@ -848,7 +881,7 @@ async function cancel(query: QueryWorkspaceTab) {
 
 const closeDialog = ref<ReturnType<typeof closeWarnings> | null>(null);
 let closeResolver: ((value: boolean) => void) | undefined;
-function confirmClose(list: QueryWorkspaceTab[]) {
+function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false) {
   if (session.value?.can_cancel === false) {
     const running = list.filter(
       (query) => executionActive(query.execution) && query.execution?.status !== "waiting_review"
@@ -859,6 +892,7 @@ function confirmClose(list: QueryWorkspaceTab[]) {
     }
   }
   const warnings = closeWarnings(list);
+  if (preserveSqlDrafts) warnings.dirty = list.some((query) => editDirty(query.edit));
   if (!Object.values(warnings).some(Boolean)) return Promise.resolve(true);
   if (closeResolver) return Promise.resolve(false);
   closeDialog.value = warnings;
@@ -888,26 +922,28 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
       return;
     }
     tab.busy = true;
+    const queryApi = api;
     try {
-      if (tab.execution && executionActive(tab.execution)) await api.cancel(tab.execution.id);
-      if (exportActive(tab.exportJob)) await api.cancelExport(tab.exportJob!.id);
+      if (tab.execution && executionActive(tab.execution)) await queryApi.cancel(tab.execution.id);
+      if (exportActive(tab.exportJob)) await queryApi.cancelExport(tab.exportJob!.id);
       if (tab.console && tab.console.state !== "closed" && session.value?.state !== "closed")
-        await api.closeConsole(tab.console.id);
+        await queryApi.closeConsole(tab.console.id);
     } catch (cause) {
       tab.error = failureText(cause);
       tab.busy = false;
       return;
     }
+    if (!isCurrent(tab)) return;
     tab.closed = true;
     tab.loadGeneration++;
   }
-  const index = tabs.value.findIndex((item) => item.id === tab.id);
+  const index = tabs.value.indexOf(tab);
   if (index < 0) return;
   tabs.value.splice(index, 1);
   if (activeId.value === tab.id) activeId.value = tabs.value[Math.max(0, index - 1)]?.id || "";
 }
 async function reconnect(query: QueryWorkspaceTab) {
-  if (!sessionReady.value || query.busy || !(await confirmClose([query]))) return;
+  if (!sessionReady.value || query.busy || !(await confirmClose([query])) || !isCurrent(query)) return;
   try {
     if (query.console) await api.closeConsole(query.console.id);
   } catch (cause) {
@@ -916,6 +952,7 @@ async function reconnect(query: QueryWorkspaceTab) {
       return;
     }
   }
+  if (!isCurrent(query)) return;
   if (query.execution && executionActive(query.execution)) query.execution = { ...query.execution, status: "unknown" };
   query.pending = null;
   query.edit = createEditDraft();
@@ -925,48 +962,99 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.resultSql = "";
   await connectQuery(query);
 }
-async function startSession() {
+async function replaceConnection(nextEndpoint: string, nextCredential: string) {
+  const identity = JSON.stringify([nextEndpoint, nextCredential]);
+  const request = ++replacement;
+  if (!nextCredential || connection?.identity === identity) return;
+  // SQL drafts survive reconnect. Server-bound edits, pending submissions and transactions do not.
+  const confirmation = (replacementConfirmation ||= confirmClose(queries.value, true));
+  const confirmed = await confirmation;
+  if (replacementConfirmation === confirmation) replacementConfirmation = null;
+  if (!confirmed) {
+    if (!disposed && request === replacement && props.tab) {
+      if (session.value && session.value.state !== "closed") workspace?.markSessionConnected(props.tab.id);
+      else markDisconnected(t("Chen.GoV1SessionClosed"));
+    }
+    return;
+  }
+  if (disposed || request !== replacement) return;
+  retireConnection(connection);
+  closeSqlAi();
+  tabs.value = tabs.value.map((tab) => {
+    if (tab.kind === "object") return { ...tab };
+    tab.closed = true;
+    tab.loadGeneration++;
+    return {
+      ...createQueryTab(tab.title, tab.context, tab.sql),
+      id: tab.id,
+      kind: tab.kind,
+      baselineSql: tab.baselineSql,
+      browseObject: tab.browseObject
+    };
+  });
+  session.value = null;
+  defaultContext.value = { database: "", schema: "" };
+  schemaEdit.value = null;
+  renameTarget.value = null;
+  eventConnected.value = false;
+  sequence = 0;
+  api = createChenGoApi(nextEndpoint, fetch, { mode: single ? "single" : "managed" });
+  eventController = new AbortController();
+  connection = { identity, credential: nextCredential, api, controller: eventController, session: null };
+  await startSession();
+}
+function startSession(): Promise<void> {
+  const scope = connection;
+  if (!scope || disposed || scope.session) return Promise.resolve();
+  if (scope.connecting) return scope.connecting;
   busy.value = true;
   error.value = "";
   authenticationUnknown.value = false;
-  try {
-    if (single) session.value = await api.authenticateSelector(props.selector!);
-    else {
-      const token = props.tab?.payload?.token as { id?: string } | undefined;
-      const connectToken = String(token?.id || props.tab?.payload?.id || "");
-      if (!connectToken) throw new ChenGoError("missing_token", t("Chen.GoV1MissingToken"), 400);
-      session.value = await api.authenticate(connectToken);
+  // A retry after an unknown response must reuse this API's authentication request_id.
+  scope.connecting = (async () => {
+    try {
+      const authenticated = single
+        ? await scope.api.authenticateSelector(scope.credential)
+        : await scope.api.authenticate(scope.credential);
+      scope.session = authenticated;
+      if (!isConnectionCurrent(scope)) {
+        retireConnection(scope);
+        return;
+      }
+      session.value = authenticated;
+      if (queries.value.length) await Promise.all(queries.value.map(connectQuery));
+      else await newQuery();
+      if (!isConnectionCurrent(scope)) return;
+      if (props.tab) workspace?.markSessionConnected(props.tab.id);
+      void watchEvents(scope);
+    } catch (cause) {
+      if (isConnectionCurrent(scope)) {
+        authenticationUnknown.value = !session.value && (!(cause instanceof ChenGoError) || cause.status >= 500);
+        error.value = failureText(cause);
+        markDisconnected(error.value);
+      }
+    } finally {
+      scope.connecting = undefined;
+      if (isConnectionCurrent(scope)) busy.value = false;
     }
-    if (disposed) {
-      await api.closeSession(session.value.id);
-      return;
-    }
-    await newQuery();
-    if (props.tab) workspace?.markSessionConnected(props.tab.id);
-    void watchEvents();
-  } catch (cause) {
-    if (!disposed) {
-      authenticationUnknown.value = !session.value && (!(cause instanceof ChenGoError) || cause.status >= 500);
-      error.value = failureText(cause);
-      markDisconnected(error.value);
-    }
-  } finally {
-    if (!disposed) busy.value = false;
-  }
+  })();
+  return scope.connecting;
 }
 async function closeSession() {
-  if (!session.value || busy.value || !(await confirmClose(queries.value))) return;
+  const scope = connection;
+  if (!scope?.session || busy.value || !(await confirmClose(queries.value)) || !isConnectionCurrent(scope)) return;
   busy.value = true;
   try {
-    await api.closeSession(session.value.id);
-    session.value.state = "closed";
-    eventController.abort();
+    await scope.api.closeSession(scope.session.id);
+    if (!isConnectionCurrent(scope)) return;
+    if (session.value) session.value.state = "closed";
+    scope.controller.abort();
     for (const query of queries.value) closeQuerySession(query);
     markDisconnected(t("Chen.GoV1SessionClosed"));
   } catch (cause) {
-    error.value = failureText(cause);
+    if (isConnectionCurrent(scope)) error.value = failureText(cause);
   } finally {
-    busy.value = false;
+    if (isConnectionCurrent(scope)) busy.value = false;
   }
 }
 function beforeUnload(event: BeforeUnloadEvent) {
@@ -983,8 +1071,14 @@ const unregisterCloseGuard = props.tab
   : undefined;
 onMounted(() => {
   window.addEventListener("beforeunload", beforeUnload);
-  void startSession();
 });
+watch(
+  [endpoint, credential],
+  ([nextEndpoint, nextCredential]) => {
+    void replaceConnection(nextEndpoint, nextCredential);
+  },
+  { immediate: true }
+);
 onBeforeUnmount(() => {
   disposed = true;
   closeSqlAi();
@@ -996,7 +1090,7 @@ onBeforeUnmount(() => {
     query.closed = true;
     query.loadGeneration++;
   }
-  if (session.value && session.value.state !== "closed") void api.closeSession(session.value.id).catch(() => {});
+  retireConnection(connection);
 });
 defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
 </script>
@@ -1097,7 +1191,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         @click="startSession"
       />
     </div>
-    <div v-else ref="workspaceBody" class="relative flex min-h-0 flex-1">
+    <div v-else :key="session.id" ref="workspaceBody" class="relative flex min-h-0 flex-1">
       <button
         v-if="drawer && !desktopTree"
         class="absolute inset-0 z-10 bg-[var(--workspace-surface-main)] opacity-60"
@@ -1300,6 +1394,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     </div>
     <GoSchemaEditor
       v-if="schemaEdit && session"
+      :key="session.id"
       :session="session"
       :api="api"
       :context="schemaEdit.context"
