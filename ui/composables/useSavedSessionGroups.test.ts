@@ -16,7 +16,10 @@ vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.user 
 vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
 }));
-vi.mock("~/composables/useAclDialog", () => ({ closeAclScope: vi.fn() }));
+vi.mock("~/composables/useAclDialog", () => ({
+  closeAclScope: vi.fn(),
+  trackAclBatchConnection: vi.fn(() => vi.fn())
+}));
 vi.mock("~/composables/useSettingManager", () => ({ useSettingManager: () => ({ collapse: { value: false } }) }));
 vi.mock("~/composables/useApiRequest", () => ({ getAssetDetailRequest: mocks.detail, apiRequest: mocks.script }));
 

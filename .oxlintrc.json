@@ -11,6 +11,7 @@
     "node": true
   },
   "ignorePatterns": [
+    "**/.codex-tests/**",
     "packages/guacamole/upstream/**",
     "packages/guacamole/types/**",
     "**/.DS_Store",

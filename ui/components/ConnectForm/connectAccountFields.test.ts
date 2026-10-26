@@ -5,6 +5,7 @@ import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
 import {
   findMatchingPersonalCredential,
+  isAutoPushAccount,
   resolvePersonalCredentialSecretType,
   supportsPersonalCredential
 } from "~/utils/connection";
@@ -67,7 +68,12 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     (name: string) =>
       name === "vue"
         ? Vue
-        : { findMatchingPersonalCredential, resolvePersonalCredentialSecretType, supportsPersonalCredential },
+        : {
+            findMatchingPersonalCredential,
+            isAutoPushAccount,
+            resolvePersonalCredentialSecretType,
+            supportsPersonalCredential
+          },
     ...Object.values(globals)
   );
   let state!: {

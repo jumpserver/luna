@@ -1,5 +1,5 @@
-import type { LangType } from "../../i18n/language";
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { LangType } from "../../i18n/language";
 
 export type ActionType = "action" | "select";
 export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
@@ -319,6 +319,7 @@ export interface Actions {
 }
 
 export interface PermedAccount {
+  auto_push_protocols?: string[];
   alias: string;
   date_expired: string;
   has_secret: boolean;
@@ -512,6 +513,7 @@ export interface ConnectionBody {
 }
 
 export interface TokenResponse {
+  account_preparation_required?: boolean;
   code?: string;
   detail?: string;
   account: string;
@@ -525,6 +527,20 @@ export interface TokenResponse {
   date_expired: string;
   date_updated: string;
   expire_time: number;
+  acl?: {
+    requirements: Record<string, "pending" | "running" | "passed" | "failed">;
+    steps?: string[];
+    face_online: boolean;
+    face_online_acknowledged?: boolean;
+    face_token?: string;
+    mfa_methods: { value: string; label: string; challenge_required: boolean }[];
+    reviewers?: { id: string; name: string; username: string }[];
+    review_group?: string;
+    review_status?: string;
+    preparation?: { status: "queued" | "running" | "failed" | "ready"; detail: string; execution_id?: string };
+    cancelled: boolean;
+    error?: string;
+  };
   face_token?: string;
   face_monitor_token?: string;
   from_ticket: any;

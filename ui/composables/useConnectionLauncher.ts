@@ -1,6 +1,7 @@
 import type { ConnectionSessionPayload } from "~/composables/useAssetAction";
 import type { ConnectionFormInfo } from "~/composables/useAssetConnection";
 import type { AssetItem } from "~/types";
+import { trackAclBatchConnection } from "~/composables/useAclDialog";
 
 interface ConnectionLaunchOptions {
   protocol?: string;
@@ -31,10 +32,12 @@ export function useConnectionLauncher() {
     options: Pick<ConnectionLaunchOptions, "paneId" | "aclBatchId" | "onPaneOpened" | "assertCurrent"> = {}
   ) =>
     new Promise<boolean>((resolve) => {
+      const releaseBatch = trackAclBatchConnection(options.aclBatchId, asset.id, options.paneId);
       let settled = false;
       const finish = (result: boolean) => {
         if (settled) return;
         settled = true;
+        releaseBatch();
         resolve(result);
       };
       const fail = (error: unknown) => {
@@ -50,6 +53,7 @@ export function useConnectionLauncher() {
         tabId: options.paneId,
         aclBatchId: options.aclBatchId,
         onSessionReady: (payload) => {
+          if (settled) return;
           try {
             options.assertCurrent?.();
           } catch {
@@ -69,7 +73,9 @@ export function useConnectionLauncher() {
           finish(true);
         },
         onSessionError: fail
-      }).catch(fail);
+      })
+        .then(() => finish(false))
+        .catch(fail);
     });
 
   const configure = (asset: AssetItem, options: ConnectionLaunchOptions = {}) =>

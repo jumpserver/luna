@@ -1,12 +1,12 @@
 import type {
   AssetDetail,
   AssetTreeKind,
+  ConnectionTokenReuseResponse,
   PermedAccount,
   PermedProtocol,
   PermissionOrgs,
   PersonalAssetCredential,
   RdpGraphics,
-  ConnectionTokenReuseResponse,
   TokenResponse,
   UserProfile
 } from "~/types";
@@ -587,18 +587,45 @@ export function getSmartEndpoint(
 export function createConnectionToken(
   body: unknown,
   orgId?: string,
-  options: { createTicket?: boolean; faceVerify?: boolean; faceMonitorToken?: string; admin?: boolean } = {}
+  options: { faceMonitorToken?: string; admin?: boolean; aclStepwise?: boolean } = {}
 ): Promise<TokenResponse> {
   const query: Record<string, unknown> = {};
-  if (options.createTicket) query.create_ticket = 1;
-  if (options.faceVerify) query.face_verify = 1;
   if (options.faceMonitorToken) query.face_monitor_token = options.faceMonitorToken;
+  if (options.aclStepwise) query.acl_stepwise = true;
 
   return apiRequest<TokenResponse>({
     method: "POST",
     path: options.admin ? "/api/v1/authentication/admin-connection-token/" : "/api/v1/authentication/connection-token/",
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
+    orgId
+  });
+}
+
+export function advanceConnectionAcl(
+  tokenId: string,
+  body: Record<string, unknown>,
+  orgId?: string,
+  admin?: boolean
+): Promise<TokenResponse> {
+  return apiRequest<TokenResponse>({
+    method: "POST",
+    path: `/api/v1/authentication/${admin ? "admin-connection-token" : "connection-token"}/${encodeURIComponent(tokenId)}/acl/`,
+    body,
+    orgId
+  });
+}
+
+export function advanceConnectionAclBatch(
+  tokenIds: string[],
+  body: Record<string, unknown>,
+  orgId?: string,
+  admin?: boolean
+): Promise<TokenResponse[]> {
+  return apiRequest<TokenResponse[]>({
+    method: "POST",
+    path: `/api/v1/authentication/${admin ? "admin-connection-token" : "connection-token"}/acl/batch/`,
+    body: { ...body, token_ids: tokenIds },
     orgId
   });
 }
@@ -631,10 +658,11 @@ export function getConnectionRdpFile(tokenId: string, query: Record<string, unkn
   });
 }
 
-export function exchangeConnectionToken(tokenId: string): Promise<TokenResponse> {
+export function exchangeConnectionToken(tokenId: string, aclStepwise = false): Promise<TokenResponse> {
   return apiRequest<TokenResponse>({
     method: "POST",
     path: "/api/v1/authentication/connection-token/exchange/",
+    ...(aclStepwise ? { query: { acl_stepwise: true } } : {}),
     body: { id: tokenId }
   });
 }

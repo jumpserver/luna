@@ -1,152 +1,64 @@
 <script setup lang="ts">
 import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
-const { globalGroup, isOpen, submit, close, retryFace } = useAclDialog();
+const { globalGroup, isOpen, submit, close } = useAclDialog();
 const { t } = useI18n();
-const minimized = ref(false);
-const canMinimize = computed(() => globalGroup.value?.code === "acl_review");
-const isFaceGroup = computed(() => globalGroup.value?.code.startsWith("acl_face_") || false);
-const hasFaceFailure = computed(
-  () => isFaceGroup.value && globalGroup.value?.items.some((item) => item.status === "failed" && !item.settled)
-);
-const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } =
-  useAclDialogPresentation(globalGroup);
-const activeCount = computed(
-  () =>
-    globalGroup.value?.items.filter((item) => ["ready", "submitting", "pending", "verifying"].includes(item.status))
-      .length || 0
-);
-
-const cancelConfirmOpen = ref(false);
-
+const {
+  canSubmit,
+  description,
+  isActionable,
+  isBusy,
+  isPushFailed,
+  isUnavailable,
+  isReviewApproved,
+  isReviewDeclined,
+  reviewContinueLabel,
+  submitLabel,
+  title
+} = useAclDialogPresentation(globalGroup);
 const handleClose = () => {
-  if (!globalGroup.value) return;
-  if (isFaceGroup.value) {
-    void close(globalGroup.value);
-    return;
-  }
-  if (hasPending.value) {
-    cancelConfirmOpen.value = true;
-    return;
-  }
-  void close(globalGroup.value);
-};
-
-const confirmCancel = () => {
-  cancelConfirmOpen.value = false;
   if (globalGroup.value) void close(globalGroup.value);
 };
-
 const handleSubmit = () => {
   if (globalGroup.value) void submit(globalGroup.value);
 };
-
-const minimizedDescription = computed(() => {
-  const group = globalGroup.value;
-  if (!group) return "";
-  if (activeCount.value > 0) {
-    return t(group.submitted ? "AclDialog.MinimizedPending" : "AclDialog.MinimizedReady", {
-      count: activeCount.value
-    });
-  }
-  return t("AclDialog.MinimizedFinished", { count: group.items.length });
-});
-
-watch(
-  () => globalGroup.value?.id,
-  (id, previousId) => {
-    if (!id || (previousId && id !== previousId)) minimized.value = false;
-  }
-);
 </script>
 
 <template>
   <UModal
-    :open="isOpen && !minimized"
+    v-if="globalGroup"
+    :open="isOpen"
     :title="title"
-    :dismissible="isFaceGroup"
+    :dismissible="false"
     :close="false"
     :ui="{
       content:
-        'w-[calc(100vw-3rem)] max-w-[640px] bg-[var(--workspace-surface-panel)] divide-[var(--app-border)] ring-[var(--app-border)]',
-      header: 'h-11 min-h-11 bg-[var(--workspace-surface-header)] px-4 py-0 sm:px-4 sm:py-0',
+        'w-[calc(100vw-3rem)] max-w-[640px] max-h-[calc(100dvh-2rem)] bg-(--workspace-surface-panel) divide-(--app-border) ring-(--app-border)',
+      header: 'h-11 min-h-11 bg-(--workspace-surface-header) px-4 py-0 sm:px-4 sm:py-0',
       title: 'text-sm leading-5',
-      body: 'bg-[var(--app-surface-panel-strong)] px-6 py-4 sm:px-6 sm:py-4',
-      footer: 'justify-end gap-2 bg-[var(--workspace-surface-footer)] px-5 py-3 sm:px-5 sm:py-3'
+      body: 'min-h-0 max-h-[min(65dvh,36rem)] overflow-y-auto bg-(--app-surface-panel-strong) px-6 py-4 sm:px-6 sm:py-4',
+      footer: 'flex-wrap justify-end gap-2 bg-(--workspace-surface-footer) px-5 py-3 sm:px-5 sm:py-3'
     }"
-    @update:open="
-      (open) => {
-        if (!open && isFaceGroup) handleClose();
-      }
-    "
   >
-    <template #actions>
-      <UButton
-        v-if="canMinimize"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-minus"
-        :title="t('ToolTips.Minimize')"
-        :aria-label="t('ToolTips.Minimize')"
-        @click="minimized = true"
-      />
-    </template>
     <template #body>
-      <UAlert
-        v-if="isReview && (!globalGroup?.submitted || hasPending)"
-        :color="globalGroup?.submitted ? 'info' : 'warning'"
-        variant="soft"
-        :icon="globalGroup?.submitted ? 'i-lucide-clock' : 'i-lucide-triangle-alert'"
-        :description="description"
-        class="mb-4"
-      />
-      <p v-else class="mb-4 text-sm text-[var(--app-text-secondary)]">{{ description }}</p>
-      <AclDialogContent v-if="globalGroup" :group="globalGroup" :chrome="false" />
+      <p v-if="!isActionable && description" class="mb-4 text-sm text-(--app-text-secondary)">{{ description }}</p>
+      <AclDialogContent v-if="globalGroup" :group="globalGroup" />
     </template>
     <template #footer>
-      <UButton color="neutral" variant="outline" :disabled="isBusy && !isFaceGroup" @click="handleClose">
-        {{ isActionable && (!globalGroup?.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
+      <UButton color="neutral" variant="outline" @click="handleClose">
+        {{ t(isActionable && !isUnavailable && !isReviewDeclined ? "Common.Cancel" : "ToolTips.Close") }}
       </UButton>
-      <UButton v-if="isActionable && !globalGroup?.submitted" :loading="isBusy" @click="handleSubmit">
-        {{ isBatch && isReview ? t("AclDialog.SubmitAll") : t("Common.Confirm") }}
+      <UButton v-if="isReviewApproved" class="shrink-0 tabular-nums" disabled aria-live="polite">
+        {{ reviewContinueLabel }} ({{ globalGroup.reviewApprovedCountdown }})
       </UButton>
       <UButton
-        v-else-if="isActionable && hasFaceFailure"
-        icon="i-lucide-refresh-cw"
-        :disabled="isBusy"
-        @click="retryFace(globalGroup)"
+        v-if="isActionable && !isPushFailed && !isUnavailable && !isReviewApproved && !isReviewDeclined"
+        :loading="isBusy"
+        :disabled="!canSubmit"
+        @click="handleSubmit"
       >
-        {{ t("Face.Remote.Retry") }}
+        {{ submitLabel }}
       </UButton>
     </template>
   </UModal>
-
-  <ModalAlertDialog
-    v-model:open="cancelConfirmOpen"
-    :title="t('AclDialog.CancelConfirmTitle')"
-    :description="t('AclDialog.CancelConfirmDescription')"
-    :confirm-label="t('Common.Confirm')"
-    confirm-color="error"
-    @confirm="confirmCancel"
-  />
-
-  <UButton
-    v-if="isOpen && minimized && globalGroup"
-    color="neutral"
-    variant="outline"
-    class="fixed right-4 bottom-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] cursor-pointer items-center justify-start gap-3 rounded-lg border-[var(--app-border)] bg-[var(--app-panel-bg)] px-3 py-3 text-left shadow-lg transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-[var(--app-card-bg-soft)] hover:shadow-xl active:translate-y-0"
-    :title="t('AclDialog.Restore')"
-    :aria-label="t('AclDialog.Restore')"
-    @click="minimized = false"
-  >
-    <span class="grid size-9 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
-      <UIcon name="i-lucide-clipboard-clock" class="size-4.5" />
-    </span>
-    <span class="min-w-0 flex-1">
-      <span class="block truncate text-sm font-medium text-[var(--app-fg)]">{{ t("AclDialog.LoginReview") }}</span>
-      <span class="mt-0.5 block truncate text-xs text-[var(--app-muted)]">{{ minimizedDescription }}</span>
-    </span>
-    <UBadge v-if="activeCount" :label="String(activeCount)" color="primary" variant="soft" size="sm" />
-    <UIcon name="i-lucide-maximize-2" class="size-4 shrink-0 text-[var(--app-muted)]" />
-  </UButton>
 </template>
