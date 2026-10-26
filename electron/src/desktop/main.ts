@@ -86,7 +86,12 @@ const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelFor
 const allowedChenOrigins = new Set<string>();
 const allowedKokoOrigins = new Set();
 const configuredConnectorSessions = new WeakSet();
-const allowedPaths = new Set([os.homedir(), app.getPath("userData"), process.resourcesPath]);
+const allowedPaths = new Set([
+  os.homedir(),
+  app.getPath("userData"),
+  process.resourcesPath,
+  path.join(projectRoot, "plugins")
+]);
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
