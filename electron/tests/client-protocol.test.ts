@@ -35,6 +35,8 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("./oauth-callback");
     case "./compatibility":
       return require("./compatibility");
+    case "./application-config":
+      return { resolveMacBundleExecutable: async (value: string) => value };
     case "./shared/product-name":
       return require("./shared/product-name");
     case "node:child_process":
