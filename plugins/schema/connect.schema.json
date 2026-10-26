@@ -98,7 +98,43 @@
         },
         "interpreter": {
           "type": "string",
-          "description": "Optional interpreter override, e.g. pwsh, bash"
+          "description": "Optional interpreter override. node uses Electron's bundled Node runtime."
+        },
+        "input": {
+          "type": "string",
+          "enum": ["env", "stdin"],
+          "default": "env",
+          "description": "Pass connection JSON via JMS_CONNECT_JSON or stdin"
+        },
+        "serialize": {
+          "type": "boolean",
+          "default": false,
+          "description": "Queue launches of this script until the previous handoff finishes"
+        },
+        "accepts_command": { "type": "boolean", "default": false },
+        "use_ssh_helper": { "type": "boolean" },
+        "protocol_aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "launchModule": {
+      "type": "object",
+      "required": ["type", "module"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "module" },
+        "module": {
+          "type": "string",
+          "description": "Relative path to a JavaScript module exporting a launch-plan builder"
+        },
+        "target": { "type": "string", "enum": ["executable", "terminal"], "default": "executable" },
+        "accepts_command": { "type": "boolean", "default": false },
+        "use_ssh_helper": { "type": "boolean" },
+        "protocol_aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
         }
       }
     },
@@ -153,6 +189,7 @@
       "oneOf": [
         { "$ref": "#/$defs/launchArgs" },
         { "$ref": "#/$defs/launchScript" },
+        { "$ref": "#/$defs/launchModule" },
         { "$ref": "#/$defs/launchUrl" },
         { "$ref": "#/$defs/launchFile" },
         { "$ref": "#/$defs/launchAutoIt" }
