@@ -7,20 +7,20 @@ import {
 } from "~/chen/utils/dataGridSelection";
 import {
   compareResultValues,
-  formatResultJson,
   formatResultHex,
-  resultBinaryHex,
-  resultJsonFormat,
-  resultValuePart,
-  resultValuePreview,
-  resultValueText,
+  formatResultJson,
   RESULT_JSON_FORMAT_LIMIT,
+  resultBinaryHex,
   resultContextSelection,
   resultDisplayText,
   resultFocusSelection,
   resultGridRows,
+  resultJsonFormat,
   resultSelectionTsv,
-  resultTypeBadge
+  resultTypeBadge,
+  resultValuePart,
+  resultValuePreview,
+  resultValueText
 } from "./resultGrid";
 
 describe("read-only result grid", () => {
@@ -142,7 +142,7 @@ describe("read-only result grid", () => {
     const large = `{"body":"${"x".repeat(RESULT_JSON_FORMAT_LIMIT)}"}`;
     expect(resultJsonFormat(large)).toEqual({ text: null, limited: true });
     expect(formatResultJson(large)).toBe(large);
-    const nested = "[".repeat(32) + Array.from({ length: 12000 }, () => "0").join(",") + "]".repeat(32);
+    const nested = "[".repeat(32) + Array.from({ length: 12000 }).fill("0").join(",") + "]".repeat(32);
     expect(resultJsonFormat(nested)).toEqual({ text: null, limited: true });
     expect(resultJsonFormat("invalid json")).toEqual({ text: null, limited: false });
     expect(resultJsonFormat('{"ok":true}')).toEqual({ text: '{\n  "ok": true\n}', limited: false });

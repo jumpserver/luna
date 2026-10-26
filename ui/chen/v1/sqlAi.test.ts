@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { ChenSqlEditorContext, ChenSqlProposal } from "~/chen/composables/useChenSqlAiSessions";
+import { describe, expect, it } from "vitest";
 import { prepareGoSqlProposal } from "./sqlAi";
 
 const context: ChenSqlEditorContext = {

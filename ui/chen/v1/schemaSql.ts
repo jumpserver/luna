@@ -1,4 +1,4 @@
-import type { GoCatalogColumn, GoCatalogObject, GoCatalogInspect } from "./api";
+import type { GoCatalogColumn, GoCatalogInspect, GoCatalogObject } from "./api";
 import type { ChenCreateTableColumn } from "~/chen/types";
 import { buildChenCreateTableSql, chenCreateTableTypes } from "~/chen/utils/createTableSql";
 import { canonicalChenDialect } from "~/chen/utils/sqlDialect";

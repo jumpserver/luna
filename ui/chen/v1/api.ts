@@ -1,6 +1,6 @@
+import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 import { buildHeaders, chenPath } from "~/chen/api/client";
 import { newChenRequestId } from "./requestId";
-import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 
 export interface GoSession {
   id: string;

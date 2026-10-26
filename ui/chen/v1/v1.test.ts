@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChenGoError, createChenGoApi, executionActive, executionCanCancel, reconcileExecution } from "./api";
-import { readChenEvents } from "./events";
 import { completionIsCurrent } from "./completion";
+import { readChenEvents } from "./events";
 import { useGoChenProtocol } from "./routing";
 
 vi.mock("~/chen/api/client", () => ({

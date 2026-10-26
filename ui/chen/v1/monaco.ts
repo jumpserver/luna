@@ -1,5 +1,11 @@
 import * as monaco from "monaco-editor/editor/editor.api.js";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
+import { parseColorToRgb } from "~/shared/theme/color";
+import {
+  readResolvedEditorTokens,
+  readResolvedSyntaxTokens,
+  readResolvedWorkspaceTokens
+} from "~/shared/theme/resolvedTokens";
 import "monaco-editor/languages/definitions/mysql/register.js";
 import "monaco-editor/languages/definitions/pgsql/register.js";
 import "monaco-editor/languages/definitions/sql/register.js";
@@ -15,12 +21,6 @@ import "monaco-editor/editor/contrib/multicursor/browser/multicursor.js";
 import "monaco-editor/editor/contrib/wordOperations/browser/wordOperations.js";
 import "monaco-editor/editor/contrib/clipboard/browser/clipboard.js";
 import "monaco-editor/editor/contrib/contextmenu/browser/contextmenu.js";
-import { parseColorToRgb } from "~/shared/theme/color";
-import {
-  readResolvedEditorTokens,
-  readResolvedSyntaxTokens,
-  readResolvedWorkspaceTokens
-} from "~/shared/theme/resolvedTokens";
 
 // Vite emits one same-origin worker asset; SQL semantics are HTTP, no LSP WebSocket or CDN.
 globalThis.MonacoEnvironment = { getWorker: () => new EditorWorker() };

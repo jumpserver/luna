@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import type { GoCatalogObject } from "./api";
-import { columnChangeSql, createTableSql, canAlterColumnDefinition, droppableIndexes } from "./schemaSql";
+import { describe, expect, it } from "vitest";
+import { canAlterColumnDefinition, columnChangeSql, createTableSql, droppableIndexes } from "./schemaSql";
 const object: GoCatalogObject = { database: "db", schema: "a.b", name: "items", kind: "table" };
 const input = { name: "name", type: "VARCHAR", size: "200", nullable: true };
 const original = { name: "before", data_type: "varchar(100)", nullable: false };

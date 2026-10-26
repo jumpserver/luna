@@ -1,12 +1,12 @@
+import type { GoEditMetadata, GoExecution, GoRows } from "./api";
 import { describe, expect, it } from "vitest";
-import type { GoEditMetadata, GoRows, GoExecution } from "./api";
 import {
   acceptEditExecution,
   createEditDraft,
   editChanges,
-  editPayloadBytes,
   editDirty,
   editDraftRows,
+  editPayloadBytes,
   editRowRef,
   stageDeleteRows,
   stageEditCell
