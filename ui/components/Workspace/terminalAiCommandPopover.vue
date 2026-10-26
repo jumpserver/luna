@@ -22,16 +22,12 @@ import {
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
 import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
-import {
-  canOpenTerminalAiCommand,
-  isTerminalAiApprovalShortcut,
-  isTerminalAiCommandShortcut,
-  terminalAiLiveTurn
-} from "~/utils/terminalAiCommand";
+import { canOpenTerminalAiCommand, isTerminalAiApprovalShortcut, terminalAiLiveTurn } from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
+const shortcuts = useAppShortcuts();
 const { openAi } = useAiPanel();
 const assistantRuntime = useWorkspaceAssistantRuntime();
 const { session: assistantSession, scopeId } = useWorkspaceAssistantPanelSession(assistantRuntime);
@@ -50,9 +46,11 @@ const draft = computed({
     if (session.value) session.value.draft = value;
   }
 });
-const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));
+const shortcutLabel = computed(() => shortcuts.label("terminalAi"));
 const approvalShortcutLabel = computed(() => (isMacOS.value ? "⌘ ↵" : "Ctrl ↵"));
-const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }));
+const shortcutHint = computed(() =>
+  shortcutLabel.value ? t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }) : ""
+);
 const sendLabel = computed(() => (submitting.value ? t("TerminalAi.Sending") : t("TerminalAi.Send")));
 const assistantBusy = computed(() => Boolean(scopeId.value && isWorkspaceAssistantBusy(scopeId.value)));
 const liveTurn = computed(() =>
@@ -172,7 +170,7 @@ function close(restoreTerminalFocus = true) {
 }
 
 function handleWindowKeydown(event: KeyboardEvent) {
-  if (event.defaultPrevented || event.isComposing || !hostRef.value?.getClientRects().length) return;
+  if (shortcuts.blocked(event, panelRef.value) || !hostRef.value?.getClientRects().length) return;
   if (open.value && event.key === "Escape") {
     if (tour.tourActive.value) return;
     event.preventDefault();
@@ -192,7 +190,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
     void decideApproval(quickApproval.value.id, "approve");
     return;
   }
-  if (tour.tourActive.value || !isTerminalAiCommandShortcut(event, isMacOS.value) || !available.value) return;
+  if (tour.tourActive.value || !shortcuts.matches("terminalAi", event) || !available.value) return;
   const target = event.target instanceof Element ? event.target : null;
   const xterm = getKokoTerminalElement(props.pane.id);
   if (!xterm?.getClientRects().length) return;
@@ -203,6 +201,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
     return;
   event.preventDefault();
   event.stopPropagation();
+  if (event.repeat) return;
   if (open.value) focusInput();
   else void show(xterm);
 }

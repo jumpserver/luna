@@ -186,11 +186,6 @@ export const useKokoTerminalSocket = () => {
     );
   }, 200);
 
-  const debouncedSendHostKey = useDebounceFn((key: string) => {
-    if (key === "ArrowRight") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+right");
-    if (key === "ArrowLeft") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+left");
-  }, 500);
-
   const terminalInputLocked = (data = "") => {
     if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return true;
     const paneId = unref(sessionCtxRef)?.tabId || "";
@@ -251,7 +246,6 @@ export const useKokoTerminalSocket = () => {
     onContextMenu: openContextMenu,
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
-    onHostKey: debouncedSendHostKey,
     inputLocked: terminalInputLocked,
     sendHostEvent,
     sendToHost,

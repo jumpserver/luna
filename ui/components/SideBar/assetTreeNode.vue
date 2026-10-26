@@ -201,7 +201,7 @@ watch(
         <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
         <span
           class="inline-flex min-w-min flex-1 items-center font-medium"
-          :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"
+          :class="!isParent ? 'tracking-[0.01em]' : ''"
         >
           <span class="sidebar-tree-label truncate" :title="node.name">{{ node.name }}</span>
           <span

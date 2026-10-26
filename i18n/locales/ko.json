@@ -2900,5 +2900,42 @@
     "invalid-site": "사이트 URL이 잘못되었습니다. 자격 증명, 쿼리 또는 프래그먼트가 없는 HTTP 또는 HTTPS URL을 입력하세요.",
     "invalid-client-version": "실행 중인 클라이언트 버전이 잘못되었습니다. 릴리스 버전이 주입된 클라이언트를 사용하세요.",
     "Continue": "연결 계속"
+  },
+  "Shortcuts": {
+    "Title": "키보드 단축키",
+    "Description": "앱 단축키를 사용자 지정하여 원격 세션과의 충돌을 방지합니다.",
+    "Search": "작업 또는 단축키 검색",
+    "ResetAll": "모두 기본값으로 복원",
+    "Hint": "변경 사항은 이 기기에 즉시 적용됩니다. 앱 단축키는 해당 범위에서 우선 적용됩니다. 브라우저 및 운영 체제 단축키는 사용할 수 없는 경우가 있습니다. 편집기와 원격 세션의 키 설정은 변경되지 않습니다.",
+    "DesktopOnly": "데스크톱 전용",
+    "Disabled": "사용 안 함",
+    "Change": "단축키 변경: {action}",
+    "Disable": "단축키 사용 안 함: {action}",
+    "Restore": "기본값 복원: {action}",
+    "Reserved": "시스템, 브라우저 또는 편집기에서 예약한 조합입니다. 다른 단축키를 선택하세요.",
+    "Conflict": "이 조합은 이미 “{action}”에 지정되어 있습니다. 먼저 해당 단축키를 변경하거나 비활성화하세요.",
+    "ModifierRequired": "Ctrl, Command 또는 Alt와 다른 키를 함께 사용하세요. Shift만으로는 설정할 수 없습니다.",
+    "RecordHint": "키 조합을 누른 다음 저장하세요. Esc로 취소하고 Tab으로 컨트롤 사이를 이동합니다.",
+    "PressKeys": "키 조합을 누르세요",
+    "RecordingFailed": "키 입력을 시작할 수 없습니다. 이 대화 상자를 닫고 다시 시도하세요.",
+    "NoResults": "일치하는 단축키가 없습니다",
+    "DigitTabs": "숫자 키로 세션 전환",
+    "DigitTabsHint": "{modifier}+1–8로 세션을 선택하고 {modifier}+9로 마지막 세션을 선택합니다. 텍스트 필드나 편집기에 입력할 때는 비활성화됩니다.",
+    "ResetConfirm": "모든 단축키를 기본값으로 복원하고 숫자 키로 세션 전환을 활성화할까요?",
+    "Actions": {
+      "previousTab": "이전 세션",
+      "nextTab": "다음 세션",
+      "closeTab": "현재 세션 닫기",
+      "focus": "집중 모드 전환",
+      "fullscreen": "전체 화면 전환",
+      "rightPanel": "오른쪽 패널 표시 전환",
+      "terminalAi": "터미널 AI 열기",
+      "localShell": "새 로컬 터미널"
+    },
+    "Scopes": {
+      "workspace": "작업 공간 · 활성 세션이 있을 때",
+      "application": "앱 · 설정 및 대화 상자 외부",
+      "terminal": "터미널 · 터미널 AI를 사용할 수 있고 터미널에 포커스가 있을 때"
+    }
   }
 }

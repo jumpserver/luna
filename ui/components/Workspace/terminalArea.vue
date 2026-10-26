@@ -11,6 +11,7 @@ const showLoginPrompt = computed(
   () => isDesktopRuntime() && authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
 );
 const { t } = useI18n();
+const shortcuts = useAppShortcuts();
 const shortcutRows = computed(() => [
   {
     id: "connection",
@@ -22,19 +23,21 @@ const shortcutRows = computed(() => [
     id: "focus",
     icon: "i-lucide-maximize-2",
     name: t("TabMenu.FocusCurrent"),
-    keys: ["meta", "shift", "P"]
+    keys: shortcuts.kbds("focus")
   },
   {
     id: "fullscreen",
     icon: "i-lucide-fullscreen",
     name: t("TabMenu.FullscreenCurrent"),
-    keys: ["meta", "shift", "F"]
+    keys: shortcuts.kbds("fullscreen")
   },
   {
     id: "switch",
     icon: "i-lucide-arrow-left-right",
     name: t("WorkspaceEmpty.SwitchSession"),
-    keys: ["alt", "shift", "arrowleft", "arrowright", "or", "meta", "1-9"]
+    keys: shortcuts.kbds("previousTab").length
+      ? [...shortcuts.kbds("previousTab"), "or", ...shortcuts.kbds("nextTab")]
+      : shortcuts.kbds("nextTab")
   }
 ]);
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
