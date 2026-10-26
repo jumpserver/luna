@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { GuacamoleFile } from "@/lion/hooks/useGuacamoleClient";
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
 import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
@@ -14,10 +15,14 @@ import { useLionEndpoint } from "@/lion/hooks/useLionEndpoint";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionWsUrl } from "@/lion/utils/base";
 import { getCurrentConnectParams } from "@/lion/utils/common";
+import { resolveKeyboardLayout } from "@/lion/utils/keyboard";
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ErrorStatusCodes } from "@/lion/utils/status";
 import { useLionSessionShareAdapter } from "@/lion/workspaces/useLionSessionShareAdapter";
 import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+import { getLunaPreferences } from "~/composables/useApiRequest";
+import { useSettingManager } from "~/composables/useSettingManager";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tabId?: string }>();
 
@@ -108,15 +113,6 @@ const debouncedResize = useDebounceFn(() => {
 
 let resizeObserver: ResizeObserver | null = null;
 
-interface GuacamoleFile {
-  mimetype?: any;
-  streamName?: any;
-  type: "DIRECTORY" | "FILE";
-  name: string;
-  parent?: GuacamoleFile | null;
-  is_dir?: boolean;
-}
-
 interface UploadItem {
   uploadOptions: LionUploadCustomRequestOptions;
   folder: GuacamoleFile;
@@ -135,19 +131,23 @@ const createUploadId = () => {
   return globalThis.crypto?.randomUUID?.() || `lion-drop-${Date.now()}-${uploadSequence}`;
 };
 
-function getKeyboardLayout() {
-  if (!import.meta.client) return "en-us-qwerty";
-  const lunaSetting = localStorage.getItem("LunaSetting");
-  if (lunaSetting) {
-    const setting = JSON.parse(lunaSetting);
-    const graphics = setting.graphics || {};
-    const layout = graphics.keyboard_layout || setting.keyboard_layout;
-    if (layout) return layout;
+const user = useUserInfoStore();
+const { keyboardLayout: localKeyboardLayout, hydrationPromise } = useSettingManager();
+
+async function getKeyboardLayout() {
+  await hydrationPromise.value;
+  if (user.loggedIn) {
+    try {
+      const preferences = await getLunaPreferences();
+      return resolveKeyboardLayout(preferences.graphics?.keyboard_layout || localKeyboardLayout.value);
+    } catch (error) {
+      addErrorToast({ title: t("Common.OperationFailed"), error });
+    }
   }
-  return "en-us-qwerty";
+  return resolveKeyboardLayout(localKeyboardLayout.value);
 }
 
-const keyboardLayout = ref<string>(getKeyboardLayout());
+const keyboardLayout = shallowRef("en-us-qwerty");
 const shouldEnableScroll = ref(false);
 
 const refreshConnectTicket = async () => {
@@ -303,6 +303,9 @@ onMounted(async () => {
 
   let connectConfig: Awaited<ReturnType<typeof resolveConnectConfig>>;
   try {
+    // RDP chooses its keymap at connection time; keep the soft keyboard on that same layout.
+    keyboardLayout.value = await getKeyboardLayout();
+    if (disposed) return;
     connectConfig = await resolveConnectConfig();
   } catch (error) {
     if (disposed) return;
@@ -335,7 +338,7 @@ onMounted(async () => {
   );
 
   const displayEl = displayRef.value;
-  if (!displayEl) {
+  if (!displayEl || !guaDisplay.value) {
     loading.value = false;
     disconnectGuaclient();
     return;
@@ -373,7 +376,7 @@ onUnmounted(() => {
   window.removeEventListener("focus", debouncedSendClipboardToRemote);
 });
 
-const handleScreenKeyboard = (name: string, keysym: any) => {
+const handleScreenKeyboard = (name: "keydown" | "keyup", keysym: number) => {
   if (name === "keydown") sendKeyEvent(1, keysym);
   else if (name === "keyup") sendKeyEvent(0, keysym);
 };
@@ -390,7 +393,7 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
     addErrorToast({ title: error instanceof Error ? error.message : String(error) });
     return;
   }
-  currentGuacFsObject.value.requestInputStream(file.streamName, (stream: any, mimetype: any) => {
+  currentGuacFsObject.value?.requestInputStream(file.streamName, (stream, mimetype) => {
     clientFileReceived(stream, mimetype, file.name);
   });
 };
@@ -413,12 +416,13 @@ watch(
 );
 
 const handleCombineKeys = (keys: string[]) => {
-  keys.forEach((keysym: any) => sendKeyEvent(1, keysym));
-  setTimeout(() => keys.forEach((keysym: any) => sendKeyEvent(0, keysym)), 100);
+  const keysyms = keys.map(Number);
+  keysyms.forEach((keysym) => sendKeyEvent(1, keysym));
+  setTimeout(() => keysyms.forEach((keysym) => sendKeyEvent(0, keysym)), 100);
 };
 
 const scaleGuaDisplay = (value: number) => {
-  if (value <= 0) return;
+  if (value <= 0 || !guaDisplay.value) return;
   const newScale = value / 100;
   if (newScale > scale.value) shouldEnableScroll.value = true;
   else if (newScale <= 1) shouldEnableScroll.value = false;

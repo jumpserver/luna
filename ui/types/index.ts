@@ -79,6 +79,7 @@ export interface ConfigItem {
   builtin?: boolean;
   icon_path?: string;
   use_ssh_helper?: boolean;
+  uses_terminal_host?: boolean;
   path_display?: string;
   path_copyable?: boolean;
   path_selectable?: boolean;
@@ -461,14 +462,15 @@ export interface ConnectMethod {
 }
 
 export interface RdpGraphics {
-  use_sysdba?: boolean;
   charset?: CharsetType;
   backspaceAsCtrlH?: boolean;
   disableautohash?: boolean;
+  use_sysdba?: boolean;
   rdp_resolution?: string;
   resolution?: string;
   keyboard_layout?: string;
   rdp_client_option?: string[];
+  printers_redirect?: boolean;
   rdp_color_quality?: string;
   rdp_smart_size?: string;
   applet_connection_method?: string;

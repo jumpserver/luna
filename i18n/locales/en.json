@@ -1139,7 +1139,7 @@
     "DuplicateSiteNameError": "This site name already exists. Use a different name",
     "LoginFailedDescription": "Login failed, the current account has expired, please log in again",
     "InvalidUrlError": "Invalid site address. Enter a full address that includes http:// or https://",
-    "InvalidSiteError": "Login failed: site is unreachable or invalid. Please check and try again.",
+    "InvalidSiteError": "Unable to access this site. Please open it manually to test.",
     "AddAccount": "Add Site",
     "SwitchSite": "Switch Site",
     "SavedSites": "Saved sites",
@@ -1356,6 +1356,8 @@
     "RdpFullScreen": "Full screen",
     "RdpMultiScreen": "Multiple screens",
     "RdpDrivesRedirect": "Redirect drives",
+    "RdpPrintersRedirect": "Printer redirection",
+    "RdpPrintersRedirectDescription": "Redirect printers for RDP connections. Web sessions download printed documents as PDFs.",
     "RdpLocalClientDescription": "Applies only to the local RDP client, not the web remote desktop.",
     "RemoteMicrophone": "Remote microphone",
     "RdpFileReusable": "Reusable RDP file",
@@ -2688,5 +2690,42 @@
     "invalid-site": "The site URL is invalid. Enter an HTTP or HTTPS URL without credentials, a query, or a fragment.",
     "invalid-client-version": "The running client version is invalid. Use a client built with its release version.",
     "Continue": "Continue connecting"
+  },
+  "Shortcuts": {
+    "Title": "Keyboard shortcuts",
+    "Description": "Customize application shortcuts and avoid conflicts with remote sessions.",
+    "Search": "Search actions or shortcuts",
+    "ResetAll": "Restore all defaults",
+    "Hint": "Changes apply immediately on this device. Application shortcuts take priority in their scope. Browser and operating system shortcuts may be unavailable. Editor and remote-session keymaps are unchanged.",
+    "DesktopOnly": "Desktop only",
+    "Disabled": "Disabled",
+    "Change": "Change shortcut: {action}",
+    "Disable": "Disable shortcut: {action}",
+    "Restore": "Restore default: {action}",
+    "Reserved": "This combination is reserved by the system, browser, or editor. Choose another shortcut.",
+    "Conflict": "This combination is already assigned to “{action}”. Change or disable that shortcut first.",
+    "ModifierRequired": "Use Ctrl, Command, or Alt together with a key. Shift alone is not sufficient.",
+    "RecordHint": "Press a key combination, then save. Escape cancels. Tab moves between controls.",
+    "PressKeys": "Press a key combination",
+    "RecordingFailed": "Could not start recording. Close this dialog and try again.",
+    "NoResults": "No matching shortcuts",
+    "DigitTabs": "Switch sessions with number keys",
+    "DigitTabsHint": "{modifier}+1–8 selects a session; {modifier}+9 selects the last. Disabled while typing in a text field or editor.",
+    "ResetConfirm": "Restore all shortcuts and enable switching sessions with number keys?",
+    "Actions": {
+      "previousTab": "Previous session",
+      "nextTab": "Next session",
+      "closeTab": "Close current session",
+      "focus": "Toggle focus mode",
+      "fullscreen": "Toggle fullscreen",
+      "rightPanel": "Toggle right panel",
+      "terminalAi": "Open terminal AI",
+      "localShell": "New local terminal"
+    },
+    "Scopes": {
+      "workspace": "Workspace · when a session is active",
+      "application": "Application · outside settings and dialogs",
+      "terminal": "Terminal · when terminal AI is available and focused"
+    }
   }
 }

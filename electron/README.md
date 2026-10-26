@@ -54,7 +54,33 @@ pnpm electron:dev
 ```
 
 Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
-On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
+On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing.
+
+Windows signing hooks run only in GitHub Actions (`GITHUB_ACTIONS=true`); local builds
+always use `off`, even when signing credentials or `WINDOWS_SIGN_MODE` are set. The
+release Action defaults to `optional` and also supports `required` and `off` through
+`WINDOWS_SIGN_MODE`. Signing helpers live in `scripts/windows-sign.ts` and use
+`SIGNPANEL_URL` (an HTTPS origin) and `SIGNPANEL_API_TOKEN` through `scripts/sign-ci.ps1`.
+Optional mode warns on the first signing failure, keeps the original file, and
+skips subsequent signing attempts so packaging and publishing can continue. Required
+mode stops the build on missing credentials, signing failures, or invalid signatures.
+Off mode skips all Windows signing. Signed files replace their originals only after
+download integrity and Authenticode verification succeed.
+
+Forge signs only the project executables `JumpServer.exe`, `resources/bin/jms-ssh.exe`,
+and the optional `resources/face-engine/facelive-worker.exe` before making installers.
+NSIS signs only its generated uninstaller and setup executable; WiX MSI signing follows
+filename normalization. Bundled third-party binaries, including Electron runtime DLLs,
+plugins, NSIS `elevate.exe`, and all `node_modules` files, are excluded from signing.
+When SignPanel is not configured, signing in Actions still supports
+`WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or
+`WINDOWS_SIGN_WITH_PARAMS` under the same mode policy.
+
+The client release Action maps the existing SignPanel secrets (the URL may also be a
+repository variable). Manual builds expose `windows_sign_mode`; tag builds use the
+`WINDOWS_SIGN_MODE` repository variable or default to `optional`. Installer signatures
+are checked before upload; only `required` treats signature failures as fatal. Release
+checksums are generated from the final artifacts.
 
 The native face engine has its own uv-managed Python sidecar. For local engine
 checks, prepare it once and open `/face` in the development renderer:
@@ -94,8 +120,8 @@ Remaining release work:
 - code signing/notarization and updater channel wiring.
 
 Create a local unpacked production app with `pnpm electron:package:dir`, or build platform artifacts
-with `pnpm electron:build`. Packaging uses Electron Forge makers: DMG/ZIP on macOS, Squirrel/WiX on
-Windows, and DEB/RPM on Linux. Windows no longer uses NSIS, and Linux no longer produces AppImage.
+with `pnpm electron:build`. Packaging uses Electron Forge makers: DMG on macOS, NSIS/WiX on
+Windows, and DEB/RPM on Linux. Linux no longer produces AppImage.
 
 Packaged clients register only `jms2://` and use `jms2://auth/callback` for OAuth.
 `jms://` belongs to the legacy client. The server's OAuth application must allow

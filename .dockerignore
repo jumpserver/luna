@@ -1,4 +1,5 @@
 dist
+packages/guacamole/dist
 node_modules
 .git
 .github

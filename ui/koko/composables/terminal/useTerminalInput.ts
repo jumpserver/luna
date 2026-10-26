@@ -25,7 +25,6 @@ export function useKokoTerminalInput(options: {
   onContextMenu: (event: MouseEvent) => void;
   getTerminalConfig: () => Partial<ITerminalSettings>;
   onResize: (size: { cols: number; rows: number }) => void;
-  onHostKey: (key: string) => void;
   inputLocked: (data?: string) => boolean;
   sendHostEvent: (event: string, data: unknown) => void;
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
@@ -185,14 +184,6 @@ export function useKokoTerminalInput(options: {
       const customResult = options.onKeyEvent?.(event);
       if (customResult !== undefined) return customResult;
       if (event.key === KeyboardKey.Enter && event.isComposing) return false;
-      if (
-        event.altKey &&
-        event.shiftKey &&
-        (event.key === KeyboardKey.ArrowRight || event.key === KeyboardKey.ArrowLeft)
-      ) {
-        options.onHostKey(event.key);
-        return false;
-      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.F) {
         if (event.type === "keydown") {
           options.sendMittEvent(TerminalMittEvent.OpenSearch);

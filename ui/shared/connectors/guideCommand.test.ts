@@ -66,7 +66,6 @@ describe("connection guide CLI", () => {
   });
 });
 
-
 describe("Oracle connection guide role", () => {
   it.each([undefined, false, true])("uses the effective SYSDBA option (%s)", (useSysDBA) => {
     expect(getGuideConnectCommand({ ...database, protocol: "oracle", useSysDBA })).toBe(

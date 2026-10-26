@@ -5,17 +5,17 @@
   "is_set": true,
   "is_internal": true,
   "executable": {
-    "type": "bundled",
-    "default": "Terminal"
+    "type": "system",
+    "default": "x-terminal-emulator"
   },
   "launch": {
-    "type": "args",
-    "driver": "linux-terminal",
+    "type": "module",
+    "module": "scripts/launch.mjs",
+    "accepts_command": true,
     "use_ssh_helper": true,
     "protocol_aliases": {
       "telnet": "ssh"
-    },
-    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+    }
   },
   "display_name": "Terminal"
 }

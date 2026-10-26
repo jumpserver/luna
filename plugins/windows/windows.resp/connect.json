@@ -10,9 +10,8 @@
     "required": true
   },
   "launch": {
-    "type": "args",
-    "driver": "resp",
-    "template": "--settings-dir*{config_file}"
+    "type": "module",
+    "module": "scripts/launch.mjs"
   },
   "display_name": "Redis Desktop Manager"
 }

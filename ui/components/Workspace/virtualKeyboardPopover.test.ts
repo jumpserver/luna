@@ -1,6 +1,7 @@
 import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, onScopeDispose, reactive, ref, shallowRef, watch } from "vue";
+import { getKeyboardCharacter, getKeyboardCharacterRows } from "~/lion/utils/keyboard";
 import source from "./virtualKeyboardPopover.vue?raw";
 
 const cleanups: Array<() => void> = [];
@@ -27,10 +28,13 @@ function setup(protocol = "ssh") {
   const scope = {
     exports: {},
     require: () => ({
+      getKeyboardCharacter,
+      getKeyboardCharacterRows,
       sendKokoTerminalData,
       getLionWorkspaceSession: (id: string) => ({
         sendCombinationKeys,
         isRemoteApp,
+        keyboardLayout: ref("en-us-qwerty"),
         sendKeyEvent: id === "session" ? sendKeyEvent : otherSessionKeyEvent
       }),
       useEventListener: (...args: any[]) => {
@@ -355,7 +359,7 @@ it.each(["close", "panel", "session", "disconnect", "blur", "dispose", "rotate"]
       [0, 65],
       [0, 65507]
     ]);
-    expect(Object.values(keyboard.modifiers)).toEqual([false, false, false, false, false]);
+    expect(Object.values(keyboard.modifiers)).toEqual([false, false, false, false, false, false]);
     expect(keyboard.pressedKeys.size).toBe(0);
     expect(keyboard.otherSessionKeyEvent).not.toHaveBeenCalled();
   }

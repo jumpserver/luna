@@ -1,3 +1,5 @@
+import type { ShortcutOverrides } from "~/shared/shortcuts";
+import { normalizeShortcutOverrides } from "~/shared/shortcuts";
 import type { UiRadius, UserSettingPersistedState } from "~/composables/useSettingStorage";
 import type {
   AppConfigType,
@@ -388,6 +390,14 @@ export const useSettingManager = () => {
   return {
     ...toRefs(state),
 
+    setShortcutOverrides: (value: ShortcutOverrides) => {
+      state.shortcutOverrides = normalizeShortcutOverrides(value);
+      persist({ shortcutOverrides: state.shortcutOverrides });
+    },
+    setSessionDigitShortcuts: (enabled: boolean) => {
+      state.sessionDigitShortcuts = enabled;
+      persist({ sessionDigitShortcuts: enabled });
+    },
     setLang,
     setSort,
     setTheme,

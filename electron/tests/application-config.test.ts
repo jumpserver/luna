@@ -14,6 +14,99 @@ import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
+function shellArguments(command) {
+  const result = spawnSync("/bin/sh", ["-c", `set -- ${command}; printf '%s\\0' "$@"`], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout.split("\0").slice(0, -1);
+}
+
+test("Windows Navicat launch behavior comes entirely from its plugin configuration", async () => {
+  const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  const id = "windows.navicat17";
+  for (const protocol of ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"]) {
+    const application = await service.buildItem(
+      {
+        id,
+        category: "databases",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins/windows", id)
+      },
+      { selections: { [`databases:${protocol}`]: id } }
+    );
+    assert.equal(application.launch_type, "script");
+    assert.equal(application.script_interpreter, "node");
+    assert.equal(application.script_input, "stdin");
+    assert.equal(application.script_serialize, true);
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    let launches = 0;
+    launcher.launchScript = async (selected, payload, values) => {
+      assert.equal(selected, application);
+      assert.equal(payload.protocol, protocol === "mariadb" ? "mysql" : protocol);
+      assert.equal(values.username, "selector-token");
+      assert.equal(values.value, "test-secret");
+      assert.equal(values.dbname, protocol === "oracle" ? "selector-token" : "application database");
+      launches++;
+    };
+    const payload = {
+      protocol,
+      client: "navicat17",
+      name: "SQL Server test",
+      endpoint: { host: "gateway.example.test", port: 5525 },
+      token: { id: "selector-token", value: "test-secret" },
+      asset: { info: { db_name: "application database" } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launches, 1);
+    assert.equal(payload.protocol, protocol);
+  }
+});
+
+test("SQL Server applications other than the bundled Navicat plugin retain their argument launch", async () => {
+  for (const [name, pluginId] of [
+    ["dbeaver", "windows.dbeaver"],
+    ["ssms17", "windows.ssms17"],
+    ["navicat17", "custom.navicat17"]
+  ]) {
+    const application = {
+      name,
+      plugin_id: pluginId,
+      protocol: ["sqlserver"],
+      enabled_protocols: ["sqlserver"],
+      match_first: ["sqlserver"],
+      is_set: true,
+      launch_type: "args",
+      arg_format: "{username}|{value}|{dbname}"
+    };
+    const launcher = new LocalApplicationLauncher(
+      {},
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    let args;
+    launcher.launchExecutable = async (_selected, value) => {
+      args = value;
+    };
+    await launcher.launch(
+      `jms2://${Buffer.from(
+        JSON.stringify({
+          protocol: "sqlserver",
+          name: "Test",
+          endpoint: { host: "gateway.example.test", port: 5525 },
+          token: { id: "selector", value: "test-secret" },
+          asset: { info: { db_name: "application" } }
+        })
+      ).toString("base64")}`
+    );
+    assert.equal(args, "selector|test-secret|application");
+  }
+});
+
 test("RESP receives a private connection config through its settings directory", async (context) => {
   const appData = await mkdtemp(path.join(os.tmpdir(), "jms RESP config "));
   context.after(() => rm(appData, { recursive: true, force: true }));
@@ -25,9 +118,17 @@ test("RESP receives a private connection config through its settings directory",
     category: "databases",
     protocol: "redis",
     name: "resp",
+    pluginId: undefined,
     path: process.execPath
   });
-  await service.updateSelection({ category: "databases", protocol: "redis", name: "resp", makeDefault: true });
+  await service.updateSelection({
+    category: "databases",
+    protocol: "redis",
+    name: "resp",
+    pluginId: undefined,
+    path: undefined,
+    makeDefault: true
+  });
   const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
   const payload = {
     protocol: "redis",
@@ -113,7 +214,7 @@ for (const platform of ["macos", "linux", "windows"]) {
     const dbx = config.databases.find((item) => item.name === "dbx");
     assert.ok(dbx);
     assert.ok(config.databases.some((item) => item.name === "dbeaver"));
-    assert.equal(dbx.launch_type, "args");
+    assert.equal(dbx.launch_type, "module");
     assert.equal(dbx.executable_type, "user_path");
     const types = {
       mysql: "mysql",
@@ -129,6 +230,7 @@ for (const platform of ["macos", "linux", "windows"]) {
     assert.deepEqual(new Set(dbx.protocol), new Set(Object.keys(types)));
     assert.deepEqual(dbx.match_first, dbx.protocol);
     const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    launcher.resolveExecutable = async (application) => application.path;
     for (const [protocol, type] of Object.entries(types)) {
       const payload = {
         protocol,
@@ -140,7 +242,9 @@ for (const platform of ["macos", "linux", "windows"]) {
       let launches = 0;
       launcher.launchExecutable = async (application, argumentString) => {
         assert.equal(application.name, "dbx");
-        const args = localAppLauncherInternals.splitArguments(argumentString);
+        const args = Array.isArray(argumentString)
+          ? argumentString
+          : localAppLauncherInternals.splitArguments(argumentString);
         assert.equal(args.length, 1);
         const url = new URL(args[0]);
         assert.equal(url.protocol, "dbx:");
@@ -222,10 +326,13 @@ for (const platform of ["macos", "linux", "windows"]) {
     let launched = false;
     launcher.launchExecutable = async (selected, argumentString) => {
       assert.equal(selected.name, "dbeaver");
-      assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [
-        "-con",
-        "name=Dameng|driver=dameng|user=token-id|password=secret|host=gateway.example.com|port=5525|save=false|connect=true"
-      ]);
+      assert.deepEqual(
+        Array.isArray(argumentString) ? argumentString : localAppLauncherInternals.splitArguments(argumentString),
+        [
+          "-con",
+          "name=Dameng|driver=dameng|user=token-id|password=secret|host=gateway.example.com|port=5525|save=false|connect=true"
+        ]
+      );
       launched = true;
     };
     const payload = {
@@ -258,9 +365,8 @@ for (const platform of ["macos", "linux"]) {
     });
     const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
     let launched = false;
-    launcher.launchTerminal = async (selected, command) => {
-      assert.equal(selected.name, "terminal");
-      assert.equal(command, "disql 'token-id/p'\\''a&b@gateway.example.com:5525'");
+    launcher.launchInTerminal = async (command) => {
+      assert.deepEqual(shellArguments(command), ["disql", "token-id/p'a&b@gateway.example.com:5525"]);
       launched = true;
     };
     const payload = {
@@ -300,7 +406,7 @@ for (const [platform, protocol, expectedClient] of [
       assert.equal(application.name, expectedClient);
       launched++;
     };
-    launcher.launchTerminal = launch;
+    launcher.launchScript = launch;
     launcher.launchExecutable = launch;
     launcher.launchFile = launch;
     const url = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
@@ -556,6 +662,12 @@ for (const platform of ["macos", "linux"]) {
       is_set: true,
       match_first: ["mongodb"],
       launch_type: config.launch.type,
+      module_path: config.launch.module,
+      plugin_dir: path.join(projectRoot, "plugins", platform, `${platform}.terminal-db`),
+      path: process.execPath,
+      executable_type: "system",
+      uses_terminal_host: config.launch.target === "terminal",
+      accepts_command: Boolean(config.launch.accepts_command),
       launch_driver: config.launch.driver,
       arg_format: config.launch.template,
       protocol_templates: config.launch.protocol_templates
@@ -571,7 +683,7 @@ for (const platform of ["macos", "linux"]) {
     const database = "data /?#";
     const expectedUri = `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(password)}@gateway.example.com:5525/${encodeURIComponent(database)}?authSource=admin&loadBalanced=true&retryWrites=false`;
     let launched = false;
-    launcher.launchTerminal = async (_selected, command) => {
+    launcher.launchInTerminal = async (command) => {
       const result = spawnSync("bash", ["-lc", `mongosh() { printf '%s\\n' "$@"; }\n${command}`], {
         encoding: "utf8"
       });
@@ -597,57 +709,49 @@ for (const platform of ["macos", "linux"]) {
 }
 
 for (const platform of ["macos", "linux"]) {
-  test(`${platform}/terminal-db applies the Oracle token role through the integrated launcher`, async () => {
-    const config = JSON.parse(
-      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.terminal-db`, "connect.json"), "utf8")
+  test(`${platform} SQLPlus plugin applies SYSDBA and preserves direct commands`, async () => {
+    const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+    const id = `${platform}.terminal-db`;
+    const application = await service.buildItem(
+      {
+        id,
+        category: "databases",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins", platform, id)
+      },
+      { selections: { "databases:oracle": id } }
     );
-    const application = {
-      name: "terminal-db",
-      protocol: ["oracle"],
-      is_set: true,
-      match_first: ["oracle"],
-      launch_type: config.launch.type,
-      launch_driver: config.launch.driver,
-      arg_format: config.launch.template,
-      protocol_templates: { ...config.launch.protocol_templates }
-    };
     const launcher = new LocalApplicationLauncher(
       { isPackaged: false },
       projectRoot,
       { getConfig: async () => ({ databases: [application] }) },
       null
     );
-    const command = "sqlplus token-id/secret@gateway.example.com:5525/token-id";
-    for (const useSysDBA of [undefined, false, true]) {
-      const payload = {
-        protocol: "oracle",
-        endpoint: { host: "gateway.example.com", port: 5525 },
-        token: { id: "token-id", value: "secret" },
-        asset: { info: { db_name: "ORCLCDB" } },
-        connect_options: useSysDBA === undefined ? {} : { use_sysdba: useSysDBA }
-      };
-      let launches = 0;
-      launcher.launchTerminal = async (selected, argumentString) => {
-        assert.equal(selected, application);
-        assert.equal(argumentString, `${command}${useSysDBA ? " as sysdba" : ""}`);
-        launches++;
-      };
-      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
-      assert.equal(launches, 1);
-    }
-    application.protocol_templates.oracle += " as sysdba";
-    launcher.launchTerminal = async (_selected, argumentString) => {
-      assert.equal(argumentString, `${command} as sysdba`);
-    };
     const payload = {
       protocol: "oracle",
       endpoint: { host: "gateway.example.com", port: 5525 },
       token: { id: "token-id", value: "secret" },
-      connect_options: { use_sysdba: true }
+      asset: { info: { db_name: "ORCLCDB" } }
     };
-    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    for (const role of [false, true]) {
+      let called = false;
+      launcher.launchInTerminal = async (command) => {
+        assert.deepEqual(shellArguments(command), [
+          "sqlplus",
+          "token-id/secret@gateway.example.com:5525/token-id",
+          ...(role ? ["as", "sysdba"] : [])
+        ]);
+        called = true;
+      };
+      await launcher.launch(
+        `jms2://${Buffer.from(JSON.stringify({ ...payload, connect_options: { use_sysdba: role } })).toString("base64")}`
+      );
+      assert.ok(called);
+    }
+    const direct = "sqlplus example as sysdba";
+    launcher.launchInTerminal = async (command) => assert.equal(command, direct);
     await launcher.launch(
-      `jms2://${Buffer.from(JSON.stringify({ ...payload, command: `${command} as sysdba` })).toString("base64")}`
+      `jms2://${Buffer.from(JSON.stringify({ ...payload, command: direct, connect_options: { use_sysdba: true } })).toString("base64")}`
     );
   });
 }
@@ -674,6 +778,12 @@ for (const [platform, plugin, expected] of [
       enabled_protocols: ["mariadb"],
       match_first: ["mariadb"],
       launch_type: config.launch.type,
+      module_path: config.launch.module,
+      plugin_dir: path.join(projectRoot, "plugins", platform, platform === "demo" ? plugin : `${platform}.${plugin}`),
+      path: process.execPath,
+      executable_type: "system",
+      uses_terminal_host: config.launch.target === "terminal",
+      accepts_command: Boolean(config.launch.accepts_command),
       launch_driver: config.launch.driver,
       arg_format: config.launch.template,
       protocol_templates: config.launch.protocol_templates
@@ -694,6 +804,7 @@ for (const [platform, plugin, expected] of [
     let launches = 0;
     const checkArgs = async (selected, args) => {
       assert.equal(selected, application);
+      args = Array.isArray(args) ? args.join(" ") : args;
       assert.ok(args.includes(expected), args);
       assert.ok(args.includes("gateway.example.com"), args);
       assert.ok(args.includes("5525"), args);
@@ -701,12 +812,11 @@ for (const [platform, plugin, expected] of [
       launches++;
     };
     launcher.launchExecutable = checkArgs;
-    launcher.launchTerminal = checkArgs;
+    launcher.launchInTerminal = async (command) => checkArgs(application, shellArguments(command));
     launcher.launchScript = async (selected, received, values) => {
       assert.equal(selected, application);
       assert.deepEqual(received, { ...payload, protocol: "mysql", ...(received.client ? { client: plugin } : {}) });
       assert.equal(values.protocol, "mysql");
-      assert.equal(values.dbeaver_protocol, "mysql");
       assert.equal(values.dbname, "app");
       launches++;
     };
@@ -734,6 +844,12 @@ for (const [platform, plugin] of [
       is_set: true,
       match_first: ["mongodb"],
       launch_type: config.launch.type,
+      module_path: config.launch.module,
+      plugin_dir: path.join(projectRoot, "plugins", platform, platform === "demo" ? plugin : `${platform}.${plugin}`),
+      path: process.execPath,
+      executable_type: "system",
+      uses_terminal_host: config.launch.target === "terminal",
+      accepts_command: Boolean(config.launch.accepts_command),
       launch_driver: config.launch.driver,
       arg_format: config.launch.template,
       protocol_templates: config.launch.protocol_templates
@@ -749,7 +865,10 @@ for (const [platform, plugin] of [
       const capture = async (selected, argumentString) => {
         assert.equal(selected, application);
         const uri = `mongodb://token-id:secret@gateway.example.com:5525/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
-        assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [uri]);
+        assert.deepEqual(
+          Array.isArray(argumentString) ? argumentString : localAppLauncherInternals.splitArguments(argumentString),
+          [uri]
+        );
         launched = true;
       };
       launcher.launchExecutable = capture;
@@ -858,4 +977,196 @@ test("enables multiple clients independently and persists a separate protocol de
   assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "second");
   await update("Second", false);
   await assert.rejects(launcher.resolveApplication({ protocol: "ssh" }), /no configured application/);
+});
+
+test("database command plans use the selected iTerm2 host and reject hosts without command support", async () => {
+  const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  const state = { selections: { "terminal:ssh": "macos.iterm", "databases:mysql": "macos.terminal-db" } };
+  const entry = (id, category) => ({
+    id,
+    category,
+    builtin: true,
+    pluginDir: path.join(projectRoot, "plugins/macos", id)
+  });
+  const host = await service.buildItem(entry("macos.iterm", "terminal"), state);
+  const database = await service.buildItem(entry("macos.terminal-db", "databases"), state);
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    { getConfig: async () => ({ terminal: [host], databases: [database] }) },
+    null
+  );
+  let calls = 0;
+  const password = "space ' \" $() 中文";
+  launcher.launchScript = async (selected, payload) => {
+    assert.equal(selected.plugin_id, "macos.iterm");
+    assert.deepEqual(shellArguments(payload.command), [
+      "mysql",
+      "-u",
+      "token",
+      `-p${password}`,
+      "-h",
+      "gateway.example",
+      "-P",
+      "3306",
+      "business"
+    ]);
+    calls++;
+  };
+  const payload = {
+    protocol: "mysql",
+    endpoint: { host: "gateway.example", port: 3306 },
+    token: { id: "token", value: password },
+    asset: { info: { db_name: "business" } }
+  };
+  const raw = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await launcher.launch(raw);
+  assert.equal(calls, 1);
+  host.accepts_command = false;
+  await assert.rejects(launcher.launch(raw), /selected terminal host cannot open command/);
+  assert.equal(calls, 1);
+});
+
+for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} DBeaver module owns driver mapping and Oracle SYSDBA arguments`, async () => {
+    const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+    const id = `${platform}.dbeaver`;
+    const application = await service.buildItem(
+      {
+        id,
+        category: "databases",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins", platform, id)
+      },
+      {
+        selections: { "databases:oracle": id, "databases:sqlserver": id },
+        plugins: { [id]: { path: process.execPath } }
+      }
+    );
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    for (const [protocol, role] of [
+      ["oracle", false],
+      ["oracle", true],
+      ["sqlserver", false]
+    ]) {
+      let called = false;
+      launcher.launchExecutable = async (_selected, args) => {
+        assert.equal(args[0], "-con");
+        assert.equal(args.length, 2);
+        assert.ok(args[1].includes("password=space ' \" 中文"));
+        assert.equal(args[1].includes("authProp.oracle.logon-as=SYSDBA"), role);
+        if (protocol === "sqlserver") assert.ok(args[1].includes("driver=mssql_jdbc_ms_new"));
+        called = true;
+      };
+      const payload = {
+        protocol,
+        connect_options: { use_sysdba: role },
+        endpoint: { host: "gateway.example", port: 5525 },
+        token: { id: "token", value: "space ' \" 中文" }
+      };
+      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      assert.ok(called);
+    }
+  });
+}
+
+for (const platform of ["linux", "windows"]) {
+  test(`${platform} terminal module owns helper arguments and direct commands`, async () => {
+    const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+    const id = `${platform}.terminal`;
+    const application = await service.buildItem(
+      {
+        id,
+        category: "terminal",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins", platform, id)
+      },
+      { selections: { "terminal:telnet": id } }
+    );
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ terminal: [application] }) },
+      null
+    );
+    for (const command of ["", "echo direct-command"]) {
+      let called = false;
+      launcher.launchExecutable = async (_selected, args) => {
+        if (platform === "windows") {
+          assert.equal(args[0], "new-tab");
+          if (command) assert.deepEqual(args.slice(1), ["cmd.exe", "/d", "/s", "/c", command]);
+          else
+            assert.deepEqual(args.slice(2), ["ssh", "JMS-token@gateway.example", "-p", "2222", "-P", "space ' 中文"]);
+        } else {
+          assert.deepEqual(args.slice(0, 3), ["-e", "bash", "-lc"]);
+          if (command) assert.equal(args[3], command);
+          else {
+            const decoded = shellArguments(args[3]);
+            assert.deepEqual(decoded.slice(1), [
+              "ssh",
+              "JMS-token@gateway.example",
+              "-p",
+              "2222",
+              "-P",
+              "space ' 中文"
+            ]);
+          }
+        }
+        called = true;
+      };
+      const payload = {
+        protocol: "telnet",
+        command,
+        endpoint: { host: "gateway.example", port: 2222 },
+        token: { id: "token", value: "space ' 中文" }
+      };
+      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      assert.ok(called);
+    }
+  });
+}
+
+test("plugin modules handle stdin in paths with spaces and reject unsafe results without leaking credentials", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "jms plugin 模块 "));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const filename = path.join(directory, "launch.mjs");
+  const application = {
+    launch_type: "module",
+    module_path: "launch.mjs",
+    plugin_dir: directory,
+    path: process.execPath,
+    executable_type: "user_path"
+  };
+  const launcher = new LocalApplicationLauncher({ isPackaged: false }, projectRoot, { configDir: directory }, null);
+  const secret = "private space ' 中文";
+  const payload = {
+    protocol: "mysql",
+    endpoint: { host: "gateway.example", port: 3306 },
+    token: { id: "token", value: secret }
+  };
+  let launches = 0;
+  launcher.launchExecutable = async (_selected, args) => {
+    assert.deepEqual(args, [secret]);
+    launches++;
+  };
+  await writeFile(
+    filename,
+    'export default c => { if (process.env.JMS_CONNECT_JSON) throw Error("unexpected env"); return {type:"args",args:[c.value]}; };'
+  );
+  await launcher.launchApplication(application, payload);
+  assert.equal(launches, 1);
+  await writeFile(filename, "export default c => { throw Error(c.value); };");
+  await assert.rejects(launcher.launchApplication(application, payload), (error: Error) => {
+    assert.match(error.message, /Plugin could not prepare/);
+    assert.ok(!error.message.includes(secret));
+    return true;
+  });
+  await writeFile(filename, 'export default c => ({type:"args",args:[c.value,42]});');
+  await assert.rejects(launcher.launchApplication(application, payload), /invalid launch plan/);
+  assert.equal(launches, 1);
 });

@@ -471,6 +471,41 @@ test.describe("online session replay", () => {
     await expect(page.locator("[data-replay-speed]")).toBeEnabled();
   });
 
+  test("keeps guacamole stopped at the end until restarted", async ({ page }) => {
+    await installReplayBackend(page, { type: "guacamole", src: "/mock.replay" });
+    await openReplay(page, "/replay/sid-guacamole-ended");
+
+    const playButton = page.locator(".replay-play-button");
+    await expect(page.locator("[data-replay-controls]")).toContainText(/00:01\s*\/\s*00:01/);
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await playButton.click();
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+
+    await page.locator(".replay-restart-button").click();
+    await expect(playButton).toHaveAttribute("aria-label", /Pause|暂停/);
+  });
+
+  test("keeps guacamole load errors visible after restart and seek", async ({ page }) => {
+    await installReplayBackend(page, { type: "guacamole", src: "/mock.replay" });
+    await page.route("**/mock.replay", (route) => route.fulfill({ status: 503, body: "Unavailable" }));
+    await openReplay(page, "/replay/sid-guacamole-error");
+
+    const error = page.getByText("Unable to load recording: HTTP 503", { exact: true });
+    const playButton = page.locator(".replay-play-button");
+    await expect(error).toBeVisible();
+    await page.locator(".replay-restart-button").click();
+    await expect(error).toBeVisible();
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+
+    await page.keyboard.press("ArrowRight");
+    await expect(error).toBeVisible();
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    await playButton.click();
+    await expect(error).toBeVisible();
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+  });
+
   test("changes guacamole playback speed without remounting the player", async ({ page }) => {
     const frames = Array.from({ length: 21 }, (_, index) => {
       const timestamp = String(100 + index * 1000);
@@ -687,11 +722,14 @@ test.describe("online session replay", () => {
     await page.setViewportSize({ width: 900, height: 700 });
     await expect.poll(async () => (await root.boundingBox())?.width || 0).toBeLessThan(initial.root.width);
 
-    const resized = await measure();
-    expect(resized.viewport.width).toBeCloseTo(resized.root.width, 0);
-    expect(resized.viewport.height).toBeCloseTo(resized.root.height, 0);
-    expect(resized.display.width).toBeCloseTo(resized.viewport.width, 0);
-    expect(resized.display.height).toBeCloseTo(resized.viewport.height, 0);
+    // Layout changes precede the ResizeObserver and asynchronous frame restore.
+    await expect(async () => {
+      const resized = await measure();
+      expect(resized.viewport.width).toBeCloseTo(resized.root.width, 0);
+      expect(resized.viewport.height).toBeCloseTo(resized.root.height, 0);
+      expect(resized.display.width).toBeCloseTo(resized.viewport.width, 0);
+      expect(resized.display.height).toBeCloseTo(resized.viewport.height, 0);
+    }).toPass({ timeout: 5000 });
   });
 
   test("fills the stage with mp4 instead of a cinema card", async ({ page }) => {

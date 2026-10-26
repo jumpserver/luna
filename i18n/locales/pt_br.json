@@ -1355,6 +1355,8 @@
     "RdpFullScreen": "Tela cheia",
     "RdpMultiScreen": "Várias telas",
     "RdpDrivesRedirect": "Redirecionar unidades",
+    "RdpPrintersRedirect": "Redirecionamento de impressoras",
+    "RdpPrintersRedirectDescription": "Redireciona impressoras em conexões RDP. As sessões web baixam os documentos impressos como PDF.",
     "RdpLocalClientDescription": "Aplica-se apenas ao cliente RDP local, não à área de trabalho remota na web.",
     "RemoteMicrophone": "Microfone remoto",
     "RdpFileReusable": "Arquivo RDP reutilizável",
@@ -2688,5 +2690,42 @@
     "invalid-site": "URL do site inválida. Insira uma URL HTTP ou HTTPS sem credenciais, consulta ou fragmento.",
     "invalid-client-version": "A versão do cliente é inválida. Use um cliente compilado com sua versão de lançamento.",
     "Continue": "Continuar conexão"
+  },
+  "Shortcuts": {
+    "Title": "Atalhos de teclado",
+    "Description": "Personalize os atalhos do aplicativo e evite conflitos com sessões remotas.",
+    "Search": "Pesquisar ações ou atalhos",
+    "ResetAll": "Restaurar todos os padrões",
+    "Hint": "As alterações são aplicadas imediatamente neste dispositivo. Os atalhos do aplicativo têm prioridade em seu contexto. Atalhos do navegador e do sistema operacional podem não estar disponíveis. Os mapas de teclas do editor e das sessões remotas não são alterados.",
+    "DesktopOnly": "Somente no aplicativo de desktop",
+    "Disabled": "Desativado",
+    "Change": "Alterar atalho: {action}",
+    "Disable": "Desativar atalho: {action}",
+    "Restore": "Restaurar padrão: {action}",
+    "Reserved": "Esta combinação é reservada pelo sistema, navegador ou editor. Escolha outro atalho.",
+    "Conflict": "Esta combinação já está atribuída a “{action}”. Altere ou desative esse atalho primeiro.",
+    "ModifierRequired": "Use Ctrl, Command ou Alt junto com outra tecla. Shift sozinho não é suficiente.",
+    "RecordHint": "Pressione uma combinação de teclas e salve. Esc cancela. Tab alterna entre os controles.",
+    "PressKeys": "Pressione uma combinação de teclas",
+    "RecordingFailed": "Não foi possível iniciar a captura. Feche esta caixa de diálogo e tente novamente.",
+    "NoResults": "Nenhum atalho correspondente",
+    "DigitTabs": "Alternar sessões com teclas numéricas",
+    "DigitTabsHint": "{modifier}+1–8 seleciona uma sessão; {modifier}+9 seleciona a última. Desativado ao digitar em um campo de texto ou no editor.",
+    "ResetConfirm": "Restaurar todos os atalhos e ativar a alternância de sessões com teclas numéricas?",
+    "Actions": {
+      "previousTab": "Sessão anterior",
+      "nextTab": "Próxima sessão",
+      "closeTab": "Fechar sessão atual",
+      "focus": "Alternar modo de foco",
+      "fullscreen": "Alternar tela cheia",
+      "rightPanel": "Mostrar ou ocultar painel direito",
+      "terminalAi": "Abrir IA do terminal",
+      "localShell": "Novo terminal local"
+    },
+    "Scopes": {
+      "workspace": "Área de trabalho · quando há uma sessão ativa",
+      "application": "Aplicativo · fora das configurações e caixas de diálogo",
+      "terminal": "Terminal · quando a IA do terminal está disponível e o terminal está em foco"
+    }
   }
 }

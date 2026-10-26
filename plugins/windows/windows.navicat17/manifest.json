@@ -2,26 +2,17 @@
   "id": "windows.navicat17",
   "name": "navicat17",
   "display_name": "Navicat premium Lite 17",
-  "version": "1.0.0",
-  "min_client_version": "4.0.0",
+  "version": "1.2.0",
+  "min_client_version": "5.1.0",
   "author": "JumpServer",
   "homepage": "https://github.com/jumpserver/clients",
   "download_url": "https://www.navicat.com.cn/products",
   "category": "databases",
-  "protocols": [
-    "mariadb",
-    "mysql",
-    "oracle",
-    "postgresql",
-    "sqlserver"
-  ],
+  "protocols": ["mariadb", "mysql", "oracle", "postgresql", "sqlserver"],
   "builtin": true,
   "comment": {
-    "zh": "数据库管理软件",
-    "en": "Database management software."
+    "zh": "SQL Server 支持 Navicat 16/17/18：选择对应版本的可执行文件，使用与 JumpServer 客户端相同的权限运行。其他数据库仍使用原有的 Navicat 17 连接方式。",
+    "en": "SQL Server supports Navicat 16/17/18. Select its executable and use the same privilege level as JumpServer. Other databases retain the existing Navicat 17 connection method."
   },
-  "permissions": [
-    "autoit",
-    "exec"
-  ]
+  "permissions": ["autoit", "exec"]
 }

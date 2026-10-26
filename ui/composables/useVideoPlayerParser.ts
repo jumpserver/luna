@@ -1,6 +1,7 @@
 import type { OfflineMediaType } from "~/utils/offlineMedia";
+import type { ArchivedRecordingEntry } from "~/utils/browserRecordingArchive";
 import { gunzipSync } from "fflate";
-import untar from "js-untar";
+import { importRecordingArchive, removeRecordingArchive, streamArchiveEntry } from "~/utils/browserRecordingArchive";
 import {
   assignPartTotals,
   basename,
@@ -8,6 +9,8 @@ import {
   isGzipBuffer,
   isTarBuffer,
   isTarPackageName,
+  openOfflineMediaStream,
+  readOfflineMediaHeader,
   resolvePlayableMedia,
   stripOfflineExtension,
   stripReplayJsonExtension,
@@ -56,19 +59,20 @@ export interface VideoPlayerItem {
   partIndex?: number;
   partTotal?: number;
   castData?: string;
+  recordingBlob?: Blob;
+  recordingEntry?: ArchivedRecordingEntry;
 }
 
 interface ParseResult {
   items: VideoPlayerItem[];
 }
 
-interface UntarEntry {
-  name: string;
-  buffer: ArrayBuffer;
-}
-
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw signal.reason || new DOMException("Recording import cancelled.", "AbortError");
 }
 
 export function classifyVideoPlayerEntry(fileName: string): "metadata" | VideoPlayerItemType | null {
@@ -151,11 +155,6 @@ function toMp4Url(buffer: ArrayBuffer) {
   return URL.createObjectURL(blob);
 }
 
-function toGzipUrl(buffer: ArrayBuffer) {
-  const blob = new Blob([new Uint8Array(buffer)], { type: "application/gzip" });
-  return URL.createObjectURL(blob);
-}
-
 function withMeta(item: Omit<VideoPlayerItem, "id" | "meta">, meta: VideoPlayerMeta | null): VideoPlayerItem {
   return {
     id: createId(item.name),
@@ -179,6 +178,46 @@ function withPartIndex(item: VideoPlayerItem, partIndex?: number): VideoPlayerIt
 
   item.partIndex = partIndex + 1;
   return item;
+}
+
+export async function releaseBrowserVideoPlayerItems(removed: VideoPlayerItem[], retained: VideoPlayerItem[] = []) {
+  const retainedArchives = new Set(retained.map((item) => item.recordingEntry?.archiveId));
+  const retainedSources = new Set(retained.map((item) => item.source));
+  const archives = new Set<string>();
+  for (const item of removed) {
+    if (item.source.startsWith("blob:") && !retainedSources.has(item.source)) URL.revokeObjectURL(item.source);
+    const archiveId = item.recordingEntry?.archiveId;
+    if (archiveId && !retainedArchives.has(archiveId)) archives.add(archiveId);
+  }
+  await Promise.allSettled([...archives].map((id) => removeRecordingArchive(id)));
+}
+
+async function readArchivedMeta(entry: ArchivedRecordingEntry, remainingBytes: number, signal?: AbortSignal) {
+  const stream = await openOfflineMediaStream({ stream: () => streamArchiveEntry(entry, signal) });
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  const text: string[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      throwIfAborted(signal);
+      const result = await reader.read();
+      if (result.done) break;
+      length += result.value.byteLength;
+      if (length > 1024 * 1024) throw new Error("Recording metadata exceeds the 1 MiB limit.");
+      if (length > remainingBytes) throw new Error("Recording archive metadata exceeds the 16 MiB limit.");
+      text.push(decoder.decode(result.value, { stream: true }));
+    }
+    text.push(decoder.decode());
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  try {
+    return { meta: JSON.parse(text.join("")) as VideoPlayerMeta, byteLength: length };
+  } catch {
+    return { meta: null, byteLength: length };
+  }
 }
 
 export function useVideoPlayerParser() {
@@ -212,28 +251,30 @@ export function useVideoPlayerParser() {
     );
   }
 
-  function buildItemFromResolved(
+  async function buildItemFromBlob(
     fileName: string,
-    buffer: ArrayBuffer,
+    blob: Blob,
     meta: VideoPlayerMeta | null,
     recordingId: string,
-    recordingLabel: string
-  ): VideoPlayerItem | null {
-    const resolved = resolvePlayableMedia(fileName, buffer);
+    recordingLabel: string,
+    header?: ArrayBuffer
+  ): Promise<VideoPlayerItem | null> {
+    const resolved = resolvePlayableMedia(fileName, header || (await readOfflineMediaHeader(blob)));
     const effectiveMeta = resolveItemMeta(meta, fileName);
 
     if (!resolved) return null;
 
     if (resolved.type === "cast") {
-      return buildCastItem(fileName, resolved.buffer, meta, recordingId, recordingLabel, resolved.partIndex);
+      return buildCastItem(fileName, await blob.arrayBuffer(), meta, recordingId, recordingLabel, resolved.partIndex);
     }
 
     if (resolved.type === "mp4") {
+      const compressed = isGzipBuffer(await blob.slice(0, 2).arrayBuffer());
       return withPartIndex(
         withMeta(
           {
             name: basename(fileName),
-            source: toMp4Url(resolved.buffer),
+            source: compressed ? toMp4Url(unwrapGzip(await blob.arrayBuffer())) : URL.createObjectURL(blob),
             type: "mp4",
             recordingId,
             recordingLabel
@@ -248,7 +289,8 @@ export function useVideoPlayerParser() {
       withMeta(
         {
           name: basename(fileName),
-          source: toGzipUrl(resolved.buffer),
+          source: "",
+          recordingBlob: blob,
           type: "gua",
           recordingId,
           recordingLabel
@@ -259,99 +301,125 @@ export function useVideoPlayerParser() {
     );
   }
 
-  async function parseTarBuffer(fileName: string, tarBuffer: ArrayBuffer): Promise<ParseResult> {
-    const recordingId = createId(fileName);
-    const recordingLabel = stripOfflineExtension(fileName);
-    let extractedFiles: UntarEntry[] = [];
-
+  async function parseArchiveFile(file: File, signal?: AbortSignal): Promise<ParseResult> {
+    const archive = await importRecordingArchive(file, signal);
     try {
-      extractedFiles = (await untar(tarBuffer).progress(() => {})) as UntarEntry[];
-    } catch {
-      return { items: [] };
-    }
-
-    let meta: VideoPlayerMeta | null = null;
-    const items: VideoPlayerItem[] = [];
-
-    for (const entry of extractedFiles) {
-      if (!isMetadataEntry(entry.name)) continue;
-
-      meta = safeParseJson(entry.buffer) || meta;
-    }
-
-    for (const entry of extractedFiles) {
-      if (isMetadataEntry(entry.name)) continue;
-
-      const item = buildItemFromResolved(entry.name, entry.buffer, meta, recordingId, recordingLabel);
-
-      if (item) {
-        items.push({
-          ...item,
-          recordingId,
-          recordingLabel
-        });
+      const entries = archive.entries.filter(
+        (entry) => !entry.name.split("/").some((segment) => segment === "__MACOSX" || segment.startsWith("._"))
+      );
+      const metas: VideoPlayerMeta[] = [];
+      const metaByKey = new Map<string, VideoPlayerMeta>();
+      let metadataBytes = 0;
+      for (const entry of entries) {
+        throwIfAborted(signal);
+        if (!isMetadataEntry(entry.name)) continue;
+        const { meta, byteLength } = await readArchivedMeta(entry, 16 * 1024 * 1024 - metadataBytes, signal);
+        metadataBytes += byteLength;
+        if (meta) {
+          metas.push(meta);
+          indexReplayMeta(metaByKey, entry.name, meta);
+        }
       }
-    }
 
-    assignPartTotals(items, meta?.files);
-    return { items };
+      const items: VideoPlayerItem[] = [];
+      for (const entry of entries) {
+        throwIfAborted(signal);
+        if (isMetadataEntry(entry.name)) continue;
+        const header = await readOfflineMediaHeader({ stream: () => streamArchiveEntry(entry, signal) });
+        const resolved = resolvePlayableMedia(entry.name, header);
+        if (!resolved) continue;
+        const meta = lookupReplayMeta(metaByKey, entry.name) || (metas.length === 1 ? metas[0]! : null);
+        items.push(
+          withPartIndex(
+            {
+              id: `${archive.archiveId}:${entry.entryId}`,
+              name: basename(entry.name),
+              source: "",
+              recordingEntry: entry,
+              type: resolved.type,
+              meta: resolveItemMeta(meta, entry.name),
+              recordingId: archive.archiveId,
+              recordingLabel: stripOfflineExtension(file.name)
+            },
+            resolved.partIndex
+          )
+        );
+      }
+
+      throwIfAborted(signal);
+      assignPartTotals(
+        items,
+        metas.flatMap((meta) => meta.files || [])
+      );
+      if (!items.length) await removeRecordingArchive(archive.archiveId);
+      return { items };
+    } catch (error) {
+      await removeRecordingArchive(archive.archiveId);
+      throw error;
+    }
   }
 
-  async function parseSingleBuffer(
+  async function parseSingleBlob(
     fileName: string,
-    buffer: ArrayBuffer,
-    meta: VideoPlayerMeta | null = null
+    blob: Blob,
+    meta: VideoPlayerMeta | null = null,
+    header?: ArrayBuffer
   ): Promise<ParseResult> {
     const recordingId = createId(fileName);
     const recordingLabel = stripOfflineExtension(fileName);
-    const item = buildItemFromResolved(fileName, buffer, meta, recordingId, recordingLabel);
+    const item = await buildItemFromBlob(fileName, blob, meta, recordingId, recordingLabel, header);
 
     return { items: item ? [item] : [] };
   }
 
-  async function parseFiles(files: File[]) {
+  async function parseFiles(files: File[], signal?: AbortSignal) {
     const items: VideoPlayerItem[] = [];
     const metaByKey = new Map<string, VideoPlayerMeta>();
-    const archives: Array<{ fileName: string; tarBuffer: ArrayBuffer }> = [];
-    const mediaFiles: Array<{ fileName: string; buffer: ArrayBuffer }> = [];
-
-    for (const file of files) {
-      const fileName = basename(file.name);
-      const buffer = await file.arrayBuffer();
-      const unwrapped = unwrapGzip(buffer);
-      let tarBuffer: ArrayBuffer | null = null;
-      if (isTarBuffer(unwrapped)) tarBuffer = unwrapped;
-      else if (isTarBuffer(buffer)) tarBuffer = buffer;
-
-      if (tarBuffer || isTarPackageName(fileName)) {
-        archives.push({ fileName, tarBuffer: tarBuffer || unwrapped });
-        continue;
-      }
-
-      if (isMetadataEntry(fileName)) {
-        const parsedMeta = safeParseJson(isGzipBuffer(buffer) ? unwrapped : buffer);
-
-        if (parsedMeta) indexReplayMeta(metaByKey, fileName, parsedMeta);
-
-        continue;
-      }
-
-      mediaFiles.push({ fileName, buffer });
-    }
-
-    for (const archive of archives) {
-      items.push(...(await parseTarBuffer(archive.fileName, archive.tarBuffer)).items);
-    }
-
+    const archives: File[] = [];
+    const mediaFiles: Array<{ file: File; header: ArrayBuffer }> = [];
     const looseItems: VideoPlayerItem[] = [];
-    for (const file of mediaFiles) {
-      const meta = lookupReplayMeta(metaByKey, file.fileName);
-      looseItems.push(...(await parseSingleBuffer(file.fileName, file.buffer, meta)).items);
-    }
 
-    assignPartTotals(looseItems);
-    items.push(...looseItems);
-    return items;
+    try {
+      for (const file of files) {
+        throwIfAborted(signal);
+        const fileName = basename(file.name);
+        const header = await readOfflineMediaHeader(file);
+
+        if (isTarBuffer(header) || isTarPackageName(fileName)) {
+          archives.push(file);
+          continue;
+        }
+
+        if (isMetadataEntry(fileName)) {
+          const parsedMeta = safeParseJson(unwrapGzip(await file.arrayBuffer()));
+
+          if (parsedMeta) indexReplayMeta(metaByKey, fileName, parsedMeta);
+
+          continue;
+        }
+
+        mediaFiles.push({ file, header });
+      }
+
+      for (const archive of archives) {
+        throwIfAborted(signal);
+        items.push(...(await parseArchiveFile(archive, signal)).items);
+      }
+
+      for (const { file, header } of mediaFiles) {
+        throwIfAborted(signal);
+        const meta = lookupReplayMeta(metaByKey, file.name);
+        looseItems.push(...(await parseSingleBlob(file.name, file, meta, header)).items);
+      }
+
+      assignPartTotals(looseItems);
+      items.push(...looseItems);
+      throwIfAborted(signal);
+      return items;
+    } catch (error) {
+      await releaseBrowserVideoPlayerItems([...items, ...looseItems]);
+      throw error;
+    }
   }
 
   async function parsePaths(filePaths: string[]) {

@@ -53,6 +53,15 @@ const sectionDefs = computed(() => {
       authenticatedOnly: false
     },
     {
+      key: "shortcuts" as const,
+      label: t("Shortcuts.Title"),
+      description: t("Shortcuts.Description"),
+      icon: "i-lucide-keyboard",
+      routeName: "setting-shortcuts",
+      desktopOnly: false,
+      authenticatedOnly: false
+    },
+    {
       key: "application" as const,
       label: t("Common.OpenWith"),
       description: t("Setting.ApplicationDescription"),
@@ -183,7 +192,7 @@ watch(
                 :ui="{
                   root: 'relative mb-8 border-0 py-0',
                   wrapper: 'flex flex-col gap-0',
-                  title: 'text-xl font-semibold tracking-tight text-highlighted',
+                  title: 'text-2xl sm:text-2xl font-semibold tracking-tight text-highlighted',
                   description: 'mt-1.5 text-sm text-muted'
                 }"
               />

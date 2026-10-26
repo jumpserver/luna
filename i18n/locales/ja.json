@@ -1355,6 +1355,8 @@
     "RdpFullScreen": "全画面",
     "RdpMultiScreen": "マルチスクリーン",
     "RdpDrivesRedirect": "ドライブのリダイレクト",
+    "RdpPrintersRedirect": "プリンターのリダイレクト",
+    "RdpPrintersRedirectDescription": "RDP 接続でプリンターをリダイレクトします。Web セッションでは印刷結果を PDF としてダウンロードします。",
     "RdpLocalClientDescription": "ローカル RDP クライアントにのみ適用され、Web リモートデスクトップには影響しません。",
     "RemoteMicrophone": "リモートマイク",
     "RdpFileReusable": "RDP ファイルの再利用",
@@ -2688,5 +2690,42 @@
     "invalid-site": "サイト URL が無効です。認証情報、クエリ、フラグメントを含まない HTTP または HTTPS URL を入力してください。",
     "invalid-client-version": "実行中のクライアントのバージョンが無効です。リリースバージョンを注入してビルドしたクライアントを使用してください。",
     "Continue": "接続を続行"
+  },
+  "Shortcuts": {
+    "Title": "キーボードショートカット",
+    "Description": "アプリのショートカットをカスタマイズして、リモートセッションとの競合を避けます。",
+    "Search": "操作やショートカットを検索",
+    "ResetAll": "すべて既定に戻す",
+    "Hint": "変更はこのデバイスですぐに反映されます。アプリのショートカットは適用範囲内で優先されます。ブラウザーや OS のショートカットは使用できない場合があります。エディターとリモートセッションのキー設定は変更されません。",
+    "DesktopOnly": "デスクトップ版のみ",
+    "Disabled": "無効",
+    "Change": "ショートカットを変更：{action}",
+    "Disable": "ショートカットを無効化：{action}",
+    "Restore": "既定に戻す：{action}",
+    "Reserved": "この組み合わせはシステム、ブラウザー、またはエディターで予約されています。別のショートカットを選んでください。",
+    "Conflict": "この組み合わせは「{action}」に割り当てられています。先にそのショートカットを変更または無効化してください。",
+    "ModifierRequired": "Ctrl、Command、Alt のいずれかと他のキーを組み合わせてください。Shift だけでは設定できません。",
+    "RecordHint": "キーの組み合わせを押してから保存してください。Esc でキャンセル、Tab でコントロールを移動します。",
+    "PressKeys": "キーの組み合わせを押してください",
+    "RecordingFailed": "キー入力を開始できませんでした。このダイアログを閉じて、もう一度お試しください。",
+    "NoResults": "一致するショートカットはありません",
+    "DigitTabs": "数字キーでセッションを切り替える",
+    "DigitTabsHint": "{modifier}+1–8 でセッションを選択し、{modifier}+9 で最後のセッションを選択します。テキスト欄やエディターへの入力中は無効です。",
+    "ResetConfirm": "すべてのショートカットを既定に戻し、数字キーによるセッション切り替えを有効にしますか？",
+    "Actions": {
+      "previousTab": "前のセッション",
+      "nextTab": "次のセッション",
+      "closeTab": "現在のセッションを閉じる",
+      "focus": "集中モードを切り替える",
+      "fullscreen": "全画面表示を切り替える",
+      "rightPanel": "右パネルの表示を切り替える",
+      "terminalAi": "ターミナル AI を開く",
+      "localShell": "新しいローカルターミナル"
+    },
+    "Scopes": {
+      "workspace": "ワークスペース · セッションがアクティブなとき",
+      "application": "アプリ · 設定とダイアログ以外",
+      "terminal": "ターミナル · ターミナル AI が利用可能でフォーカスがあるとき"
+    }
   }
 }

@@ -23,6 +23,7 @@ export interface ApiRequest {
   headers?: Record<string, string>;
   orgId?: string;
   responseType?: "text";
+  timeoutMs?: number;
 }
 
 export class ApiRequestError extends Error {
@@ -283,6 +284,7 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   const response = await fetch(url, {
     method: request.method,
     credentials: "include",
+    ...(request.timeoutMs !== undefined ? { signal: AbortSignal.timeout(request.timeoutMs) } : {}),
     headers: {
       Accept: "application/json",
       ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),

@@ -1,5 +1,5 @@
 import { useLocalStorage } from "@vueuse/core";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, shallowRef } from "vue";
 import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
@@ -52,7 +52,7 @@ describe("AI overlay panel", () => {
     rightPanel.setPanelWidth(340);
   });
 
-  afterAll(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
 
   it("defaults to closed on desktop and remembers visibility independently for each workspace tab", () => {
     const panel = useAiPanel();
@@ -170,6 +170,24 @@ describe("AI overlay panel", () => {
       expect(resolveUnifiedAiPanel({ workspaceMode, protocol, surface, sessionKind })).toBe(expected);
     }
   );
+
+  it.each([{}, undefined])("queues terminal prompts without randomUUID (crypto: %j)", (crypto) => {
+    vi.stubGlobal("crypto", crypto);
+    const panel = useAiPanel();
+    const binding = { loginContext: "login", resourceId: "resource", agentId: "agent" };
+    panel.requestTerminalPrompt("pane", "Inspect", binding);
+    const first = panel.pendingTerminalPrompt.value!;
+    expect(first.id).toEqual(expect.any(String));
+    expect(first.id).not.toBe("");
+    panel.requestTerminalPrompt("pane", "Inspect again", binding);
+    const second = panel.pendingTerminalPrompt.value!;
+    expect(second).toMatchObject({ ...binding, paneId: "pane", text: "Inspect again" });
+    expect(second.id).not.toBe(first.id);
+    panel.takeTerminalPrompt(first.id);
+    expect(panel.pendingTerminalPrompt.value).toBe(second);
+    panel.takeTerminalPrompt(second.id);
+    expect(panel.pendingTerminalPrompt.value).toBeNull();
+  });
 
   it("carries the exact terminal and login binding into the unified assistant once", () => {
     const panel = useAiPanel();

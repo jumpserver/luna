@@ -1,21 +1,29 @@
 import type { RdpGraphics, ResolutionType } from "~/types";
 import { getLunaPreferences, updateLunaPreferences } from "~/composables/useApiRequest";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { resolveKeyboardLayout } from "~/lion/utils/keyboard";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type GraphicsFields = Pick<
   RdpGraphics,
-  "rdp_resolution" | "rdp_color_quality" | "rdp_smart_size" | "rdp_client_option"
+  | "rdp_resolution"
+  | "keyboard_layout"
+  | "rdp_color_quality"
+  | "rdp_smart_size"
+  | "rdp_client_option"
+  | "printers_redirect"
 >;
 
 export function useRdpResolutionPreference() {
   const user = useUserInfoStore();
   const {
     rdpResolution,
+    keyboardLayout: localKeyboardLayout,
     rdpColorQuality,
     rdpSmartSize,
     rdpClientOption,
     setRdpResolutionPreference,
+    setKeyboardLayoutPreference,
     setRdpColorQualityPreference,
     setRdpSmartSizePreference,
     setRdpClientOptionPreference
@@ -31,6 +39,7 @@ export function useRdpResolutionPreference() {
 
   const applyLocal = (partial: GraphicsFields) => {
     if (partial.rdp_resolution) setRdpResolutionPreference((partial.rdp_resolution || "auto") as ResolutionType);
+    if (partial.keyboard_layout) setKeyboardLayoutPreference(partial.keyboard_layout);
     if (partial.rdp_color_quality) setRdpColorQualityPreference(partial.rdp_color_quality);
     if (partial.rdp_smart_size != null) setRdpSmartSizePreference(partial.rdp_smart_size);
     if (Array.isArray(partial.rdp_client_option)) setRdpClientOptionPreference(partial.rdp_client_option);
@@ -52,8 +61,10 @@ export function useRdpResolutionPreference() {
         if (cancelled) return;
         const graphics: GraphicsFields = {
           rdp_resolution: preferences.graphics?.rdp_resolution,
+          keyboard_layout: resolveKeyboardLayout(preferences.graphics?.keyboard_layout),
           rdp_color_quality: preferences.graphics?.rdp_color_quality || "32",
           rdp_smart_size: preferences.graphics?.rdp_smart_size || "0",
+          printers_redirect: preferences.graphics?.printers_redirect ?? false,
           rdp_client_option: Array.isArray(preferences.graphics?.rdp_client_option)
             ? [...preferences.graphics.rdp_client_option]
             : []
@@ -126,19 +137,33 @@ export function useRdpResolutionPreference() {
       void patchGraphics({ rdp_color_quality: value || "32" });
     }
   });
+  const keyboardLayout = computed({
+    get: () => resolveKeyboardLayout(serverGraphics.value.keyboard_layout || localKeyboardLayout.value),
+    set: (value: string) => {
+      void patchGraphics({ keyboard_layout: resolveKeyboardLayout(value) });
+    }
+  });
   const smartSize = computed({
     get: () => serverGraphics.value.rdp_smart_size || rdpSmartSize.value || "0",
     set: (value: string) => {
       void patchGraphics({ rdp_smart_size: value || "0" });
     }
   });
+  const printersRedirect = computed({
+    get: () => serverGraphics.value.printers_redirect ?? false,
+    set: (value: boolean) => {
+      void patchGraphics({ printers_redirect: value });
+    }
+  });
 
   return {
     resolution,
+    keyboardLayout,
     busy,
     setResolution,
     colorQuality,
     smartSize,
+    printersRedirect,
     fullScreen: bindFlag("full_screen"),
     multiScreen: bindFlag("multi_screen"),
     drivesRedirect: bindFlag("drives_redirect")

@@ -7,6 +7,8 @@ import {
   clearTerminalCommandHistory,
   getAuthenticatedTerminalCommandHistoryScope
 } from "~/composables/useTerminalCommandHistory";
+import { message as lionMessages } from "~/lion/locales/modules";
+import { keyboardLayoutOptions } from "~/lion/utils/keyboard";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -145,6 +147,11 @@ const smartSizeItems = computed(() => [
   { label: t("Setting.Enable"), id: "1" }
 ]);
 
+const keyboardLayoutItems = computed(() => {
+  const messages = lionMessages[locale.value as keyof typeof lionMessages] || lionMessages.en;
+  return keyboardLayoutOptions.map((option) => ({ value: String(option.value), label: messages[option.label] }));
+});
+
 const selectedLanguage = computed<LangType>({
   get: () => (locale.value as LangType) || "zh",
   set: (code: LangType) => {
@@ -160,12 +167,14 @@ const selectedCharset = computed<CharsetType>({
 
 const {
   resolution: selectedResolution,
+  keyboardLayout: selectedKeyboardLayout,
   busy: graphicsBusy,
   colorQuality: selectedColorQuality,
   smartSize: selectedSmartSize,
   fullScreen: selectedFullScreen,
   multiScreen: selectedMultiScreen,
-  drivesRedirect: selectedDrivesRedirect
+  drivesRedirect: selectedDrivesRedirect,
+  printersRedirect: selectedPrintersRedirect
 } = useRdpResolutionPreference();
 const hasXPack = computed(() => currentUser.value?.xpackLicenseValid === true);
 
@@ -307,6 +316,18 @@ async function clearCommandHistory() {
     </SettingsGroup>
 
     <SettingsGroup :title="t('Setting.RemoteDesktop')">
+      <SettingsRow :title="t('RightPanel.KeyboardLayout')">
+        <USelect
+          v-model="selectedKeyboardLayout"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="keyboardLayoutItems"
+          :aria-label="t('RightPanel.KeyboardLayout')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
         <USelect
           v-model="selectedResolution"
@@ -343,6 +364,14 @@ async function clearCommandHistory() {
           :aria-label="t('Setting.RdpSmartSize')"
           size="sm"
           class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpPrintersRedirect')" :description="t('Setting.RdpPrintersRedirectDescription')">
+        <USwitch
+          v-model="selectedPrintersRedirect"
+          :disabled="graphicsBusy"
+          :aria-label="t('Setting.RdpPrintersRedirect')"
         />
       </SettingsRow>
 

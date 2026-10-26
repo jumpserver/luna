@@ -1356,6 +1356,8 @@
     "RdpFullScreen": "Plein écran",
     "RdpMultiScreen": "Plusieurs écrans",
     "RdpDrivesRedirect": "Redirection des lecteurs",
+    "RdpPrintersRedirect": "Redirection des imprimantes",
+    "RdpPrintersRedirectDescription": "Redirige les imprimantes des connexions RDP. Les sessions web téléchargent les documents imprimés au format PDF.",
     "RdpLocalClientDescription": "S’applique uniquement au client RDP local, et non au bureau distant web.",
     "RemoteMicrophone": "Microphone distant",
     "RdpFileReusable": "Fichier RDP réutilisable",
@@ -2688,5 +2690,42 @@
     "invalid-site": "URL du site invalide. Saisissez une URL HTTP ou HTTPS sans identifiants, paramètres ni fragment.",
     "invalid-client-version": "La version du client est invalide. Utilisez un client compilé avec sa version de publication.",
     "Continue": "Continuer la connexion"
+  },
+  "Shortcuts": {
+    "Title": "Raccourcis clavier",
+    "Description": "Personnalisez les raccourcis de l’application et évitez les conflits avec les sessions distantes.",
+    "Search": "Rechercher une action ou un raccourci",
+    "ResetAll": "Tout rétablir par défaut",
+    "Hint": "Les modifications prennent effet immédiatement sur cet appareil. Les raccourcis de l’application sont prioritaires dans leur contexte. Certains raccourcis du navigateur ou du système peuvent être indisponibles. Les raccourcis de l’éditeur et des sessions distantes restent inchangés.",
+    "DesktopOnly": "Application de bureau uniquement",
+    "Disabled": "Désactivé",
+    "Change": "Modifier le raccourci : {action}",
+    "Disable": "Désactiver le raccourci : {action}",
+    "Restore": "Rétablir par défaut : {action}",
+    "Reserved": "Cette combinaison est réservée par le système, le navigateur ou l’éditeur. Choisissez un autre raccourci.",
+    "Conflict": "Cette combinaison est déjà attribuée à « {action} ». Modifiez ou désactivez d’abord ce raccourci.",
+    "ModifierRequired": "Utilisez Ctrl, Command ou Alt avec une autre touche. Maj seul ne suffit pas.",
+    "RecordHint": "Appuyez sur une combinaison de touches, puis enregistrez. Échap annule. Tab passe d’un contrôle à l’autre.",
+    "PressKeys": "Appuyez sur une combinaison de touches",
+    "RecordingFailed": "Impossible de commencer la saisie. Fermez cette boîte de dialogue et réessayez.",
+    "NoResults": "Aucun raccourci correspondant",
+    "DigitTabs": "Changer de session avec les touches numériques",
+    "DigitTabsHint": "{modifier}+1–8 sélectionne une session ; {modifier}+9 sélectionne la dernière. Désactivé pendant la saisie dans un champ de texte ou l’éditeur.",
+    "ResetConfirm": "Rétablir tous les raccourcis par défaut et activer le changement de session avec les touches numériques ?",
+    "Actions": {
+      "previousTab": "Session précédente",
+      "nextTab": "Session suivante",
+      "closeTab": "Fermer la session actuelle",
+      "focus": "Basculer le mode concentration",
+      "fullscreen": "Basculer le plein écran",
+      "rightPanel": "Afficher ou masquer le panneau droit",
+      "terminalAi": "Ouvrir l’IA du terminal",
+      "localShell": "Nouveau terminal local"
+    },
+    "Scopes": {
+      "workspace": "Espace de travail · lorsqu’une session est active",
+      "application": "Application · hors des paramètres et des boîtes de dialogue",
+      "terminal": "Terminal · lorsque l’IA du terminal est disponible et que le terminal a le focus"
+    }
   }
 }

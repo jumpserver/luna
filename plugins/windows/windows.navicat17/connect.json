@@ -10,8 +10,11 @@
     "required": true
   },
   "launch": {
-    "type": "args",
-    "template": "{url}"
+    "type": "script",
+    "script": "scripts/launch.mjs",
+    "interpreter": "node",
+    "input": "stdin",
+    "serialize": true
   },
   "display_name": "Navicat premium Lite 17"
 }
