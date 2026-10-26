@@ -1,3 +1,11 @@
+import {
+  matchesShortcut,
+  normalizeShortcutOverrides,
+  shortcutAccelerator,
+  shortcutBindings,
+  shortcutDefinitions
+} from "../../../ui/shared/shortcuts";
+import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
 import type { MenuItemConstructorOptions } from "electron";
 import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -68,6 +76,9 @@ if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}
 const windows = new Map();
 const subscriptions = new Map();
 const stores = new Map();
+let shortcutOverrides: ShortcutOverrides = {};
+const shortcutRecorders = new WeakSet();
+const shortcutEnvironment = { mac: process.platform === "darwin", desktop: true };
 const localShellSessions = new Map();
 const apiStreams = new Map();
 const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
@@ -519,19 +530,22 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
 
-  windowWebContents.on("before-input-event", (event, input) => {
-    const closeCurrentTab =
-      input.type === "keyDown" &&
-      !input.isAutoRepeat &&
-      input.alt &&
-      input.shift &&
-      !input.control &&
-      !input.meta &&
-      (input.code === "KeyW" || input.key.toLowerCase() === "w");
-    if (!closeCurrentTab) return;
-
-    event.preventDefault();
-    emitDesktopEvent("desktop-menu-command", "close-current-tab", label);
+  windowWebContents.on("before-input-event", (_event, input) => {
+    // Let the renderer resolve scope/focus before consuming application shortcuts.
+    // Native menus still show the configured accelerators and retain their click actions.
+    const key = {
+      code: input.code,
+      ctrlKey: input.control,
+      metaKey: input.meta,
+      altKey: input.alt,
+      shiftKey: input.shift
+    };
+    const applicationShortcut = shortcutDefinitions.some(({ id }) =>
+      shortcutBindings(id, shortcutOverrides, shortcutEnvironment).some((binding) =>
+        matchesShortcut(key, binding, shortcutEnvironment.mac)
+      )
+    );
+    windowWebContents.setIgnoreMenuShortcuts(shortcutRecorders.has(windowWebContents) || applicationShortcut);
   });
 
   if (allowDevTools) {
@@ -818,13 +832,13 @@ function buildMenu() {
       submenu: [
         {
           label: labels.newLocalShell,
-          accelerator: "CmdOrCtrl+T",
+          accelerator: shortcutAccelerator("localShell", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("open-local-shell")
         },
         { type: "separator" },
         {
           label: labels.closeTab,
-          accelerator: "CmdOrCtrl+W",
+          accelerator: shortcutAccelerator("closeTab", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("close-current-tab")
         }
       ]
@@ -846,17 +860,21 @@ function buildMenu() {
       submenu: [
         {
           label: labels.focusMode,
-          accelerator: "CmdOrCtrl+Shift+P",
+          accelerator: shortcutAccelerator("focus", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("toggle-focus-mode")
         },
         { label: labels.leftPanel, click: () => sendMenuCommand("toggle-left-panel") },
-        { label: labels.rightPanel, click: () => sendMenuCommand("toggle-right-panel") },
+        {
+          label: labels.rightPanel,
+          accelerator: shortcutAccelerator("rightPanel", shortcutOverrides, shortcutEnvironment),
+          click: () => sendMenuCommand("toggle-right-panel")
+        },
         { label: labels.batchCommand, click: () => sendMenuCommand("toggle-batch-command") },
         { label: labels.statusBar, click: () => sendMenuCommand("toggle-status-bar") },
         { type: "separator" },
         {
           label: labels.fullscreen,
-          accelerator: "CmdOrCtrl+Shift+F",
+          accelerator: shortcutAccelerator("fullscreen", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("toggle-fullscreen-mode")
         }
       ]
@@ -986,8 +1004,15 @@ async function handleStore(command, args) {
   const store = stores.get(args.rid);
   if (!store) throw new Error("Desktop store is not loaded");
   if (command === "plugin:store|set") {
-    store.data[args.key] = args.value;
-    emitDesktopEvent("store://change", { resourceId: args.rid, key: args.key, value: args.value, exists: true });
+    for (const [rid, loaded] of stores) {
+      if (loaded.path !== store.path) continue;
+      loaded.data[args.key] = args.value;
+      emitDesktopEvent("store://change", { resourceId: rid, key: args.key, value: args.value, exists: true });
+    }
+    if (path.basename(store.path) === "user-setting.json" && args.key === "state") {
+      shortcutOverrides = normalizeShortcutOverrides(args.value?.shortcutOverrides);
+      buildMenu();
+    }
     return null;
   }
   if (command === "plugin:store|get") return [store.data[args.key], Object.hasOwn(store.data, args.key)];
@@ -1039,6 +1064,13 @@ async function handleInvoke(event, request) {
   if (command === "plugin:event|unlisten") return subscriptions.delete(args.eventId);
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
     emitDesktopEvent(args.event, args.payload);
+    return null;
+  }
+
+  if (command === "set_shortcut_recording") {
+    if (args.enabled === true) shortcutRecorders.add(event.sender);
+    else shortcutRecorders.delete(event.sender);
+    event.sender.setIgnoreMenuShortcuts(args.enabled === true);
     return null;
   }
 
@@ -1517,6 +1549,11 @@ app.whenReady().then(async () => {
   const persistedSettings = await readFile(path.join(app.getPath("userData"), "user-setting.json"), "utf8").catch(
     () => ""
   );
+  try {
+    shortcutOverrides = normalizeShortcutOverrides(JSON.parse(persistedSettings).state?.shortcutOverrides);
+  } catch {
+    shortcutOverrides = {};
+  }
   debugLogService.setEnabled(parsePersistedDebugLogEnabled(persistedSettings));
   activateDebugLogService(debugLogService);
   if (debugLogService.isEnabled) {

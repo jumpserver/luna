@@ -16,7 +16,7 @@ watch(sessionGroupSaveError, (error) => {
 });
 const appBaseURL = useRuntimeConfig().app.baseURL;
 const { isMacOS } = usePlatform();
-const { open: settingsOpen } = useSettingsWindow();
+const shortcuts = useAppShortcuts();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const showAddSession = computed(() => !props.standalone && (loggedIn.value || isDesktopRuntime()));
@@ -30,7 +30,6 @@ const {
   renameTabGroup,
   toggleTabGroup,
   ungroupTabs,
-  activateAdjacentSession,
   canSplitWorkspace,
   draggedTabId,
   enterFocusMode,
@@ -142,7 +141,7 @@ function usesPrimaryTabModifier(event: KeyboardEvent) {
 }
 
 function shouldShowShortcutHint(index: number) {
-  if (!showShortcutHints.value) return false;
+  if (!shortcuts.sessionDigitShortcuts.value || !showShortcutHints.value) return false;
   if (tabs.value.length <= 9) return index < tabs.value.length;
   return index < 8 || index === tabs.value.length - 1;
 }
@@ -363,7 +362,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       tabMenuItem(
         {
           label: t("TabMenu.FullscreenCurrent"),
-          kbds: ["meta", "shift", "F"],
+          kbds: shortcuts.kbds("fullscreen"),
           onSelect: () => {
             hideContextMenu();
             void enterFullscreenMode(tab.id);
@@ -403,7 +402,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       tabMenuItem(
         {
           label: t("TabMenu.CloseCurrent"),
-          kbds: ["alt", "shift", "W"],
+          kbds: shortcuts.kbds("closeTab"),
           onSelect: () => {
             hideContextMenu();
             void closeTab(tab);
@@ -418,7 +417,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.FocusCurrent"),
-        kbds: ["meta", "shift", "P"],
+        kbds: shortcuts.kbds("focus"),
         onSelect: () => {
           hideContextMenu();
           enterFocusMode(tab.id);
@@ -429,7 +428,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.FullscreenCurrent"),
-        kbds: ["meta", "shift", "F"],
+        kbds: shortcuts.kbds("fullscreen"),
         onSelect: () => {
           hideContextMenu();
           void enterFullscreenMode(tab.id);
@@ -527,7 +526,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.CloseCurrent"),
-        kbds: ["alt", "shift", "W"],
+        kbds: shortcuts.kbds("closeTab"),
         onSelect: () => {
           hideContextMenu();
           void closeTab(tab);
@@ -585,7 +584,7 @@ const tabMenuItems = computed(
       {
         label: t("TabMenu.CloseCurrent"),
         icon: "i-lucide-x",
-        kbds: ["alt", "shift", "W"],
+        kbds: shortcuts.kbds("closeTab"),
         ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
         disabled: !activeTab.value,
         onSelect: () => {
@@ -659,16 +658,11 @@ function selectTab(id: string) {
   nextTick(scrollActiveTabIntoView);
 }
 
-function switchTab(direction: "previous" | "next") {
-  activateAdjacentSession(direction);
-  nextTick(scrollActiveTabIntoView);
-}
-
 function isTypingIntoEditable(event: KeyboardEvent) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return false;
   if (target.closest(".xterm")) return false;
-  if (target.isContentEditable) return true;
+  if (target.isContentEditable || target.closest(".cm-editor")) return true;
 
   const tagName = target.tagName;
   return (
@@ -676,20 +670,12 @@ function isTypingIntoEditable(event: KeyboardEvent) {
   );
 }
 
-function getTabIndexFromDigitShortcut(event: KeyboardEvent) {
-  const match = event.code.match(/^(?:Digit|Numpad)([1-9])$/);
-  if (!match) return -1;
-
-  if (!usesPrimaryTabModifier(event)) return -1;
-
-  const digit = Number(match[1]);
-  if (!digit) return -1;
-
-  return digit === 9 ? tabs.value.length - 1 : digit - 1;
-}
-
 function syncShortcutHintsVisibility(event: KeyboardEvent) {
-  showShortcutHints.value = tabs.value.length >= 2 && !isTypingIntoEditable(event) && usesPrimaryTabModifier(event);
+  showShortcutHints.value =
+    shortcuts.sessionDigitShortcuts.value &&
+    tabs.value.length >= 2 &&
+    !isTypingIntoEditable(event) &&
+    usesPrimaryTabModifier(event);
 }
 
 function clearShortcutHints() {
@@ -730,48 +716,7 @@ watch(
   { flush: "post" }
 );
 
-useEventListener(window, "keydown", (event: KeyboardEvent) => {
-  syncShortcutHintsVisibility(event);
-
-  const closeCurrentTab =
-    !event.repeat &&
-    event.altKey &&
-    event.shiftKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    event.code === "KeyW" &&
-    !settingsOpen.value &&
-    activeTab.value;
-  if (closeCurrentTab) {
-    event.preventDefault();
-    event.stopPropagation();
-    void closeTab(closeCurrentTab);
-    return;
-  }
-
-  if (event.defaultPrevented || tabs.value.length < 2 || isTypingIntoEditable(event)) return;
-
-  const targetIndex = getTabIndexFromDigitShortcut(event);
-  if (targetIndex >= 0) {
-    const targetTab = tabs.value[Math.min(targetIndex, tabs.value.length - 1)];
-    if (!targetTab) return;
-    event.preventDefault();
-    selectTab(targetTab.id);
-    return;
-  }
-
-  if (!event.altKey || !event.shiftKey) return;
-
-  if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    switchTab("previous");
-  }
-
-  if (event.key === "ArrowRight") {
-    event.preventDefault();
-    switchTab("next");
-  }
-});
+useEventListener(window, "keydown", syncShortcutHintsVisibility);
 
 useEventListener(window, "keyup", (event: KeyboardEvent) => {
   syncShortcutHintsVisibility(event);

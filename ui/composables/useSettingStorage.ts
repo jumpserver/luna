@@ -1,3 +1,5 @@
+import type { ShortcutOverrides } from "~/shared/shortcuts";
+import { normalizeShortcutOverrides } from "~/shared/shortcuts";
 import type { ThemePresetId } from "~/composables/useThemePresets";
 import type { DesktopStore, DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
@@ -87,6 +89,8 @@ export interface UserSettingPersistedState {
   modernIsland: boolean;
   uiRadius: UiRadius;
   debugLog: boolean;
+  shortcutOverrides: ShortcutOverrides;
+  sessionDigitShortcuts: boolean;
 }
 
 const STORE_PATH = "user-setting.json";
@@ -127,6 +131,8 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS,
   modernIsland: false,
   uiRadius: "small",
+  shortcutOverrides: {},
+  sessionDigitShortcuts: true,
   debugLog: false
 };
 
@@ -145,7 +151,9 @@ const loadWebState = () => {
       uiFontSize: normalizeFontSize(parsed.uiFontSize),
       codeFontSize: normalizeFontSize(parsed.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(parsed.sidebarWidth),
-      sidebarSections: normalizeSidebarSections(parsed.sidebarSections)
+      sidebarSections: normalizeSidebarSections(parsed.sidebarSections),
+      shortcutOverrides: normalizeShortcutOverrides(parsed.shortcutOverrides),
+      sessionDigitShortcuts: parsed.sessionDigitShortcuts !== false
     };
   } catch {
     return DEFAULT_STATE;
@@ -184,7 +192,9 @@ export const useSettingStorage = () => {
       uiFontSize: normalizeFontSize(saved.uiFontSize),
       codeFontSize: normalizeFontSize(saved.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(saved.sidebarWidth),
-      sidebarSections: normalizeSidebarSections(saved.sidebarSections)
+      sidebarSections: normalizeSidebarSections(saved.sidebarSections),
+      shortcutOverrides: normalizeShortcutOverrides(saved.shortcutOverrides),
+      sessionDigitShortcuts: saved.sessionDigitShortcuts !== false
     };
   };
 
@@ -225,12 +235,23 @@ export const useSettingStorage = () => {
           uiFontSize: normalizeFontSize(next.uiFontSize),
           codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
-          sidebarSections: normalizeSidebarSections(next.sidebarSections)
+          sidebarSections: normalizeSidebarSections(next.sidebarSections),
+          shortcutOverrides: normalizeShortcutOverrides(next.shortcutOverrides),
+          sessionDigitShortcuts: next.sessionDigitShortcuts !== false
         });
       };
 
+      const onStorage = (event: StorageEvent) => {
+        if (event.key === WEB_STORE_KEY || event.key === null) {
+          handler(new CustomEvent(WEB_STORE_KEY, { detail: loadWebState() }));
+        }
+      };
       globalThis.addEventListener(WEB_STORE_KEY, handler);
-      return () => globalThis.removeEventListener(WEB_STORE_KEY, handler);
+      globalThis.addEventListener("storage", onStorage);
+      return () => {
+        globalThis.removeEventListener(WEB_STORE_KEY, handler);
+        globalThis.removeEventListener("storage", onStorage);
+      };
     }
 
     const store = await ensureStore();
@@ -242,7 +263,9 @@ export const useSettingStorage = () => {
           uiFontSize: normalizeFontSize(next.uiFontSize),
           codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
-          sidebarSections: normalizeSidebarSections(next.sidebarSections)
+          sidebarSections: normalizeSidebarSections(next.sidebarSections),
+          shortcutOverrides: normalizeShortcutOverrides(next.shortcutOverrides),
+          sessionDigitShortcuts: next.sessionDigitShortcuts !== false
         });
       }
     });

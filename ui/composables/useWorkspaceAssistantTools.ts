@@ -73,7 +73,7 @@ export const workspaceOperationTools: AgentMcpTool[] = [
         "asset"
       ),
       id,
-      section: choice("general", "user", "appearance", "application", "about"),
+      section: choice("general", "user", "appearance", "shortcuts", "application", "about"),
       visible: { type: "boolean" }
     },
     ["target"]

@@ -22,9 +22,8 @@ async function selectGroup(id: string) {
   if (failures.length)
     toast.add({ title: t("SavedGroups.OpenFailed"), description: failures.join("\n"), color: "warning" });
 }
-const { isMacOS } = usePlatform();
+const shortcuts = useAppShortcuts();
 const localShellAvailable = computed(() => isDesktopRuntime());
-const localShellShortcutModifier = computed(() => (isMacOS.value ? "meta" : "ctrl"));
 const listTitle = computed(() => (search.value.trim() ? t("AddSession.SearchResults") : t("Menu.RecentConnections")));
 const listEmpty = computed(() =>
   search.value.trim() ? t("AddSession.NoMatchingAssets") : t("RecentConnections.Empty")
@@ -148,8 +147,7 @@ watch(open, (value) => {
                 <span class="block truncate text-[11px] text-muted">{{ t("AddSession.LocalShellHint") }}</span>
               </span>
               <span class="flex shrink-0 items-center gap-px">
-                <UKbd :value="localShellShortcutModifier" size="sm" />
-                <UKbd value="T" size="sm" />
+                <UKbd v-for="(key, index) in shortcuts.kbds('localShell')" :key="index" :value="key" size="sm" />
               </span>
             </button>
           </template>

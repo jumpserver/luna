@@ -2636,5 +2636,42 @@
     "invalid-site": "URL del sitio inválida. Introduzca una URL HTTP o HTTPS sin credenciales, consulta ni fragmento.",
     "invalid-client-version": "La versión del cliente es inválida. Use un cliente compilado con su versión de publicación.",
     "Continue": "Continuar conexión"
+  },
+  "Shortcuts": {
+    "Title": "Atajos de teclado",
+    "Description": "Personaliza los atajos de la aplicación y evita conflictos con las sesiones remotas.",
+    "Search": "Buscar acciones o atajos",
+    "ResetAll": "Restaurar todos los valores predeterminados",
+    "Hint": "Los cambios se aplican de inmediato en este dispositivo. Los atajos de la aplicación tienen prioridad en su ámbito. Algunos atajos del navegador y del sistema operativo pueden no estar disponibles. Los mapas de teclas del editor y de las sesiones remotas no cambian.",
+    "DesktopOnly": "Solo en la aplicación de escritorio",
+    "Disabled": "Desactivado",
+    "Change": "Cambiar atajo: {action}",
+    "Disable": "Desactivar atajo: {action}",
+    "Restore": "Restaurar valor predeterminado: {action}",
+    "Reserved": "Esta combinación está reservada por el sistema, el navegador o el editor. Elige otro atajo.",
+    "Conflict": "Esta combinación ya está asignada a «{action}». Cambia o desactiva ese atajo primero.",
+    "ModifierRequired": "Usa Ctrl, Command o Alt junto con otra tecla. Mayús por sí sola no es suficiente.",
+    "RecordHint": "Pulsa una combinación de teclas y guarda. Esc cancela. Tab permite desplazarse entre los controles.",
+    "PressKeys": "Pulsa una combinación de teclas",
+    "RecordingFailed": "No se pudo iniciar la captura. Cierra este diálogo y vuelve a intentarlo.",
+    "NoResults": "No hay atajos coincidentes",
+    "DigitTabs": "Cambiar de sesión con las teclas numéricas",
+    "DigitTabsHint": "{modifier}+1–8 selecciona una sesión; {modifier}+9 selecciona la última. Se desactiva al escribir en un campo de texto o en el editor.",
+    "ResetConfirm": "¿Restaurar todos los atajos y activar el cambio de sesión con las teclas numéricas?",
+    "Actions": {
+      "previousTab": "Sesión anterior",
+      "nextTab": "Sesión siguiente",
+      "closeTab": "Cerrar sesión actual",
+      "focus": "Alternar modo de concentración",
+      "fullscreen": "Alternar pantalla completa",
+      "rightPanel": "Mostrar u ocultar panel derecho",
+      "terminalAi": "Abrir IA del terminal",
+      "localShell": "Nuevo terminal local"
+    },
+    "Scopes": {
+      "workspace": "Espacio de trabajo · cuando hay una sesión activa",
+      "application": "Aplicación · fuera de los ajustes y diálogos",
+      "terminal": "Terminal · cuando la IA del terminal está disponible y el terminal tiene el foco"
+    }
   }
 }
