@@ -72,7 +72,7 @@ retain the existing workspace.
 ## Additional dialect presentation and validation boundaries
 
 `ui/chen/utils/sqlDialect.ts` centralizes display names, identifier quoting, editor tokenization,
-initial SELECTs, namespace hierarchy, and preview syntax. MySQL, MariaDB, ClickHouse, and OceanBase
+initial SELECT statements, namespace hierarchy, and preview syntax. MySQL, MariaDB, ClickHouse, and OceanBase
 MySQL mode use a database-to-objects hierarchy; PostgreSQL, Oracle, SQL Server, Db2, Dameng, and
 OceanBase Oracle mode include a schema level. Missing schemas are not replaced with a database
 name in schema-qualified SQL.
