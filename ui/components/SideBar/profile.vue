@@ -699,6 +699,13 @@ const handleConfirm = async (confirmation?: { id: number; accountId: string; gen
     });
     if (generation !== loginRequestGeneration) return;
     if (payload?.status === "confirmation-required" && payload.compatibility) {
+      const { status, reason } = payload.compatibility;
+      if (status === "unknown" && (reason === "network" || reason === "timeout")) {
+        hasValidationError.value = true;
+        validationField.value = "site";
+        errorMessage.value = t("Login.InvalidSiteError");
+        return;
+      }
       openModal.value = false;
       loginBtn.value = false;
       useClientCompatibility().show(payload.compatibility, async () => {
@@ -709,14 +716,13 @@ const handleConfirm = async (confirmation?: { id: number; accountId: string; gen
       return;
     }
     if (!payload || payload.status !== "success") {
-      loginBtn.value = false;
+      if (payload && payload.status !== "stale") throw new Error(t("Login.LoginFailed"));
       return;
     }
     if (leavingCurrentSite) await closeCurrentSiteWorkspace();
     if (generation !== loginRequestGeneration) return;
     if (!(await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName }))) {
-      loginBtn.value = false;
-      return;
+      throw new Error(t("Login.LoginFailed"));
     }
     void saveRecentSite(normalizedSite);
   } catch (e: any) {
@@ -742,14 +748,17 @@ const handleConfirm = async (confirmation?: { id: number; accountId: string; gen
         progress: true,
         duration: 4000
       });
-      enableLoginBtnAfter(2000);
     }
 
     nextTick(() => {
       inputRef.value?.$el?.querySelector("input")?.focus();
     });
   } finally {
-    if (generation === loginRequestGeneration) loginInFlight = false;
+    if (generation === loginRequestGeneration) {
+      loginInFlight = false;
+      clearLoginBtnUnlockTimer();
+      loginBtn.value = false;
+    }
   }
 };
 
@@ -786,8 +795,8 @@ onMounted(async () => {
 
     addErrorToast({
       id: loginFailureToastId,
-      title: t("Login.LoginFailed"),
-      description,
+      title: reason === "invalid-site" ? description : t("Login.LoginFailed"),
+      description: reason === "invalid-site" ? undefined : description,
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000
@@ -819,8 +828,8 @@ onMounted(async () => {
 
     addErrorToast({
       id: loginFailureToastId,
-      title: t("Login.LoginFailed"),
-      description,
+      title: reason === "invalid-site" ? description : t("Login.LoginFailed"),
+      description: reason === "invalid-site" ? undefined : description,
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000
@@ -1237,7 +1246,7 @@ onBeforeUnmount(() => {
         @clear="clearRecentSites"
       />
 
-      <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
+      <div v-if="hasValidationError" role="alert" class="text-error text-xs px-1">
         {{ errorMessage }}
       </div>
     </div>
