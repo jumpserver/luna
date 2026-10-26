@@ -37,6 +37,7 @@ test("Windows Navicat launch behavior comes entirely from its plugin configurati
     assert.equal(application.script_interpreter, "node");
     assert.equal(application.script_input, "stdin");
     assert.equal(application.script_serialize, true);
+    assert.match(application.script_exit_messages[23], /step 3/);
     const launcher = new LocalApplicationLauncher(
       { isPackaged: false },
       projectRoot,

@@ -1,42 +1,90 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 
-// Navicat 16 has no connection URI, and 17/18 do not accept one as a bare
-// executable argument. Use the native connection dialog in all three versions.
+export const navicatAutoItSteps = JSON.parse(readFileSync(new URL("./autoit-steps.json", import.meta.url), "utf8"));
+
+// This dialog sequence targets Navicat 17.0.13. Other versions are not adapted.
+// Do not gate execution on version metadata; use the configured executable.
 // Keep credentials on stdin: never interpolate them into PowerShell or argv.
-export const navicatSQLServerScript = String.raw`
+export const navicatAutomationScript = String.raw`
 param($request)
 $ErrorActionPreference = 'Stop'
 $mutex = $null
 $locked = $false
+$stage = 11
 try {
-  $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($request.executable)
-  if ($version.ProductName -notmatch 'Navicat' -or $version.FileMajorPart -notin @(16, 17, 18)) {
-    throw 'unsupported Navicat executable'
-  }
   Add-Type -AssemblyName UIAutomationClient
   Add-Type -AssemblyName UIAutomationTypes
+  if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { throw 'native ARM64 AutoIt is unavailable' }
+  $dllName = if ([IntPtr]::Size -eq 8) { 'AutoItX3_x64.dll' } else { 'AutoItX3.dll' }
+  $dllPath = Join-Path $request.autoit_dir $dllName
+  $expected = if ([IntPtr]::Size -eq 8) { 'a9af515ba2eaae9ffc9ef81748d2553f2f85d3dabb1cb0a8887180214c05433a' } else { 'a26fddee7674f74730d28d553220566bac64c4f877c5f33b5be6899202307845' }
+  if ((Get-FileHash -LiteralPath $dllPath -Algorithm SHA256).Hash -ne $expected) { throw 'AutoIt binary mismatch' }
   Add-Type @'
 using System;
 using System.Runtime.InteropServices;
-public static class NavicatControl {
-  [DllImport("user32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
-  public static extern IntPtr SendMessageTimeout(IntPtr handle, uint message, UIntPtr wParam, string value, uint flags, uint timeout, out UIntPtr result);
+public static class NavicatAutoIt {
+  [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+  static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
+  [DllImport("kernel32.dll", CharSet=CharSet.Ansi)]
+  static extern IntPtr GetProcAddress(IntPtr module, string name);
+  [DllImport("user32.dll")]
+  public static extern uint GetWindowThreadProcessId(IntPtr handle, out uint process);
+  [DllImport("user32.dll")]
+  public static extern bool IsChild(IntPtr parent, IntPtr child);
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate void ActivateDelegate(string title, string text);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate int WaitActiveDelegate(string title, string text, int seconds);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate void SendKeyDelegate(string keys, int mode);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate void InitDelegate();
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate IntPtr GetControlDelegate(string title, string text, string control);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate int SetTextDelegate(IntPtr window, IntPtr control, string text);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate int ClickDelegate(IntPtr window, IntPtr control, string button, int count, int x, int y);
+  [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet=CharSet.Unicode)]
+  public delegate int SendDelegate(string title, string text, string control, string keys, int mode);
+  public static GetControlDelegate GetControl;
+  public static SetTextDelegate SetText;
+  public static ClickDelegate Click;
+  public static SendDelegate Send;
+  public static ActivateDelegate Activate;
+  public static WaitActiveDelegate WaitActive;
+  public static SendKeyDelegate SendKey;
+  static Delegate Bind(IntPtr module, string name, Type type) {
+    IntPtr address = GetProcAddress(module, name);
+    if (address == IntPtr.Zero) throw new InvalidOperationException("Missing AutoIt export");
+    return Marshal.GetDelegateForFunctionPointer(address, type);
+  }
+  public static void Load(string path) {
+    IntPtr module = LoadLibraryEx(path, IntPtr.Zero, 0x1100);
+    if (module == IntPtr.Zero) throw new InvalidOperationException("Cannot load AutoIt");
+    ((InitDelegate)Bind(module, "AU3_Init", typeof(InitDelegate)))();
+    GetControl = (GetControlDelegate)Bind(module, "AU3_ControlGetHandle", typeof(GetControlDelegate));
+    SetText = (SetTextDelegate)Bind(module, "AU3_ControlSetTextByHandle", typeof(SetTextDelegate));
+    Click = (ClickDelegate)Bind(module, "AU3_ControlClickByHandle", typeof(ClickDelegate));
+    Send = (SendDelegate)Bind(module, "AU3_ControlSend", typeof(SendDelegate));
+    Activate = (ActivateDelegate)Bind(module, "AU3_WinActivate", typeof(ActivateDelegate));
+    WaitActive = (WaitActiveDelegate)Bind(module, "AU3_WinWaitActive", typeof(WaitActiveDelegate));
+    SendKey = (SendKeyDelegate)Bind(module, "AU3_Send", typeof(SendKeyDelegate));
+  }
 }
 '@
-  $mutex = New-Object Threading.Mutex($false, 'Local\JumpServerNavicatSQLServer')
+  [NavicatAutoIt]::Load($dllPath)
+  $stage = 12
+  $mutex = New-Object Threading.Mutex($false, 'Local\JumpServerNavicat')
   try { $locked = $mutex.WaitOne(10000) } catch [Threading.AbandonedMutexException] { $locked = $true }
   if (-not $locked) { throw 'another Navicat connection is being configured' }
   $deadline = [DateTime]::UtcNow.AddSeconds(70)
 
-  function Get-Nodes($root) {
-    return $root.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition)
-  }
-  function Get-Name($element) {
-    return ($element.Current.Name -replace '&', '').Trim().TrimEnd(':', [char]0xff1a)
-  }
   function Wait-For($probe, $seconds = 12) {
     $until = [DateTime]::UtcNow.AddSeconds($seconds)
     while ([DateTime]::UtcNow -lt $until -and [DateTime]::UtcNow -lt $deadline) {
@@ -46,79 +94,7 @@ public static class NavicatControl {
     }
     throw 'Navicat control was not available before the timeout'
   }
-  function Invoke-Control($element) {
-    $pattern = $null
-    if ($element.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$pattern) -and
-        $pattern.Current.ExpandCollapseState -ne [Windows.Automation.ExpandCollapseState]::LeafNode) {
-      $pattern.Expand()
-    } elseif ($element.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) {
-      $pattern.Invoke()
-    } else { throw 'Navicat control does not expose an accessible action' }
-  }
-  function Find-Action($root, $name) {
-    return Get-Nodes $root | Where-Object {
-      -not $_.Current.IsOffscreen -and $_.Current.IsEnabled -and
-      $_.Current.ControlType -in @([Windows.Automation.ControlType]::Button, [Windows.Automation.ControlType]::SplitButton, [Windows.Automation.ControlType]::MenuItem) -and
-      (Get-Name $_) -match $name
-    } | Select-Object -First 1
-  }
-  function Set-Field($dialog, $labelPattern, $value, $password = $false) {
-    $nodes = @(Get-Nodes $dialog | Where-Object { -not $_.Current.IsOffscreen -and $_.Current.IsEnabled })
-    $edits = @($nodes | Where-Object {
-      $_.Current.ControlType -eq [Windows.Automation.ControlType]::Edit -or $_.Current.ClassName -match '^T(Buttoned)?Edit$'
-    })
-    $candidates = @()
-    if ($password) {
-      $candidates = @($edits | Where-Object { $_.Current.IsPassword })
-      if ($candidates.Count -eq 0) { $labelPattern = '^(Password|密码|密碼|Пароль)$' }
-    }
-    if (-not $password -or $candidates.Count -eq 0) {
-      $labels = @($nodes | Where-Object {
-        $_.Current.ControlType -eq [Windows.Automation.ControlType]::Text -and (Get-Name $_) -match $labelPattern
-      })
-      foreach ($label in $labels) {
-        $candidates += @($edits | Where-Object {
-          ($password -or -not $_.Current.IsPassword) -and
-          ($_.Current.LabeledBy -eq $label -or
-            ([Math]::Abs(($_.Current.BoundingRectangle.Top + $_.Current.BoundingRectangle.Height / 2) -
-                         ($label.Current.BoundingRectangle.Top + $label.Current.BoundingRectangle.Height / 2)) -le
-               [Math]::Max(4, [Math]::Min($_.Current.BoundingRectangle.Height, $label.Current.BoundingRectangle.Height) / 2) -and
-             $_.Current.BoundingRectangle.Left -ge $label.Current.BoundingRectangle.Right - 8))
-        })
-      }
-    }
-    $candidates = @($candidates | Sort-Object { $_.GetRuntimeId() -join '.' } -Unique)
-    if ($candidates.Count -ne 1) { throw 'Navicat connection field is missing or ambiguous' }
-    $pattern = $null
-    $edit = $candidates[0]
-    $written = $false
-    if ($edit.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern, [ref]$pattern)) {
-      try { $pattern.SetValue([string]$value); $written = $true } catch { }
-    }
-    if ($written) { return }
-    if ($edit.Current.ProcessId -eq $processId -and $edit.Current.NativeWindowHandle -ne 0) {
-      # Delphi's TEdit provider can omit ValuePattern. Address only the
-      # already identified control in the selected Navicat process.
-      $result = [UIntPtr]::Zero
-      if ([NavicatControl]::SendMessageTimeout([IntPtr]$edit.Current.NativeWindowHandle, 12, [UIntPtr]::Zero, [string]$value, 2, 1000, [ref]$result) -eq [IntPtr]::Zero) {
-        throw 'Navicat connection field rejected text input'
-      }
-    } else {
-      throw 'Navicat connection field is not accessible'
-    }
-  }
-  function Disable-SavePassword($dialog, $required = $true) {
-    $checkboxes = @(Get-Nodes $dialog | Where-Object {
-      $_.Current.ControlType -eq [Windows.Automation.ControlType]::CheckBox -and
-      (Get-Name $_) -match '^(Save password|Remember password|保存密码|儲存密碼|保存密碼|Запомнить пароль|Сохранить пароль)$'
-    })
-    if ($checkboxes.Count -eq 0 -and -not $required) { return }
-    if ($checkboxes.Count -ne 1) { throw 'Navicat save-password control is missing or ambiguous' }
-    $pattern = $checkboxes[0].GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
-    if ($pattern.Current.ToggleState -ne [Windows.Automation.ToggleState]::Off) { $pattern.Toggle() }
-    if ($pattern.Current.ToggleState -ne [Windows.Automation.ToggleState]::Off) { throw 'could not disable password saving' }
-  }
-
+  $stage = 13
   $processes = @(Get-Process | Where-Object {
     $_.SessionId -eq [Diagnostics.Process]::GetCurrentProcess().SessionId -and
     $_.Path -eq $request.executable -and $_.MainWindowHandle -ne 0
@@ -132,153 +108,165 @@ public static class NavicatControl {
       $_.SessionId -eq [Diagnostics.Process]::GetCurrentProcess().SessionId -and
       $_.Path -eq $request.executable -and $_.MainWindowHandle -ne 0
     } | Select-Object -First 1
-    if ($process) { [Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle) }
+    if ($process) {
+      $candidate = [Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+      if ($candidate.Current.ClassName -eq 'TNavicatMainForm') { return $candidate }
+    }
   }
   $processId = $main.Current.ProcessId
-  $windowPattern = $null
-  if ($main.TryGetCurrentPattern([Windows.Automation.WindowPattern]::Pattern, [ref]$windowPattern) -and
-      $windowPattern.Current.WindowVisualState -eq [Windows.Automation.WindowVisualState]::Minimized) {
-    $windowPattern.SetWindowVisualState([Windows.Automation.WindowVisualState]::Normal)
+  $mainHandle = [IntPtr]$main.Current.NativeWindowHandle
+  function Window-Target($handle) { return '[HANDLE:0x' + $handle.ToString('X') + ']' }
+  function Active-Window {
+    $handle = [NavicatAutoIt]::GetForegroundWindow()
+    [uint32]$owner = 0
+    [void][NavicatAutoIt]::GetWindowThreadProcessId($handle, [ref]$owner)
+    if ($owner -eq $processId) { return $handle }
+    return $null
   }
-  function Get-Windows {
-    return [Windows.Automation.AutomationElement]::RootElement.FindAll(
-      [Windows.Automation.TreeScope]::Children,
-      (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)))
+  function Active-Control($selector) {
+    $window = Active-Window
+    if (-not $window) { return $null }
+    $control = [NavicatAutoIt]::GetControl.Invoke((Window-Target $window), '', $selector)
+    if ($control -eq [IntPtr]::Zero) { return $null }
+    [uint32]$owner = 0
+    [void][NavicatAutoIt]::GetWindowThreadProcessId($control, [ref]$owner)
+    if ($owner -ne $processId -or -not [NavicatAutoIt]::IsChild($window, $control)) { throw 'wrong control process' }
+    return @{ Window = $window; Control = $control }
   }
-  $before = @(Get-Windows | ForEach-Object { $_.Current.NativeWindowHandle })
-  $connection = Find-Action $main '^(Connection|New connection|连接|新建连接|連線|新增連線|Соединение|Новое соединение)[.\s\u2026]*$'
-  if (-not $connection) { throw 'Navicat new-connection action was not found' }
-  Invoke-Control $connection
-  $server = Wait-For {
-    foreach ($window in @(Get-Windows)) {
-      $action = Find-Action $window '^SQL\s*Server[.\s\u2026]*$'
-      if ($action) { return $action }
-    }
-  }
-  Invoke-Control $server
-  $dialog = Wait-For {
-    Get-Windows | Where-Object {
-      $_.Current.NativeWindowHandle -notin $before -and $_.Current.Name -match 'SQL\s*Server'
-    } | Select-Object -First 1
-  }
-  $authentication = @(Get-Nodes $dialog | Where-Object {
-    $_.Current.ControlType -eq [Windows.Automation.ControlType]::ComboBox -and -not $_.Current.IsOffscreen
-  } | Where-Object { (Get-Name $_) -match 'SQL\s*Server|Windows|验证|驗證|Authentication' })
-  if ($authentication.Count -ne 1) { throw 'Navicat authentication selector is missing or ambiguous' }
-  $authentication[0].GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
-  $sqlAuthentication = Wait-For {
-    foreach ($window in @(Get-Windows)) {
-      $option = Get-Nodes $window | Where-Object {
-        $_.Current.ControlType -eq [Windows.Automation.ControlType]::ListItem -and
-        -not $_.Current.IsOffscreen -and (Get-Name $_) -match 'SQL\s*Server'
-      } | Select-Object -First 1
-      if ($option) { return $option }
-    }
-  }
-  $sqlAuthentication.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select()
-  Set-Field $dialog '^(Connection name|连接名|連線名稱|Имя соединения)$' $request.name
-  Set-Field $dialog '^(Host|Host name|Hostname|Server|主机|主機|服务器|伺服器|Хост|Сервер)$' $request.host
-  Set-Field $dialog '^(Port|端口|連接埠|Порт)$' $request.port
-  Set-Field $dialog '^(Initial database|Database|初始数据库|初始資料庫|数据库|資料庫|Начальная база данных|База данных)$' $request.database
-  Set-Field $dialog '^(User name|Username|用户名|使用者名稱|用戶名|Имя пользователя|Пользователь)$' $request.username
-  Disable-SavePassword $dialog
-  $save = Find-Action $dialog '^(OK|Save|保存|确定|確定|儲存|ОК|Сохранить)$'
-  if (-not $save) { throw 'Navicat save action was not found' }
-  Invoke-Control $save
-  $item = Wait-For {
-    Get-Nodes $main | Where-Object {
-      $_.Current.ControlType -eq [Windows.Automation.ControlType]::TreeItem -and $_.Current.Name -eq $request.name
-    } | Select-Object -First 1
-  }
-  Invoke-Control $item
-  $connected = Wait-For {
-    $prompts = @(Get-Windows | Where-Object { $_.Current.NativeWindowHandle -notin $before })
-    foreach ($prompt in $prompts) {
-      # A different database can prompt in the same Navicat process. Only
-      # release the secret to a prompt carrying our unique connection name.
-      if (-not $prompt.Current.Name.Contains($request.name) -and
-          @(Get-Nodes $prompt | Where-Object { $_.Current.Name.Contains($request.name) }).Count -eq 0) { continue }
-      $passwords = @(Get-Nodes $prompt | Where-Object {
-        $_.Current.ControlType -eq [Windows.Automation.ControlType]::Edit -and $_.Current.IsPassword -and -not $_.Current.IsOffscreen
-      })
-      if ($passwords.Count -eq 1) {
-        Set-Field $prompt '' $request.password $true
-        Disable-SavePassword $prompt $false
-        $ok = Find-Action $prompt '^(OK|Connect|确定|確定|连接|連線|ОК|Подключить)$'
-        if (-not $ok) { throw 'Navicat password confirmation action was not found' }
-        Invoke-Control $ok
+  $passwordControl = $null
+  $index = 0
+  foreach ($step in $request.steps) {
+    $index++
+    $stage = 20 + $index
+    Start-Sleep -Milliseconds 300
+    switch ($step.cmd) {
+      'Wait' {
+        if ($main.Current.ClassName -ne 'TNavicatMainForm' -or $step.element -ne '[CLASS:TNavicatMainForm]') { throw 'unexpected main window' }
+        [NavicatAutoIt]::Activate.Invoke((Window-Target $mainHandle), '')
+        if ([NavicatAutoIt]::WaitActive.Invoke((Window-Target $mainHandle), '', [int]$step.type) -ne 1) { throw 'main window timeout' }
       }
-    }
-    $children = $item.FindAll([Windows.Automation.TreeScope]::Children,
-      (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::TreeItem)))
-    foreach ($database in $children) {
-      $databaseName = $database.Current.Name
-      if (($request.database -and $databaseName -eq $request.database) -or
-          (-not $request.database -and $databaseName -and $databaseName -notmatch '^(Loading|Connecting|Databases|加载中|连接中|数据库|資料庫)[.\s\u2026]*$')) {
-        return $true
+      'SendKey' {
+        if ((Active-Window) -ne $mainHandle) { throw 'main window lost focus' }
+        [NavicatAutoIt]::SendKey.Invoke($step.element, 0)
       }
+      'ControlSend' {
+        $target = Wait-For { Active-Control $step.element }
+        # getNavicatURL already applies exactly the upstream AutoIt escaping.
+        if ([NavicatAutoIt]::Send.Invoke((Window-Target $target.Window), '', $step.element, $request.url, 0) -ne 1) { throw 'control send failed' }
+      }
+      'ControlClick' {
+        $target = Wait-For { Active-Control $step.element }
+        $coordinates = $step.type.Split(',')
+        # Preserve Go strconv.Atoi's ignored-error result: upstream "1OO" becomes 0.
+        [int]$x = 0; [int]$y = 0
+        [void][int]::TryParse($coordinates[0], [ref]$x)
+        [void][int]::TryParse($coordinates[1], [ref]$y)
+        if ($passwordControl -and ($target.Window -ne $passwordControl.Window)) { throw 'password window changed' }
+        if ([NavicatAutoIt]::Click.Invoke($target.Window, $target.Control, 'left', 1, $x, $y) -ne 1) { throw 'control click failed' }
+        if ($step.element -eq '[CLASS:TButtonedEdit; INSTANCE:1]') { $passwordControl = $target }
+      }
+      'ControlSetText' {
+        $target = Wait-For { Active-Control $step.element }
+        if (-not $passwordControl -or $target.Window -ne $passwordControl.Window -or $target.Control -ne $passwordControl.Control) { throw 'password control changed' }
+        if ([NavicatAutoIt]::SetText.Invoke($target.Window, $target.Control, [string]$request.password) -ne 1) { throw 'control text failed' }
+      }
+      default { throw 'unsupported AutoIt step' }
     }
-  } 25
+  }
   [Console]::Out.WriteLine('OK')
 } catch {
   # UI and exception messages can contain connection information. Return a fixed
   # error; leave Navicat's own dialog available for the user to inspect.
-  [Console]::Error.WriteLine('Navicat SQL Server setup failed. Check the connection dialog, client version, accessibility and matching privilege levels.')
-  exit 1
+  [Console]::Out.WriteLine('ERROR:' + $stage)
+  exit $stage
 } finally {
   if ($locked) { $mutex.ReleaseMutex() }
   if ($mutex) { $mutex.Dispose() }
 }
 `;
 
-export function launchNavicatSQLServer(connection, start = spawn, platform = process.platform) {
+export const navicatFailureStages = {
+  11: "AutoIt DLL loading",
+  12: "another connection is being configured",
+  13: "Navicat main window",
+  21: "step 1: wait for main window",
+  22: "step 2: send Ctrl+U",
+  23: "step 3: enter URI",
+  24: "step 4: click URI confirmation",
+  25: "step 5: select connection option",
+  26: "step 6: confirm connection option",
+  27: "step 7: click password field",
+  28: "step 8: enter password",
+  29: "step 9: confirm password"
+};
+function failureCode(output) {
+  const code = Number(/^ERROR:(\d+)$/.exec(output.trim())?.[1]);
+  return Object.hasOwn(navicatFailureStages, code) ? code : 1;
+}
+function failureStage(output) {
+  return navicatFailureStages[failureCode(output)] || "automation process";
+}
+export function autoItDirectory(
+  root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..")
+) {
+  const packaged = path.join(root, "bin", "autoit");
+  return existsSync(packaged) ? packaged : path.join(root, "electron", "assets", "autoit");
+}
+
+export function launchNavicatConnection(connection, start = spawn, platform = process.platform) {
   if (platform !== "win32") {
-    throw new Error("The Windows Navicat SQL Server adapter can only run on Windows");
+    throw new Error("The Windows Navicat adapter can only run on Windows");
   }
   if (
-    !connection.executable ||
-    !connection.name ||
-    !connection.host ||
-    !connection.username ||
-    typeof connection.password !== "string" ||
-    !connection.password ||
+    [connection.executable, connection.name, connection.host, connection.username, connection.password].some(
+      (value) => typeof value !== "string" || !value || value.includes("\0")
+    ) ||
+    typeof connection.database !== "string" ||
+    connection.database.includes("\0") ||
     !/^\d+$/.test(String(connection.port)) ||
     Number(connection.port) < 1 ||
     Number(connection.port) > 65535
   ) {
-    throw new Error("Navicat SQL Server connection information is incomplete or invalid");
+    throw new Error("Navicat connection information is incomplete or invalid");
   }
   return new Promise((resolve, reject) => {
-    const child = start(
-      path.win32.join(
-        process.env.SystemRoot || "C:\\Windows",
-        "System32",
-        "WindowsPowerShell",
-        "v1.0",
-        "powershell.exe"
-      ),
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-STA",
-        "-EncodedCommand",
-        Buffer.from(
-          "[Console]::InputEncoding=[Text.UTF8Encoding]::new(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $message=[Console]::In.ReadLine()|ConvertFrom-Json; & ([ScriptBlock]::Create($message.script)) $message.connection",
-          "utf16le"
-        ).toString("base64")
-      ],
-      { windowsHide: true, stdio: ["pipe", "pipe", "ignore"] }
-    );
+    let child;
+    try {
+      child = start(
+        path.win32.join(
+          process.env.SystemRoot || "C:\\Windows",
+          "System32",
+          "WindowsPowerShell",
+          "v1.0",
+          "powershell.exe"
+        ),
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-STA",
+          "-EncodedCommand",
+          Buffer.from(
+            "[Console]::InputEncoding=[Text.UTF8Encoding]::new(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $message=[Console]::In.ReadLine()|ConvertFrom-Json; & ([ScriptBlock]::Create($message.script)) $message.connection",
+            "utf16le"
+          ).toString("base64")
+        ],
+        { windowsHide: true, stdio: ["pipe", "pipe", "ignore"] }
+      );
+    } catch {
+      reject(new Error("Navicat connection failed (automation process)."));
+      return;
+    }
     let output = "";
-    const timer = setTimeout(() => {
-      child.kill();
-      fail();
-    }, 90000);
+    const timer = setTimeout(fail, 90000);
     function fail() {
       clearTimeout(timer);
+      child.kill();
       reject(
-        new Error(
-          "Navicat SQL Server connection failed. Check Navicat's dialog, use version 16/17/18, and run both applications at the same privilege level."
+        Object.assign(
+          new Error(
+            `Navicat connection failed (${failureStage(output)}). Check the dialog and matching privilege levels.`
+          ),
+          { exitCode: failureCode(output) }
         )
       );
     }
@@ -292,8 +280,31 @@ export function launchNavicatSQLServer(connection, start = spawn, platform = pro
       if (code === 0 && output.trim() === "OK") resolve();
       else fail();
     });
-    child.stdin?.end(`${JSON.stringify({ script: navicatSQLServerScript, connection })}\n`);
+    child.stdin?.end(`${JSON.stringify({ script: navicatAutomationScript, connection: { ...connection, steps: navicatAutoItSteps } })}\n`);
   });
+}
+
+// Port of go-client/pkg/awaken/awaken_windows.go:getNavicatURL.
+export function getNavicatURL(connectInfo) {
+  // Go's $ means absolute end of input, unlike JavaScript's final-newline case.
+  const matches = /@([^\n]+)$(?![\s\S])/.exec(connectInfo.name || "");
+  const name = matches ? matches[1] : (connectInfo.username || "");
+  let url = `navicat://conn.${connectInfo.protocol || ""}?Conn.Host=${connectInfo.host || ""}&Conn.Name=${name}&Conn.Port=${connectInfo.port ?? ""}&Conn.Username=${connectInfo.username || ""}`;
+  switch (connectInfo.protocol) {
+    case "oracle":
+      url = url.replace("conn.oracle", "conn.ora");
+      url += `&Conn.ServiceName=${connectInfo.dbname || ""}&Conn.ServiceNameType=ServiceName&Conn.ConnectionMode=Basic`;
+      break;
+    case "sqlserver":
+      url = url.replace("conn.sqlserver", "conn.mssql");
+      url += `&Conn.AuthenticationType=Default&Conn.InitialDatabase=${connectInfo.dbname || ""}`;
+      break;
+    case "postgresql":
+      url = url.replace("conn.postgresql", "conn.pgsql");
+      url += `&Conn.InitialDatabase=${connectInfo.dbname || ""}`;
+      break;
+  }
+  return url.replace(/[\^(){}~]/g, (match) => `{${match}}`);
 }
 
 export function launchNavicat(context, start = spawn, platform = process.platform) {
@@ -302,38 +313,25 @@ export function launchNavicat(context, start = spawn, platform = process.platfor
   if (typeof context.executable !== "string" || !path.win32.isAbsolute(context.executable)) {
     throw new Error("Navicat executable path is invalid");
   }
-  if (context.protocol === "sqlserver") {
-    return launchNavicatSQLServer(
-      {
-        executable: context.executable,
-        name: `JMS_${String(context.name || "").slice(0, 48)}_${randomUUID()}`,
-        host: context.host,
-        port: context.port,
-        username: context.username,
-        password: context.value,
-        database: context.dbname
-      },
-      start,
-      platform
-    );
+  if (!["mysql", "mariadb", "oracle", "postgresql", "sqlserver"].includes(context.protocol)) {
+    throw new Error("Navicat protocol is invalid");
   }
-  const aliases = { mysql: "mysql", mariadb: "mysql", oracle: "ora", postgresql: "pgsql" };
-  if (!Object.hasOwn(aliases, context.protocol)) throw new Error("Navicat protocol is invalid");
-  const query = new URLSearchParams({
-    "Conn.Host": context.host,
-    "Conn.Name": context.name,
-    "Conn.Port": String(context.port),
-    "Conn.Username": context.username
-  });
-  const url = `navicat://conn.${aliases[context.protocol]}?${query}`;
-  return new Promise((resolve, reject) => {
-    const child = start(context.executable, [url], { detached: true, stdio: "ignore" });
-    child.once("error", () => reject(new Error("Navicat launch failed")));
-    child.once("spawn", () => {
-      child.unref();
-      resolve();
-    });
-  });
+  return launchNavicatConnection(
+    {
+      executable: context.executable,
+      name: context.name || context.username,
+      host: context.host,
+      port: context.port,
+      username: context.username,
+      password: context.value,
+      database: context.dbname || "",
+      protocol: context.protocol,
+      url: getNavicatURL(context),
+      autoit_dir: autoItDirectory()
+    },
+    start,
+    platform
+  );
 }
 
 async function main() {
@@ -342,10 +340,12 @@ async function main() {
     let input = "";
     for await (const chunk of process.stdin) input += chunk;
     await launchNavicat(JSON.parse(input));
-  } catch {
+  } catch (error) {
     // Exception messages and spawn arguments can contain credentials.
-    console.error("Navicat connection failed. Check the connection dialog, client version and privilege levels.");
-    process.exitCode = 1;
+    console.error(
+      "Navicat connection failed. Check the connection dialog and privilege levels."
+    );
+    process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
   }
 }
 

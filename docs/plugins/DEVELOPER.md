@@ -149,8 +149,9 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 - `launch.interpreter: "node"` 使用 Electron 自带的 Node 运行时，不依赖用户安装 Node.js；入口脚本使用标准 JavaScript（例如 `.mjs`）
 - `launch.input: "stdin"` 将 JSON 写入脚本的标准输入并关闭输入流，环境变量中不设置 `JMS_CONNECT_JSON`；默认仍使用环境变量
 - `launch.serialize: true` 按脚本路径排队执行，前一次交接成功或失败后才启动下一次
+- `launch.exit_messages` 可按非零退出码声明静态错误提示；启动器不读取子进程 stderr，也不对提示插入连接参数
 - 上下文还提供已解析的 `executable`、数据库名 `dbname`；连接 URL 由插件自行构造
-- Windows Navicat 的完整示例见 `plugins/windows/windows.navicat17/`；版本检查、SQL Server 对话框操作和成功确认均在插件内完成
+- Windows Navicat 的完整示例见 `plugins/windows/windows.navicat17/`；AutoIt URI/密码代填流程仅按 Navicat 17.0.13 适配，不做版本校验或拦截；插件按 `scripts/autoit-steps.json` 中与上游一致的九步执行，退出成功表示代填完成，不代表已独立确认数据库连接成功；DLL 来源和 Windows 验收方法见 `electron/assets/autoit/README.md`
 
 脚本接收的 JSON 示例：
 

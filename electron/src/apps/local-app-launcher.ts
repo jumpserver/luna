@@ -69,7 +69,7 @@ function splitArguments(input) {
   return args.flatMap((argument) => argument.split("*"));
 }
 
-function spawnDetached(executable, args, options = {}, waitForExit = false, input?: string) {
+function spawnDetached(executable, args, options = {}, waitForExit = false, input?: string, exitMessages = {}) {
   return new Promise<void>((resolve, reject) => {
     const child = spawn(executable, args, {
       detached: !waitForExit,
@@ -89,7 +89,10 @@ function spawnDetached(executable, args, options = {}, waitForExit = false, inpu
     if (waitForExit) {
       child.once("exit", (code, signal) => {
         if (code === 0) resolve();
-        else reject(new Error(`failed to launch client '${executable}': ${signal || `exit code ${code}`}`));
+        else {
+          const message = typeof exitMessages[code] === "string" ? exitMessages[code] : `exit code ${code}`;
+          reject(new Error(`failed to launch client '${executable}': ${signal || message}`));
+        }
       });
     }
     if (input !== undefined) {
@@ -325,7 +328,8 @@ export class LocalApplicationLauncher {
         interpreter ? [scriptPath] : [],
         { env, windowsHide: true },
         true,
-        useStdin ? `${input}\n` : undefined
+        useStdin ? `${input}\n` : undefined,
+        application.script_exit_messages
       );
     if (!application.script_serialize) return run();
     this.scriptQueues ||= new Map();
