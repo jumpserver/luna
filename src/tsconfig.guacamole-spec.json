@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": {
+    "types": ["jasmine"]
+  },
+  "files": [
+    "test-guacamole.ts",
+    "polyfills.ts"
+  ],
+  "include": [
+    "app/elements/replay/guacamole/**/*.spec.ts"
+  ]
+}

@@ -15,6 +15,17 @@
   overflow-y: auto;
 }
 
+.recording-error {
+  position: absolute;
+  z-index: 2;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  padding: 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+}
+
 #display .item{
   height: 80px;
   border-bottom: #000 solid 1px;

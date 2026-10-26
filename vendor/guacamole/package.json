@@ -1,0 +1,9 @@
+{
+  "name": "@jumpserver/guacamole",
+  "version": "1.5.5-jumpserver.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/guacamole.js",
+  "types": "index.d.ts",
+  "license": "Apache-2.0"
+}
