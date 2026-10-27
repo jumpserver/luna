@@ -111,16 +111,18 @@ test("serialized Node plugin scripts keep credentials on stdin and recover after
     script_path: "launch.mjs",
     script_interpreter: "node",
     script_input: "stdin",
-    script_serialize: true
+    script_serialize: true,
+    script_exit_messages: { 14: "Navicat: URI dialog unavailable" }
   };
   const payload = {
     protocol: "sqlserver",
+    name: "root@a+b%2Bc",
     endpoint: { host: "gateway.example", port: 5525 },
     token: { id: "first", value: "first-secret" }
   };
   const values = { protocol: "sqlserver", dbname: "first-db" };
   const first = launcher.launchScript(application, payload, values);
-  const failure = assert.rejects(first, /failed to launch client.*exit code 1/);
+  const failure = assert.rejects(first, /failed to launch client.*Navicat: URI dialog unavailable/);
   const second = launcher.launchScript(
     application,
     { ...payload, token: { id: "second", value: "second-secret" } },
@@ -134,8 +136,9 @@ test("serialized Node plugin scripts keep credentials on stdin and recover after
   assert.equal(calls[0].options.env.JMS_CONNECT_JSON, undefined);
   assert.equal(calls[0].input.executable, application.path);
   assert.equal(calls[0].input.username, "first");
+  assert.equal(calls[0].input.source_name, "root@a+b%2Bc");
   children[0].emit("spawn");
-  children[0].emit("exit", 1, null);
+  children[0].emit("exit", 14, null);
   await failure;
   await new Promise(setImmediate);
   assert.equal(calls.length, 2);

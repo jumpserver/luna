@@ -295,6 +295,7 @@ export class ApplicationConfigService {
       script_interpreter: launch.interpreter || "",
       script_input: launch.input || "env",
       script_serialize: Boolean(launch.serialize),
+      script_exit_messages: launch.exit_messages || {},
       use_ssh_helper: Boolean(launch.use_ssh_helper),
       protocol_aliases: launch.protocol_aliases || {},
       protocol_templates: launch.protocol_templates || {},

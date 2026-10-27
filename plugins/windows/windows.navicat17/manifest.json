@@ -1,18 +1,27 @@
 {
   "id": "windows.navicat17",
   "name": "navicat17",
-  "display_name": "Navicat premium Lite 17",
-  "version": "1.2.0",
+  "display_name": "Navicat Premium Lite 17.0.13",
+  "version": "1.3.0",
   "min_client_version": "5.1.0",
   "author": "JumpServer",
   "homepage": "https://github.com/jumpserver/clients",
   "download_url": "https://www.navicat.com.cn/products",
   "category": "databases",
-  "protocols": ["mariadb", "mysql", "oracle", "postgresql", "sqlserver"],
+  "protocols": [
+    "mariadb",
+    "mysql",
+    "oracle",
+    "postgresql",
+    "sqlserver"
+  ],
   "builtin": true,
   "comment": {
-    "zh": "SQL Server 支持 Navicat 16/17/18：选择对应版本的可执行文件，使用与 JumpServer 客户端相同的权限运行。其他数据库仍使用原有的 Navicat 17 连接方式。",
-    "en": "SQL Server supports Navicat 16/17/18. Select its executable and use the same privilege level as JumpServer. Other databases retain the existing Navicat 17 connection method."
+    "zh": "代填流程仅按 Navicat 17.0.13 适配。请选择正确的可执行文件，并与 JumpServer 客户端使用相同权限运行。",
+    "en": "Autofill is adapted for Navicat 17.0.13 only. Select the correct executable and run it at the same privilege level as JumpServer."
   },
-  "permissions": ["autoit", "exec"]
+  "permissions": [
+    "autoit",
+    "exec"
+  ]
 }

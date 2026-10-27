@@ -14,7 +14,9 @@
     "script": "scripts/launch.mjs",
     "interpreter": "node",
     "input": "stdin",
-    "serialize": true
+    "exit_messages": {
+      "1": "Navicat automation helper failed. Check the executable and AutoIt DLLs."
+    }
   },
-  "display_name": "Navicat premium Lite 17"
+  "display_name": "Navicat Premium Lite 17.0.13"
 }
