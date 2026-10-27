@@ -263,28 +263,39 @@ export function launchLocalApp(url, fail) {
   let decideTimeOut = null;
   const aLink = document.createElement('iframe');
   aLink.style.display = 'none';
-  aLink.src = url;
-  document.body.appendChild(aLink);
-  window.onblur = () => {
+  const markProtocolHandled = () => {
     if (decideTimeOut) {
       isDone = true;
     }
   };
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      markProtocolHandled();
+    }
+  };
   const curDone = function done() {
-    isDone = false;
     clearTimeout(decideTimeOut);
     decideTimeOut = null;
-    document.body.removeChild(aLink);
+    window.removeEventListener('blur', markProtocolHandled, true);
+    window.removeEventListener('pagehide', markProtocolHandled, true);
+    document.removeEventListener('visibilitychange', onVisibilityChange, true);
+    if (aLink.parentNode) {
+      aLink.parentNode.removeChild(aLink);
+    }
   };
 
+  window.addEventListener('blur', markProtocolHandled, true);
+  window.addEventListener('pagehide', markProtocolHandled, true);
+  document.addEventListener('visibilitychange', onVisibilityChange, true);
+
   decideTimeOut = setTimeout(() => {
-    if (isDone) {
-      curDone();
-    } else {
+    curDone();
+    if (!isDone) {
       fail();
-      curDone();
     }
   }, 2000);
+  aLink.src = url;
+  document.body.appendChild(aLink);
 }
 
 /**

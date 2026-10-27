@@ -1,17 +1,19 @@
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, Inject, OnDestroy, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
+import {Subscription, timer} from 'rxjs';
+import {exhaustMap} from 'rxjs/operators';
 
 @Component({
   selector: 'elements-acl-dialog',
   templateUrl: './acl-dialog.component.html',
   styleUrls: ['./acl-dialog.component.scss']
 })
-export class ElementACLDialogComponent implements OnInit {
+export class ElementACLDialogComponent implements OnInit, OnDestroy {
   public asset: Asset;
   public connectInfo: ConnectData;
   public code: string;
@@ -22,7 +24,7 @@ export class ElementACLDialogComponent implements OnInit {
   // Token 的行为，创建或者兑换 Token, create, exchange
   public tokenAction: string = 'create';
   public tokenID: string;
-  private timerCheckTicket: number;
+  private ticketSubscription: Subscription;
 
   constructor(public dialogRef: MatDialogRef<ElementACLDialogComponent>,
               private _i18n: I18nService,
@@ -62,6 +64,16 @@ export class ElementACLDialogComponent implements OnInit {
     this._toastr.success(msg);
   }
 
+  ngOnDestroy() {
+    this.stopCheckingTicket();
+  }
+
+  private stopCheckingTicket() {
+    if (this.ticketSubscription) {
+      this.ticketSubscription.unsubscribe();
+    }
+  }
+
   onCancelReview() {
     this.closeDialog();
   }
@@ -97,41 +109,43 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   closeDialog() {
-    clearInterval(this.timerCheckTicket);
+    this.stopCheckingTicket();
     this.dialogRef.close(null);
   }
 
   checkTicket() {
-    const checkMethod = this.connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
-    const checkURL = this.connectionToken.from_ticket_info.check_ticket_api.url;
-    const ticketAssignees = this.connectionToken.from_ticket_info.assignees.join(', ');
-    this.timerCheckTicket = setInterval(() => {
-      this._http[checkMethod](checkURL).subscribe(
-        async ticket => {
-          if (ticket.status.value !== 'closed') {
-            // 工单未关闭
-            this.ticketAssignees = ticketAssignees;
-            this.code = 'ticket_review_pending';
-            return;
-          }
-          const state = ticket.state.value;
-          if (state === 'approved') {
-            const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg);
-            this.dialogRef.close(this.connectionToken);
-          } else if (state === 'rejected') {
-            this.code = 'ticket_review_rejected';
-          } else if (state === 'closed') {
-            this.code = 'ticket_review_closed';
-          }
-          clearInterval(this.timerCheckTicket);
-        },
-        error => {
-          this.code = 'other';
-          this.otherError = error.error.detail + `(${checkURL})`;
-          clearInterval(this.timerCheckTicket);
+    this.stopCheckingTicket();
+    const connectionToken = this.connectionToken;
+    const checkMethod = connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
+    const checkURL = connectionToken.from_ticket_info.check_ticket_api.url;
+    const ticketAssignees = connectionToken.from_ticket_info.assignees.join(', ');
+    this.ticketSubscription = timer(0, 3000).pipe(
+      exhaustMap(() => this._http[checkMethod](checkURL))
+    ).subscribe(
+      (ticket: any) => {
+        if (ticket.status.value !== 'closed') {
+          // 工单未关闭
+          this.ticketAssignees = ticketAssignees;
+          this.code = 'ticket_review_pending';
+          return;
         }
-      );
-    }, 3000);
+        this.stopCheckingTicket();
+        const state = ticket.state.value;
+        if (state === 'approved') {
+          const msg = this._i18n.instant('Login review approved');
+          this._toastr.success(msg);
+          this.dialogRef.close(connectionToken);
+        } else if (state === 'rejected') {
+          this.code = 'ticket_review_rejected';
+        } else if (state === 'closed') {
+          this.code = 'ticket_review_closed';
+        }
+      },
+      error => {
+        this.code = 'other';
+        this.otherError = error.error.detail + `(${checkURL})`;
+        this.stopCheckingTicket();
+      }
+    );
   }
 }
