@@ -117,6 +117,26 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 | `system`    | 系统 PATH 中的命令（`default` 为命令名，如 `putty.exe`） |
 | `user_path` | 用户必须在设置中选择可执行文件路径                       |
 
+### 模块模式（module）
+
+适用于由插件构造可执行文件参数的场景：
+
+```json
+{
+  "launch": {
+    "type": "module",
+    "module": "scripts/launch.mjs"
+  }
+}
+```
+
+模块通过默认导出函数接收连接上下文，返回 `{ type: "args", args: ["参数", "值"] }`。
+上下文包含连接字段、原始名称 `source_name`、数据库名 `dbname` 和已解析的 `executable`。
+客户端在独立 Node 子进程中通过 stdin 传入上下文，并将参数数组交给所选可执行文件，不经过 shell 或字符串参数拆分。
+模块准备连接最多等待 30 秒，返回数据最多 1 MiB；失败时仅显示通用错误，不记录包含凭据的模块输出。
+
+Windows Navicat 示例见 `plugins/windows/windows.navicat17/`：选择 Navicat Premium Lite 18 的 EXE，插件返回 `{ type: "args", args: ["-uri", url] }`；URI 包含 `Conn.Password`，作为单独参数传给所选程序，无需 AutoIt，也不依赖系统协议关联。
+
 ### 脚本模式（script）
 
 适用于 iTerm2、需要 AppleScript / PowerShell 自动化的场景。

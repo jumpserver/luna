@@ -28,8 +28,6 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("../shared/debug-log");
     case "../shared/url":
       return require("../shared/url");
-    case "./navicat-sqlserver":
-      return require("./navicat-sqlserver");
     case "./oauth-callback":
       return require("./oauth-callback");
     case "./compatibility":
@@ -74,48 +72,6 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
   });
   return exports;
 }
-
-test("Navicat native dialogs serialize connection tokens and recover after a failed launch", async () => {
-  const calls = [];
-  const finishes = [];
-  const { LocalApplicationLauncher } = loadWithElectronMocks("../src/apps/local-app-launcher.ts", {
-    "node:fs/promises": { stat: async () => ({ isFile: () => true }) },
-    "./navicat-sqlserver": {
-      launchNavicatSQLServer: (connection) => {
-        calls.push(connection);
-        return new Promise<void>((resolve, reject) => finishes.push({ resolve, reject }));
-      }
-    }
-  });
-  const launcher = new LocalApplicationLauncher({}, "", null, null);
-  const values = {
-    name: "SQLServer",
-    host: "gateway.example.test",
-    port: "5525",
-    username: "first",
-    value: "first-secret",
-    dbname: "first-db"
-  };
-  const first = launcher.launchNavicatSQLServer({ path: "navicat.exe" }, values);
-  const failure = assert.rejects(first, /native failure/);
-  const second = launcher.launchNavicatSQLServer(
-    { path: "navicat.exe" },
-    { ...values, username: "second", value: "second-secret", dbname: "second-db" }
-  );
-  await new Promise(setImmediate);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].username, "first");
-  finishes[0].reject(new Error("native failure"));
-  await failure;
-  await new Promise(setImmediate);
-  assert.equal(calls.length, 2);
-  assert.equal(calls[1].username, "second");
-  assert.equal(calls[1].password, "second-secret");
-  assert.equal(calls[1].database, "second-db");
-  assert.notEqual(calls[0].name, calls[1].name);
-  finishes[1].resolve();
-  await second;
-});
 
 test("Windows RDP launch preserves a connection file path containing spaces and waits for spawn", async () => {
   const child = Object.assign(new EventEmitter(), { unref() {} });
