@@ -14,20 +14,8 @@
     "script": "scripts/launch.mjs",
     "interpreter": "node",
     "input": "stdin",
-    "serialize": true,
     "exit_messages": {
-      "11": "Navicat: AutoIt DLL is missing, invalid, or incompatible with the PowerShell architecture.",
-      "12": "Navicat: another connection is being configured. Retry after it completes.",
-      "13": "Navicat: main window unavailable or multiple matching processes. Check the executable and privilege levels.",
-      "21": "Navicat: autofill step 1 (Wait) failed. Check the active Navicat window and privilege levels.",
-      "22": "Navicat: autofill step 2 (SendKey) failed. Check the active Navicat window and privilege levels.",
-      "23": "Navicat: autofill step 3 (ControlSend) failed. Check the active Navicat window and privilege levels.",
-      "24": "Navicat: autofill step 4 (ControlClick) failed. Check the active Navicat window and privilege levels.",
-      "25": "Navicat: autofill step 5 (ControlClick) failed. Check the active Navicat window and privilege levels.",
-      "26": "Navicat: autofill step 6 (ControlClick) failed. Check the active Navicat window and privilege levels.",
-      "27": "Navicat: autofill step 7 (ControlClick) failed. Check the active Navicat window and privilege levels.",
-      "28": "Navicat: autofill step 8 (ControlSetText) failed. Check the active Navicat window and privilege levels.",
-      "29": "Navicat: autofill step 9 (ControlClick) failed. Check the active Navicat window and privilege levels."
+      "1": "Navicat automation helper failed. Check the executable and AutoIt DLLs."
     }
   },
   "display_name": "Navicat Premium Lite 17.0.13"

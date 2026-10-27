@@ -116,6 +116,7 @@ test("serialized Node plugin scripts keep credentials on stdin and recover after
   };
   const payload = {
     protocol: "sqlserver",
+    name: "root@a+b%2Bc",
     endpoint: { host: "gateway.example", port: 5525 },
     token: { id: "first", value: "first-secret" }
   };
@@ -135,6 +136,7 @@ test("serialized Node plugin scripts keep credentials on stdin and recover after
   assert.equal(calls[0].options.env.JMS_CONNECT_JSON, undefined);
   assert.equal(calls[0].input.executable, application.path);
   assert.equal(calls[0].input.username, "first");
+  assert.equal(calls[0].input.source_name, "root@a+b%2Bc");
   children[0].emit("spawn");
   children[0].emit("exit", 14, null);
   await failure;

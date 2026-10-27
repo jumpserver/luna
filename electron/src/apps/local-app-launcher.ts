@@ -276,6 +276,7 @@ export class LocalApplicationLauncher {
     return {
       ...valuesFor(payload),
       ...values,
+      source_name: String(payload.name || ""),
       port: payload.endpoint.port,
       executable: await this.resolveExecutable(application),
       config_dir: this.configService?.configDir || "",

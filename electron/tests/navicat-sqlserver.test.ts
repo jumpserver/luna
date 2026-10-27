@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import {
   launchNavicat,
   getNavicatURL,
+  prepareNavicatName,
+  navicatStepsScript,
   launchNavicatConnection,
   autoItDirectory,
   navicatAutoItSteps,
@@ -33,7 +35,7 @@ test(
   "installed Windows Navicat completes the upstream nine-step autofill",
   {
     skip: process.platform !== "win32" || !process.env.JMS_TEST_NAVICAT_CONNECTION_FILE,
-    timeout: 100000
+    timeout: 600000
   },
   async () => {
     const input = JSON.parse(await readFile(process.env.JMS_TEST_NAVICAT_CONNECTION_FILE!, "utf8"));
@@ -113,31 +115,76 @@ test("Navicat helper receives literal credentials over stdin, not executable arg
 });
 
 test("Navicat URL follows the upstream naming, protocol fields and escaping exactly", () => {
-  const base = { name: "asset@name", protocol: "mysql", host: "gateway", port: "5525", username: "token", dbname: "db" };
-  assert.equal(getNavicatURL(base), "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token");
+  const base = {
+    name: "asset@name",
+    protocol: "mysql",
+    host: "gateway",
+    port: "5525",
+    username: "token",
+    dbname: "db"
+  };
+  assert.equal(
+    getNavicatURL(base),
+    "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token"
+  );
   for (const name of ["asset", "asset@", "asset@name\n", ""]) {
-    assert.equal(getNavicatURL({ ...base, name }), "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=token&Conn.Port=5525&Conn.Username=token");
+    assert.equal(
+      getNavicatURL({ ...base, name }),
+      "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=token&Conn.Port=5525&Conn.Username=token"
+    );
   }
-  assert.equal(getNavicatURL({ ...base, name: "a@b@c" }), "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=b@c&Conn.Port=5525&Conn.Username=token");
-  assert.equal(getNavicatURL({ ...base, name: "a@中文 &+=!#% ^(){}~" }), "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=中文 &+=!#% {^}{(}{)}{{}{}}{~}&Conn.Port=5525&Conn.Username=token");
-  assert.equal(getNavicatURL({ ...base, protocol: "mariadb" }), "navicat://conn.mariadb?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token");
-  assert.equal(getNavicatURL({ ...base, protocol: "oracle" }), "navicat://conn.ora?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.ServiceName=db&Conn.ServiceNameType=ServiceName&Conn.ConnectionMode=Basic");
-  assert.equal(getNavicatURL({ ...base, protocol: "sqlserver" }), "navicat://conn.mssql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.AuthenticationType=Default&Conn.InitialDatabase=db");
-  assert.equal(getNavicatURL({ ...base, protocol: "postgresql" }), "navicat://conn.pgsql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.InitialDatabase=db");
+  assert.equal(
+    getNavicatURL({ ...base, name: "a@b@c" }),
+    "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=b@c&Conn.Port=5525&Conn.Username=token"
+  );
+  assert.equal(
+    getNavicatURL({ ...base, name: "a@中文 &+=!#% ^(){}~" }),
+    "navicat://conn.mysql?Conn.Host=gateway&Conn.Name=中文 &+=!#% {^}{(}{)}{{}{}}{~}&Conn.Port=5525&Conn.Username=token"
+  );
+  assert.equal(
+    getNavicatURL({ ...base, protocol: "mariadb" }),
+    "navicat://conn.mariadb?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token"
+  );
+  assert.equal(
+    getNavicatURL({ ...base, protocol: "oracle" }),
+    "navicat://conn.ora?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.ServiceName=db&Conn.ServiceNameType=ServiceName&Conn.ConnectionMode=Basic"
+  );
+  assert.equal(
+    getNavicatURL({ ...base, protocol: "sqlserver" }),
+    "navicat://conn.mssql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.AuthenticationType=Default&Conn.InitialDatabase=db"
+  );
+  assert.equal(
+    getNavicatURL({ ...base, protocol: "postgresql" }),
+    "navicat://conn.pgsql?Conn.Host=gateway&Conn.Name=name&Conn.Port=5525&Conn.Username=token&Conn.InitialDatabase=db"
+  );
 });
 
 test("every database passes the upstream URI unchanged to AutoIt and keeps the password separate", async () => {
   for (const protocol of ["mysql", "mariadb", "oracle", "postgresql", "sqlserver"]) {
-    const context = { ...connection, protocol, name: "asset@name & 中文^(){}~+!#", value: connection.password, dbname: connection.database, url: "file:///ignored" };
-    await launchNavicat(context, fakeStart((child, message) => {
-      assert.equal(message.connection.url, getNavicatURL(context));
-      assert.equal(message.connection.password, connection.password);
-      assert.equal(message.connection.database, connection.database);
-      assert.ok(!message.connection.url.includes(connection.password));
-      assert.equal(message.connection.autoit_dir, autoItDirectory());
-      child.stdout.emit("data", "OK\n");
-      child.emit("close", 0);
-    }), "win32");
+    const context = {
+      ...connection,
+      protocol,
+      name: "asset@name & 中文^(){}~+!#",
+      value: connection.password,
+      dbname: connection.database,
+      url: "file:///ignored"
+    };
+    await launchNavicat(
+      context,
+      fakeStart((child, message) => {
+        assert.equal(
+          message.connection.connect_info.url,
+          getNavicatURL({ ...context, dbname: protocol === "oracle" ? context.username : context.dbname })
+        );
+        assert.equal(message.connection.password, connection.password);
+        assert.equal(message.connection.database, protocol === "oracle" ? connection.username : connection.database);
+        assert.ok(!message.connection.connect_info.url.includes(connection.password));
+        assert.equal(message.connection.autoit_dir, autoItDirectory());
+        child.stdout.emit("data", "OK\n");
+        child.emit("close", 0);
+      }),
+      "win32"
+    );
   }
   assert.ok(!navicatAutomationScript.includes("[regex]::Replace"), "do not escape the URI twice");
   assert.throws(() => launchNavicat({ ...connection, protocol: "unknown" }, undefined, "win32"), /protocol is invalid/);
@@ -154,32 +201,6 @@ test("AutoIt resources resolve from source and packaged layouts", async () => {
   }
 });
 
-test("automation failures preserve only allowlisted stage codes", async () => {
-  for (const [output, expectedCode] of [
-    ["ERROR:23", 23],
-    ["ERROR:28", 28],
-    ["ERROR:999", 1],
-    [connection.password, 1]
-  ] as const) {
-    await assert.rejects(
-      launchNavicatConnection(
-        connection,
-        fakeStart((child) => {
-          child.stdout.emit("data", output);
-          child.emit("close", 1);
-        }),
-        "win32"
-      ),
-      (error: any) => {
-        assert.equal(error.exitCode, expectedCode);
-        assert.ok(!error.message.includes(connection.password));
-        if (expectedCode === 23) assert.match(error.message, /step 3: enter URI/);
-        return true;
-      }
-    );
-  }
-});
-
 test("starting Navicat without completing the autofill is not reported as success", async () => {
   for (const code of [0, 1, null]) {
     await assert.rejects(
@@ -190,7 +211,7 @@ test("starting Navicat without completing the autofill is not reported as succes
         }) as any,
         "win32"
       ),
-      /Navicat connection failed/
+      /Navicat automation helper failed/
     );
   }
 });
@@ -240,15 +261,7 @@ test("Navicat adapter rejects invalid inputs before launching an executable", ()
   const start = () => {
     throw new Error("should not launch");
   };
-  for (const override of [
-    { port: "0" },
-    { port: "65536" },
-    { port: "1433;bad" },
-    { password: "" },
-    { username: "" },
-    { password: "a\0b" },
-    { database: "a\0b" }
-  ]) {
+  for (const override of [{ port: "55\0" }, { username: "user\0name" }, { password: "a\0b" }, { database: "a\0b" }]) {
     assert.throws(
       () => launchNavicatConnection({ ...connection, ...override }, start as any, "win32"),
       /incomplete or invalid/
@@ -259,22 +272,37 @@ test("Navicat adapter rejects invalid inputs before launching an executable", ()
 
 test("autofill steps exactly match the upstream connect.json fetched on 2026-10-26", () => {
   // Freeze the exact cmd/type/element sequence, including the upstream 1OO typo.
-  assert.equal(createHash("sha256").update(JSON.stringify(navicatAutoItSteps)).digest("hex"), "b0ca609f598267cc181996824d0fdbf7f6c3cc69c38b83c7960513160c300278");
+  assert.equal(
+    createHash("sha256").update(JSON.stringify(navicatAutoItSteps)).digest("hex"),
+    "b0ca609f598267cc181996824d0fdbf7f6c3cc69c38b83c7960513160c300278"
+  );
   assert.equal(navicatAutoItSteps.length, 9);
   assert.equal(navicatAutoItSteps[5].type, "1OO,10");
   assert.equal(navicatAutoItSteps[8].element, "[CLASS:TButton; INSTANCE:2]");
 });
 
-test("17.0.13 runner executes the step table without version gates or extra UI actions", () => {
-  assert.ok(!/FileVersionInfo|FileMajorPart|FileMinorPart|FileBuildPart/.test(navicatAutomationScript));
-  assert.ok(navicatAutomationScript.includes("foreach ($step in $request.steps)"));
-  assert.ok(!/Disable-SavePassword|Find-Connection|TreeItem|Find-Action/.test(navicatAutomationScript));
-  for (const api of ["AU3_WinWaitActive", "AU3_Send", "AU3_ControlSend", "AU3_ControlSetTextByHandle", "AU3_ControlClickByHandle"])
+test("runner uses the upstream string APIs and no extra automation gates", () => {
+  assert.ok(
+    !/UIAutomation|FileVersionInfo|GetForegroundWindow|ByHandle|Mutex|deadline|IsChild/.test(navicatAutomationScript)
+  );
+  assert.ok(navicatAutomationScript.includes("::Run.Invoke($request.executable, '', 1)"));
+  assert.ok(navicatStepsScript.includes("::WaitActive.Invoke($step.element, '', $sleepTime)"));
+  for (const api of [
+    "AU3_Run",
+    "AU3_WinWaitActive",
+    "AU3_Send",
+    "AU3_ControlSend",
+    "AU3_ControlSetText",
+    "AU3_ControlClick"
+  ])
     assert.ok(navicatAutomationScript.includes(api));
-  assert.ok(navicatAutomationScript.includes("GetWindowThreadProcessId"));
-  assert.ok(navicatAutomationScript.includes("::IsChild"));
-  assert.ok(navicatAutomationScript.includes("Get-FileHash -LiteralPath $dllPath"));
-  assert.ok(navicatAutomationScript.includes("[void][int]::TryParse($coordinates[0], [ref]$x)"));
+});
+
+test("name preparation matches QueryUnescape before upstream replacement", () => {
+  assert.equal(prepareNavicatName("root@a+b%2Bc%3Ad-e"), "root@ab+c_d_e");
+  assert.equal(prepareNavicatName("root@bad%xx"), "");
+  assert.equal(prepareNavicatName("root@%FF"), "root@\uFFFD");
+  assert.equal(prepareNavicatName("root@%ñ"), "");
 });
 
 test("synchronous native failures are sanitized", async () => {
@@ -293,22 +321,80 @@ test("synchronous native failures are sanitized", async () => {
   );
 });
 
-test("automation timeout terminates the helper and rejects the connection", async (context) => {
+test("upstream retries are not cut off by a global timeout", async (context) => {
   context.mock.timers.enable({ apis: ["setTimeout"] });
+  let child;
   let killed = 0;
   const pending = launchNavicatConnection(
     connection,
-    fakeStart((child) => {
+    fakeStart((value) => {
+      child = value;
       child.kill = () => {
         killed++;
       };
     }),
     "win32"
   );
-  const rejected = assert.rejects(pending, /Navicat connection failed/);
-  // Let the stdin stream finish before advancing the helper deadline.
   await new Promise(setImmediate);
-  context.mock.timers.tick(90000);
-  await rejected;
-  assert.equal(killed, 1);
+  context.mock.timers.tick(600000);
+  assert.equal(killed, 0);
+  child.stdout.emit("data", "OK\n");
+  child.emit("close", 0);
+  await pending;
 });
+
+test("all native entry points are exported by both bundled AutoIt DLLs", async () => {
+  const names = [...navicatAutomationScript.matchAll(/Bind\(module, "(AU3_\w+)"/g)].map((match) => match[1]);
+  assert.ok(names.length === 6);
+  for (const filename of ["AutoItX3.dll", "AutoItX3_x64.dll"]) {
+    const bytes = await readFile(new URL(`../assets/autoit/${filename}`, import.meta.url));
+    for (const name of names) assert.ok(bytes.includes(Buffer.from(`${name}\0`)), `${filename}: missing ${name}`);
+  }
+});
+
+for (const result of [1, 0]) {
+  test(
+    `real PowerShell step trace matches upstream calls, delays and retry exhaustion (return ${result})`,
+    {
+      skip: process.platform !== "win32" && !process.env.JMS_TEST_PWSH_EXECUTABLE
+    },
+    () => {
+      const info = { url: "navicat://literal^{(}", value: "literal +!#^(){}~ password" };
+      const output = spawnSync(
+        process.env.JMS_TEST_PWSH_EXECUTABLE || "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          fileURLToPath(new URL("./fixtures/navicat-autoit-trace.ps1", import.meta.url))
+        ],
+        {
+          input: JSON.stringify({ script: navicatStepsScript, steps: navicatAutoItSteps, info, result }),
+          encoding: "utf8",
+          timeout: 15000
+        }
+      );
+      assert.equal(output.status, 0, output.stderr);
+      const expected = [];
+      for (const step of navicatAutoItSteps) {
+        expected.push(["Sleep", 300]);
+        if (step.cmd === "SendKey") {
+          expected.push(["SendKey", "^u", 0]);
+          continue;
+        }
+        const attempts = result ? 1 : step.cmd === "Wait" ? 32 : 12;
+        for (let attempt = 0; attempt < attempts; attempt++) {
+          if (step.cmd === "Wait") expected.push(["Wait", step.element, "", 15]);
+          else if (step.cmd === "ControlSend") expected.push([step.cmd, "", "", step.element, info.url, 0]);
+          else if (step.cmd === "ControlSetText") expected.push([step.cmd, "", "", step.element, info.value]);
+          else {
+            const [x, y] = step.type.split(",").map((value) => (/^\d+$/.test(value) ? Number(value) : 0));
+            expected.push([step.cmd, "", "", step.element, "left", 1, x, y]);
+          }
+          expected.push(["Sleep", step.cmd === "Wait" ? 1500 : 300]);
+        }
+      }
+      assert.deepEqual(JSON.parse(output.stdout), expected);
+    }
+  );
+}

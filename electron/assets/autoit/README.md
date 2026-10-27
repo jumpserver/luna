@@ -3,10 +3,10 @@
 These unmodified third-party binaries come from [jumpserver/client](https://github.com/jumpserver/client/tree/7b03884d54994600391fda1ab1717f2da43aea28/go-client/pkg/autoit), pinned to commit `7b03884d54994600391fda1ab1717f2da43aea28`.
 AutoItX remains subject to its vendor's license; the upstream repository's license must not be assumed to relicense these binaries. See [AutoIt](https://www.autoitscript.com/site/autoit/).
 
-| File | Calling process architecture | SHA-256 |
-| --- | --- | --- |
-| AutoItX3.dll | Windows x86 | a26fddee7674f74730d28d553220566bac64c4f877c5f33b5be6899202307845 |
-| AutoItX3_x64.dll | Windows x64 | a9af515ba2eaae9ffc9ef81748d2553f2f85d3dabb1cb0a8887180214c05433a |
+| File             | Calling process architecture | SHA-256                                                          |
+| ---------------- | ---------------------------- | ---------------------------------------------------------------- |
+| AutoItX3.dll     | Windows x86                  | a26fddee7674f74730d28d553220566bac64c4f877c5f33b5be6899202307845 |
+| AutoItX3_x64.dll | Windows x64                  | a9af515ba2eaae9ffc9ef81748d2553f2f85d3dabb1cb0a8887180214c05433a |
 
 There is no ARM64 DLL in this upstream directory. Choose by the architecture of the process loading the DLL, not the target application's architecture. A native ARM64 process cannot load either file directly.
 
