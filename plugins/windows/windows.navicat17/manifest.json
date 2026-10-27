@@ -1,8 +1,8 @@
 {
   "id": "windows.navicat17",
   "name": "navicat17",
-  "display_name": "Navicat Premium Lite 17.0.13",
-  "version": "1.3.0",
+  "display_name": "Navicat Premium Lite 18",
+  "version": "1.4.0",
   "min_client_version": "5.1.0",
   "author": "JumpServer",
   "homepage": "https://github.com/jumpserver/clients",
@@ -17,11 +17,10 @@
   ],
   "builtin": true,
   "comment": {
-    "zh": "代填流程仅按 Navicat 17.0.13 适配。请选择正确的可执行文件，并与 JumpServer 客户端使用相同权限运行。",
-    "en": "Autofill is adapted for Navicat 17.0.13 only. Select the correct executable and run it at the same privilege level as JumpServer."
+    "zh": "选择 Navicat Premium Lite 18 的 navicat.exe，通过 -uri 参数打开包含临时密码的连接，无需 AutoIt。",
+    "en": "Select the Navicat Premium Lite 18 executable. Connections with temporary credentials are opened using -uri, without AutoIt."
   },
   "permissions": [
-    "autoit",
     "exec"
   ]
 }

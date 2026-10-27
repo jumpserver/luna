@@ -10,13 +10,8 @@
     "required": true
   },
   "launch": {
-    "type": "script",
-    "script": "scripts/launch.mjs",
-    "interpreter": "node",
-    "input": "stdin",
-    "exit_messages": {
-      "1": "Navicat automation helper failed. Check the executable and AutoIt DLLs."
-    }
+    "type": "module",
+    "module": "scripts/launch.mjs"
   },
-  "display_name": "Navicat Premium Lite 17.0.13"
+  "display_name": "Navicat Premium Lite 18"
 }

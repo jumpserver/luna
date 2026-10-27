@@ -24,13 +24,6 @@ await Promise.all([
   )
 ]);
 
-// Native DLLs must remain outside app.asar. Forge already packages the bin directory.
-if (platform === "windows") {
-  await cp(path.join(projectRoot, "electron", "assets", "autoit"), path.join(stagingRoot, "bin", "autoit"), {
-    recursive: true
-  });
-}
-
 const configuredFaceBundle = String(process.env.JMS_FACE_ENGINE_BUNDLE || "").trim();
 const defaultFaceBundle = path.join(
   projectRoot,
