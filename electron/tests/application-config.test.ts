@@ -33,11 +33,9 @@ test("Windows Navicat launch behavior comes entirely from its plugin configurati
       },
       { selections: { [`databases:${protocol}`]: id } }
     );
-    assert.equal(application.launch_type, "script");
-    assert.equal(application.script_interpreter, "node");
-    assert.equal(application.script_input, "stdin");
-    assert.equal(application.script_serialize, false);
-    assert.match(application.script_exit_messages[1], /automation helper failed/);
+    assert.equal(application.launch_type, "module");
+    assert.equal(application.executable_type, "user_path");
+    assert.equal(application.path_exists, false);
     const launcher = new LocalApplicationLauncher(
       { isPackaged: false },
       projectRoot,
@@ -45,7 +43,7 @@ test("Windows Navicat launch behavior comes entirely from its plugin configurati
       null
     );
     let launches = 0;
-    launcher.launchScript = async (selected, payload, values) => {
+    launcher.launchModule = async (selected, payload, values) => {
       assert.equal(selected, application);
       assert.equal(payload.protocol, protocol === "mariadb" ? "mysql" : protocol);
       assert.equal(values.username, "selector-token");

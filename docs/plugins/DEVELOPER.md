@@ -151,7 +151,7 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 - `launch.serialize: true` 按脚本路径排队执行，前一次交接成功或失败后才启动下一次
 - `launch.exit_messages` 可按非零退出码声明静态错误提示；启动器不读取子进程 stderr，也不对提示插入连接参数
 - 上下文还提供已解析的 `executable`、数据库名 `dbname`；连接 URL 由插件自行构造
-- Windows Navicat 的完整示例见 `plugins/windows/windows.navicat17/`；AutoIt URI/密码代填流程仅按 Navicat 17.0.13 适配，不做版本校验或拦截；插件按 `scripts/autoit-steps.json` 中与上游一致的九步执行，退出成功表示代填完成，不代表已独立确认数据库连接成功；DLL 来源和 Windows 验收方法见 `electron/assets/autoit/README.md`
+- Windows Navicat 的示例见 `plugins/windows/windows.navicat17/`：选择 Navicat Premium Lite 18 的 EXE，插件返回 `{ type: "args", args: ["-uri", url] }`；URI 包含 `Conn.Password`，作为单独参数传给所选程序，无需 AutoIt，也不依赖系统协议关联。
 
 脚本接收的 JSON 示例：
 
