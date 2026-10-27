@@ -721,8 +721,7 @@ function receiveToken(
       if (candidate.settled || reviewTicketId(candidate.token) !== ticketId) continue;
       clearTimers(candidate);
       candidate.status = reviewStatus;
-      candidate.detail =
-        token.acl.error || `AclDialog.${reviewStatus === "rejected" ? "ReviewRejected" : "ReviewClosed"}`;
+      candidate.detail = `AclDialog.${reviewStatus === "rejected" ? "ReviewRejected" : "ReviewClosed"}`;
     }
     resumeConnections(group);
     return;

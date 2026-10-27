@@ -79,7 +79,7 @@ const faceFrame = ref<HTMLIFrameElement | null>(null);
 const visibleDetail = (detail: string) => {
   if (detail.startsWith("AccountProvisioning.Task:"))
     return t("AccountProvisioning.Task", { id: detail.split(":")[1] });
-  if (detail.startsWith("AccountProvisioning.")) return t(detail);
+  if (detail.startsWith("AccountProvisioning.") || detail.startsWith("AclDialog.")) return t(detail);
   return localizeFaceLiveDetail(detail, t);
 };
 const reviewErrors = computed(() => {
