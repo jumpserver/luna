@@ -67,10 +67,15 @@ it.skipIf(typeof document === "undefined").each([
   try {
     await Vue.nextTick();
     expect([...host.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["ToolTips.Close"]);
-    group.value.code = "acl_face_verify";
+    group.value.code = "acl_controls";
+    group.value.items[0].token = {
+      id: "face-token",
+      is_active: false,
+      acl: { requirements: { face: "pending" }, face_online: false, cancelled: false, mfa_methods: [] }
+    };
     await Vue.nextTick();
     expect([...host.querySelectorAll("button")].map((button) => button.textContent)).toEqual([
-      "ToolTips.Close",
+      "Common.Cancel",
       "Face.Remote.Retry"
     ]);
   } finally {

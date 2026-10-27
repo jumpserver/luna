@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { ref } from "vue";
 import type { WorkspaceSessionTab } from "./useWorkspaceTabs";
 import { useWorkspaceTabMenu } from "./useWorkspaceTabMenu";
 
 vi.mock("~/composables/useConnectMethods", () => ({ SFTP_FILE_EDITOR_VALUE: "sftp_file_editor" }));
 
 const mocks = vi.hoisted(() => ({ exchange: vi.fn() }));
-vi.mock("~/composables/useConnectTokenExchange", () => ({ exchangeConnectToken: mocks.exchange }));
+vi.mock("~/composables/useConnectTokenExchange", async (original) => ({
+  ...(await original<typeof import("./useConnectTokenExchange")>()),
+  exchangeConnectToken: mocks.exchange
+}));
 const getAssetDetailRequest = vi.fn();
 vi.mock("~/composables/useApiRequest", () => ({
   getAssetDetailRequest: (...args: unknown[]) => getAssetDetailRequest(...args)
@@ -17,6 +21,11 @@ const openSession = vi.fn((_asset: unknown, _options: { payload?: unknown }) => 
 const openSetupSession = vi.fn();
 const handleAssetConnection = vi.fn();
 const addErrorToast = vi.fn();
+const markSessionConnecting = vi.fn();
+const markSessionConnected = vi.fn();
+const markSessionDisconnected = vi.fn();
+const getSessionConnectionAttempt = vi.fn();
+const tabs = ref<WorkspaceSessionTab[]>([]);
 
 function session(webProxy = true) {
   return {
@@ -44,7 +53,10 @@ function session(webProxy = true) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  tabs.value = [];
+  getSessionConnectionAttempt.mockReturnValue(1);
+  openSession.mockReturnValue({ id: "new-pane" });
   mocks.exchange.mockResolvedValue({ id: "new-token", value: "new-value", org_id: "asset-org" });
   getAssetDetailRequest.mockResolvedValue({ permed_accounts: [], permed_protocols: [] });
   createKokoTicket.mockResolvedValue({ ticket: "new-ticket" });
@@ -53,10 +65,14 @@ beforeEach(() => {
   vi.stubGlobal("useAssetAction", () => ({ handleAssetConnection }));
   vi.stubGlobal("useWorkspaceConnectors", () => ({ createKokoTicket }));
   vi.stubGlobal("useWorkspaceTabs", () => ({
+    tabs,
     updateSessionPayload,
     openSession,
     openSetupSession,
-    markSessionConnecting: vi.fn(),
+    markSessionConnecting,
+    markSessionConnected,
+    markSessionDisconnected,
+    getSessionConnectionAttempt,
     setActiveSession: vi.fn()
   }));
 });
@@ -120,4 +136,69 @@ it("keeps ordinary workspace token exchange independent of Web Proxy tickets", a
   await useWorkspaceTabMenu().reconnectSession(session(false));
   expect(createKokoTicket).not.toHaveBeenCalled();
   expect(updateSessionPayload.mock.calls[0]![1]).toMatchObject({ id: "new-token", value: "new-value" });
+});
+
+async function cancelExchange() {
+  const { exchangeConnectToken } =
+    await vi.importActual<typeof import("./useConnectTokenExchange")>("./useConnectTokenExchange");
+  vi.stubGlobal("exchangeConnectionToken", vi.fn().mockResolvedValue({ id: "pending-token", is_active: false }));
+  vi.stubGlobal("useAclDialog", () => ({ request: () => Promise.resolve(null) }));
+  mocks.exchange.mockImplementation(exchangeConnectToken);
+}
+
+it.each(["reconnect", "clone", "pane", "automation"])(
+  "does not start another connection after the user cancels %s ACL",
+  async (action) => {
+    await cancelExchange();
+    const tab = session(false);
+    const menu = useWorkspaceTabMenu();
+    if (action === "reconnect") await menu.reconnectSession(tab);
+    else if (action === "automation") await menu.reconnectSession(tab, vi.fn());
+    else if (action === "clone") await menu.cloneSession(tab);
+    else await menu.connectCurrentPane(tab, { id: "other-pane" } as never);
+    await Promise.resolve();
+
+    expect(handleAssetConnection).not.toHaveBeenCalled();
+    expect(openSetupSession).not.toHaveBeenCalled();
+    expect(updateSessionPayload).not.toHaveBeenCalled();
+    expect(addErrorToast).not.toHaveBeenCalled();
+    if (action === "pane") expect(markSessionDisconnected).toHaveBeenCalledWith("other-pane");
+  }
+);
+
+function surfaceSnapshot(status: "connected" | "disconnected") {
+  const pane = { ...session(false), protocol: "postgresql", status, mode: "session" as const };
+  tabs.value = [{ ...pane, panes: [pane] }] as WorkspaceSessionTab[];
+  const currentPane = tabs.value[0]!.panes[0]!;
+  // Pane surfaces receive toSurfaceTab(pane), a shallow snapshot of status.
+  const snapshot: WorkspaceSessionTab = { ...currentPane, layoutMode: "single", panes: [currentPane] };
+  markSessionConnecting.mockImplementation(() => {
+    currentPane.status = "connecting";
+  });
+  return { currentPane, snapshot };
+}
+
+it.each(["connected", "disconnected"] as const)(
+  "restores the original %s Chen pane when exchange ACL is cancelled",
+  async (status) => {
+    await cancelExchange();
+    const { snapshot } = surfaceSnapshot(status);
+    await useWorkspaceTabMenu().reconnectSession(snapshot);
+    expect(status === "connected" ? markSessionConnected : markSessionDisconnected).toHaveBeenCalledWith("pane");
+    expect(status === "connected" ? markSessionDisconnected : markSessionConnected).not.toHaveBeenCalled();
+    expect(snapshot.status).toBe(status);
+    expect(snapshot.payload!.id).toBe("old-token");
+  }
+);
+
+it.each(["new-attempt", "closed", "removed"])("does not restore a stale connection after %s", async (change) => {
+  await cancelExchange();
+  const { currentPane, snapshot } = surfaceSnapshot("connected");
+  const reconnecting = useWorkspaceTabMenu().reconnectSession(snapshot);
+  if (change === "new-attempt") getSessionConnectionAttempt.mockReturnValue(2);
+  else if (change === "removed") tabs.value = [];
+  else currentPane.status = "disconnected";
+  await reconnecting;
+  expect(markSessionConnected).not.toHaveBeenCalled();
+  expect(markSessionDisconnected).not.toHaveBeenCalled();
 });

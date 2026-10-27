@@ -4,7 +4,7 @@ import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 const props = defineProps<{ scopeId: string }>();
 const { t } = useI18n();
 const { groupForScope, submit, close, closeScope } = useAclDialog();
-const { closePane } = useWorkspaceTabs();
+const { closePane, tabs } = useWorkspaceTabs();
 const group = groupForScope(props.scopeId);
 const {
   canSubmit,
@@ -21,9 +21,14 @@ const {
 } = useAclDialogPresentation(group);
 
 const handleClose = async () => {
-  if (!group.value) return;
-  const cancelling = close(group.value);
-  await closePane(props.scopeId);
+  const current = group.value;
+  if (!current) return;
+  const pane = tabs.value.flatMap((tab) => tab.panes).find((item) => item.id === props.scopeId);
+  // Only an initial connection owns the pane. Reconnecting can create another
+  // scoped ACL request while the existing session and its SQL drafts stay open.
+  const ownsInitialPane = current.items.some((item) => item.scopeId === props.scopeId) && pane && !pane.payload;
+  const cancelling = close(current);
+  if (ownsInitialPane) await closePane(props.scopeId);
   await cancelling;
 };
 const handleSubmit = () => {
