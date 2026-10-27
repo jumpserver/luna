@@ -192,3 +192,58 @@ it.each([true, false])("saves printer redirection as %s independently of client 
   expect(preference.printersRedirect.value).toBe(enabled);
   expect(preference.fullScreen.value).toBe(true);
 });
+
+it.each(["0", "1", "2"] as const)("saves Windows key combinations as %s independently", async (value) => {
+  api.getLunaPreferences.mockResolvedValue({
+    graphics: { rdp_keyboard_hook: "2", printers_redirect: true, rdp_client_option: ["full_screen"] }
+  });
+  const preference = start();
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  preference.keyboardHook.value = value;
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(api.updateLunaPreferences).toHaveBeenCalledExactlyOnceWith({ graphics: { rdp_keyboard_hook: value } });
+  expect(preference.keyboardHook.value).toBe(value);
+  expect(preference.printersRedirect.value).toBe(true);
+  expect(preference.fullScreen.value).toBe(true);
+});
+
+it.each([undefined, null, "invalid", "", 0])(
+  "defaults invalid or missing keyboard hook %s to full screen",
+  async (value) => {
+    api.getLunaPreferences.mockResolvedValue({ graphics: { rdp_keyboard_hook: value } });
+    const preference = start();
+    await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+    expect(preference.keyboardHook.value).toBe("2");
+  }
+);
+
+it("reloads the keyboard hook for each account and ignores a stale save", async () => {
+  api.getLunaPreferences.mockResolvedValue({ graphics: { rdp_keyboard_hook: "0" } });
+  const preference = start();
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(preference.keyboardHook.value).toBe("0");
+  let finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  api.updateLunaPreferences.mockReturnValueOnce(pending);
+  preference.keyboardHook.value = "1";
+  api.getLunaPreferences.mockResolvedValue({ graphics: {} });
+  user.currentAccountId = "another-user";
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  finish();
+  await pending;
+  expect(preference.keyboardHook.value).toBe("2");
+});
+
+it("retains the saved keyboard hook when updating fails", async () => {
+  api.getLunaPreferences.mockResolvedValue({ graphics: { rdp_keyboard_hook: "0" } });
+  const preference = start();
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  const error = new Error("Save failed");
+  api.updateLunaPreferences.mockRejectedValue(error);
+  preference.keyboardHook.value = "1";
+  await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+  expect(preference.keyboardHook.value).toBe("0");
+  expect(errorToast).toHaveBeenCalledWith(expect.objectContaining({ error }));
+});
