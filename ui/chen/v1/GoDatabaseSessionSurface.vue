@@ -19,7 +19,7 @@ import type {
 } from "~/chen/composables/useChenSqlAiSessions";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { useElementSize, useLocalStorage } from "@vueuse/core";
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { parseKokoMcpFrame } from "#koko/composables/agent/types";
 import {
@@ -99,7 +99,7 @@ const busy = ref(true);
 const authenticationUnknown = ref(false);
 const eventConnected = ref(false);
 const drawer = ref(false);
-const workspaceBody = ref<HTMLElement | null>(null);
+const workspaceBody = useTemplateRef<HTMLElement>("workspaceBody");
 const { width: workspaceWidth } = useElementSize(workspaceBody);
 const sidebarId = useId();
 // Only presentation preferences are persisted; connection details and SQL stay in memory.

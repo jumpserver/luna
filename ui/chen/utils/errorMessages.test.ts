@@ -5,7 +5,12 @@ import zh from "../../../i18n/locales/zh.json";
 import { chenErrorCatalog } from "./errorCatalog";
 import { chenErrorText } from "./errorMessages";
 
-const i18n = createI18n({ legacy: false, locale: "zh", fallbackLocale: "en", messages: { zh, en } });
+const i18n = createI18n<[typeof en], "zh" | "en", false>({
+  legacy: false,
+  locale: "zh",
+  fallbackLocale: "en",
+  messages: { zh, en }
+});
 const t = (key: string, values: Record<string, string | number> = {}) => i18n.global.t(key, values);
 
 describe("Chen error localization", () => {
@@ -115,7 +120,7 @@ describe("Chen error localization", () => {
   });
 
   it("uses the selected locale and preserves already localized UI validation", () => {
-    const english = createI18n({ legacy: false, locale: "en", messages: { en } }).global.t;
+    const english = createI18n<[typeof en], "en", false>({ legacy: false, locale: "en", messages: { en } }).global.t;
     expect(chenErrorText("idle_disconnect", english)).toBe(en.Chen.Errors.idle_disconnect);
     expect(chenErrorText(new Error(en.Chen.GoWriteSqlFileInvalid), english)).toBe(en.Chen.GoWriteSqlFileInvalid);
     expect(chenErrorText(new Error(zh.Chen.GoWriteSqlFileInvalid), t)).toBe(zh.Chen.GoWriteSqlFileInvalid);
