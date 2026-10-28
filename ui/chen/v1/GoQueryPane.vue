@@ -6,6 +6,7 @@ import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
 import { computed, ref, useId, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
@@ -196,7 +197,7 @@ async function run(sql: string, version: number) {
       writeConfirmation.value = { sql, version, consoleId };
     else emit("run", sql, version);
   } catch (cause) {
-    editorError.value = cause instanceof Error ? cause.message : String(cause);
+    editorError.value = chenErrorText(cause, t);
   } finally {
     analysisBusy.value = false;
   }
@@ -239,7 +240,7 @@ async function loadSqlFile(event: Event) {
     if (!sql.trim() || sql.includes("\0")) throw new Error(t("Chen.GoWriteSqlFileInvalid"));
     if (props.session.permissions.can_upload && ready.value) emit("uploadSql", sql);
   } catch (cause) {
-    editorError.value = cause instanceof Error ? cause.message : String(cause);
+    editorError.value = chenErrorText(cause, t);
   }
 }
 function preventCopy(event: ClipboardEvent) {
@@ -784,7 +785,7 @@ defineExpose({
           role="alert"
           class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-xs text-error"
         >
-          {{ query.execution.error.code }} · {{ query.execution.error.message }}
+          {{ chenErrorText(query.execution.error, t) }}
         </div>
         <div
           v-if="query.resultLoadError"

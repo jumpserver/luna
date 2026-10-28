@@ -29,6 +29,7 @@ import {
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenSampleSql, chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { registerWorkspaceSessionCloseGuard } from "~/composables/useWorkspaceTabs";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -148,12 +149,7 @@ const insertTarget = computed(() => (activeTab.value?.kind === "query" ? activeT
 let disposed = false;
 let sequence = 0;
 let queryNumber = 0;
-const failureText = (cause: unknown) =>
-  cause instanceof ChenGoError && cause.code === "session_control_unavailable"
-    ? t("Chen.GoV1ControlUnavailable")
-    : cause instanceof Error
-      ? cause.message
-      : String(cause);
+const failureText = (cause: unknown) => chenErrorText(cause, t);
 const aiAvailable = computed(() => !!props.tab && !!getChenSqlAiSession(props.tab.id)?.enabled);
 let aiGeneration = 0;
 function sqlAiContext(): ChenSqlEditorContext | null {
@@ -440,7 +436,7 @@ function acceptEvent(event: GoEvent) {
   if (event.type === "session.closed") {
     if (session.value) session.value.state = "closed";
     eventController.abort();
-    error.value = String((event.data as { reason?: string }).reason || t("Chen.GoV1SessionClosed"));
+    error.value = chenErrorText((event.data as { reason?: string }).reason, t, "session_closed");
     for (const query of queries.value) closeQuerySession(query);
     markDisconnected(error.value);
   }

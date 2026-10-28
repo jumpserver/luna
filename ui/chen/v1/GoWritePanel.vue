@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
 import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { executionActive } from "./api";
 import {
   clearEditDraft,
@@ -116,7 +117,7 @@ async function loadMetadata() {
     );
     if (!current.signal.aborted && props.query.rows === rowSet) draft.value.metadata = metadata;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) metadataBusy.value = false;
   }
@@ -223,7 +224,7 @@ async function preview() {
     );
     previewOpen.value = true;
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause);
+    error.value = chenErrorText(cause, t);
   } finally {
     draft.value.busy = false;
   }
@@ -339,7 +340,9 @@ function discard() {
       </template>
       <span v-else class="text-xs text-muted">
         {{ metadataBusy ? t("Chen.LoadingTableMetadata") : t("Chen.GoWriteReadonly") }}
-        <template v-if="draft.metadata?.reason">· {{ draft.metadata.reason }}</template>
+        <template v-if="draft.metadata?.reason">
+          · {{ chenErrorText(draft.metadata.reason, t, "edit_unavailable") }}
+        </template>
       </span>
       <UButton
         class="ml-auto"

@@ -5,6 +5,7 @@ import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Vue from "vue";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
+import * as errorMessages from "~/chen/utils/errorMessages";
 import * as dialect from "~/chen/utils/sqlDialect";
 import * as apiModule from "./api";
 import * as editing from "./dataEditing";
@@ -141,6 +142,7 @@ function mountSurface(firstToken = "old") {
       handleChenSqlAiError: vi.fn()
     },
     "~/chen/utils/sqlDialect": dialect,
+    "~/chen/utils/errorMessages": errorMessages,
     "~/composables/useWorkspaceTabs": { registerWorkspaceSessionCloseGuard: () => vi.fn() },
     "~/store/modules/userInfo": { useUserInfoStore: () => ({}) },
     "./api": apiModule,
@@ -232,6 +234,8 @@ describe("Go database connection replacement", () => {
       type: "session.closed",
       data: { reason: "idle_disconnect" }
     } as GoEvent);
+    expect(mounted.state.error.value).toBe("Chen.Errors.idle_disconnect");
+    expect(mounted.markSessionDisconnected).toHaveBeenCalledWith(expect.anything(), "Chen.Errors.idle_disconnect");
     exchange(mounted, "new");
     await waitReady(mounted, "new");
     const current = mounted.state.tabs.value[0]!;

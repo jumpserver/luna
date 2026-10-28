@@ -6,6 +6,7 @@ import type { ChenCreateTableColumn } from "~/chen/types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenCreateTableTypes } from "~/chen/utils/createTableSql";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import {
   buildChenCreateIndexSql,
   buildChenDropIndexSql,
@@ -102,7 +103,7 @@ const definition = computed(() => {
       error: ""
     };
   } catch (cause) {
-    return { sql: "", error: cause instanceof Error ? cause.message : String(cause) };
+    return { sql: "", error: chenErrorText(cause, t) };
   }
 });
 function addColumn() {
@@ -150,7 +151,7 @@ onMounted(async () => {
     );
     chosen.value = metadata.value.columns[0]?.name || "";
   } catch (cause) {
-    if (!controller.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!controller.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     busy.value = false;
   }
@@ -171,7 +172,7 @@ async function nativeDefinition() {
         .join("\n")}\n\n`
     );
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause);
+    error.value = chenErrorText(cause, t);
   } finally {
     busy.value = false;
   }

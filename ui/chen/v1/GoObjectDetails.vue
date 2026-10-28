@@ -2,6 +2,7 @@
 import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
 const props = defineProps<{
   api: ChenGoApi;
@@ -50,7 +51,7 @@ const current = computed(() =>
 );
 const columns = computed(() => sections.value.find((item) => item.key === active.value)?.columns || []);
 const sectionError = computed(() =>
-  typeof current.value?.error === "string" ? current.value.error : current.value?.error?.message
+  current.value?.error ? chenErrorText(current.value.error, t, "catalog_failed") : ""
 );
 const labels: Record<string, string> = {
   name: "Chen.Name",
@@ -80,7 +81,7 @@ async function load() {
     );
     if (!current.signal.aborted) data.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
@@ -96,7 +97,7 @@ async function loadDdl() {
     const value = await props.api.catalogDdl(props.sessionId, props.object.schema, props.object.name, current.signal);
     if (!current.signal.aborted) ddl.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) ddlError.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) ddlError.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) ddlBusy.value = false;
   }
