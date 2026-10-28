@@ -3,7 +3,7 @@
   "type": "module",
   "version": "5.1.0",
   "private": true,
-  "packageManager": "pnpm@11.4.0",
+  "packageManager": "pnpm@11.28.5",
   "description": "JumpServer web application",
   "author": "JumpServer",
   "license": "GPL-3.0-or-later",
