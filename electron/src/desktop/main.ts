@@ -60,6 +60,7 @@ import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
+import { ClipboardHistoryService } from "./clipboard-history";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -81,6 +82,7 @@ let shortcutOverrides: ShortcutOverrides = {};
 const shortcutRecorders = new WeakSet();
 const shortcutEnvironment = { mac: process.platform === "darwin", desktop: true };
 const localShellSessions = new Map();
+const clipboardHistory = new ClipboardHistoryService(() => clipboard.readText());
 const apiStreams = new Map();
 const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
 const allowedChenOrigins = new Set<string>();
@@ -1119,9 +1121,24 @@ async function handleInvoke(event, request) {
   if (command === "plugin:path|extname") return path.extname(args.path);
   if (command === "plugin:path|basename") return path.basename(args.path, args.ext);
   if (command === "plugin:path|is_absolute") return path.isAbsolute(args.path);
-  if (command === "plugin:clipboard-manager|write_text") return void clipboard.writeText(args.text || "");
+  if (command === "plugin:clipboard-manager|write_text") {
+    await clipboard.writeText(args.text || "");
+    await clipboardHistory.capture();
+    return;
+  }
   if (command === "plugin:clipboard-manager|read_text") return clipboard.readText();
   if (command === "plugin:clipboard-manager|clear") return void clipboard.clear();
+  if (command === "desktop_clipboard_history") return clipboardHistory.read();
+  if (command === "desktop_clipboard_history_status") return clipboardHistory.status();
+  if (command === "desktop_clipboard_history_remove") {
+    if (typeof args.id !== "string") throw new Error("Invalid clipboard history item ID");
+    return clipboardHistory.remove(args.id);
+  }
+  if (command === "desktop_clipboard_history_clear") return clipboardHistory.clear();
+  if (command === "desktop_clipboard_history_set_enabled") {
+    if (typeof args.enabled !== "boolean") throw new Error("Invalid clipboard history state");
+    return clipboardHistory.setEnabled(args.enabled);
+  }
   if (command === "desktop_clipboard_write_image") {
     const image = nativeImage.createFromBitmap(Buffer.from(args.rgba), {
       width: Number(args.width),
@@ -1560,6 +1577,7 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("will-quit", () => {
+  clipboardHistory.stop();
   void faceEngine?.shutdown();
 });
 app.on("activate", () => createWindow("main"));
@@ -1618,6 +1636,7 @@ app.whenReady().then(async () => {
     ffmpegPlugin
   );
   ipcMain.handle("jms:invoke", handleInvoke);
+  clipboardHistory.start();
   if (process.platform === "darwin") {
     const icon = loadAppIcon();
     if (icon) app.dock.setIcon(icon);
