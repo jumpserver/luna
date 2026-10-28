@@ -2,6 +2,7 @@
 import type { ChenGoApi, GoCatalogColumn, GoCatalogObject } from "./api";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import GoObjectDetails from "./GoObjectDetails.vue";
 const props = defineProps<{
   object: GoCatalogObject;
@@ -53,7 +54,7 @@ async function load(more = false) {
     cursor.value = page.next_cursor;
     hasMore.value = page.has_more;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }

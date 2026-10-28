@@ -3,6 +3,7 @@ import type { ChenGoApi, GoCatalogObject, GoCatalogPage } from "./api";
 import type { QueryContext } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { writeClipboardText } from "~/utils/clipboard";
 import { mergeCatalogNodes, objectKey, qualifiedObjectName, quoteIdentifier } from "./workspace";
@@ -161,8 +162,7 @@ async function load(current: Node, append = false) {
     current.more = page.has_more;
     current.loaded = true;
   } catch (cause) {
-    if (!controller.signal.aborted && generation === current.generation)
-      current.error = cause instanceof Error ? cause.message : String(cause);
+    if (!controller.signal.aborted && generation === current.generation) current.error = chenErrorText(cause, t);
   } finally {
     controllers.delete(controller);
     if (generation === current.generation) current.loading = false;
@@ -372,7 +372,7 @@ async function runSearch(append = false) {
     current.more = page.has_more;
     current.loaded = true;
   } catch (cause) {
-    if (!controller.signal.aborted) current.error = cause instanceof Error ? cause.message : String(cause);
+    if (!controller.signal.aborted) current.error = chenErrorText(cause, t);
   } finally {
     if (!controller.signal.aborted) current.loading = false;
   }

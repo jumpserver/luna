@@ -4,6 +4,7 @@ import type { QueryWorkspaceTab } from "./workspace";
 import { useIntervalFn } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { editDirty } from "./dataEditing";
 import { downloadGoExport } from "./exportDownload";
 import { exportActive } from "./workspace";
@@ -105,7 +106,7 @@ async function download() {
           : "Chen.GoV1ExportDownloadStarted"
     );
   } catch (cause) {
-    if (job.value?.id === id) failure.value = cause instanceof Error ? cause.message : String(cause);
+    if (job.value?.id === id) failure.value = chenErrorText(cause, t);
   } finally {
     downloading.value = false;
   }
@@ -154,7 +155,7 @@ useIntervalFn(() => {
           </p>
           <p v-if="job.truncated" class="text-warning">{{ t("Chen.GoV1ExportIncomplete") }}</p>
           <p v-if="job.error" class="whitespace-pre-wrap break-words text-error">
-            {{ job.error.message }} ({{ job.error.code }})
+            {{ chenErrorText(job.error, t) }}
           </p>
           <p v-if="job.expires_at" class="text-xs text-muted">
             {{ t("Chen.GoV1ExportExpires", { time: new Date(job.expires_at).toLocaleString() }) }}
