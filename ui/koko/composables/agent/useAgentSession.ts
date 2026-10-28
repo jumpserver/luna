@@ -44,6 +44,7 @@ interface AgentSessionOptions {
   relay: AgentToolRelay;
   messageMetadata: () => Record<string, unknown>;
   onMessage: (message: UIMessage) => void;
+  shouldHandleEvent?: (event: AgentEvent) => boolean;
   onAvailability: (available: boolean) => void;
   onApprovalMode?: (mode: AgentApprovalMode) => void;
   onInputLock?: (locked: boolean) => void;
@@ -754,6 +755,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     if (event.session_id && event.session_id !== state.agentSessionId) return;
     if (event.resource_session_id && event.resource_session_id !== state.resourceSessionId) return;
     state.lastSeq = event.seq;
+    if (options.shouldHandleEvent && !options.shouldHandleEvent(event)) return;
     const payload = event.payload || {};
     const runId = String(event.run_id || payload.run_id || "");
     const lifecycle = agentEventLifecycle(event.type);
