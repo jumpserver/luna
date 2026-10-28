@@ -80,7 +80,7 @@ export class ClipboardHistoryService {
     try {
       const text = await this.readText();
       if (!this.running || !this.enabled || revision !== this.revision) return;
-      if (!text || text.length > MAX_ITEM_BYTES || Buffer.byteLength(text, "utf8") > MAX_ITEM_BYTES) {
+      if (text.length > MAX_ITEM_BYTES || Buffer.byteLength(text, "utf8") > MAX_ITEM_BYTES || !text.trim()) {
         this.lastFingerprint = "";
         return;
       }

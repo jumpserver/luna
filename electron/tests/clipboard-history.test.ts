@@ -34,6 +34,10 @@ test("captures changed text, deduplicates exactly, and preserves deletion until 
   await service.clear();
   context.mock.timers.tick(500);
   assert.deepEqual(await service.read(), []);
+  text = " \t\r\n\u00a0\u3000";
+  assert.deepEqual(await service.read(), []);
+  text = " \tfirst line  \r\n second line \n";
+  assert.equal((await service.read())[0].text, text);
 });
 
 test("limits item count, UTF-8 item size, and total stored bytes", async (context) => {
