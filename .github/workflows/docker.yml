@@ -1,38 +1,31 @@
 name: Build Web Image
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/docker.yml"
-      - ".dockerignore"
-      - "Dockerfile"
-      - "nginx.conf"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "nuxt.config.ts"
-      - "ui/**"
-      - "packages/**"
-      - "public/**"
-      - "i18n/**"
-      - "patches/**"
   push:
-    branches: [master]
+    branches: [dev, master]
     tags: ["v*"]
     paths:
       - ".github/workflows/docker.yml"
       - ".dockerignore"
+      - ".npmrc"
       - "Dockerfile"
       - "nginx.conf"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "nuxt.config.ts"
+      - "tsconfig.json"
       - "ui/**"
       - "packages/**"
       - "public/**"
       - "i18n/**"
       - "patches/**"
+      - "!**/*.test.*"
+      - "!**/*.spec.*"
+      - "!**/tests/**"
+      - "!**/e2e/**"
+      - "!ui/**/*.md"
+      - "!packages/**/*.md"
   workflow_dispatch:
 
 permissions:
@@ -49,6 +42,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - uses: docker/setup-qemu-action@v3
+        if: startsWith(github.ref, 'refs/tags/')
 
       - uses: docker/setup-buildx-action@v3
 
@@ -74,7 +68,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ startsWith(github.ref, 'refs/tags/') && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
