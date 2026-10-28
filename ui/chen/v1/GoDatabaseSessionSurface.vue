@@ -41,7 +41,7 @@ import GoObjectPane from "./GoObjectPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
-import { prepareGoSqlProposal } from "./sqlAi";
+import { goSqlExecutionError, prepareGoSqlProposal } from "./sqlAi";
 import { usePaneResize } from "./usePaneResize";
 import {
   acceptQueryExecution,
@@ -176,7 +176,7 @@ function sqlAiContext(): ChenSqlEditorContext | null {
     workspaceTabId: query.id,
     workspaceTabKind: "query",
     currentContext: JSON.stringify(query.context),
-    lastError: query.execution?.error ? { ...query.execution.error } : null
+    lastError: goSqlExecutionError(query, snapshot)
   };
 }
 function applySqlProposal(proposal: ChenSqlProposal) {
