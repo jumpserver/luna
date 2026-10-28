@@ -6,6 +6,7 @@ export const shortcutDefinitions = [
   { id: "focus", default: "Mod+Shift+KeyP", scope: "workspace" },
   { id: "fullscreen", default: "Mod+Shift+KeyF", scope: "workspace" },
   { id: "rightPanel", default: "Mod+Alt+Digit2", scope: "application" },
+  { id: "clipboardHistory", default: "Mod+Shift+KeyH", scope: "application", desktopOnly: true },
   { id: "terminalAi", default: "Mod+KeyK", scope: "terminal" },
   { id: "localShell", default: "Mod+KeyT", scope: "application", desktopOnly: true }
 ] as const;

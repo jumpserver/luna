@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoAnalysis } from "./api";
 import type { SqlSourceRange } from "./executionRange";
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 import { completionFilterText, completionIsCurrent, waitForCompletion } from "./completion";
 import { analysisMatches, statementAt } from "./executionRange";
 import { applyChenMonacoTheme, monaco } from "./monaco";
@@ -28,7 +29,7 @@ const emit = defineEmits<{
   editorError: [message: string];
 }>();
 const { t } = useI18n();
-const host = ref<HTMLElement | null>(null);
+const host = shallowRef<HTMLElement | null>(null);
 let editor: monaco.editor.IStandaloneCodeEditor | undefined;
 let model: monaco.editor.ITextModel | undefined;
 const disposables: monaco.IDisposable[] = [];
@@ -42,6 +43,7 @@ let analysisRequest: { consoleId: string; version: number; promise: Promise<GoAn
 let analysisController: AbortController | undefined;
 let analysisTimer: ReturnType<typeof setTimeout> | undefined;
 let currentDecoration: monaco.editor.IEditorDecorationsCollection | undefined;
+let unregisterClipboard: (() => void) | undefined;
 
 function invalidateCompletion() {
   completion?.abort();
@@ -466,6 +468,35 @@ onMounted(() => {
   for (const name of ["copy", "cut", "paste", "drop"]) host.value.addEventListener(name, clipboard, true);
   host.value.addEventListener("keydown", keydown, true);
   host.value.addEventListener("beforeinput", beforeinput, true);
+  const instance = editor;
+  const documentModel = model;
+  unregisterClipboard = registerWorkspaceClipboardSurface(host.value, () => {
+    const version = documentModel.getVersionId();
+    const range = instance.getSelection();
+    const consoleId = props.consoleId;
+    if (!range) return null;
+    const available = () =>
+      editor === instance &&
+      model === documentModel &&
+      !documentModel.isDisposed() &&
+      documentModel.getVersionId() === version &&
+      props.consoleId === consoleId &&
+      props.online !== false &&
+      props.visible !== false;
+    return {
+      terminal: false,
+      mode: "paste",
+      paste(text) {
+        if (!available()) return "unavailable";
+        if (props.readOnly || !props.canPaste) return "denied";
+        instance.pushUndoStop();
+        const applied = instance.executeEdits("chen.clipboard-history", [{ range, text, forceMoveMarkers: true }]);
+        instance.pushUndoStop();
+        return applied ? "pasted" : "unavailable";
+      },
+      focus: () => editor?.focus()
+    };
+  });
 });
 watch(
   () => props.modelValue,
@@ -506,6 +537,7 @@ watch(
   { flush: "post" }
 );
 onBeforeUnmount(() => {
+  unregisterClipboard?.();
   cancelAnimationFrame(layoutFrame);
   completion?.abort();
   clearTimeout(analysisTimer);

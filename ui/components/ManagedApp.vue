@@ -7,6 +7,7 @@ import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
 import FaceOnlineMonitorHost from "~/components/Face/FaceOnlineMonitorHost.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
+import ClipboardHistory from "~/components/Modal/clipboardHistory.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
 import { confirmAiTaskLeave, useAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDebugLog";
@@ -453,6 +454,7 @@ onBeforeUnmount(() => {
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
         <ConnectionFormModal />
+        <ClipboardHistory v-if="isDesktopRuntime()" />
         <ClientCompatibilityDialog v-if="isDesktopRuntime()" />
         <AclDialog />
         <FaceOnlineMonitorHost />

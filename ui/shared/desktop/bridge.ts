@@ -165,9 +165,21 @@ export const desktopOs = {
   locale: () => requireElectron().invoke<string | null>("plugin:os|locale")
 };
 
+export interface DesktopClipboardHistoryItem {
+  id: string;
+  text: string;
+  copiedAt: number;
+}
+
 export const desktopClipboard = {
   readText: () => requireElectron().invoke<string>("plugin:clipboard-manager|read_text"),
   writeText: (text: string) => requireElectron().invoke<void>("plugin:clipboard-manager|write_text", { text }),
+  history: () => requireElectron().invoke<DesktopClipboardHistoryItem[]>("desktop_clipboard_history"),
+  removeHistory: (id: string) => requireElectron().invoke<void>("desktop_clipboard_history_remove", { id }),
+  clearHistory: () => requireElectron().invoke<void>("desktop_clipboard_history_clear"),
+  historyStatus: () => requireElectron().invoke<{ enabled: boolean }>("desktop_clipboard_history_status"),
+  setHistoryEnabled: (enabled: boolean) =>
+    requireElectron().invoke<void>("desktop_clipboard_history_set_enabled", { enabled }),
   writeImage: (rgba: Uint8Array, width: number, height: number) =>
     requireElectron().invoke<void>("desktop_clipboard_write_image", { rgba, width, height })
 };

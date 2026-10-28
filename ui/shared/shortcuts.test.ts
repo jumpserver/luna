@@ -30,6 +30,11 @@ describe("application shortcuts", () => {
     expect(shortcutBindings("localShell", {}, web)).toEqual([]);
   });
 
+  it("binds clipboard history only on desktop", () => {
+    expect(shortcutBindings("clipboardHistory", {}, web)).toEqual([]);
+    expect(shortcutBindings("clipboardHistory", {}, desktop)).toEqual(["Mod+Shift+KeyH"]);
+  });
+
   it("replaces every old binding and releases disabled chords", () => {
     const overrides = { closeTab: "Mod+Shift+KeyE", terminalAi: null };
     expect(shortcutBindings("closeTab", overrides, desktop)).toEqual(["Mod+Shift+KeyE"]);

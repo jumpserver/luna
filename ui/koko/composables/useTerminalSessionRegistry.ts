@@ -218,6 +218,10 @@ export function getKokoTerminalElement(tabId: string) {
   return getRegisteredTerminal(tabId)?.element ?? null;
 }
 
+export function focusKokoTerminal(tabId: string) {
+  getRegisteredTerminal(tabId)?.focus();
+}
+
 export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor | null {
   const terminal = getRegisteredTerminal(tabId);
   const screen = terminal?.element?.querySelector<HTMLElement>(".xterm-screen");
