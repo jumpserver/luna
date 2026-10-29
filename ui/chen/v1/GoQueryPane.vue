@@ -810,6 +810,7 @@ defineExpose({
         <GoWritePanel
           v-if="query.rows"
           :key="query.rows.id"
+          :visible="visible"
           :query="query"
           :session="session"
           :api="api"

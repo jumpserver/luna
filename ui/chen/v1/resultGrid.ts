@@ -1,4 +1,4 @@
-import type { GoRows } from "./api";
+import type { GoCopySelection, GoRows } from "./api";
 import type { ChenGridCell, ChenGridSelection } from "~/chen/utils/dataGridSelection";
 import { formatChenTsv } from "~/chen/utils/dataGridCopy";
 import {
@@ -68,6 +68,32 @@ export function resultFocusSelection(selection: ChenGridSelection, cell: ChenGri
 }
 
 export const resultColumnId = (ordinal: number) => `column_${ordinal}`;
+
+// Display order can differ from cache order after sorting, filtering or pinning.
+// Send ordinal identities, never labels or browser-supplied cell values.
+export function resultSQLSelection(
+  rows: { __row?: unknown }[],
+  columns: { id: string }[],
+  source: GoRows
+): GoCopySelection | null {
+  const selectedRows = rows.map((row) => Number(row.__row) - 1);
+  const selectedColumns = columns.map((column) =>
+    source.columns.findIndex((_, index) => resultColumnId(index) === column.id)
+  );
+  if (
+    !selectedRows.length ||
+    !selectedColumns.length ||
+    selectedRows.length > 500 ||
+    selectedRows.some(
+      (index) => !Number.isInteger(index) || index < source.offset || index >= source.offset + source.rows.length
+    ) ||
+    selectedColumns.some((index) => index < 0) ||
+    new Set(selectedRows).size !== selectedRows.length ||
+    new Set(selectedColumns).size !== selectedColumns.length
+  )
+    return null;
+  return { rows: selectedRows, columns: selectedColumns };
+}
 
 export function resultGridRows(rows: GoRows) {
   return rows.rows.map((values, index) => ({

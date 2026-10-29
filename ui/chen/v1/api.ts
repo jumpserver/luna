@@ -87,6 +87,15 @@ export interface GoRows {
   truncated: boolean;
   next_offset?: number;
 }
+export interface GoCopySelection {
+  rows: number[];
+  columns: number[];
+}
+export interface GoCopiedSQL {
+  sql: string;
+  row_count: number;
+  notes: string[];
+}
 export interface GoEditColumn {
   index: number;
   name: string;
@@ -328,6 +337,19 @@ export function createChenGoApi(
         `/consoles/${id(consoleId)}/results/${id(resultId)}/edit?offset=${offset}&limit=${limit}`,
         "GET",
         undefined,
+        signal
+      ),
+    copySQL: (
+      consoleId: string,
+      resultId: string,
+      operation: "insert" | "update",
+      selection: GoCopySelection,
+      signal?: AbortSignal
+    ) =>
+      request<GoCopiedSQL>(
+        `/consoles/${id(consoleId)}/results/${id(resultId)}/copy-sql`,
+        "POST",
+        { operation, ...selection },
         signal
       ),
     previewEdits: (consoleId: string, resultId: string, changes: GoEditChange[], source: "grid" | "csv" = "grid") =>

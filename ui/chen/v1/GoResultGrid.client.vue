@@ -12,7 +12,7 @@ import type {
   IHeaderParams
 } from "ag-grid-community";
 import type { PropType } from "vue";
-import type { GoRows } from "./api";
+import type { GoCopiedSQL, GoCopySelection, GoRows } from "./api";
 import type { ChenGridCell } from "~/chen/utils/dataGridSelection";
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
@@ -36,6 +36,7 @@ import {
   resultFocusSelection,
   resultGridRows,
   resultSelectionTsv,
+  resultSQLSelection,
   resultTypeBadge,
   resultValuePreview,
   resultValueText
@@ -46,6 +47,8 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 const props = defineProps<{
   rows: GoRows;
   canCopy: boolean;
+  copySql?: (operation: "insert" | "update", selection: GoCopySelection) => Promise<GoCopiedSQL>;
+  sqlCopyDisabled?: boolean;
   editableColumns?: number[];
   insertableColumns?: number[];
   originalRowCount?: number;
@@ -60,6 +63,8 @@ const toast = useToast();
 const gridApi = shallowRef<GridApi | null>(null);
 const selection = ref(emptyChenGridSelection());
 const filter = ref("");
+const sqlCopyBusy = ref(false);
+let mounted = true;
 const shownRows = ref(props.rows.rows.length);
 const valueOpen = ref(false);
 const valueCell = ref<{ name: string; type: string; row: number; value: unknown } | null>(null);
@@ -139,7 +144,13 @@ const contextMenuItems = computed<DropdownMenuItem[][]>(() => {
         icon: "i-lucide-table-2",
         disabled: !props.canCopy || !bounds.value,
         onSelect: () => copySelection(true)
-      }
+      },
+      ...(["insert", "update"] as const).map((operation) => ({
+        label: t(operation === "insert" ? "Chen.CopyInsertSql" : "Chen.CopyUpdateSql"),
+        icon: "i-lucide-file-code",
+        disabled: !props.canCopy || !bounds.value || !props.copySql || props.sqlCopyDisabled || sqlCopyBusy.value,
+        onSelect: () => void copySqlSelection(operation)
+      }))
     ],
     [
       {
@@ -318,6 +329,33 @@ function copySelection(headers = false) {
   const selected = selectedData();
   if (selected) void copyText(resultSelectionTsv(selected.rows, selected.columns, headers));
 }
+async function copySqlSelection(operation: "insert" | "update") {
+  if (!props.canCopy || !props.copySql || props.sqlCopyDisabled || sqlCopyBusy.value) return;
+  const selected = selectedData();
+  const indices = selected && resultSQLSelection(selected.rows, selected.columns, props.rows);
+  if (!indices) {
+    toast.add({ title: t("Chen.GoCopySqlUnavailable"), description: t("Chen.GoCopySqlHint"), color: "error" });
+    return;
+  }
+  const source = props.rows;
+  sqlCopyBusy.value = true;
+  try {
+    const output = await props.copySql(operation, indices);
+    if (!mounted || props.rows !== source || !props.canCopy || props.sqlCopyDisabled) return;
+    if (!output.sql || output.row_count !== indices.rows.length) throw new Error("Invalid SQL copy response");
+    await writeClipboardText(output.sql);
+    toast.add({ title: t("Chen.SelectionCopied"), description: output.notes.join("\n"), color: "success" });
+  } catch (cause) {
+    if (mounted && props.rows === source)
+      toast.add({
+        title: t("Chen.GoCopySqlUnavailable"),
+        description: cause instanceof Error ? cause.message : String(cause),
+        color: "error"
+      });
+  } finally {
+    sqlCopyBusy.value = false;
+  }
+}
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) {
     event.preventDefault();
@@ -495,6 +533,7 @@ onMounted(() => {
   window.addEventListener("blur", finishSelection);
 });
 onBeforeUnmount(() => {
+  mounted = false;
   window.removeEventListener("pointerup", finishSelection);
   window.removeEventListener("blur", finishSelection);
   gridApi.value = null;
@@ -649,6 +688,9 @@ onBeforeUnmount(() => {
         {{ t(editableColumns?.length || insertableColumns?.length ? "Chen.GoWriteGridHint" : "Chen.GoV1GridReadOnly") }}
       </span>
     </div>
+    <p v-if="copySql" class="shrink-0 border-t border-default px-2 py-1 text-xs text-muted" role="status">
+      {{ t(sqlCopyDisabled ? "Chen.GoCopySqlLocked" : "Chen.GoCopySqlHint") }}
+    </p>
     <GoResultValue v-if="valueOpen && valueCell" v-model:open="valueOpen" :cell="valueCell" :can-copy="canCopy" />
   </div>
 </template>

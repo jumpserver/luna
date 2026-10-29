@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoEditColumn, GoEditPlan, GoSession } from "./api";
+import type { ChenGoApi, GoCopySelection, GoEditColumn, GoEditPlan, GoSession } from "./api";
 import type { QueryWorkspaceTab } from "./workspace";
 import type { ChenDataViewField } from "~/chen/types";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
@@ -23,7 +23,7 @@ import {
 import GoResultGrid from "./GoResultGrid.client.vue";
 import { newChenRequestId } from "./requestId";
 
-const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi }>();
+const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi; visible?: boolean }>();
 const emit = defineEmits<{ apply: [plan: GoEditPlan]; refresh: [] }>();
 const { t } = useI18n();
 const error = ref("");
@@ -127,7 +127,37 @@ watch(
   () => void loadMetadata(),
   { immediate: true }
 );
-onBeforeUnmount(() => controller?.abort());
+let copyController: AbortController | undefined;
+onBeforeUnmount(() => {
+  controller?.abort();
+  copyController?.abort();
+});
+const sqlCopyDisabled = computed(() => metadataBusy.value || locked.value || dirty.value || props.visible === false);
+watch(
+  () => [sqlCopyDisabled.value, props.query.rows, props.query.console?.id],
+  () => copyController?.abort(),
+  { flush: "sync" }
+);
+async function copySQL(operation: "insert" | "update", selection: GoCopySelection) {
+  const source = props.query.rows;
+  const consoleId = props.query.console?.id;
+  if (!source || !consoleId || !props.session.permissions.can_copy || sqlCopyDisabled.value)
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  copyController?.abort();
+  const current = new AbortController();
+  copyController = current;
+  const result = await props.api.copySQL(consoleId, source.id, operation, selection, current.signal);
+  if (
+    current.signal.aborted ||
+    props.query.rows !== source ||
+    props.query.console?.id !== consoleId ||
+    !props.session.permissions.can_copy ||
+    sqlCopyDisabled.value
+  )
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  return result;
+}
+
 function addRow() {
   if (!canInsert.value || count.value >= GO_EDIT_LIMIT) return;
   draft.value.inserts.push({ id: newChenRequestId(), values: {} });
@@ -371,6 +401,8 @@ function discard() {
     <GoResultGrid
       :rows="rows"
       :can-copy="session.permissions.can_copy"
+      :copy-sql="copySQL"
+      :sql-copy-disabled="sqlCopyDisabled"
       :editable-columns="
         canChange && draft.source !== 'csv'
           ? draft.metadata?.columns.filter((column) => column.editable).map((column) => column.index)
