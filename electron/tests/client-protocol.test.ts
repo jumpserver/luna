@@ -197,6 +197,10 @@ test("Windows RDP launch preserves a connection file path containing spaces and 
 
 test("native launcher reports spawn errors without leaking connection arguments", async () => {
   const child = Object.assign(new EventEmitter(), { unref() {} });
+  let resolveSpawned: () => void;
+  const spawned = new Promise<void>((resolve) => {
+    resolveSpawned = resolve;
+  });
   let executable = "";
   const { LocalApplicationLauncher } = loadWithElectronMocks(
     "../src/apps/local-app-launcher.ts",
@@ -204,6 +208,7 @@ test("native launcher reports spawn errors without leaking connection arguments"
       "node:child_process": {
         spawn: (value: string) => {
           executable = value;
+          resolveSpawned();
           return child;
         }
       }
@@ -221,7 +226,7 @@ test("native launcher reports spawn errors without leaking connection arguments"
     assert.doesNotMatch(error.message, /test-secret/);
     return true;
   });
-  await new Promise(setImmediate);
+  await spawned;
   assert.equal(executable, "x-terminal-emulator");
   child.emit("error", Object.assign(new Error("spawn failed with test-secret"), { code: "ENOENT" }));
   await rejected;
@@ -523,7 +528,9 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
     }),
     resolve: (url: string) => resolveAuthorization(url)
   };
-  const service = new DesktopAuthService((_event: string, url: string) => authorized.resolve(url));
+  const service = new DesktopAuthService((event: string, url: string) => {
+    if (event === "auth_url") authorized.resolve(url);
+  });
   service.checkCompatibility = async ({ site }: { site: string }) => ({
     status: "compatible",
     site,

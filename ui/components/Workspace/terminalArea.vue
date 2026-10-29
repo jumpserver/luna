@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { clientLoginReasonMessageKey } from "~/utils/clientLoginPolicy";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
@@ -8,7 +9,12 @@ const { loggedIn, userMap } = storeToRefs(userInfoStore);
 const currentUser = computed(() => userMap.value[userInfoStore.currentAccountId]);
 const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
-  () => isDesktopRuntime() && authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
+  () =>
+    isDesktopRuntime() &&
+    authReady.value &&
+    !loggedIn.value &&
+    activeTab.value?.protocol !== "local-shell" &&
+    !activeTab.value?.panes.some((pane) => pane.mode === "session")
 );
 const { t } = useI18n();
 const shortcuts = useAppShortcuts();
@@ -74,6 +80,9 @@ const openLogin = () => {
             <div class="shrink-0 font-medium" :style="{ color: 'var(--app-fg)' }">
               {{ t("WorkspaceEmpty.LoginHint") }}
             </div>
+            <p v-if="currentUser?.sessionExpired" class="shrink-0 text-center text-warning" role="status">
+              {{ t(clientLoginReasonMessageKey(currentUser.sessionExpiredReason)) }}
+            </p>
             <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
               {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}
             </UButton>
@@ -88,14 +97,19 @@ const openLogin = () => {
         </div>
       </template>
 
-      <template v-else-if="activeTab">
+      <!-- Login expiry must not tear down transports owned by these surfaces. -->
+      <div v-if="activeTab" v-show="!showLoginPrompt" class="h-full min-h-0">
         <template v-for="tab in tabs" :key="tab.id">
           <WorkspaceSessionPane v-show="activeTabId === tab.id" :tab="tab" class="h-full min-h-0" />
         </template>
         <WorkspacePaneSurfaceHost v-for="pane in panes" :key="pane.id" :pane="pane" />
-      </template>
+      </div>
 
-      <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+      <div
+        v-else-if="!showLoginPrompt"
+        class="h-full min-h-0 grid place-items-center text-sm"
+        :style="{ color: 'var(--app-muted)' }"
+      >
         <div class="grid w-max grid-cols-[14px_auto_auto] items-center gap-x-3 gap-y-1.5 text-left">
           <template v-for="row in shortcutRows" :key="row.id">
             <UIcon :name="row.icon" class="size-3.5" />

@@ -6,6 +6,18 @@ import {
   shortcutDefinitions
 } from "../../../ui/shared/shortcuts";
 import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
+import { clientLoginReasonMessageKey } from "../../../ui/utils/clientLoginPolicy";
+import { normalizeLanguageCode } from "../../../i18n/language";
+import enMessages from "../../../i18n/locales/en.json";
+import esMessages from "../../../i18n/locales/es.json";
+import frMessages from "../../../i18n/locales/fr.json";
+import jaMessages from "../../../i18n/locales/ja.json";
+import koMessages from "../../../i18n/locales/ko.json";
+import ptBrMessages from "../../../i18n/locales/pt_br.json";
+import ruMessages from "../../../i18n/locales/ru.json";
+import viMessages from "../../../i18n/locales/vi.json";
+import zhMessages from "../../../i18n/locales/zh.json";
+import zhHantMessages from "../../../i18n/locales/zh_hant.json";
 import type { MenuItemConstructorOptions } from "electron";
 import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -25,6 +37,7 @@ import {
   nativeTheme,
   net,
   Notification,
+  powerMonitor,
   protocol,
   shell,
   Tray
@@ -291,6 +304,32 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
+  if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
+}
+
+function notifyClientLoginExpired(payload: { reason?: string }) {
+  const win = windows.get("main");
+  if (!win || win.isDestroyed() || win.isFocused() || !Notification.isSupported()) return;
+  const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
+  const messages = {
+    en: enMessages.Login,
+    es: esMessages.Login,
+    fr: frMessages.Login,
+    ja: jaMessages.Login,
+    ko: koMessages.Login,
+    pt_br: ptBrMessages.Login,
+    ru: ruMessages.Login,
+    vi: viMessages.Login,
+    zh: zhMessages.Login,
+    zh_hant: zhHantMessages.Login
+  }[language];
+  const key = clientLoginReasonMessageKey(payload?.reason).slice("Login.".length) as keyof typeof messages;
+  const notification = new Notification({ title: messages.SessionExpired, body: messages[key] });
+  notification.on("click", () => {
+    const mainWindow = createWindow("main");
+    if (mainWindow.isMinimized()) mainWindow.restore();
+  });
+  notification.show();
 }
 
 function clearDesktopEventSubscriptions(webContents) {
@@ -1567,10 +1606,27 @@ async function drainPendingProtocolUrls() {
 const initialProtocolUrl = findClientProtocolUrl(process.argv);
 if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
 
+let authExitFinished = false;
+let authExitPending = false;
 app.on("before-quit", (event) => {
-  if (!replayTranscoder?.isTranscoding || allowCloseDuringTranscode) return;
+  if (replayTranscoder?.isTranscoding && !allowCloseDuringTranscode) {
+    event.preventDefault();
+    confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+    return;
+  }
+  authService?.stopSessionMonitor();
+  if (authExitFinished) return;
+  if (authExitPending) {
+    event.preventDefault();
+    return;
+  }
+  if (!authService?.hasExitSessions()) return;
   event.preventDefault();
-  confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+  authExitPending = true;
+  void authService.revokeOnExit().finally(() => {
+    authExitFinished = true;
+    app.quit();
+  });
 });
 
 app.on("window-all-closed", () => {
@@ -1647,4 +1703,6 @@ app.whenReady().then(async () => {
     emitDesktopEvent("desktop://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   createWindow("main");
+  authService.startSessionMonitor();
+  powerMonitor.on("resume", () => void authService.checkSessions(true));
 });

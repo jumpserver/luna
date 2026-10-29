@@ -34,6 +34,12 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
 const authSession = useAuthSession();
+const expiredSessionNoticeOpen = computed({
+  get: () => authSession.expiredSessionNotice.value !== null,
+  set: (open) => {
+    if (!open) void authSession.dismissExpiredSessionNotice();
+  }
+});
 const userInfoStore = useUserInfoStore();
 const { handleWebClientProtocolPayload } = useAssetAction();
 useWorkspaceFeatures(authSession.authReady);
@@ -76,6 +82,7 @@ const unlistenFont = ref<DesktopUnlistenFn | null>(null);
 const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
 const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
 const unlistenAuthSessionExpired = ref<DesktopUnlistenFn | null>(null);
+const unlistenClientLoginPolicy = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 const {
   confirmOpen: siteLeaveConfirmOpen,
@@ -350,10 +357,19 @@ onMounted(async () => {
 
   if (isDesktopRuntime()) {
     try {
-      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string }>(
+      unlistenClientLoginPolicy.value = await desktopListen<{
+        sessionId: string;
+        policy: import("~/types/index").ClientLoginPolicy;
+      }>("client-login-policy", ({ payload }) => {
+        if (!payload?.sessionId || !payload.policy) return;
+        userInfoStore.setClientLoginPolicy(payload.sessionId, payload.policy);
+        // Rewrite old localStorage copies before a process-only login is restored or published.
+        userInfoStore.$persist();
+      });
+      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string; reason?: string }>(
         "auth-session-expired",
         ({ payload }) => {
-          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""));
+          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""), payload?.reason);
         }
       );
     } catch (err) {
@@ -443,6 +459,7 @@ onBeforeUnmount(() => {
   unlistenSettingsNavigate.value?.();
   unlistenWebProtocolUrl.value?.();
   unlistenAuthSessionExpired.value?.();
+  unlistenClientLoginPolicy.value?.();
 });
 </script>
 
@@ -458,6 +475,20 @@ onBeforeUnmount(() => {
         <ClientCompatibilityDialog v-if="isDesktopRuntime()" />
         <AclDialog />
         <FaceOnlineMonitorHost />
+        <UModal
+          v-if="isDesktopRuntime()"
+          v-model:open="expiredSessionNoticeOpen"
+          :title="t('Login.SessionExpired')"
+          :description="authSession.expiredSessionDescription.value"
+          :dismissible="false"
+          :ui="{ content: 'max-w-md', footer: 'justify-end' }"
+        >
+          <template #footer>
+            <UButton color="primary" @click="authSession.dismissExpiredSessionNotice(true)">
+              {{ t("Common.Confirm") }}
+            </UButton>
+          </template>
+        </UModal>
         <UModal
           v-model:open="siteLeaveConfirmOpen"
           :title="siteLeaveKind === 'logout' ? t('Login.Logout') : t('Login.SwitchSite')"

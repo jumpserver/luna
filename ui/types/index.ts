@@ -175,6 +175,23 @@ export interface UserProfile {
   org_roles?: Array<RoleType & { name?: string }>;
 }
 
+export interface ClientLoginPolicy {
+  reauth_on_exit: boolean;
+  // Minutes; 0 disables the limit.
+  max_idle_time: number;
+  // Minutes; 0 disables the limit.
+  max_session_time: number;
+}
+
+export type ClientLoginReason =
+  | "policy_changed"
+  | "absolute_timeout"
+  | "idle_timeout"
+  | "security_revoke"
+  | "app_exit"
+  | "logout"
+  | "unknown";
+
 export interface UserData {
   accountId: string;
   userId?: string;
@@ -183,6 +200,7 @@ export interface UserData {
   name: string;
   language?: string;
   bearerToken: string;
+  clientLoginPolicy?: ClientLoginPolicy;
   system_roles: RoleType[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
@@ -197,6 +215,7 @@ export interface UserIntiInfo {
   version?: string;
   xpack_license_valid?: boolean;
   security_command_execution?: boolean;
+  client_login_policy?: ClientLoginPolicy;
   resolved_site?: string;
   profile: {
     data: string;

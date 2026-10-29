@@ -4,10 +4,15 @@ import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { useSettingManager } from "~/composables/useSettingManager";
-import { closeCurrentSiteWorkspace, confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
+import {
+  closeCurrentSiteWorkspace,
+  confirmLeaveCurrentSiteSessions,
+  hasActiveWorkspaceSessions
+} from "~/composables/useSiteAccountSwitch";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
-import { desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { desktopEmit, desktopInvoke, desktopListen, openDesktopAuthUrl } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { clientLoginReasonMessageKey } from "~/utils/clientLoginPolicy";
 import RecentSites from "./recentSites.vue";
 
 const recentSiteLimit = 5;
@@ -50,6 +55,10 @@ const inputSite = ref("");
 const inputSiteName = ref("");
 const siteNameEdited = ref(false);
 const editingAccountId = ref("");
+const expiredLoginReason = computed(() => {
+  const account = userMap.value[editingAccountId.value];
+  return account?.sessionExpired ? t(clientLoginReasonMessageKey(account.sessionExpiredReason)) : "";
+});
 const errorMessage = ref("");
 const loginBtn = ref(false);
 const openModal = ref(false);
@@ -775,6 +784,12 @@ onMounted(async () => {
     clearLoginBtnUnlockTimer();
     loginBtn.value = false;
     openModal.value = false;
+    // The auth layout replaces the workspace and disconnects its transports.
+    // Keep live sessions mounted while the existing browser flow authenticates.
+    if (hasActiveWorkspaceSessions()) {
+      void openDesktopAuthUrl(url);
+      return;
+    }
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
   });
   if (!retainDesktopListener(unlistenAuthUrlRef, unlistenAuthUrl)) return;
@@ -1189,6 +1204,14 @@ onBeforeUnmount(() => {
     @clipboard="handleClipboard"
   >
     <div class="space-y-3">
+      <UAlert
+        v-if="expiredLoginReason"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-log-in"
+        :title="t('Login.SessionExpired')"
+        :description="expiredLoginReason"
+      />
       <UInput
         ref="inputRef"
         v-model="inputSite"

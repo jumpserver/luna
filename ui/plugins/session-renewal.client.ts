@@ -1,26 +1,33 @@
 import { isChenSingleRoute } from "~/chen/v1/standalone";
 import { apiRequest } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const route = useRoute();
   const userInfoStore = useUserInfoStore();
   const controller = new AbortController();
-  let lastRenewalAt = -Infinity;
+  let lastActivitySentAt = -Infinity;
   let inFlight = false;
 
   function onActivity(event: Event) {
     if (isChenSingleRoute(route.path) || !event.isTrusted || !userInfoStore.loggedIn) return;
 
-    const now = performance.now();
-    if (inFlight || now - lastRenewalAt < 10_000) return;
+    const desktop = isDesktopRuntime();
+    // Only idle expiry needs input reports; the desktop main process also monitors login validity.
+    if (desktop && (userInfoStore.currentUser?.clientLoginPolicy?.max_idle_time ?? 0) <= 0) return;
 
-    // All workspace panes share this limit; idle time never schedules a request.
-    lastRenewalAt = now;
+    const now = performance.now();
+    // Desktop only limits input IPC noise here; the main process owns the shared 10-second network budget.
+    const activityInterval = desktop ? 1_000 : 10_000;
+    if (inFlight || now - lastActivitySentAt < activityInterval) return;
+
+    // Only real activity triggers renewal; idle time never schedules a request.
+    lastActivitySentAt = now;
     inFlight = true;
     void apiRequest({
-      method: "GET",
-      path: "/api/v1/health/",
+      method: desktop ? "POST" : "GET",
+      path: desktop ? "/api/v1/authentication/client-login-session/activity/" : "/api/v1/health/",
       headers: { "Cache-Control": "no-cache" },
       timeoutMs: 10_000
     })
