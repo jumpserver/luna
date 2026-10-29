@@ -275,40 +275,6 @@ watch(
         </SettingsGroup>
       </SettingsSection>
 
-      <SettingsSection
-        v-if="isDesktopRuntime()"
-        :title="t('UserProfile.ClientLoginInfo')"
-        :description="t('UserProfile.ClientLoginInfoDescription')"
-      >
-        <SettingsGroup>
-          <div class="space-y-1 px-4 py-3 text-sm">
-            <p class="break-all text-highlighted">
-              <span class="text-muted">{{ t("UserProfile.CurrentSite") }} ·</span>
-              {{ currentUser?.siteName || currentUser?.site }}
-              <span v-if="currentUser?.siteName" class="text-muted">({{ currentUser?.site }})</span>
-            </p>
-            <p class="break-words text-highlighted">
-              <span class="text-muted">{{ t("UserProfile.ClientLoginCurrentUser") }} ·</span>
-              {{ clientLoginAccount }}
-            </p>
-          </div>
-          <div
-            v-for="row in clientLoginRows"
-            :key="row.label"
-            class="flex flex-wrap items-start justify-between gap-x-8 gap-y-1 px-4 py-3 text-sm"
-          >
-            <div>
-              <span :class="row.highlighted ? 'font-medium text-highlighted' : 'text-muted'">{{ row.label }}</span>
-              <p v-if="row.hint" class="mt-1 text-xs text-muted">{{ row.hint }}</p>
-            </div>
-            <span class="min-w-0 break-words text-right text-highlighted" :class="{ 'font-medium': row.highlighted }">
-              {{ row.value }}
-            </span>
-          </div>
-        </SettingsGroup>
-        <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
-      </SettingsSection>
-
       <div v-if="loading" class="space-y-6">
         <div class="flex items-center gap-3">
           <USkeleton class="size-12 rounded-full" />
@@ -430,6 +396,40 @@ watch(
           </SettingsGroup>
         </SettingsSection>
       </template>
+
+      <SettingsSection
+        v-if="isDesktopRuntime()"
+        :title="t('UserProfile.ClientLoginInfo')"
+        :description="t('UserProfile.ClientLoginInfoDescription')"
+      >
+        <SettingsGroup>
+          <div class="space-y-1 px-4 py-3 text-sm">
+            <p class="break-all text-highlighted">
+              <span class="text-muted">{{ t("UserProfile.CurrentSite") }} ·</span>
+              {{ currentUser?.siteName || currentUser?.site }}
+              <span v-if="currentUser?.siteName" class="text-muted">({{ currentUser?.site }})</span>
+            </p>
+            <p class="break-words text-highlighted">
+              <span class="text-muted">{{ t("UserProfile.ClientLoginCurrentUser") }} ·</span>
+              {{ clientLoginAccount }}
+            </p>
+          </div>
+          <div
+            v-for="row in clientLoginRows"
+            :key="row.label"
+            class="flex flex-wrap items-start justify-between gap-x-8 gap-y-1 px-4 py-3 text-sm"
+          >
+            <div>
+              <span :class="row.highlighted ? 'font-medium text-highlighted' : 'text-muted'">{{ row.label }}</span>
+              <p v-if="row.hint" class="mt-1 text-xs text-muted">{{ row.hint }}</p>
+            </div>
+            <span class="min-w-0 break-words text-right text-highlighted" :class="{ 'font-medium': row.highlighted }">
+              {{ row.value }}
+            </span>
+          </div>
+        </SettingsGroup>
+        <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
+      </SettingsSection>
     </template>
   </div>
 </template>
