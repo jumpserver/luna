@@ -44,6 +44,7 @@
     "bump": "bumpp",
     "set_version": "node scripts/set-version.js",
     "client:dev": "pnpm electron:dev",
+    "client:build": "pnpm electron:build",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:prepare": "pnpm generate:client && node scripts/prepare-electron-resources.mjs",
     "electron:package:dir": "pnpm electron:prepare && pnpm --dir electron package",
