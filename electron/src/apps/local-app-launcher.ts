@@ -3,6 +3,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
+import { resolveMacBundleExecutable } from "./application-config";
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -212,8 +213,9 @@ export class LocalApplicationLauncher {
   }
 
   async resolveExecutable(application) {
-    const configured = String(application.path || "").trim();
+    let configured = String(application.path || "").trim();
     if (configured.includes("\0")) throw new Error("Invalid application path");
+    if (application.executable_type === "user_path") configured = await resolveMacBundleExecutable(configured);
     if (await isFile(configured)) return configured;
     if (application.executable_type === "application_bundle" && (await isDirectory(configured))) return configured;
     if (application.is_internal) {

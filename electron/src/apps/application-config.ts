@@ -1,8 +1,11 @@
+import { execFile } from "node:child_process";
 import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { Unzip, UnzipInflate } from "fflate";
 import { electronLog } from "../shared/debug-log";
 
+const execFileAsync = promisify(execFile);
 const categories = ["terminal", "remotedesktop", "filetransfer", "databases"];
 const maxPluginArchiveBytes = 64 * 1024 * 1024;
 const maxPluginExtractedBytes = 256 * 1024 * 1024;
@@ -59,6 +62,24 @@ function configuredPathExists(connect, executablePath) {
   const type = connect?.executable?.type || "";
   if (!["user_path", "application_bundle"].includes(type)) return true;
   return Boolean(executablePath);
+}
+
+export async function resolveMacBundleExecutable(executablePath) {
+  const bundle = executablePath.replace(/\/$/, "");
+  if (process.platform !== "darwin" || !bundle.endsWith(".app") || !(await exists(bundle, "directory"))) {
+    return executablePath;
+  }
+  try {
+    const plist = path.join(bundle, "Contents", "Info.plist");
+    const { stdout } = await execFileAsync("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleExecutable", plist]);
+    const executable = stdout.trim();
+    if (!executable || path.basename(executable) !== executable) return executablePath;
+    const candidate = path.join(bundle, "Contents", "MacOS", executable);
+    if (await exists(candidate, "file")) return candidate;
+  } catch {
+    // Keep the bundle path when its executable metadata is missing or invalid.
+  }
+  return executablePath;
 }
 
 function safeArchiveName(raw) {
@@ -253,7 +274,7 @@ export class ApplicationConfigService {
 
   async pathExists(platformConnect, executablePath) {
     const type = platformConnect?.executable?.type || "";
-    if (type === "user_path") return exists(executablePath, "file");
+    if (type === "user_path") return exists(await resolveMacBundleExecutable(executablePath), "file");
     if (type === "application_bundle") return exists(executablePath, "directory");
     return configuredPathExists(platformConnect, executablePath);
   }
@@ -393,13 +414,21 @@ export class ApplicationConfigService {
     state.selections ||= {};
     state.enabled_selections ||= {};
     state.plugins ||= {};
+    const { platformConnect } = await this.pluginData(entry);
     if (String(newPath || "").trim()) {
-      state.plugins[entry.id] = { ...state.plugins[entry.id], path: String(newPath).trim(), enabled: true };
+      const selectedPath = String(newPath).trim();
+      state.plugins[entry.id] = {
+        ...state.plugins[entry.id],
+        path:
+          platformConnect?.executable?.type === "user_path"
+            ? await resolveMacBundleExecutable(selectedPath)
+            : selectedPath,
+        enabled: true
+      };
       await this.saveState(state);
       return this.getConfig();
     }
 
-    const { platformConnect } = await this.pluginData(entry);
     const executablePath = this.resolvePath(entry, platformConnect, state);
     if (enabled && !(await this.pathExists(platformConnect, executablePath))) {
       throw new Error(`executable not found: ${executablePath || "(empty path)"}`);
