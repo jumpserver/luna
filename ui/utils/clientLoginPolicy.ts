@@ -69,8 +69,7 @@ export function clientLoginExpiryMessage(
       return {
         key: "Login.ExpiredLifetimeDetail",
         params: {
-          expiresAt: formatClientLoginTimestamp(session.expires_at, locale),
-          elapsed: formatClientLoginDuration((now - expiresAt) / 1000, locale)
+          expiresAt: formatClientLoginTimestamp(session.expires_at, locale)
         }
       };
     }

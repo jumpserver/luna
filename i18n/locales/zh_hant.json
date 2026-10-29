@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "登入失敗：證書或安全連線異常。",
     "NetworkError": "網路不可用，請檢查網路連線",
     "ServerError": "伺服器暫時不可用，請稍後重試",
-    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期，已過期 {elapsed}。請重新登入。",
+    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期。請重新登入。",
     "ExpiredIdleDetail": "閒置已達 {duration}（限制 {limit}），登入已失效。請重新登入。"
   },
   "Asset": {

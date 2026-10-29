@@ -236,45 +236,6 @@ watch(
     </div>
 
     <template v-else>
-      <SettingsSection
-        v-if="isDesktopRuntime()"
-        :title="t('UserProfile.SiteAccounts')"
-        :description="t('UserProfile.SiteAccountsDescription')"
-      >
-        <template #actions>
-          <UButton
-            :label="t('Login.AddAccount')"
-            icon="i-lucide-user-round-plus"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            @click="addAccount"
-          />
-        </template>
-
-        <SettingsGroup>
-          <div v-for="[accountId, account] in accounts" :key="accountId" class="flex items-center gap-3 px-4 py-3">
-            <UAvatar :alt="account.name" color="neutral" size="sm" class="shrink-0" />
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-highlighted">{{ account.name }}</p>
-              <p class="truncate text-xs text-muted">{{ account.siteName || account.site }} · {{ account.site }}</p>
-            </div>
-            <UBadge v-if="accountId === currentAccountId" color="primary" variant="subtle" size="sm">
-              {{ t("UserProfile.Current") }}
-            </UBadge>
-            <UButton
-              v-else
-              :label="t('UserProfile.Switch')"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              :loading="switchingAccount"
-              @click="switchAccount(accountId)"
-            />
-          </div>
-        </SettingsGroup>
-      </SettingsSection>
-
       <div v-if="loading" class="space-y-6">
         <div class="flex items-center gap-3">
           <USkeleton class="size-12 rounded-full" />
@@ -396,6 +357,45 @@ watch(
           </SettingsGroup>
         </SettingsSection>
       </template>
+
+      <SettingsSection
+        v-if="isDesktopRuntime()"
+        :title="t('UserProfile.SiteAccounts')"
+        :description="t('UserProfile.SiteAccountsDescription')"
+      >
+        <template #actions>
+          <UButton
+            :label="t('Login.AddAccount')"
+            icon="i-lucide-user-round-plus"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            @click="addAccount"
+          />
+        </template>
+
+        <SettingsGroup>
+          <div v-for="[accountId, account] in accounts" :key="accountId" class="flex items-center gap-3 px-4 py-3">
+            <UAvatar :alt="account.name" color="neutral" size="sm" class="shrink-0" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-highlighted">{{ account.name }}</p>
+              <p class="truncate text-xs text-muted">{{ account.siteName || account.site }} · {{ account.site }}</p>
+            </div>
+            <UBadge v-if="accountId === currentAccountId" color="primary" variant="subtle" size="sm">
+              {{ t("UserProfile.Current") }}
+            </UBadge>
+            <UButton
+              v-else
+              :label="t('UserProfile.Switch')"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :loading="switchingAccount"
+              @click="switchAccount(accountId)"
+            />
+          </div>
+        </SettingsGroup>
+      </SettingsSection>
 
       <SettingsSection
         v-if="isDesktopRuntime()"

@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Не удалось войти: проблема с сертификатом или защищенным соединением.",
     "NetworkError": "Сеть недоступна. Проверьте подключение.",
     "ServerError": "Сервер временно недоступен. Повторите попытку позже.",
-    "ExpiredLifetimeDetail": "Срок входа истёк {expiresAt}, {elapsed} назад. Войдите снова.",
+    "ExpiredLifetimeDetail": "Срок входа истёк {expiresAt}. Войдите снова.",
     "ExpiredIdleDetail": "Срок входа истёк после {duration} бездействия (предел: {limit}). Войдите снова."
   },
   "Asset": {

@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "로그인 실패: 인증서 또는 보안 연결에 문제가 있습니다.",
     "NetworkError": "네트워크를 사용할 수 없습니다. 연결 상태를 확인하세요.",
     "ServerError": "서버를 일시적으로 사용할 수 없습니다. 나중에 다시 시도하세요.",
-    "ExpiredLifetimeDetail": "이번 로그인은 {expiresAt}에 만료되었으며 {elapsed}이 지났습니다. 다시 로그인해 주세요.",
+    "ExpiredLifetimeDetail": "이번 로그인은 {expiresAt}에 만료되었습니다. 다시 로그인해 주세요.",
     "ExpiredIdleDetail": "유휴 시간이 {duration}(제한: {limit})에 도달하여 로그인이 만료되었습니다. 다시 로그인해 주세요."
   },
   "Asset": {

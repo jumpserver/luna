@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
     "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
-    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}, il y a {elapsed}. Veuillez vous reconnecter.",
+    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter.",
     "ExpiredIdleDetail": "Votre connexion a expiré après {duration} d’inactivité (limite : {limit}). Veuillez vous reconnecter."
   },
   "Asset": {

@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
     "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
-    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}, cách đây {elapsed}. Vui lòng đăng nhập lại.",
+    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại.",
     "ExpiredIdleDetail": "Đăng nhập đã hết hạn sau {duration} không hoạt động (giới hạn: {limit}). Vui lòng đăng nhập lại."
   },
   "Asset": {

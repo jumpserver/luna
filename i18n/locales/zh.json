@@ -1167,7 +1167,7 @@
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "网络不可用，请检查网络连接",
     "ServerError": "服务器暂时不可用，请稍后重试",
-    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期，已过期 {elapsed}。请重新登录。",
+    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。",
     "ExpiredIdleDetail": "空闲已达到 {duration}（限制 {limit}），登录已失效。请重新登录。"
   },
   "Loading": {

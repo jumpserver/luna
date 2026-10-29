@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Falha no login: problema no certificado ou na conexão segura.",
     "NetworkError": "Rede indisponível. Verifique a conectividade.",
     "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde.",
-    "ExpiredLifetimeDetail": "Este login expirou em {expiresAt}, há {elapsed}. Entre novamente.",
+    "ExpiredLifetimeDetail": "Este login expirou em {expiresAt}. Entre novamente.",
     "ExpiredIdleDetail": "Seu login expirou após {duration} de inatividade (limite: {limit}). Entre novamente."
   },
   "Asset": {

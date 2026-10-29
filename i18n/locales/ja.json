@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "ログインに失敗しました。証明書または安全な接続に問題があります。",
     "NetworkError": "ネットワークを利用できません。接続を確認してください。",
     "ServerError": "サーバーは一時的に利用できません。後でもう一度お試しください。",
-    "ExpiredLifetimeDetail": "今回のログインは {expiresAt} に期限切れとなり、{elapsed} が経過しました。再度ログインしてください。",
+    "ExpiredLifetimeDetail": "今回のログインは {expiresAt} に期限切れとなりました。再度ログインしてください。",
     "ExpiredIdleDetail": "アイドル時間が {duration}（上限：{limit}）に達したため、ログインが失効しました。再度ログインしてください。"
   },
   "Asset": {

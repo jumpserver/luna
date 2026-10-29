@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
     "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
-    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}, hace {elapsed}. Vuelva a iniciar sesión.",
+    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión.",
     "ExpiredIdleDetail": "La sesión caducó tras {duration} de inactividad (límite: {limit}). Vuelva a iniciar sesión."
   },
   "Asset": {

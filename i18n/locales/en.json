@@ -1172,7 +1172,7 @@
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
     "ServerError": "The server is temporarily unavailable. Please try again later.",
-    "ExpiredLifetimeDetail": "This login expired at {expiresAt}, {elapsed} ago. Please sign in again.",
+    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again.",
     "ExpiredIdleDetail": "Your login expired after {duration} of inactivity (limit: {limit}). Please sign in again."
   },
   "Asset": {
