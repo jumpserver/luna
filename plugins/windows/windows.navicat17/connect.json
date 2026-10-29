@@ -10,8 +10,8 @@
     "required": true
   },
   "launch": {
-    "type": "args",
-    "template": "{url}"
+    "type": "module",
+    "module": "scripts/launch.mjs"
   },
-  "display_name": "Navicat premium Lite 17"
+  "display_name": "Navicat Premium Lite 18"
 }

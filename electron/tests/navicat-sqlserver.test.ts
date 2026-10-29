@@ -1,148 +1,139 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { EventEmitter } from "node:events";
-import { readFile } from "node:fs/promises";
-import { PassThrough } from "node:stream";
 import test from "node:test";
-import { launchNavicatSQLServer, navicatSQLServerScript } from "../src/apps/navicat-sqlserver.ts";
+import buildLaunchPlan, { getNavicatURL } from "../../plugins/windows/windows.navicat17/scripts/launch.mjs";
+import { LocalApplicationLauncher } from "../src/apps/local-app-launcher.ts";
+import { fileURLToPath } from "node:url";
 
-const connection = {
-  executable: String.raw`C:\Program Files\PremiumSoft\Navicat Premium 18\navicat.exe`,
-  name: "JMS_SQLServer_test",
+const context = {
+  name: "asset@Test",
   host: "gateway.example.test",
-  port: "5525",
-  username: "11111111-1111-1111-1111-111111111111",
-  password: `secret with \" ' $() \\ * 中文\r\nsecond line`,
-  database: "database with spaces"
+  port: 3325,
+  username: `token-user &+=?#% * \" ' \\ 中文`,
+  value: `secret &+=?#% * \" ' $() ^(){}~ 中文`,
+  dbname: "database & 中文",
+  protocol: "mysql"
 };
 
-// Opt-in Windows acceptance check. Supply a private JSON file with executable,
-// host, port, username, password and database; no credentials enter test argv.
-test(
-  "installed Windows Navicat connects and lists the expected SQL Server database",
-  {
-    skip: process.platform !== "win32" || !process.env.JMS_TEST_NAVICAT_CONNECTION_FILE,
-    timeout: 100000
-  },
-  async () => {
-    const input = JSON.parse(await readFile(process.env.JMS_TEST_NAVICAT_CONNECTION_FILE!, "utf8"));
-    await launchNavicatSQLServer({ ...input, name: `JMS_SQLServer_test_${randomUUID()}` });
-  }
-);
+test("Navicat 18 receives -uri and one complete URI with literal credentials", () => {
+  const plan = buildLaunchPlan(context);
+  assert.equal(plan.type, "args");
+  assert.equal(plan.args.length, 2);
+  assert.equal(plan.args[0], "-uri");
+  const url = new URL(plan.args[1]);
+  assert.equal(url.protocol, "navicat:");
+  assert.equal(url.hostname, "conn.mysql");
+  assert.deepEqual(
+    [...url.searchParams],
+    [
+      ["Conn.Host", context.host],
+      ["Conn.Name", "Test"],
+      ["Conn.Port", "3325"],
+      ["Conn.Username", context.username],
+      ["Conn.Password", context.value]
+    ]
+  );
+  assert.equal(url.hash, "");
+});
 
-test(
-  "PowerShell native adapter parses and its label expressions compile",
-  {
-    skip: process.platform !== "win32" && !process.env.JMS_TEST_PWSH_EXECUTABLE
-  },
-  () => {
-    const result = spawnSync(
-      process.env.JMS_TEST_PWSH_EXECUTABLE || "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        String.raw`
-    $tokens=$null; $errors=$null
-    $ast=[System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(),[ref]$tokens,[ref]$errors)
-    if ($errors.Count) { $errors|ForEach-Object{[Console]::Error.WriteLine($_.ToString())}; exit 1 }
-    foreach ($node in $ast.FindAll({param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $n.Value.Contains('^')},$true)) {
-      try { [void][regex]::new($node.Value) } catch { [Console]::Error.WriteLine('Invalid label expression'); exit 1 }
+test("other database URI fields and legacy naming are retained", () => {
+  for (const protocol of ["mysql", "mariadb", "oracle", "postgresql", "sqlserver"]) {
+    const url = new URL(getNavicatURL({ ...context, protocol, source_name: "root@my+db%2B1" }));
+    assert.equal(url.searchParams.get("Conn.Name"), "mydb+1");
+    assert.equal(url.searchParams.get("Conn.Password"), context.value);
+    const alias = { mariadb: "mysql", oracle: "ora", postgresql: "pgsql", sqlserver: "mssql" }[protocol] || protocol;
+    assert.equal(url.hostname, `conn.${alias}`);
+    if (protocol === "oracle") {
+      assert.equal(url.searchParams.get("Conn.ServiceName"), context.dbname);
+      assert.equal(url.searchParams.get("Conn.ConnectionMode"), "Basic");
     }
-  `
-      ],
-      { input: navicatSQLServerScript, encoding: "utf8", timeout: 15000 }
-    );
-    assert.equal(result.status, 0, result.stderr);
+    if (["postgresql", "sqlserver"].includes(protocol))
+      assert.equal(url.searchParams.get("Conn.InitialDatabase"), context.dbname);
+    if (protocol === "sqlserver") assert.equal(url.searchParams.get("Conn.AuthenticationType"), "Default");
   }
-);
+  assert.equal(new URL(getNavicatURL({ ...context, name: "asset" })).searchParams.get("Conn.Name"), context.username);
+  assert.throws(() => buildLaunchPlan({ ...context, command: "command" }), /cannot open command/);
+  assert.throws(() => getNavicatURL({ ...context, protocol: "unknown" }), /protocol is invalid/);
+});
 
-function fakeStart(onInput) {
-  return (executable, args, options) => {
-    assert.match(executable, /\\System32\\WindowsPowerShell\\v1\.0\\powershell\.exe$/i);
-    assert.ok(args.includes("-STA"));
-    assert.ok(args.join(" ").length < 2048, "must not exceed the Windows command-line limit");
-    assert.ok(!args.join(" ").includes(connection.password));
-    assert.ok(!args.join(" ").includes(connection.username));
-    assert.ok(!args.join(" ").includes(connection.executable));
-    assert.equal(options.env, undefined, "credentials must not enter the process environment");
-    assert.equal(options.windowsHide, true);
-    const child: any = new EventEmitter();
-    child.stdin = new PassThrough();
-    child.stdout = new PassThrough();
-    child.kill = () => {};
-    let input = "";
-    child.stdin.on("data", (value) => {
-      input += value;
-    });
-    child.stdin.on("finish", () => onInput(child, JSON.parse(input)));
-    return child;
-  };
+const pluginDir = fileURLToPath(new URL("../../plugins/windows/windows.navicat17/", import.meta.url));
+const application = {
+  name: "navicat17",
+  plugin_id: "windows.navicat17",
+  protocol: ["mysql", "mariadb", "oracle", "postgresql", "sqlserver"],
+  is_set: true,
+  enabled_protocols: ["mysql", "mariadb", "oracle", "postgresql", "sqlserver"],
+  match_first: ["mysql", "mariadb", "oracle", "postgresql", "sqlserver"],
+  plugin_dir: pluginDir,
+  module_path: "scripts/launch.mjs",
+  launch_type: "module",
+  path: process.execPath,
+  executable_type: "user_path"
+};
+const payload = {
+  client: "navicat17",
+  protocol: "mysql",
+  name: "asset@Test",
+  endpoint: { host: context.host, port: context.port },
+  token: { id: context.username, value: context.value },
+  asset: { info: { db_name: context.dbname } }
+};
+
+function connectionURL(value) {
+  return `jms2://${Buffer.from(JSON.stringify(value)).toString("base64")}`;
 }
 
-test("Navicat helper receives literal credentials over stdin, not executable arguments", async () => {
-  await launchNavicatSQLServer(
-    connection,
-    fakeStart((child, message) => {
-      assert.deepEqual(message.connection, connection);
-      assert.equal(message.script, navicatSQLServerScript);
-      child.stdout.emit("data", "OK\r\n");
-      child.emit("close", 0);
-    }) as any,
-    "win32"
-  );
-});
-
-test("starting Navicat without confirmed connection is not reported as success", async () => {
-  for (const code of [0, 1, null]) {
-    await assert.rejects(
-      launchNavicatSQLServer(
-        connection,
-        fakeStart((child) => {
-          child.emit("close", code);
-        }) as any,
-        "win32"
-      ),
-      /Navicat SQL Server connection failed/
-    );
-  }
-});
-
-test("native launch errors cannot disclose credentials through spawnargs", async () => {
-  await assert.rejects(
-    launchNavicatSQLServer(
-      connection,
-      fakeStart((child) => {
-        child.emit("error", new Error(connection.password));
-      }) as any,
-      "win32"
-    ),
-    (error: Error) => {
-      assert.ok(!error.message.includes(connection.password));
-      return true;
+test("actual plugin module launches all database types with the configured executable and literal URI arguments", async () => {
+  const launcher = new LocalApplicationLauncher(
+    {},
+    "",
+    { getConfig: async () => ({ databases: [application] }) },
+    {
+      openExternal: async () => {
+        throw new Error("must not open system handler");
+      }
     }
   );
-});
-
-test("Navicat adapter rejects invalid inputs before launching an executable", () => {
-  const start = () => {
-    throw new Error("should not launch");
+  let args;
+  launcher.launchExecutable = async (selected, values) => {
+    assert.equal(selected, application);
+    assert.equal(selected.path, process.execPath);
+    args = values;
   };
-  for (const override of [{ port: "0" }, { port: "65536" }, { port: "1433;bad" }, { password: "" }, { username: "" }]) {
-    assert.throws(
-      () => launchNavicatSQLServer({ ...connection, ...override }, start as any, "win32"),
-      /incomplete or invalid/
-    );
+  for (const protocol of application.protocol) {
+    await launcher.launch(connectionURL({ ...payload, protocol, name: "root@my+db%2B1" }));
+    assert.equal(args.length, 2);
+    assert.equal(args[0], "-uri");
+    const url = new URL(args[1]);
+    const alias = { mariadb: "mysql", oracle: "ora", postgresql: "pgsql", sqlserver: "mssql" }[protocol] || protocol;
+    assert.equal(url.hostname, `conn.${alias}`);
+    assert.equal(url.searchParams.get("Conn.Name"), "mydb+1");
+    assert.equal(url.searchParams.get("Conn.Host"), context.host);
+    assert.equal(url.searchParams.get("Conn.Port"), String(context.port));
+    assert.equal(url.searchParams.get("Conn.Username"), context.username);
+    assert.equal(url.searchParams.get("Conn.Password"), context.value);
+    if (protocol === "oracle") {
+      assert.equal(url.searchParams.get("Conn.ServiceName"), context.username);
+      assert.equal(url.searchParams.get("Conn.ConnectionMode"), "Basic");
+    }
+    if (["postgresql", "sqlserver"].includes(protocol)) {
+      assert.equal(url.searchParams.get("Conn.InitialDatabase"), context.dbname);
+    }
+    if (protocol === "sqlserver") assert.equal(url.searchParams.get("Conn.AuthenticationType"), "Default");
+    assert.equal(url.hash, "");
   }
-  assert.throws(() => launchNavicatSQLServer(connection, start as any, "darwin"), /only run on Windows/);
 });
 
-test("Windows adapter gates supported versions and does not use the clipboard or save passwords", () => {
-  assert.ok(navicatSQLServerScript.includes("@(16, 17, 18)"));
-  assert.ok(navicatSQLServerScript.includes("Disable-SavePassword $dialog"));
-  assert.ok(navicatSQLServerScript.includes("Disable-SavePassword $prompt $false"));
-  assert.ok(navicatSQLServerScript.includes("$_.Current.NativeWindowHandle -notin $before"));
-  assert.ok(navicatSQLServerScript.includes("$prompt.Current.Name.Contains($request.name)"));
-  assert.ok(!/Set-Clipboard|SendKeys|navicat:\/\//i.test(navicatSQLServerScript));
+test("a missing configured executable fails instead of falling back to the URI handler", async () => {
+  const missing = { ...application, path: "/missing-navicat-18/navicat.exe" };
+  const launcher = new LocalApplicationLauncher(
+    {},
+    "",
+    { getConfig: async () => ({ databases: [missing] }) },
+    {
+      openExternal: async () => {
+        throw new Error("must not open system handler");
+      }
+    }
+  );
+  await assert.rejects(launcher.launch(connectionURL(payload)), /not found/);
 });

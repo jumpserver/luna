@@ -288,6 +288,7 @@ export class ApplicationConfigService {
       open_with: launch.open_with || "",
       launch_driver: launch.driver || "",
       application_id: launch.application_id || "",
+      module_path: launch.module || "",
       script_path: launch.script || "",
       script_interpreter: launch.interpreter || "",
       use_ssh_helper: Boolean(launch.use_ssh_helper),

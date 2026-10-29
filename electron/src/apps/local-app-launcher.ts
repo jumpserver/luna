@@ -1,10 +1,8 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-import { launchNavicatSQLServer } from "./navicat-sqlserver";
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -110,6 +108,53 @@ function splitArguments(input) {
   if (quote) throw new Error("application argument template contains an unclosed quote");
   if (current) args.push(current);
   return args.flatMap((argument) => argument.split("*"));
+}
+
+const pluginModuleRunner = String.raw`
+const { pathToFileURL } = require("node:url");
+(async () => {
+  let input = "";
+  process.stdin.setEncoding("utf8");
+  for await (const chunk of process.stdin) input += chunk;
+  const plugin = await import(pathToFileURL(process.argv[1]).href);
+  process.stdout.write(JSON.stringify(await plugin.default(JSON.parse(input))));
+})().catch(() => process.exit(1));
+`;
+
+function runPluginModule(filename, input): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
+    delete env.JMS_CONNECT_JSON;
+    const child = spawn(process.execPath, ["-e", pluginModuleRunner, filename], {
+      env,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "ignore"]
+    });
+    let output = "";
+    const timer = setTimeout(fail, 30_000);
+    function fail() {
+      clearTimeout(timer);
+      child.kill();
+      reject(new Error("Plugin could not prepare the connection"));
+    }
+    child.once("error", fail);
+    child.stdin.once("error", fail);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+      if (Buffer.byteLength(output) > 1024 * 1024) fail();
+    });
+    child.once("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) return fail();
+      try {
+        resolve(JSON.parse(output));
+      } catch {
+        fail();
+      }
+    });
+    child.stdin.end(input);
+  });
 }
 
 function spawnDetached(executable, args, options = {}, waitForExit = false) {
@@ -313,25 +358,28 @@ export class LocalApplicationLauncher {
     return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
   }
 
-  async launchNavicatSQLServer(application, values) {
-    const executable = await this.resolveExecutable(application);
-    // Native dialogs belong to one desktop process. Queue our own launches so
-    // simultaneous tokens cannot populate one another's connection form.
-    const pending = (this.navicatConnectionQueue || Promise.resolve())
-      .catch(() => {})
-      .then(() =>
-        launchNavicatSQLServer({
-          executable,
-          name: `JMS_${values.name.slice(0, 48)}_${randomUUID()}`,
-          host: values.host,
-          port: values.port,
-          username: values.username,
-          password: values.value,
-          database: values.dbname
-        })
-      );
-    this.navicatConnectionQueue = pending;
-    return pending;
+  async launchModule(application, payload, values) {
+    const pluginRoot = path.resolve(application.plugin_dir);
+    const filename = path.resolve(pluginRoot, application.module_path || "");
+    if (!filename.startsWith(pluginRoot + path.sep) || !(await isFile(filename))) {
+      throw new Error("Plugin entry point was not found");
+    }
+    const context = {
+      ...values,
+      source_name: String(payload.name || ""),
+      port: payload.endpoint.port,
+      executable: await this.resolveExecutable(application),
+      command: String(payload.command || "")
+    };
+    const plan = await runPluginModule(filename, JSON.stringify(context));
+    if (
+      plan?.type === "args" &&
+      Array.isArray(plan.args) &&
+      plan.args.every((arg) => typeof arg === "string" && !arg.includes("\0"))
+    ) {
+      return this.launchExecutable(application, plan.args, values, payload);
+    }
+    throw new Error("Plugin returned an invalid launch plan");
   }
 
   async launch(raw) {
@@ -356,9 +404,6 @@ export class LocalApplicationLauncher {
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
     const values = valuesFor(payload);
-    if (payload.protocol === "sqlserver" && application.plugin_id === "windows.navicat17") {
-      return this.launchNavicatSQLServer(application, values);
-    }
     if (application.launch_type === "args" && application.launch_driver === "resp") {
       return this.launchResp(application, payload, values);
     }
@@ -371,6 +416,7 @@ export class LocalApplicationLauncher {
       }
       return this.launchTerminal(application, payload.command, false);
     }
+    if (application.launch_type === "module") return this.launchModule(application, payload, values);
     const template = application.protocol_templates?.[payload.protocol] || application.arg_format;
     const argumentString = render(template, values);
     if (application.launch_type === "script") return this.launchScript(application, payload, values);

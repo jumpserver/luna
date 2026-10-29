@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -14,51 +14,49 @@ import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-test("Windows Navicat uses its native SQL Server adapter without changing other database launches", async () => {
-  const application = {
-    name: "navicat17",
-    plugin_id: "windows.navicat17",
-    protocol: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    enabled_protocols: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    is_set: true,
-    match_first: ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"],
-    launch_type: "args",
-    arg_format: "{url}"
-  };
-  const launcher = new LocalApplicationLauncher(
-    { isPackaged: false },
-    projectRoot,
-    { getConfig: async () => ({ databases: [application] }) },
-    null
-  );
-  let nativeCalls = 0;
-  let argumentCalls = 0;
-  launcher.launchNavicatSQLServer = async (selected, values) => {
-    assert.equal(selected, application);
-    assert.equal(values.username, "selector-token");
-    assert.equal(values.value, `secret with spaces * \" ' $()`);
-    assert.equal(values.dbname, "application database");
-    nativeCalls++;
-  };
-  launcher.launchExecutable = async (selected, args) => {
-    assert.equal(selected, application);
-    assert.ok(args.startsWith("navicat://conn."));
-    argumentCalls++;
-  };
-  for (const protocol of application.protocol) {
+test("Windows Navicat launch behavior comes entirely from its plugin configuration", async () => {
+  const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  const id = "windows.navicat17";
+  for (const protocol of ["sqlserver", "mysql", "mariadb", "postgresql", "oracle"]) {
+    const application = await service.buildItem(
+      {
+        id,
+        category: "databases",
+        builtin: true,
+        pluginDir: path.join(projectRoot, "plugins/windows", id)
+      },
+      { selections: { [`databases:${protocol}`]: id } }
+    );
+    assert.equal(application.launch_type, "module");
+    assert.equal(application.executable_type, "user_path");
+    assert.equal(application.path_exists, false);
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    let launches = 0;
+    launcher.launchModule = async (selected, payload, values) => {
+      assert.equal(selected, application);
+      assert.equal(payload.protocol, protocol === "mariadb" ? "mysql" : protocol);
+      assert.equal(values.username, "selector-token");
+      assert.equal(values.value, "test-secret");
+      assert.equal(values.dbname, protocol === "oracle" ? "selector-token" : "application database");
+      launches++;
+    };
     const payload = {
       protocol,
       client: "navicat17",
       name: "SQL Server test",
       endpoint: { host: "gateway.example.test", port: 5525 },
-      token: { id: "selector-token", value: `secret with spaces * \" ' $()` },
+      token: { id: "selector-token", value: "test-secret" },
       asset: { info: { db_name: "application database" } }
     };
     await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launches, 1);
     assert.equal(payload.protocol, protocol);
   }
-  assert.equal(nativeCalls, 1);
-  assert.equal(argumentCalls, 4);
 });
 
 test("SQL Server applications other than the bundled Navicat plugin retain their argument launch", async () => {
@@ -83,8 +81,8 @@ test("SQL Server applications other than the bundled Navicat plugin retain their
       { getConfig: async () => ({ databases: [application] }) },
       null
     );
-    launcher.launchNavicatSQLServer = async () => {
-      throw new Error("must not use the Navicat adapter");
+    launcher.launchModule = async () => {
+      throw new Error("must not use a plugin module");
     };
     let args;
     launcher.launchExecutable = async (_selected, value) => {
@@ -717,6 +715,10 @@ for (const [platform, plugin, expected] of [
       enabled_protocols: ["mariadb"],
       match_first: ["mariadb"],
       launch_type: config.launch.type,
+      module_path: config.launch.module,
+      plugin_dir: path.join(projectRoot, "plugins", platform, directory),
+      path: process.execPath,
+      executable_type: "user_path",
       launch_driver: config.launch.driver,
       arg_format: config.launch.template,
       protocol_templates: config.launch.protocol_templates
@@ -737,6 +739,7 @@ for (const [platform, plugin, expected] of [
     let launches = 0;
     const checkArgs = async (selected, args) => {
       assert.equal(selected, application);
+      args = Array.isArray(args) ? args.join(" ") : args;
       assert.ok(args.includes(expected), args);
       assert.ok(args.includes("gateway.example.com"), args);
       assert.ok(args.includes("5525"), args);
@@ -901,4 +904,68 @@ test("enables multiple clients independently and persists a separate protocol de
   assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "second");
   await update("Second", false);
   await assert.rejects(launcher.resolveApplication({ protocol: "ssh" }), /no configured application/);
+});
+
+test("plugin module boundaries reject invalid entries and plans without exposing credentials", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "jms module 中文 "));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const pluginDir = path.join(directory, "plugin");
+  await mkdir(pluginDir);
+  const moduleFile = path.join(pluginDir, "launch.mjs");
+  await writeFile(path.join(directory, "outside.mjs"), 'export default () => ({type:"args",args:[]});');
+  const application = {
+    name: "module-test",
+    protocol: ["mysql"],
+    is_set: true,
+    match_first: ["mysql"],
+    launch_type: "module",
+    module_path: "launch.mjs",
+    plugin_dir: pluginDir,
+    path: process.execPath,
+    executable_type: "user_path"
+  };
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    { getConfig: async () => ({ databases: [application] }) },
+    null
+  );
+  const secret = "private space ' \" \\ * 中文";
+  const payload = {
+    protocol: "mysql",
+    endpoint: { host: "gateway.example", port: 3306 },
+    token: { id: "token", value: secret }
+  };
+  const raw = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  let launches = 0;
+  launcher.launchExecutable = async (_selected, args) => {
+    assert.deepEqual(args, [secret]);
+    launches++;
+  };
+  await writeFile(
+    moduleFile,
+    'export default c => { if (process.env.JMS_CONNECT_JSON) throw Error(c.value); return {type:"args",args:[c.value]}; };'
+  );
+  await launcher.launch(raw);
+  assert.equal(launches, 1);
+  for (const entry of ["", "missing.mjs", "../outside.mjs"]) {
+    application.module_path = entry;
+    await assert.rejects(launcher.launch(raw), /entry point was not found/);
+  }
+  application.module_path = "launch.mjs";
+  for (const source of [
+    'export default c => ({type:"url",url:c.value});',
+    'export default c => ({type:"args",args:[c.value,42]});',
+    'export default c => ({type:"args",args:[c.value + "\\0"]});'
+  ]) {
+    await writeFile(moduleFile, source);
+    await assert.rejects(launcher.launch(raw), /invalid launch plan/);
+  }
+  await writeFile(moduleFile, "export default c => { throw Error(c.value); };");
+  await assert.rejects(launcher.launch(raw), (error: Error) => {
+    assert.match(error.message, /Plugin could not prepare/);
+    assert.ok(!error.message.includes(secret));
+    return true;
+  });
+  assert.equal(launches, 1, "rejected modules must never launch the target application");
 });
