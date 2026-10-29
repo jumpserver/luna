@@ -25,7 +25,12 @@ const loadError = ref("");
 const avatarFailed = ref(false);
 let requestSequence = 0;
 
-const accounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
+const accounts = computed(() => {
+  const entries = Object.entries(userMap.value) as [string, UserData][];
+  return entries.sort(
+    ([leftId], [rightId]) => Number(rightId === currentAccountId.value) - Number(leftId === currentAccountId.value)
+  );
+});
 
 const avatarUrl = computed(() => {
   const value = profile.value?.avatar_url;
