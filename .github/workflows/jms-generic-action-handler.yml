@@ -1,9 +1,10 @@
 on:
   push:
+    branches: ["pr@*", "repr@*"]
   pull_request:
-    types: [opened, synchronize, closed]
+    types: [opened, closed]
   release:
-    types: [created, published, released]
+    types: [released]
 
 name: JumpServer repos generic handler
 
@@ -18,16 +19,10 @@ jobs:
           I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
 
   handle_push:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: jumpserver/action-generic-handler@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
-          I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
-
-  handle_release:
-    if: github.event_name == 'release' && github.event.action != 'released'
+    # Auto-PR only handles branch creation; repr branches also handle updates.
+    if: >-
+      github.event_name == 'push' && !github.event.deleted
+      && (startsWith(github.ref_name, 'repr@') || github.event.created)
     runs-on: ubuntu-latest
     steps:
       - uses: jumpserver/action-generic-handler@master

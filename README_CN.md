@@ -41,6 +41,10 @@ Luna 需要配合 JumpServer Core 和相应连接组件使用，单独启动前�
 安装包文件名继续使用 `JumpServer-5.1.0-Setup.exe`、`JumpServer-WebLite-5.1.0-x64.msi` 等现有格式。
 Web 镜像继续使用 `v<version>` tag 发布。
 
+重复构建时，推送新的 `client-v5.1.0-build2` 或 `weblite-v5.1.0-build2` tag 即可。
+这些构建会复用 `client-v5.1.0` 或 `weblite-v5.1.0` Release，各平台完成后分别覆盖同名附件。
+下载文件名使用 `5.1.0`，包内版本保留构建后缀；已有 tag 无需删除或移动。
+
 启动后输入 JumpServer 站点地址并登录。桌面端还支持本地 Shell、调用外部终端或数据库客户端、离线录像播放和录像转 MP4。H.264 编码所需的 FFmpeg 插件可在设置中下载。
 
 浏览器可通过 `jms2://` 链接唤起客户端。桌面端 OAuth 回调为 `jms2://auth/callback`，服务端 OAuth 应用需允许该地址；旧版客户端使用的 `jms://` 协议保持独立。

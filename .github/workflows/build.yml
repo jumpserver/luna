@@ -6,6 +6,7 @@ on:
       version:
         description: >-
           Client version or tag (e.g., v5.1.0 or client-v5.1.0-beta8).
+          Suffix tags upload to the base version release and replace matching assets.
           Versions containing beta enable Electron DevTools.
         required: true
         type: string
@@ -47,6 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
 
@@ -69,7 +71,7 @@ jobs:
         run: node scripts/set-version.js
 
       - name: Validate release version handling
-        run: node --test --test-concurrency=1 scripts/set-version.test.mjs
+        run: node --test --test-concurrency=1 scripts/set-version.test.mjs scripts/github-release.test.mjs
 
       - name: Test Guacamole source build
         run: node --test --test-concurrency=1 packages/guacamole/scripts/build.test.mjs
@@ -97,9 +99,37 @@ jobs:
       - name: Validate Electron client
         run: pnpm typecheck:electron && pnpm test:electron
 
+  release:
+    name: prepare client prerelease
+    needs: quality
+    concurrency:
+      group: client-release-prepare
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Create or reuse release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.quality.outputs.tag }}
+        run: node scripts/github-release.mjs prepare
+
   build:
     name: package ${{ matrix.name }}
-    needs: quality
+    needs: [quality, release]
+    concurrency:
+      group: client-package-${{ needs.quality.outputs.tag }}-${{ matrix.name }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -276,39 +306,9 @@ jobs:
             release/electron/make/**/*.deb
             release/electron/make/**/*.rpm
 
-  release:
-    name: publish client prerelease
-    needs: [quality, build]
-    if: >-
-      startsWith(github.ref, 'refs/tags/')
-      || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v7
-        with:
-          pattern: desktop-*
-          path: release-assets
-          merge-multiple: true
-
-      - name: Generate release checksums
-        shell: bash
-        run: |
-          # GitHub Release assets are downloaded without the
-          # maker subdirectories.
-          find release-assets -type f ! -name SHA256SUMS -print0 | sort -z |
-            while IFS= read -r -d '' artifact; do
-              (cd "$(dirname "$artifact")" &&
-                sha256sum "$(basename "$artifact")")
-            done > release-assets/SHA256SUMS
-
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.quality.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          files: release-assets/**/*
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.quality.outputs.tag }}
+          BUILD_VERSION: ${{ needs.quality.outputs.version }}
+        run: node scripts/github-release.mjs upload release/electron/make "${{ matrix.name }}"
