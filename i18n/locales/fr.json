@@ -2923,7 +2923,7 @@
     "GoWriteCsvLimit": "UTF-8 CSV with column names in the first row; up to 10 MiB / {count} rows. Rows are staged until preview and confirmation.",
     "GoWriteLimit": "Stage at most 500 changes. Read-only, deleted or non-nullable cells cannot accept this change.",
     "GoWritePending": "{count} / {limit} changes pending",
-    "GoWriteGridHint": "F2 / pencil to edit · Double-click / Enter to view · Save staged changes",
+    "GoWriteGridHint": "Double-clic / F2 pour modifier la cellule · Crayon pour la valeur complète · Clic droit pour NULL · Enregistrer les modifications",
     "GoWriteReadonly": "This result cannot be safely edited in the grid. Use the SQL editor.",
     "GoWriteOutcome_committed": "Database changes committed. Refresh to verify the latest data; do not save again.",
     "GoWriteOutcome_staged": "Changes applied to your current transaction, not committed. Explicitly COMMIT or ROLLBACK in this SQL console; do not save again.",

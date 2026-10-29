@@ -3,10 +3,12 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   CellClassParams,
   CellContextMenuEvent,
+  CellDoubleClickedEvent,
   CellFocusedEvent,
   CellMouseDownEvent,
   CellMouseOverEvent,
   ColDef,
+  GetRowIdParams,
   GridApi,
   GridReadyEvent,
   IHeaderParams
@@ -28,6 +30,7 @@ import {
   startChenGridSelection
 } from "~/chen/utils/dataGridSelection";
 import { writeClipboardText } from "~/utils/clipboard";
+import GoResultCellEditor from "./GoResultCellEditor.vue";
 import GoResultValue from "./GoResultValue.client.vue";
 import {
   compareResultValues,
@@ -47,6 +50,8 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 const props = defineProps<{
   rows: GoRows;
   canCopy: boolean;
+  active?: boolean;
+  nullableColumns?: number[];
   copySql?: (operation: "insert" | "update", selection: GoCopySelection) => Promise<GoCopiedSQL>;
   sqlCopyDisabled?: boolean;
   editableColumns?: number[];
@@ -56,7 +61,11 @@ const props = defineProps<{
   defaultCells?: string[];
   deletedRows?: number[];
 }>();
-const emit = defineEmits<{ edit: [row: number, column: number]; selection: [rows: number[]] }>();
+const emit = defineEmits<{
+  edit: [row: number, column: number];
+  change: [row: number, column: number, value: string | null];
+  selection: [rows: number[]];
+}>();
 ModuleRegistry.registerModules([AllCommunityModule]);
 const { t, locale } = useI18n();
 const toast = useToast();
@@ -73,10 +82,21 @@ const expectedFocus = new Set<string>();
 const contextMenuOpen = ref(false);
 const contextMenuPosition = reactive({ x: 0, y: 0 });
 const contextCell = ref<ChenGridCell | null>(null);
-const data = computed(() => resultGridRows(props.rows));
+const contextRow = shallowRef<Record<string, unknown> | null>(null);
+// AG Grid Vue clones row objects; keep result identity as scalar fields.
+const data = computed(() =>
+  resultGridRows(props.rows).map((row) => ({ ...row, __result: props.rows.id, __offset: props.rows.offset }))
+);
+const canSetNull = computed(() => {
+  const cell = contextCell.value;
+  const target = cell && editableTarget(contextRow.value || undefined, cell.colId);
+  return props.active !== false && !!target && props.nullableColumns?.includes(target.column) === true;
+});
+const sourceColumns = computed(() => props.rows.columns);
+const rowId = ({ data }: GetRowIdParams) => `${data.__result}:${data.__offset}:${data.__row}`;
 const columnNames = computed(() => {
   let unnamed = 0;
-  return props.rows.columns.map((column) =>
+  return sourceColumns.value.map((column) =>
     column.name === "?column?" ? t("Chen.GoV1GridUnnamedColumn", { index: ++unnamed }) : column.name
   );
 });
@@ -153,6 +173,16 @@ const contextMenuItems = computed<DropdownMenuItem[][]>(() => {
       }))
     ],
     [
+      ...(props.editableColumns?.length || props.insertableColumns?.length
+        ? [
+            {
+              label: t("Chen.SetValueNull"),
+              icon: "i-lucide-circle-minus",
+              disabled: !canSetNull.value,
+              onSelect: setCurrentCellNull
+            }
+          ]
+        : []),
       {
         label: t("Chen.GoV1GridViewValue"),
         icon: "i-lucide-expand",
@@ -217,7 +247,7 @@ const columns = computed<ColDef[]>(() => [
     cellClass: "result-row-number",
     getQuickFilterText: () => ""
   },
-  ...props.rows.columns.map(
+  ...sourceColumns.value.map(
     (column, ordinal): ColDef => ({
       colId: resultColumnId(ordinal),
       field: resultColumnId(ordinal),
@@ -228,6 +258,17 @@ const columns = computed<ColDef[]>(() => [
         innerHeaderComponentParams: { dataType: column.data_type }
       },
       initialWidth: Math.min(300, Math.max(130, (columnNames.value[ordinal]?.length || 0) * 8 + 72)),
+      editable: ({ data }) => props.active !== false && !!editableTarget(data, resultColumnId(ordinal)),
+      cellEditor: GoResultCellEditor,
+      valueSetter: (params) => {
+        const target = editableTarget(params.data, params.column.getColId());
+        if (target && (params.newValue === null || typeof params.newValue === "string")) {
+          emit("change", target.row, target.column, params.newValue);
+        }
+        // The application owns draft values. Never mutate AG Grid row data or
+        // the cached query result; the staged draft supplies the next rowData.
+        return false;
+      },
       minWidth: 80,
       maxWidth: 1000,
       valueFormatter: ({ value, data }) =>
@@ -270,6 +311,7 @@ function resetSelection() {
   expectedFocus.clear();
   contextMenuOpen.value = false;
   contextCell.value = null;
+  contextRow.value = null;
   selection.value = emptyChenGridSelection();
   refreshSelection();
 }
@@ -285,9 +327,30 @@ function captureRightMouseDown(event: MouseEvent) {
   }
 }
 function preventGridContextMenu(event: MouseEvent) {
-  if (event.target instanceof Element && event.target.closest('.ag-cell:not([col-id="__row"])')) {
-    event.preventDefault();
+  if (!(event.target instanceof Element)) return;
+  const element = event.target.closest('.ag-cell:not([col-id="__row"])');
+  if (!element) return;
+  event.preventDefault();
+  // AG Grid does not emit cellContextMenu for an active text editor.
+  if (element.classList.contains("ag-cell-inline-editing")) {
+    const colId = element.getAttribute("col-id");
+    const row = element.closest("[row-index]")?.getAttribute("row-index");
+    if (colId && row != null && Number.isInteger(Number(row))) {
+      event.stopPropagation();
+      openContextMenu({ rowIndex: Number(row), colId }, event);
+    }
   }
+}
+function openContextMenu(cell: ChenGridCell, mouse: MouseEvent) {
+  const row = gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  gridApi.value?.stopEditing();
+  contextRow.value = row || null;
+  contextCell.value = cell;
+  selection.value = resultContextSelection(selection.value, columnIds(), cell);
+  refreshSelection();
+  contextMenuPosition.x = mouse.clientX;
+  contextMenuPosition.y = mouse.clientY;
+  contextMenuOpen.value = true;
 }
 function contextMenu(event: CellContextMenuEvent) {
   const mouse = event.event as MouseEvent | undefined;
@@ -295,13 +358,7 @@ function contextMenu(event: CellContextMenuEvent) {
   const colId = event.column.getColId();
   if (!mouse || rowIndex == null || colId === "__row") return;
   mouse.preventDefault();
-  const cell = { rowIndex, colId };
-  contextCell.value = cell;
-  selection.value = resultContextSelection(selection.value, columnIds(), cell);
-  refreshSelection();
-  contextMenuPosition.x = mouse.clientX;
-  contextMenuPosition.y = mouse.clientY;
-  contextMenuOpen.value = true;
+  openContextMenu({ rowIndex, colId }, mouse);
 }
 function selectedData() {
   const area = getChenGridSelectionBounds(selection.value, columnIds());
@@ -428,6 +485,7 @@ function openValue(cell: ChenGridCell | null = selection.value.current) {
 }
 function keydown(event: KeyboardEvent) {
   if (!(event.target instanceof HTMLElement) || !event.target.closest(".ag-cell")) return;
+  if (event.target.closest(".ag-cell-inline-editing") || gridApi.value?.getEditingCells?.().length) return;
   if (
     !event.shiftKey &&
     ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Home", "End", "PageUp", "PageDown"].includes(event.key)
@@ -457,7 +515,7 @@ function keydown(event: KeyboardEvent) {
     refreshSelection();
     return;
   }
-  if (event.key === "F2" && requestEdit()) {
+  if (event.key === "F2" && startInlineEdit()) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -465,7 +523,7 @@ function keydown(event: KeyboardEvent) {
   if (event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    openValue();
+    if (!startInlineEdit()) openValue();
     return;
   }
   if (!event.shiftKey || !event.key.startsWith("Arrow")) return;
@@ -489,18 +547,45 @@ function keydown(event: KeyboardEvent) {
   api.setFocusedCell(row, next.colId);
   refreshSelection();
 }
-function requestEdit() {
-  const cell = selection.value.current;
-  const row = cell ? gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data : null;
-  if (!cell || !row) return false;
-  const column = Number(cell.colId.replace("column_", ""));
-  const index = Number(row.__row) - props.rows.offset - 1;
+function editableTarget(row: Record<string, unknown> | undefined, colId: string) {
+  if (!row || row.__result !== props.rows.id || row.__offset !== props.rows.offset) return null;
+  const column = props.rows.columns.findIndex((_, index) => resultColumnId(index) === colId);
+  const index = Number(row?.__row) - props.rows.offset - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= props.rows.rows.length || column < 0) return null;
   const allowed =
     index >= (props.originalRowCount ?? props.rows.rows.length) ? props.insertableColumns : props.editableColumns;
-  if (!allowed?.includes(column) || props.deletedRows?.includes(index)) return false;
-  emit("edit", index, column);
+  return allowed?.includes(column) && !props.deletedRows?.includes(index) ? { row: index, column } : null;
+}
+function startInlineEdit() {
+  const cell = selection.value.current;
+  const row = cell && gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  if (props.active === false || !cell || !editableTarget(row, cell.colId)) return false;
+  gridApi.value?.startEditingCell({ rowIndex: cell.rowIndex, colKey: cell.colId, key: "F2" });
   return true;
 }
+function requestEdit() {
+  gridApi.value?.stopEditing();
+  const cell = selection.value.current;
+  const row = cell && gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  const target = cell && editableTarget(row, cell.colId);
+  if (props.active === false || !target) return false;
+  emit("edit", target.row, target.column);
+  return true;
+}
+function doubleClicked(event: CellDoubleClickedEvent) {
+  if (event.node.rowIndex != null && !editableTarget(event.data, event.column.getColId())) {
+    openValue({ rowIndex: event.node.rowIndex, colId: event.column.getColId() });
+  }
+}
+function setCurrentCellNull() {
+  if (!canSetNull.value) return;
+  gridApi.value?.stopEditing(true);
+  const cell = contextCell.value;
+  const row = contextRow.value || undefined;
+  const target = cell && editableTarget(row, cell.colId);
+  if (target) emit("change", target.row, target.column, null);
+}
+defineExpose({ stopEditing: (cancel = false) => gridApi.value?.stopEditing(cancel) });
 function ready(event: GridReadyEvent) {
   gridApi.value = event.api;
 }
@@ -511,12 +596,34 @@ function pinChanged() {
   pinVersion.value++;
   refreshSelection();
 }
+watch([() => props.rows.id, () => props.rows.offset], () => {
+  gridApi.value?.stopEditing(true);
+  resetSelection();
+  valueOpen.value = false;
+});
 watch(
-  () => props.rows,
+  () => [props.editableColumns, props.insertableColumns, props.deletedRows],
   () => {
-    resetSelection();
-    valueOpen.value = false;
-  }
+    if (
+      gridApi.value
+        ?.getEditingCells?.()
+        .some(
+          (cell) =>
+            !cell.column ||
+            !editableTarget(gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data, cell.column.getColId())
+        )
+    ) {
+      gridApi.value.stopEditing(true);
+    }
+  },
+  { flush: "sync" }
+);
+watch(
+  () => props.active,
+  (active) => {
+    if (active === false) gridApi.value?.stopEditing();
+  },
+  { flush: "sync" }
 );
 watch(
   () => props.rows.id,
@@ -533,6 +640,7 @@ onMounted(() => {
   window.addEventListener("blur", finishSelection);
 });
 onBeforeUnmount(() => {
+  gridApi.value?.stopEditing();
   mounted = false;
   window.removeEventListener("pointerup", finishSelection);
   window.removeEventListener("blur", finishSelection);
@@ -631,7 +739,9 @@ onBeforeUnmount(() => {
         theme="legacy"
         :locale-text="gridLocales[locale] || gridLocales.en"
         :column-defs="columns"
+        :stop-editing-when-cells-lose-focus="true"
         :row-data="data"
+        :get-row-id="rowId"
         :default-col-def="defaults"
         :row-height="28"
         :header-height="30"
@@ -644,7 +754,7 @@ onBeforeUnmount(() => {
         @cell-mouse-down="mouseDown"
         @cell-mouse-over="mouseOver"
         @cell-focused="focused"
-        @cell-double-clicked="openValue()"
+        @cell-double-clicked="doubleClicked"
         @cell-context-menu="contextMenu"
         @sort-changed="resetSelection"
         @model-updated="modelUpdated"

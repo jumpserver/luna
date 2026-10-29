@@ -28,6 +28,7 @@ const emit = defineEmits<{ apply: [plan: GoEditPlan]; refresh: [] }>();
 const { t } = useI18n();
 const error = ref("");
 const selected = ref<number[]>([]);
+const grid = ref<{ stopEditing: (cancel?: boolean) => void } | null>(null);
 const metadataBusy = ref(false);
 const previewOpen = ref(false);
 const csvOpen = ref(false);
@@ -98,6 +99,10 @@ const insertFields = computed(() => (draft.value.metadata?.columns || []).map(as
 const updateFields = computed(() =>
   (draft.value.metadata?.columns || []).filter((column) => column.editable).map(asField)
 );
+function stageCell(row: number, column: number, value: string | null) {
+  if (!canChange.value) return;
+  if (!stageEditCell(draft.value, props.query.rows!, row, column, value)) error.value = t("Chen.GoWriteLimit");
+}
 let controller: AbortController | undefined;
 async function loadMetadata() {
   if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
@@ -238,6 +243,7 @@ function importRows(values: Record<string, string | null>[]) {
   draft.value.plan = null;
 }
 async function preview() {
+  grid.value?.stopEditing();
   if (!canChange.value || !dirty.value || !props.query.console || !props.query.rows) return;
   if (editPayloadBytes(editChanges(draft.value), draft.value.source) > GO_EDIT_MAX_BYTES) {
     error.value = t("Chen.GoWritePayloadLimit");
@@ -399,7 +405,10 @@ function discard() {
     </p>
     <p v-if="draft.refreshRequired" class="px-3 pb-2 text-xs text-warning">{{ t("Chen.GoWriteRefreshRequired") }}</p>
     <GoResultGrid
+      ref="grid"
       :rows="rows"
+      :active="visible !== false"
+      :nullable-columns="draft.metadata?.columns.filter((column) => column.nullable).map((column) => column.index)"
       :can-copy="session.permissions.can_copy"
       :copy-sql="copySQL"
       :sql-copy-disabled="sqlCopyDisabled"
@@ -418,6 +427,7 @@ function discard() {
       class="min-h-0 flex-1"
       @selection="selected = $event"
       @edit="editCell"
+      @change="stageCell"
     />
     <DataViewImportDialog
       v-if="csvOpen"

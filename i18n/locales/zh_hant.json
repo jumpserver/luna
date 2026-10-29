@@ -2740,7 +2740,7 @@
     "GoWriteCsvLimit": "UTF-8 CSV，第一行是列名；最多 10 MiB / {count} 行。只会暂存，预览并确认后才写入。",
     "GoWriteLimit": "每次最多暂存 500 项更改；不可编辑、已删除或不允许 NULL 的字段无法修改。",
     "GoWritePending": "待保存 {count} / {limit} 项",
-    "GoWriteGridHint": "F2 / 铅笔编辑 · 双击 / Enter 查看 · 修改统一保存",
+    "GoWriteGridHint": "按兩下 / F2 行內編輯 · 鉛筆編輯完整值 · 右鍵設為 NULL · 統一儲存修改",
     "GoWriteReadonly": "此结果不支持安全网格编辑，可使用 SQL 编辑器",
     "GoWriteOutcome_committed": "数据库更改已提交。请刷新结果核对最新数据；不要重复保存。",
     "GoWriteOutcome_staged": "更改已应用到当前事务，尚未提交。请在同一 SQL 控制台显式 COMMIT 或 ROLLBACK；不要重复保存。",
