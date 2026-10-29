@@ -26,6 +26,7 @@ import {
   getChenSqlAiSession,
   handleChenSqlAiError,
   handleChenSqlAiWireMessage,
+  invalidateChenSqlAiContext,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
@@ -41,7 +42,7 @@ import GoObjectPane from "./GoObjectPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
-import { prepareGoSqlProposal } from "./sqlAi";
+import { goSqlExecutionError, prepareGoSqlProposal } from "./sqlAi";
 import { usePaneResize } from "./usePaneResize";
 import {
   acceptQueryExecution,
@@ -176,7 +177,7 @@ function sqlAiContext(): ChenSqlEditorContext | null {
     workspaceTabId: query.id,
     workspaceTabKind: "query",
     currentContext: JSON.stringify(query.context),
-    lastError: query.execution?.error ? { ...query.execution.error } : null
+    lastError: goSqlExecutionError(query, snapshot)
   };
 }
 function applySqlProposal(proposal: ChenSqlProposal) {
@@ -195,8 +196,17 @@ const sendSqlAiFrame: ChenSqlAiFrameSender = (frame) => {
   const sessionId = session.value.id;
   const generation = aiGeneration;
   const paneId = props.tab.id;
+  const requestContext = getChenSqlAiSession(paneId)?.requestContext;
   void api.aiMessage(sessionId, frame, eventController.signal).catch((cause) => {
-    if (disposed || generation !== aiGeneration || session.value?.id !== sessionId || !sessionReady.value) return;
+    if (
+      disposed ||
+      generation !== aiGeneration ||
+      session.value?.id !== sessionId ||
+      !sessionReady.value ||
+      !requestContext ||
+      requestContext !== getChenSqlAiSession(paneId)?.requestContext
+    )
+      return;
     const request = parseKokoMcpFrame(frame);
     if (request?.type === "mcp.request") {
       handleChenSqlAiWireMessage(paneId, {
@@ -236,6 +246,28 @@ watch(
     else closeSqlAi();
   }
 );
+watch(
+  () => {
+    const query = activeTab.value;
+    return [
+      props.tab?.id,
+      activeId.value,
+      query?.kind,
+      query?.kind === "query"
+        ? [query.console?.id, query.console?.state, query.context.database, query.context.schema, query.sql]
+        : null
+    ];
+  },
+  () => {
+    if (props.tab) invalidateChenSqlAiContext(props.tab.id);
+  },
+  { flush: "sync" }
+);
+function updateQuerySql(query: QueryWorkspaceTab, sql: string) {
+  query.sql = sql;
+  // Monaco may advance the model version without changing the final text.
+  if (props.tab && activeId.value === query.id) invalidateChenSqlAiContext(props.tab.id);
+}
 function requestSqlAi(operation: ChenSqlAiOperation) {
   if (!props.tab || !sqlAiContext()) return;
   const current = getChenSqlAiSession(props.tab.id);
@@ -1359,7 +1391,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             @apply-edits="applyEdits(item, $event)"
             @upload-sql="restoreQuery(item.context, $event, true)"
             @refresh-data="refreshData(item)"
-            @sql="item.sql = $event"
+            @sql="updateQuerySql(item, $event)"
             @restore="(sql: string) => restoreQuery(item.context, sql)"
             @run="(sql, version) => submit(item, sql, version)"
             @explain="(sql, version) => explainQuery(item, sql, version)"
