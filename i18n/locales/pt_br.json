@@ -2299,6 +2299,7 @@
     "TableDisplaySettings": "Configurações de exibição da tabela",
     "TableDisplay": "Exibição da tabela",
     "TableDisplayHint": "Aplicadas a todas as grades de resultados do banco de dados.",
+    "GoGridPreferenceResultScope": "A visibilidade das colunas se aplica apenas ao resultado atual e é redefinida em novos resultados.",
     "NullValues": "Valores NULL",
     "MarkEmptyStrings": "Marcar cadeias de caracteres vazias",
     "ZebraStripes": "Linhas com cores alternadas",

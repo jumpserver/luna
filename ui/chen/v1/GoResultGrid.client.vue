@@ -20,6 +20,7 @@ import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community"
 import { AgGridVue } from "ag-grid-vue3";
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
 import { gridLocales } from "~/chen/locales";
 import {
   emptyChenGridSelection,
@@ -72,6 +73,26 @@ const toast = useToast();
 const gridApi = shallowRef<GridApi | null>(null);
 const selection = ref(emptyChenGridSelection());
 const filter = ref("");
+const gridPreferences = useChenGridPreferences();
+const fieldSearch = ref("");
+// ponytail: the session exposes asset/account display names, not stable connection IDs.
+// Keep visibility in this result instance until the API supplies a reliable full table identity.
+const hiddenColumns = ref<string[]>([]);
+const columnStructure = computed(() =>
+  JSON.stringify(props.rows.columns.map((column) => [column.name, column.data_type]))
+);
+const nullDisplayOptions = computed(() => [
+  { label: "NULL", value: "keyword" },
+  { label: "(null)", value: "parenthesized" },
+  { label: t("Chen.Blank"), value: "blank" }
+]);
+const displaySwitches = [
+  { key: "showEmptyStrings", label: "Chen.MarkEmptyStrings" },
+  { key: "stripedRows", label: "Chen.ZebraStripes" },
+  { key: "showCellBorders", label: "Chen.CellBorders" },
+  { key: "compactRows", label: "Chen.CompactRows" }
+] as const;
+const visibleColumnCount = computed(() => props.rows.columns.length - hiddenColumns.value.length);
 const sqlCopyBusy = ref(false);
 let mounted = true;
 const shownRows = ref(props.rows.rows.length);
@@ -100,6 +121,47 @@ const columnNames = computed(() => {
     column.name === "?column?" ? t("Chen.GoV1GridUnnamedColumn", { index: ++unnamed }) : column.name
   );
 });
+const listedColumns = computed(() =>
+  sourceColumns.value
+    .map((column, ordinal) => ({
+      id: resultColumnId(ordinal),
+      label: `${ordinal + 1}. ${columnNames.value[ordinal] || column.name}`
+    }))
+    .filter((column) => column.label.toLowerCase().includes(fieldSearch.value.trim().toLowerCase()))
+);
+function setColumnVisible(id: string, visible: boolean) {
+  if (!sourceColumns.value.some((_, ordinal) => resultColumnId(ordinal) === id)) return;
+  if (!visible && (hiddenColumns.value.includes(id) || visibleColumnCount.value <= 1)) return;
+  // Finish only the cell editor into the existing draft; no query/save event is emitted.
+  gridApi.value?.stopEditing();
+  hiddenColumns.value = visible ? hiddenColumns.value.filter((column) => column !== id) : [...hiddenColumns.value, id];
+  gridApi.value?.setColumnsVisible([id], visible);
+  visibilityChanged();
+}
+function showAllColumns() {
+  gridApi.value?.stopEditing();
+  hiddenColumns.value = [];
+  gridApi.value?.setColumnsVisible(
+    sourceColumns.value.map((_, ordinal) => resultColumnId(ordinal)),
+    true
+  );
+  visibilityChanged();
+}
+function visibilityChanged() {
+  const visible = columnIds();
+  if (
+    filter.value ||
+    [selection.value.anchor, selection.value.current, contextCell.value].some(
+      (cell) => cell && !visible.includes(cell.colId)
+    )
+  )
+    resetSelection();
+  const focused = gridApi.value?.getFocusedCell();
+  if (focused && !visible.includes(focused.column.getColId())) gridApi.value?.clearFocusedCell();
+  expectedFocus.clear();
+  pinVersion.value++;
+  refreshSelection();
+}
 const bounds = computed(() => {
   void pinVersion.value;
   return getChenGridSelectionBounds(selection.value, columnIds());
@@ -142,6 +204,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
       icon: "i-lucide-rotate-ccw",
       onSelect: () => {
         filter.value = "";
+        showAllColumns();
         gridApi.value?.resetColumnState();
         resetSelection();
       }
@@ -274,8 +337,15 @@ const columns = computed<ColDef[]>(() => [
       valueFormatter: ({ value, data }) =>
         props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
           ? "DEFAULT"
-          : resultValuePreview(value),
-      tooltipValueGetter: ({ value }) => `${resultValuePreview(value, 1024)}\n\n${t("Chen.GoV1GridPreviewHint")}`,
+          : resultValuePreview(value, 240, gridPreferences.value),
+      tooltipValueGetter: ({ value, data }) => {
+        const preview = props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
+          ? "DEFAULT"
+          : value === ""
+            ? t("Chen.GoV1GridEmptyString")
+            : resultValuePreview(value, 1024);
+        return `${preview}\n\n${t("Chen.GoV1GridPreviewHint")}`;
+      },
       comparator: (a, b) => compareResultValues(a, b, resultTypeBadge(column.data_type) === "123"),
       getQuickFilterText: ({ value }) => resultValueText(value),
       cellClassRules: {
@@ -465,12 +535,12 @@ function focused(event: CellFocusedEvent) {
   )
     return;
   const colId = event.column.getColId();
-  if (colId === "__row") return;
+  if (!columnIds().includes(colId)) return;
   selection.value = resultFocusSelection(selection.value, { rowIndex: event.rowIndex, colId }, expectedFocus);
   refreshSelection();
 }
 function openValue(cell: ChenGridCell | null = selection.value.current) {
-  if (!cell || !gridApi.value) return;
+  if (!cell || !gridApi.value || !columnIds().includes(cell.colId)) return;
   const row = gridApi.value.getDisplayedRowAtIndex(cell.rowIndex)?.data;
   const ordinal = Number(cell.colId.replace("column_", ""));
   const column = props.rows.columns[ordinal];
@@ -596,6 +666,26 @@ function pinChanged() {
   pinVersion.value++;
   refreshSelection();
 }
+watch([() => props.rows.id, columnStructure], () => {
+  gridApi.value?.stopEditing(true);
+  showAllColumns();
+  fieldSearch.value = "";
+  resetSelection();
+  gridApi.value?.clearFocusedCell();
+  valueOpen.value = false;
+});
+watch(
+  () => [
+    gridPreferences.value.nullDisplay,
+    gridPreferences.value.showEmptyStrings,
+    props.defaultCells,
+    props.changedCells,
+    props.deletedRows
+  ],
+  () => {
+    gridApi.value?.refreshCells({ force: true });
+  }
+);
 watch([() => props.rows.id, () => props.rows.offset], () => {
   gridApi.value?.stopEditing(true);
   resetSelection();
@@ -674,7 +764,79 @@ onBeforeUnmount(() => {
         {{ t("Chen.GoV1GridPageOnly") }}
         <template v-if="filter">· {{ shownRows }}/{{ rows.rows.length }}</template>
       </span>
-      <div class="ml-auto flex items-center gap-1">
+      <div class="ml-auto flex flex-wrap items-center gap-1">
+        <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }">
+          <UButton
+            icon="i-lucide-settings-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :title="t('Chen.TableDisplaySettings')"
+            :aria-label="t('Chen.TableDisplaySettings')"
+          />
+          <template #content>
+            <div class="max-h-[70vh] w-72 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-3">
+              <div>
+                <p class="text-xs font-medium text-highlighted">{{ t("Chen.TableDisplay") }}</p>
+                <p class="mt-0.5 text-xs text-muted">{{ t("Chen.TableDisplayHint") }}</p>
+              </div>
+              <label class="flex items-center justify-between gap-3 text-xs">
+                <span>{{ t("Chen.NullValues") }}</span>
+                <USelect
+                  v-model="gridPreferences.nullDisplay"
+                  class="w-28"
+                  size="xs"
+                  :aria-label="t('Chen.NullValues')"
+                  :items="nullDisplayOptions"
+                  value-key="value"
+                />
+              </label>
+              <label
+                v-for="setting in displaySwitches"
+                :key="setting.key"
+                class="flex items-center justify-between gap-3 text-xs"
+              >
+                <span>{{ t(setting.label) }}</span>
+                <USwitch v-model="gridPreferences[setting.key]" size="sm" :aria-label="t(setting.label)" />
+              </label>
+              <div v-if="rows.columns.length" class="space-y-2 border-t border-default pt-3">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-xs font-medium text-highlighted">{{ t("Chen.VisibleFields") }}</span>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    :disabled="!hiddenColumns.length"
+                    :label="t('Chen.ShowAll')"
+                    @click="showAllColumns"
+                  />
+                </div>
+                <p class="text-xs text-muted">{{ t("Chen.GoGridPreferenceResultScope") }}</p>
+                <UInput
+                  v-if="rows.columns.length > 8"
+                  v-model="fieldSearch"
+                  size="xs"
+                  icon="i-lucide-search"
+                  :placeholder="t('Chen.SearchFields')"
+                  :aria-label="t('Chen.SearchFields')"
+                />
+                <div class="max-h-48 space-y-1 overflow-y-auto">
+                  <UCheckbox
+                    v-for="column in listedColumns"
+                    :key="column.id"
+                    class="py-1"
+                    :label="column.label"
+                    :title="column.label"
+                    :ui="{ label: 'break-all text-xs' }"
+                    :model-value="!hiddenColumns.includes(column.id)"
+                    :disabled="!hiddenColumns.includes(column.id) && visibleColumnCount <= 1"
+                    @update:model-value="setColumnVisible(column.id, $event === true)"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+        </UPopover>
         <UButton
           v-if="editableColumns?.length || insertableColumns?.length"
           icon="i-lucide-pencil"
@@ -729,7 +891,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div
-      class="ag-theme-balham go-result-grid relative min-h-0 min-w-0 flex-1"
+      class="ag-theme-balham go-result-grid relative isolate min-h-0 min-w-0 flex-1"
+      :class="{ 'result-striped': gridPreferences.stripedRows, 'result-borders': gridPreferences.showCellBorders }"
       @keydown.capture="keydown"
       @mousedown.capture="captureRightMouseDown"
       @contextmenu.capture="preventGridContextMenu"
@@ -743,7 +906,7 @@ onBeforeUnmount(() => {
         :row-data="data"
         :get-row-id="rowId"
         :default-col-def="defaults"
-        :row-height="28"
+        :row-height="gridPreferences.compactRows ? 24 : 28"
         :header-height="30"
         :animate-rows="false"
         :ensure-dom-order="true"
@@ -759,6 +922,7 @@ onBeforeUnmount(() => {
         @sort-changed="resetSelection"
         @model-updated="modelUpdated"
         @column-pinned="pinChanged"
+        @column-visible="visibilityChanged"
       />
       <div
         v-if="shownRows === 0"
@@ -788,13 +952,13 @@ onBeforeUnmount(() => {
       />
     </UDropdownMenu>
     <div
-      class="flex shrink-0 items-center justify-between gap-2 border-t border-default px-2 py-1 text-[11px] text-muted"
+      class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-default px-2 py-1 text-[11px] text-muted"
     >
       <span class="truncate" :title="[positionLabel, selectionLabel].filter(Boolean).join(' · ')">
         <template v-if="positionLabel">{{ positionLabel }} ·</template>
         {{ selectionLabel }}
       </span>
-      <span class="shrink-0">
+      <span class="max-w-full">
         {{ t(editableColumns?.length || insertableColumns?.length ? "Chen.GoWriteGridHint" : "Chen.GoV1GridReadOnly") }}
       </span>
     </div>
@@ -816,11 +980,11 @@ onBeforeUnmount(() => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: var(--data-grid-row-striped);
+  --ag-odd-row-background-color: var(--data-grid-row-background);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-border-color: var(--data-grid-border);
-  --ag-row-border-color: var(--data-grid-border);
-  --ag-cell-horizontal-border: solid var(--data-grid-border);
+  --ag-row-border-color: transparent;
+  --ag-cell-horizontal-border: none;
   --ag-header-column-resize-handle-color: var(--theme-accent);
   --ag-range-selection-border-color: var(--theme-accent);
   --ag-wrapper-border-radius: 0;
@@ -829,6 +993,13 @@ onBeforeUnmount(() => {
 }
 .go-result-grid :deep(.ag-root-wrapper) {
   border: 0;
+}
+.go-result-grid.result-striped :deep(.ag-root-wrapper) {
+  --ag-odd-row-background-color: var(--data-grid-row-striped);
+}
+.go-result-grid.result-borders :deep(.ag-root-wrapper) {
+  --ag-row-border-color: var(--data-grid-border);
+  --ag-cell-horizontal-border: solid var(--data-grid-border);
 }
 .go-result-grid :deep(.ag-header-cell-text) {
   min-width: 0;
@@ -866,8 +1037,11 @@ onBeforeUnmount(() => {
 </style>
 
 <style scoped>
-:deep(.result-changed-cell) {
-  background: color-mix(in srgb, var(--ui-warning) 12%, transparent);
+.go-result-grid :deep(.result-changed-cell) {
+  background: color-mix(in srgb, var(--ui-warning) 12%, var(--data-grid-row-background));
+}
+.go-result-grid :deep(.result-changed-cell.result-selected-cell) {
+  background: color-mix(in srgb, var(--ui-warning) 12%, var(--data-grid-row-selected));
 }
 :deep(.result-deleted-cell) {
   text-decoration: line-through;

@@ -1,3 +1,5 @@
+import type { ChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
+import { formatChenGridValue } from "~/chen/composables/useChenGridPreferences";
 import type { GoCopySelection, GoRows } from "./api";
 import type { ChenGridCell, ChenGridSelection } from "~/chen/utils/dataGridSelection";
 import { formatChenTsv } from "~/chen/utils/dataGridCopy";
@@ -107,6 +109,8 @@ export function resultValueText(value: unknown): string {
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
+type ResultDisplayPreferences = Pick<ChenGridPreferences, "nullDisplay" | "showEmptyStrings">;
+
 export function resultDisplayText(value: unknown): string {
   if (value === "") return "''";
   if (value === "NULL") return '"NULL"';
@@ -123,8 +127,9 @@ function safeTextBoundary(text: string, offset: number) {
   return code >= 0xdc00 && code <= 0xdfff && previous >= 0xd800 && previous <= 0xdbff ? offset - 1 : offset;
 }
 
-export function resultValuePreview(value: unknown, limit = 240): string {
-  const text = resultDisplayText(value);
+export function resultValuePreview(value: unknown, limit = 240, preferences?: ResultDisplayPreferences): string {
+  const text =
+    preferences && (value == null || value === "") ? formatChenGridValue(value, preferences) : resultDisplayText(value);
   const end = safeTextBoundary(text, Math.min(text.length, limit));
   return (
     text
