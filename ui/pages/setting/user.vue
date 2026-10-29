@@ -359,7 +359,11 @@ watch(
             </span>
           </div>
         </SettingsGroup>
-        <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
+        <div class="space-y-2 text-xs leading-relaxed text-muted">
+          <p>{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
+          <p>{{ t("UserProfile.ClientLoginActivityScope") }}</p>
+          <p>{{ t("UserProfile.ClientLoginActivityLimits") }}</p>
+        </div>
       </SettingsSection>
 
       <template v-if="!loading && !loadError && profile">

@@ -4,6 +4,8 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Desktop input is observed in the main process across its managed windows and views.
+  if (isDesktopRuntime()) return;
   const route = useRoute();
   const userInfoStore = useUserInfoStore();
   const controller = new AbortController();
@@ -13,21 +15,15 @@ export default defineNuxtPlugin((nuxtApp) => {
   function onActivity(event: Event) {
     if (isChenSingleRoute(route.path) || !event.isTrusted || !userInfoStore.loggedIn) return;
 
-    const desktop = isDesktopRuntime();
-    // Only idle expiry needs input reports; the desktop main process also monitors login validity.
-    if (desktop && (userInfoStore.currentUser?.clientLoginPolicy?.max_idle_time ?? 0) <= 0) return;
-
     const now = performance.now();
-    // Desktop only limits input IPC noise here; the main process owns the shared 10-second network budget.
-    const activityInterval = desktop ? 1_000 : 10_000;
-    if (inFlight || now - lastActivitySentAt < activityInterval) return;
+    if (inFlight || now - lastActivitySentAt < 10_000) return;
 
     // Only real activity triggers renewal; idle time never schedules a request.
     lastActivitySentAt = now;
     inFlight = true;
     void apiRequest({
-      method: desktop ? "POST" : "GET",
-      path: desktop ? "/api/v1/authentication/client-login-session/activity/" : "/api/v1/health/",
+      method: "GET",
+      path: "/api/v1/health/",
       headers: { "Cache-Control": "no-cache" },
       timeoutMs: 10_000
     })

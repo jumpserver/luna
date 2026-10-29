@@ -12,6 +12,17 @@ import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
 import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
 import type { ClientLoginSession } from "../../../ui/types/index";
 
+// Main-process-only identity: keep the original object, never reconstruct it from renderer data.
+export interface ClientActivityBinding {
+  readonly sessionKey: string;
+  readonly origin: string;
+}
+
+interface ClientActivityState extends ClientActivityBinding {
+  nextActivityAt: number;
+  activityRequest: Promise<unknown> | null;
+}
+
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
 const OAUTH_TOKEN = "/core/auth/oauth2-provider/token/";
@@ -183,6 +194,7 @@ export class DesktopAuthService {
     this.restoredSessionIds = new Set();
     this.persistingTokens = Promise.resolve();
     this.refreshingTokens = new Map();
+    this.activityBindings = new WeakMap<object, ClientActivityState>();
     this.pendingAuth = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
@@ -247,8 +259,9 @@ export class DesktopAuthService {
       // Network failures also wait for the next interval, without a retry storm.
       session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
       try {
-        if (session.activityRequest) {
-          await session.activityRequest;
+        const activityRequest = this.activityBindings?.get(stored)?.activityRequest;
+        if (activityRequest) {
+          await activityRequest;
           return;
         }
         const bearer = await this.freshToken(session.origin, session.sessionKey);
@@ -762,6 +775,9 @@ export class DesktopAuthService {
           refresh_token: refreshed.refresh_token || stored.refresh_token,
           client_id: stored.client_id || ""
         };
+        // Rotation preserves the interactive login; a new OAuth login never inherits this identity.
+        const activityBinding = this.activityBindings?.get(stored);
+        if (activityBinding) this.activityBindings.set(this.tokens[sessionId], activityBinding);
         if (refreshed.client_login_policy) {
           await this.applyClientLoginPolicy(site, sessionId, refreshed.client_login_policy);
         } else {
@@ -921,34 +937,84 @@ export class DesktopAuthService {
     };
   }
 
-  async apiRequest(request) {
-    const session = this.currentSession();
-    if (request.service === "kael" || request.method !== "POST" || request.path !== CLIENT_SESSION_STATUS) {
-      return this.sendApiRequest(session, request);
+  captureActivityBinding(): ClientActivityBinding | null {
+    const session = this.sessions.get(this.currentSessionKey);
+    const token = session && this.tokens[session.sessionKey];
+    if (!token || (token.origin && token.origin !== session.origin)) return null;
+    let binding = this.activityBindings.get(token);
+    if (!binding) {
+      binding = { sessionKey: session.sessionKey, origin: session.origin, nextActivityAt: 0, activityRequest: null };
+      this.activityBindings.set(token, binding);
     }
-    if (session.activityRequest) return session.activityRequest;
-    if (session.nextActivityAt > performance.now()) return null;
-    // Share the activity limit across renderer windows belonging to this login.
-    session.nextActivityAt = performance.now() + CLIENT_ACTIVITY_REPORT_INTERVAL;
-    session.activityRequest = (async () => {
-      const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+    return binding;
+  }
+
+  async reportActivity(binding: ClientActivityBinding | null | undefined) {
+    const boundSession = () => {
+      if (!binding) return;
+      const session = this.sessions.get(binding.sessionKey);
+      const token = this.tokens[binding.sessionKey];
       if (
-        this.sessions.get(session.sessionKey) !== session ||
-        this.currentSessionKey !== session.sessionKey ||
-        this.tokens[session.sessionKey]?.access_token !== bearer
+        !session ||
+        session.origin !== binding.origin ||
+        !token ||
+        (token.origin && token.origin !== binding.origin) ||
+        this.activityBindings.get(token) !== binding ||
+        (token.client_login_policy?.max_idle_time ?? 0) <= 0
       )
-        return null;
-      const result = await this.sendApiRequest(session, request, bearer);
-      this.recordClientLoginSession(session.sessionKey, bearer, result);
-      // An activity report also checks this login; ordinary API traffic does not schedule monitoring.
-      this.recordSessionValidation(session, bearer);
-      return result;
+        return;
+      return session;
+    };
+    const session = boundSession();
+    if (!session) return null;
+    const state = binding as ClientActivityState;
+    if (state.activityRequest) return state.activityRequest;
+    if (state.nextActivityAt > performance.now()) return null;
+    // All windows of this login share the budget, even after account switches or token rotation.
+    state.nextActivityAt = performance.now() + CLIENT_ACTIVITY_REPORT_INTERVAL;
+    const activityRequest = (async () => {
+      try {
+        const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+        // A refresh can overlap logout, reauthentication or switching back to this account.
+        const current = boundSession();
+        if (!current || this.tokens[session.sessionKey]?.access_token !== bearer) return null;
+        const result = await this.sendApiRequest(
+          current,
+          {
+            method: "POST",
+            path: CLIENT_SESSION_STATUS,
+            headers: { "Cache-Control": "no-cache" },
+            timeoutMs: 10_000
+          },
+          bearer
+        );
+        if (!boundSession()) return result;
+        this.recordClientLoginSession(session.sessionKey, bearer, result);
+        // An activity report also checks this login; ordinary API traffic does not schedule monitoring.
+        this.recordSessionValidation(current, bearer);
+        return result;
+      } catch (error) {
+        // Inactive asset logins are not polled; missing refresh credentials must also end their login.
+        if (error?.oauthError === "invalid_grant" && boundSession()) {
+          await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
+        }
+        throw error;
+      }
     })();
+    state.activityRequest = activityRequest;
     try {
-      return await session.activityRequest;
+      return await activityRequest;
     } finally {
-      session.activityRequest = null;
+      if (state.activityRequest === activityRequest) state.activityRequest = null;
     }
+  }
+
+  async apiRequest(request, activityBinding?: ClientActivityBinding | null) {
+    if (request.service !== "kael" && request.method === "POST" && request.path === CLIENT_SESSION_STATUS) {
+      // Input must retain its owner. An unbound renderer request cannot renew whichever account is now selected.
+      return this.reportActivity(activityBinding);
+    }
+    return this.sendApiRequest(this.currentSession(), request);
   }
 
   async sendApiRequest(session, request, bearer = "") {

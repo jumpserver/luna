@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "Pas encore disponible",
     "ClientLoginUnlimited": "Illimitée",
     "ClientLoginCurrentUser": "Utilisateur actuel",
-    "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil."
+    "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil.",
+    "ClientLoginActivityScope": "Les actions réelles au clavier et à la souris dans la fenêtre principale, les fenêtres de ressources séparées et les sites web intégrés comptent comme activité. Une connexion ouverte, les sorties en arrière-plan et l’actualisation automatique ne comptent pas.",
+    "ClientLoginActivityLimits": "Les actions dans des logiciels externes comme Xshell ou MSTSC et dans certaines pages intégrées d’une autre origine ne peuvent pas être captées. Utiliser uniquement ces zones, regarder longtemps sans intervenir ou rencontrer un échec de transmission dû au réseau peut donc déclencher le délai d’inactivité. Le calcul part de la dernière activité confirmée par le serveur."
   },
   "Setting": {
     "BackToApp": "Retour à l’application",

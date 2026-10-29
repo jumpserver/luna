@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "尚未取得",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "目前使用者",
-    "ClientLoginExpiryHint": "到期時間依據伺服器最近確認的狀態，依本機時區顯示。"
+    "ClientLoginExpiryHint": "到期時間依據伺服器最近確認的狀態，依本機時區顯示。",
+    "ClientLoginActivityScope": "主視窗、獨立資產視窗及內建網站中的實際鍵盤、滑鼠操作會計入活動；連線在線、背景輸出和自動重新整理不算活動。",
+    "ClientLoginActivityLimits": "Xshell、MSTSC 等外部軟體和部分跨來源內嵌頁面中的操作無法擷取。僅在這些區域操作、長時間只觀看，或網路異常導致回報失敗時，仍可能觸發閒置逾時；以伺服器最後確認的活動時間為準。"
   },
   "Setting": {
     "BackToApp": "返回應用",

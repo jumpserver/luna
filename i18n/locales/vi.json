@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "Chưa có thông tin",
     "ClientLoginUnlimited": "Không giới hạn",
     "ClientLoginCurrentUser": "Người dùng hiện tại",
-    "ClientLoginExpiryHint": "Thời điểm hết hạn dựa trên trạng thái gần nhất được máy chủ xác nhận và hiển thị theo múi giờ của thiết bị này."
+    "ClientLoginExpiryHint": "Thời điểm hết hạn dựa trên trạng thái gần nhất được máy chủ xác nhận và hiển thị theo múi giờ của thiết bị này.",
+    "ClientLoginActivityScope": "Thao tác bàn phím và chuột thực tế trong cửa sổ chính, cửa sổ tài sản riêng và các trang web tích hợp được tính là hoạt động. Kết nối đang mở, đầu ra nền và tự động làm mới không được tính.",
+    "ClientLoginActivityLimits": "Không thể ghi nhận thao tác trong phần mềm bên ngoài như Xshell hoặc MSTSC và một số trang nhúng khác nguồn. Chỉ thao tác trong các khu vực này, chỉ xem trong thời gian dài hoặc gửi báo cáo thất bại do sự cố mạng vẫn có thể gây hết thời gian chờ do không hoạt động. Thời gian được tính từ hoạt động cuối cùng do máy chủ xác nhận."
   },
   "Setting": {
     "BackToApp": "Quay lại ứng dụng",

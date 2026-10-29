@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "아직 확인되지 않음",
     "ClientLoginUnlimited": "제한 없음",
     "ClientLoginCurrentUser": "현재 사용자",
-    "ClientLoginExpiryHint": "만료 시간은 서버가 마지막으로 확인한 상태를 기준으로 이 기기의 시간대로 표시됩니다."
+    "ClientLoginExpiryHint": "만료 시간은 서버가 마지막으로 확인한 상태를 기준으로 이 기기의 시간대로 표시됩니다.",
+    "ClientLoginActivityScope": "기본 창, 별도 자산 창, 내장 웹사이트에서 실제로 수행한 키보드와 마우스 조작이 활동으로 기록됩니다. 연결 유지, 백그라운드 출력, 자동 새로고침은 활동에 포함되지 않습니다.",
+    "ClientLoginActivityLimits": "Xshell, MSTSC 같은 외부 프로그램과 일부 교차 출처 내장 페이지의 조작은 수집할 수 없습니다. 이러한 영역에서만 조작하거나, 오랫동안 보기만 하거나, 네트워크 문제로 보고가 실패하면 유휴 시간 초과가 발생할 수 있습니다. 시간은 서버가 마지막으로 확인한 활동을 기준으로 계산됩니다."
   },
   "Setting": {
     "BackToApp": "앱으로 돌아가기",

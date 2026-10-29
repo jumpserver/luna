@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "暂未获取",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "当前用户",
-    "ClientLoginExpiryHint": "到期时间依据服务器最近确认的状态，按本机时区显示。"
+    "ClientLoginExpiryHint": "到期时间依据服务器最近确认的状态，按本机时区显示。",
+    "ClientLoginActivityScope": "主窗口、独立资产窗口及内置网站中的真实键盘、鼠标操作会计入活动；连接在线、后台输出和自动刷新不算活动。",
+    "ClientLoginActivityLimits": "Xshell、MSTSC 等外部软件和部分跨域内嵌页面中的操作无法采集。仅在这些区域操作、长时间只观看，或网络异常导致上报失败时，仍可能触发空闲超时；以服务器最后确认的活动时间为准。"
   },
   "Setting": {
     "BackToApp": "返回应用",

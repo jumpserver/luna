@@ -1294,7 +1294,9 @@
     "ClientLoginUnknown": "Aún no disponible",
     "ClientLoginUnlimited": "Sin límite",
     "ClientLoginCurrentUser": "Usuario actual",
-    "ClientLoginExpiryHint": "La caducidad refleja el último estado confirmado por el servidor y usa la zona horaria de este dispositivo."
+    "ClientLoginExpiryHint": "La caducidad refleja el último estado confirmado por el servidor y usa la zona horaria de este dispositivo.",
+    "ClientLoginActivityScope": "Las acciones reales del teclado y el ratón en la ventana principal, en ventanas independientes de activos y en sitios web integrados cuentan como actividad. Una conexión abierta, la salida en segundo plano y la actualización automática no cuentan.",
+    "ClientLoginActivityLimits": "No se pueden registrar las acciones en programas externos como Xshell o MSTSC ni en algunas páginas integradas de otro origen. Usar solo esas áreas, observar durante mucho tiempo sin interactuar o sufrir fallos de envío por problemas de red puede provocar el tiempo de espera por inactividad. El tiempo se calcula desde la última actividad confirmada por el servidor."
   },
   "Setting": {
     "BackToApp": "Volver a la aplicación",
