@@ -1145,6 +1145,13 @@
     "SavedSites": "Sitios guardados",
     "SignedIn": "Sesión iniciada",
     "SessionExpired": "Sesión caducada",
+    "ExpiredPolicyChanged": "La configuración de seguridad del cliente ha cambiado. Inicie sesión de nuevo.",
+    "ExpiredLifetime": "Su sesión ha alcanzado el límite de duración. Inicie sesión de nuevo.",
+    "ExpiredIdle": "Su sesión ha caducado por inactividad. Inicie sesión de nuevo.",
+    "ExpiredRevoked": "Se ha revocado la autorización de su sesión. Inicie sesión de nuevo.",
+    "ExpiredAppExit": "La configuración de seguridad del cliente requiere que inicie sesión de nuevo después de salir de la aplicación.",
+    "ExpiredLogout": "Ha cerrado la sesión. Inicie sesión de nuevo.",
+    "ExpiredUnknown": "Su sesión ya no es válida. Inicie sesión de nuevo.",
     "SignInAgain": "Iniciar sesión de nuevo",
     "SwitchFailed": "No se pudo cambiar de sitio. Comprueba la conexión e inténtalo de nuevo.",
     "DeleteSite": "Eliminar sitio: {name}",
@@ -1164,7 +1171,9 @@
     "InvalidCertificateMac": "Error de inicio de sesión: certificado no válido o bloqueado por la seguridad del sistema (WebView de macOS). Instale un certificado válido o abra el sitio en el navegador del sistema.",
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
-    "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde."
+    "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
+    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión.",
+    "ExpiredIdleDetail": "La sesión caducó tras {duration} de inactividad (límite: {limit}). Vuelva a iniciar sesión."
   },
   "Asset": {
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
@@ -1273,7 +1282,21 @@
     "LoadFailed": "Error al cargar el perfil del usuario",
     "Retry": "Intentar de nuevo",
     "NoUser": "Sin iniciar sesión",
-    "NoUserDescription": "Inicie sesión en un sitio de JumpServer para ver los detalles del usuario."
+    "NoUserDescription": "Inicie sesión en un sitio de JumpServer para ver los detalles del usuario.",
+    "ClientLoginInfo": "Validez del inicio de sesión del cliente",
+    "ClientLoginInfoDescription": "Política del administrador y último estado de inicio de sesión confirmado por el servidor para esta cuenta. La actividad aceptada amplía el plazo de inactividad, pero nunca la duración máxima del inicio de sesión.",
+    "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir",
+    "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión",
+    "ClientLoginStartedAt": "Inicio de esta sesión",
+    "ClientLoginIdleTimeout": "Tiempo de espera por inactividad",
+    "ClientLoginIdleExpiry": "Si no hay nueva actividad",
+    "ClientLoginEffectiveExpiry": "Caducidad prevista",
+    "ClientLoginUnknown": "Aún no disponible",
+    "ClientLoginUnlimited": "Sin límite",
+    "ClientLoginCurrentUser": "Usuario actual",
+    "ClientLoginExpiryHint": "La caducidad refleja el último estado confirmado por el servidor y usa la zona horaria de este dispositivo.",
+    "ClientLoginActivityScope": "Las acciones reales del teclado y el ratón en la ventana principal, en ventanas independientes de activos y en sitios web integrados cuentan como actividad. Una conexión abierta, la salida en segundo plano y la actualización automática no cuentan.",
+    "ClientLoginActivityLimits": "No se pueden registrar las acciones en programas externos como Xshell o MSTSC ni en algunas páginas integradas de otro origen. Usar solo esas áreas, observar durante mucho tiempo sin interactuar o sufrir fallos de envío por problemas de red puede provocar el tiempo de espera por inactividad. El tiempo se calcula desde la última actividad confirmada por el servidor."
   },
   "Setting": {
     "BackToApp": "Volver a la aplicación",

@@ -1,5 +1,8 @@
 import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import type {
+  ClientLoginPolicy,
+  ClientLoginReason,
+  ClientLoginSession,
   ConnectionInfo,
   ConnectionPreferenceInfo,
   CurrentOrg,
@@ -13,9 +16,11 @@ import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
+import { normalizeClientLoginReason, serializeUserInfo } from "~/utils/clientLoginPolicy";
 
 export type SiteUserData = UserData & {
   sessionExpired?: boolean;
+  sessionExpiredReason?: ClientLoginReason;
   language?: string;
   rdpClientOption?: RdpGraphics;
   connectionInfoMap?: Record<string, ConnectionInfo>;
@@ -71,6 +76,7 @@ const normalizeStoredConnections = (state: {
 }) => {
   const clearSite = (site?: SiteUserData | null) => {
     if (!site) return;
+    if (site.clientLoginPolicy?.reauth_on_exit) site.bearerToken = "";
     normalizeStoredConnection(site.connectionInfo);
     Object.values(site.connectionInfoMap || {}).forEach(normalizeStoredConnection);
     Object.values(site.connectionPreferenceMap || {}).forEach(normalizeStoredConnection);
@@ -148,12 +154,52 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = l;
     };
 
-    const markSessionExpired = (accountId: string) => {
+    const setClientLoginSession = (accountId: string, session: ClientLoginSession) => {
       const user = userMap.value[accountId];
-      if (user) user.sessionExpired = true;
+      if (!user) return false;
+      const previous = user.clientLoginSession;
+      if (
+        previous &&
+        (Date.parse(previous.authenticated_at) > Date.parse(session.authenticated_at) ||
+          (Date.parse(previous.authenticated_at) === Date.parse(session.authenticated_at) &&
+            Date.parse(previous.server_time) > Date.parse(session.server_time)))
+      )
+        return false;
+      // A site can contain multiple accounts; activity and deadlines belong to one login only.
+      user.clientLoginSession = session;
+      if (accountId === currentAccountId.value && currentUser.value) currentUser.value.clientLoginSession = session;
+      return true;
+    };
+
+    const markSessionExpired = (accountId: string, reason?: string, session?: ClientLoginSession) => {
+      if (session && !setClientLoginSession(accountId, session)) return false;
+      const user = userMap.value[accountId];
+      const incomingReason = normalizeClientLoginReason(reason);
+      const expiredReason =
+        incomingReason === "unknown" ? user?.sessionExpiredReason || incomingReason : incomingReason;
+      if (user) {
+        user.sessionExpired = true;
+        user.sessionExpiredReason = expiredReason;
+        user.bearerToken = "";
+      }
       if (accountId === currentAccountId.value) {
         loggedIn.value = false;
-        if (currentUser.value) (currentUser.value as SiteUserData).sessionExpired = true;
+        if (currentUser.value) {
+          (currentUser.value as SiteUserData).sessionExpired = true;
+          (currentUser.value as SiteUserData).sessionExpiredReason = expiredReason;
+          currentUser.value.bearerToken = "";
+        }
+      }
+      return true;
+    };
+
+    const setClientLoginPolicy = (accountId: string, policy: ClientLoginPolicy) => {
+      const site = userMap.value[accountId]?.site;
+      for (const [key, user] of Object.entries(userMap.value)) {
+        if (key === accountId || (site && user.site === site)) user.clientLoginPolicy = policy;
+      }
+      if (currentUser.value && (accountId === currentAccountId.value || (site && currentUser.value.site === site))) {
+        currentUser.value.clientLoginPolicy = policy;
       }
     };
 
@@ -200,6 +246,7 @@ export const useUserInfoStore = defineStore(
         ...previous,
         ...userData,
         sessionExpired: false,
+        sessionExpiredReason: undefined,
         accountId,
         connectionInfoMap: previous?.connectionInfoMap || {},
         connectionPreferenceMap: previous?.connectionPreferenceMap || {},
@@ -326,7 +373,7 @@ export const useUserInfoStore = defineStore(
           });
         }
         if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
-          markSessionExpired(accountId);
+          markSessionExpired(accountId, result?.client_login_reason, result?.client_login_session);
           options.onAuthRequired?.();
           return false;
         }
@@ -341,7 +388,14 @@ export const useUserInfoStore = defineStore(
           return false;
         }
         connectionId = result.connection_id;
-        nextUser = { ...nextUser, bearerToken: result.bearer, sessionExpired: false };
+        nextUser = {
+          ...nextUser,
+          bearerToken: result.bearer,
+          sessionExpired: false,
+          sessionExpiredReason: undefined,
+          clientLoginPolicy: result.client_login_policy,
+          clientLoginSession: result.client_login_session
+        };
       }
       enforceOrganizationLicense(nextUser);
       const activate = async () => {
@@ -615,6 +669,8 @@ export const useUserInfoStore = defineStore(
       deleteUserData,
       setUserLoggedIn,
       markSessionExpired,
+      setClientLoginPolicy,
+      setClientLoginSession,
       setCommandExecutionEnabled,
       setOrganizations,
       setRdpClientOption,
@@ -632,6 +688,7 @@ export const useUserInfoStore = defineStore(
     persist: typeof localStorage !== "undefined" && {
       key: "userInfoV2",
       storage: localStorage,
+      serializer: { serialize: serializeUserInfo, deserialize: JSON.parse },
       afterHydrate: ({ store }) => {
         normalizeStoredConnections(store.$state as Parameters<typeof normalizeStoredConnections>[0]);
         store.$persist();

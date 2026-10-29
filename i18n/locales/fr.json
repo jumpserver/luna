@@ -1145,6 +1145,13 @@
     "SavedSites": "Sites enregistrés",
     "SignedIn": "Connecté",
     "SessionExpired": "Connexion expirée",
+    "ExpiredPolicyChanged": "Les paramètres de sécurité du client ont changé. Veuillez vous reconnecter.",
+    "ExpiredLifetime": "Votre session a atteint sa durée maximale. Veuillez vous reconnecter.",
+    "ExpiredIdle": "Votre session a expiré en raison de votre inactivité. Veuillez vous reconnecter.",
+    "ExpiredRevoked": "Votre autorisation de connexion a été révoquée. Veuillez vous reconnecter.",
+    "ExpiredAppExit": "Les paramètres de sécurité du client exigent une nouvelle connexion après avoir quitté l’application.",
+    "ExpiredLogout": "Vous vous êtes déconnecté. Veuillez vous reconnecter.",
+    "ExpiredUnknown": "Votre session n’est plus valide. Veuillez vous reconnecter.",
     "SignInAgain": "Se reconnecter",
     "SwitchFailed": "Impossible de changer de site. Vérifiez votre connexion et réessayez.",
     "DeleteSite": "Supprimer le site : {name}",
@@ -1164,7 +1171,9 @@
     "InvalidCertificateMac": "Échec de la connexion : certificat invalide ou bloqué par la sécurité du système (WebView macOS). Installez un certificat valide ou ouvrez le site dans le navigateur système.",
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
-    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard."
+    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
+    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter.",
+    "ExpiredIdleDetail": "Votre connexion a expiré après {duration} d’inactivité (limite : {limit}). Veuillez vous reconnecter."
   },
   "Asset": {
     "GetAssetFailed": "Impossible de récupérer l’actif. Actualisez et réessayez"
@@ -1273,7 +1282,21 @@
     "LoadFailed": "Impossible de charger le profil utilisateur",
     "Retry": "Réessayer",
     "NoUser": "Non connecté",
-    "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur."
+    "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur.",
+    "ClientLoginInfo": "Validité de la connexion du client",
+    "ClientLoginInfoDescription": "Politique administrateur et dernier état de connexion confirmé par le serveur pour ce compte. Une activité acceptée prolonge le délai d’inactivité, mais jamais la durée maximale de connexion.",
+    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté",
+    "ClientLoginMaxLifetime": "Durée maximale de connexion",
+    "ClientLoginStartedAt": "Début de cette connexion",
+    "ClientLoginIdleTimeout": "Délai d’inactivité",
+    "ClientLoginIdleExpiry": "Sans nouvelle activité",
+    "ClientLoginEffectiveExpiry": "Expiration prévue",
+    "ClientLoginUnknown": "Pas encore disponible",
+    "ClientLoginUnlimited": "Illimitée",
+    "ClientLoginCurrentUser": "Utilisateur actuel",
+    "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil.",
+    "ClientLoginActivityScope": "Les actions réelles au clavier et à la souris dans la fenêtre principale, les fenêtres de ressources séparées et les sites web intégrés comptent comme activité. Une connexion ouverte, les sorties en arrière-plan et l’actualisation automatique ne comptent pas.",
+    "ClientLoginActivityLimits": "Les actions dans des logiciels externes comme Xshell ou MSTSC et dans certaines pages intégrées d’une autre origine ne peuvent pas être captées. Utiliser uniquement ces zones, regarder longtemps sans intervenir ou rencontrer un échec de transmission dû au réseau peut donc déclencher le délai d’inactivité. Le calcul part de la dernière activité confirmée par le serveur."
   },
   "Setting": {
     "BackToApp": "Retour à l’application",

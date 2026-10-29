@@ -57,6 +57,7 @@ function setupFreshToken(exchangeToken: () => Promise<Record<string, unknown>>) 
       }
     },
     refreshingTokens: new Map(),
+    scheduleSessionCheck() {},
     exchangeToken,
     emitEvent: (...args: unknown[]) => events.push(args),
     persistTokens: async () => {
@@ -66,8 +67,8 @@ function setupFreshToken(exchangeToken: () => Promise<Record<string, unknown>>) 
   return { auth, events, persisted: () => persistCount };
 }
 
-function oauthError(code: string) {
-  return Object.assign(new Error(`oauth ${code}`), { oauthError: code });
+function oauthError(code: string, clientLoginReason?: string) {
+  return Object.assign(new Error(`oauth ${code}`), { oauthError: code, clientLoginReason });
 }
 
 test("token exchange times out and classifies only the structured OAuth error code", async () => {
@@ -135,7 +136,7 @@ test("shared invalid refresh emits one account-scoped expiration event", async (
 
   const first = auth.freshToken("https://jumpserver.test", "account");
   const second = auth.freshToken("https://jumpserver.test", "account");
-  rejectExchange(oauthError("invalid_grant"));
+  rejectExchange(oauthError("invalid_grant", "idle_timeout"));
 
   const results = await Promise.allSettled([first, second]);
   assert.ok(results.every((result) => result.status === "rejected"));
@@ -143,7 +144,7 @@ test("shared invalid refresh emits one account-scoped expiration event", async (
   assert.equal(persisted(), 1);
   assert.equal(events.length, 1);
   assert.equal(events[0][0], "auth-session-expired");
-  assert.equal((events[0][1] as { sessionId?: string }).sessionId, "account");
+  assert.deepEqual(JSON.parse(JSON.stringify(events[0][1])), { sessionId: "account", reason: "idle_timeout" });
   assert.equal(events[0][2], "main");
   assert.equal(auth.refreshingTokens.size, 0);
 });

@@ -54,7 +54,9 @@ onMounted(async () => {
     // Read local token availability without exposing tokens or changing the active API session.
     const authenticated = new Set(await desktopInvoke<string[]>("list_authenticated_accounts"));
     for (const [id, account] of savedAccounts) {
-      if (userMap.value[id] === account && !authenticated.has(id)) user.markSessionExpired(id);
+      if (userMap.value[id] !== account || authenticated.has(id)) continue;
+      const savedReason = account.sessionExpiredReason !== "unknown" ? account.sessionExpiredReason : undefined;
+      user.markSessionExpired(id, savedReason || (account.clientLoginPolicy?.reauth_on_exit ? "app_exit" : undefined));
     }
   } catch {
     // A bridge failure does not establish that an account has expired; switching still validates it.

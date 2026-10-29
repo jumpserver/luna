@@ -10,11 +10,27 @@ import { electronLog } from "../shared/debug-log";
 import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
 import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
+import type { ClientLoginSession } from "../../../ui/types/index";
+
+// Main-process-only identity: keep the original object, never reconstruct it from renderer data.
+export interface ClientActivityBinding {
+  readonly sessionKey: string;
+  readonly origin: string;
+}
+
+interface ClientActivityState extends ClientActivityBinding {
+  nextActivityAt: number;
+  activityRequest: Promise<unknown> | null;
+}
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
 const OAUTH_TOKEN = "/core/auth/oauth2-provider/token/";
 const OAUTH_REVOKE = "/core/auth/oauth2-provider/revoke/";
+const CLIENT_SESSION_REVOKE = "/api/v1/authentication/client-login-session/revoke/";
+const CLIENT_SESSION_STATUS = "/api/v1/authentication/client-login-session/activity/";
+const CLIENT_SESSION_CHECK_INTERVAL = 30_000;
+const CLIENT_ACTIVITY_REPORT_INTERVAL = 10_000;
 const USER_PROFILE = "/api/v1/users/profile/";
 const USER_PERMISSIONS = "/api/v1/users/profile/permissions/";
 const CURRENT_ORG = "/api/v1/orgs/orgs/current/";
@@ -41,6 +57,77 @@ function parseOAuthError(text: string) {
   } catch {
     return "";
   }
+}
+
+function parseClientLoginReason(text: string) {
+  try {
+    const reason = JSON.parse(text)?.client_login_reason;
+    if (
+      ["policy_changed", "absolute_timeout", "idle_timeout", "security_revoke", "app_exit", "logout"].includes(reason)
+    )
+      return reason as string;
+  } catch {
+    // An unstructured error cannot establish why a login ended.
+  }
+  return "unknown";
+}
+
+function parseClientLoginSession(payload: unknown): ClientLoginSession | undefined {
+  try {
+    const response = (typeof payload === "string" ? JSON.parse(payload) : payload) as Record<string, unknown>;
+    const value = response?.client_login_session as Record<string, unknown>;
+    if (!value || typeof value !== "object") return;
+    const timestamp = (date: unknown) =>
+      typeof date === "string" && date.length <= 64 && /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(date)
+        ? Date.parse(date)
+        : NaN;
+    const start = timestamp(value.authenticated_at);
+    const activity = timestamp(value.last_activity_at);
+    const server = timestamp(value.server_time);
+    const expires = value.expires_at === null ? null : timestamp(value.expires_at);
+    const idle = value.idle_expires_at === null ? null : timestamp(value.idle_expires_at);
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(activity) ||
+      !Number.isFinite(server) ||
+      activity < start ||
+      server < activity ||
+      (expires !== null && (!Number.isFinite(expires) || expires < start)) ||
+      (idle !== null && (!Number.isFinite(idle) || idle < activity))
+    )
+      return;
+    return {
+      authenticated_at: String(value.authenticated_at),
+      expires_at: expires === null ? null : String(value.expires_at),
+      last_activity_at: String(value.last_activity_at),
+      idle_expires_at: idle === null ? null : String(value.idle_expires_at),
+      server_time: String(value.server_time)
+    };
+  } catch {
+    // Display metadata must never turn an otherwise valid login into an auth failure.
+  }
+}
+
+function clientLoginSessionHeaders(token, bearer: string): Record<string, string> {
+  if (token?.access_token !== bearer || !token.client_login_session_receipt) return {};
+  return { "X-JMS-Client-Login-Session": token.client_login_session_receipt };
+}
+
+function validateClientLoginPolicy(policy) {
+  if (
+    !policy ||
+    typeof policy.reauth_on_exit !== "boolean" ||
+    !Number.isInteger(policy.max_idle_time) ||
+    policy.max_idle_time < 0 ||
+    !Number.isInteger(policy.max_session_time) ||
+    policy.max_session_time < 0
+  )
+    throw new Error("OAuth response contains an invalid client login policy");
+  return {
+    reauth_on_exit: policy.reauth_on_exit,
+    max_idle_time: policy.max_idle_time,
+    max_session_time: policy.max_session_time
+  };
 }
 
 function requestSite(session, request) {
@@ -75,7 +162,8 @@ function requestHeaders(request) {
   const headers: Record<string, string> = {};
   for (const [name, value] of Object.entries(request.headers || {})) {
     const normalized = name.toLowerCase();
-    if (["authorization", "cookie", "host", "origin", "referer"].includes(normalized)) continue;
+    if (["authorization", "cookie", "host", "origin", "referer", "x-jms-client-login-session"].includes(normalized))
+      continue;
     headers[name] = String(value);
   }
   return headers;
@@ -103,7 +191,10 @@ export class DesktopAuthService {
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
+    this.restoredSessionIds = new Set();
+    this.persistingTokens = Promise.resolve();
     this.refreshingTokens = new Map();
+    this.activityBindings = new WeakMap<object, ClientActivityState>();
     this.pendingAuth = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
@@ -112,6 +203,101 @@ export class DesktopAuthService {
     this.connectionGeneration = 0;
     this.pendingConnection = null;
     this.pendingCompatibility = null;
+    this.sessionMonitor = null;
+    this.sessionMonitoringEnabled = false;
+    this.checkingSessions = false;
+  }
+
+  startSessionMonitor() {
+    if (this.sessionMonitoringEnabled) return;
+    this.sessionMonitoringEnabled = true;
+    this.scheduleSessionCheck();
+  }
+
+  stopSessionMonitor() {
+    this.sessionMonitoringEnabled = false;
+    clearTimeout(this.sessionMonitor);
+    this.sessionMonitor = null;
+  }
+
+  scheduleSessionCheck() {
+    if (!this.sessionMonitoringEnabled) return;
+    clearTimeout(this.sessionMonitor);
+    this.sessionMonitor = null;
+    if (this.checkingSessions) return;
+    const session = this.sessions.get(this.currentSessionKey);
+    if (!session || !this.tokens[session.sessionKey]) return;
+    // Main-process timers keep running when the renderer is hidden or unfocused.
+    this.sessionMonitor = setTimeout(
+      () => void this.checkSessions(),
+      Math.max(0, (session.nextCheckAt || 0) - performance.now())
+    );
+    this.sessionMonitor.unref();
+  }
+
+  recordSessionValidation(session, bearer) {
+    if (
+      !session ||
+      this.sessions.get(session.sessionKey) !== session ||
+      this.currentSessionKey !== session.sessionKey ||
+      this.tokens[session.sessionKey]?.access_token !== bearer
+    )
+      return;
+    session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
+    this.scheduleSessionCheck();
+  }
+
+  async checkSessions(force = false) {
+    if (this.checkingSessions) return;
+    this.checkingSessions = true;
+    try {
+      // Only monitor the login currently in use. Switching/restoring accounts validates
+      // them separately; saved and inactive accounts must not generate background traffic.
+      const session = this.sessions.get(this.currentSessionKey);
+      const stored = session && this.tokens[session.sessionKey];
+      if (!stored || (!force && session.nextCheckAt > performance.now())) return;
+      // Network failures also wait for the next interval, without a retry storm.
+      session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
+      try {
+        const activityRequest = this.activityBindings?.get(stored)?.activityRequest;
+        if (activityRequest) {
+          await activityRequest;
+          return;
+        }
+        const bearer = await this.freshToken(session.origin, session.sessionKey);
+        if (
+          this.sessions.get(session.sessionKey) !== session ||
+          this.currentSessionKey !== session.sessionKey ||
+          this.tokens[session.sessionKey]?.access_token !== bearer
+        )
+          return;
+        // A successful refresh already validated this login on the server.
+        if (this.tokens[session.sessionKey] !== stored) return;
+        const response = await this.requestApiResponse(session.origin, CLIENT_SESSION_STATUS, {
+          bearerToken: bearer,
+          clientLoginSessionReceipt: this.tokens[session.sessionKey]?.client_login_session_receipt,
+          timeout: 10_000
+        });
+        if (this.sessions.get(session.sessionKey) !== session || this.currentSessionKey !== session.sessionKey) return;
+        if (responseSucceeded(response.status)) {
+          this.recordClientLoginSession(session.sessionKey, bearer, response.data);
+          this.recordSessionValidation(session, bearer);
+        }
+        await this.handleUnauthorized(session, bearer, response.status, response.data);
+      } catch (error) {
+        if (
+          error?.oauthError === "invalid_grant" &&
+          this.tokens[session.sessionKey] === stored &&
+          this.sessions.get(session.sessionKey) === session
+        ) {
+          await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
+        }
+        // Network/server errors are not evidence of expiry; retry on the next tick.
+      }
+    } finally {
+      this.checkingSessions = false;
+      this.scheduleSessionCheck();
+    }
   }
 
   trustSite(site) {
@@ -140,6 +326,12 @@ export class DesktopAuthService {
       const envelope = JSON.parse(await readFile(this.tokenFile, "utf8"));
       const decrypted = safeStorage.decryptString(Buffer.from(envelope.payload, "base64"));
       this.tokens = JSON.parse(decrypted);
+      this.restoredSessionIds = new Set(Object.keys(this.tokens));
+      // Migrate any credentials written by an older client after this policy was enabled.
+      for (const [sessionId, token] of Object.entries(this.tokens) as [string, any][]) {
+        if (token.client_login_policy?.reauth_on_exit) delete this.tokens[sessionId];
+      }
+      await this.persistTokens();
       electronLog.info(`auth tokens restored sites=${Object.keys(this.tokens).length}`);
     } catch {
       this.tokens = {};
@@ -147,14 +339,59 @@ export class DesktopAuthService {
   }
 
   async persistTokens() {
-    if (!safeStorage.isEncryptionAvailable()) return;
-    const encrypted = safeStorage.encryptString(JSON.stringify(this.tokens));
-    const tempFile = `${this.tokenFile}.pending`;
-    await mkdir(path.dirname(this.tokenFile), { recursive: true });
-    await writeFile(tempFile, `${JSON.stringify({ version: 1, payload: encrypted.toString("base64") })}\n`, {
-      mode: 0o600
+    // Serialize snapshots so a concurrent refresh cannot write credentials back after logout.
+    this.persistingTokens = this.persistingTokens
+      .catch(() => {})
+      .then(async () => {
+        if (!safeStorage.isEncryptionAvailable()) return;
+        const persistent = Object.fromEntries(
+          Object.entries(this.tokens).filter(([, token]: [string, any]) => !token.client_login_policy?.reauth_on_exit)
+        );
+        const encrypted = safeStorage.encryptString(JSON.stringify(persistent));
+        const tempFile = `${this.tokenFile}.pending`;
+        await mkdir(path.dirname(this.tokenFile), { recursive: true });
+        await writeFile(tempFile, `${JSON.stringify({ version: 1, payload: encrypted.toString("base64") })}\n`, {
+          mode: 0o600
+        });
+        await rename(tempFile, this.tokenFile);
+      });
+    return this.persistingTokens;
+  }
+
+  async fetchOAuthConfig(site, sessionId) {
+    const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
+      headers: { "Cache-Control": "no-cache" },
+      signal: AbortSignal.timeout(10_000)
     });
-    await rename(tempFile, this.tokenFile);
+    const text = await response.text();
+    if (!response.ok)
+      throw new Error(
+        `OAuth config endpoint returned ${response.status}: ${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+      );
+    const config = parseJsonResponse(text);
+    // Missing metadata is the legacy server contract. Malformed policy data must not enable restoration.
+    const policy =
+      config.client_login_policy === undefined
+        ? { reauth_on_exit: false, max_idle_time: 0, max_session_time: 0 }
+        : validateClientLoginPolicy(config.client_login_policy);
+    config.client_login_policy = policy;
+    await this.applyClientLoginPolicy(site, sessionId, policy);
+    return config;
+  }
+
+  async applyClientLoginPolicy(site, sessionId, policy) {
+    let changed = false;
+    for (const [key, stored] of Object.entries(this.tokens) as [string, any][]) {
+      if (key !== sessionId && stored.origin !== site) continue;
+      stored.origin = site;
+      stored.client_login_policy = policy;
+      if (policy.reauth_on_exit && this.restoredSessionIds.has(key)) delete this.tokens[key];
+      this.restoredSessionIds.delete(key);
+      changed = true;
+    }
+    if (changed) await this.persistTokens();
+    this.restoredSessionIds.delete(sessionId);
+    this.emitEvent("client-login-policy", { sessionId, policy }, "main");
   }
 
   setSession({ sessionKey, origin, connectionId, orgId = "" }) {
@@ -173,11 +410,23 @@ export class DesktopAuthService {
     if (!approved && (current?.sessionKey !== sessionKey || current?.origin !== origin)) return { status: "stale" };
     const bearerToken = approved ? pending.bearer : current.bearerToken;
     this.currentSessionKey = sessionKey;
-    this.sessions.set(sessionKey, { sessionKey, origin, bearerToken, orgId });
+    if (approved) {
+      this.sessions.set(sessionKey, {
+        sessionKey,
+        origin,
+        bearerToken,
+        orgId,
+        nextCheckAt: performance.now() + CLIENT_SESSION_CHECK_INTERVAL
+      });
+    } else {
+      // Ordinary renderer/org synchronization must preserve shared request limits.
+      current.orgId = orgId;
+    }
     if (approved) {
       this.pendingConnection = null;
       this.pendingCompatibility = null;
     }
+    this.scheduleSessionCheck();
     electronLog.info(`auth session ${parseUrl(origin).origin}`);
     return { status: "success" };
   }
@@ -264,13 +513,18 @@ export class DesktopAuthService {
     electronLog.info("auth cancelled");
   }
 
-  async requestApiResponse(site, requestPath, { bearerToken = "", orgId = "", timeout = 30_000 } = {}) {
+  async requestApiResponse(
+    site,
+    requestPath,
+    { bearerToken = "", clientLoginSessionReceipt = "", orgId = "", timeout = 30_000 } = {}
+  ) {
     const url = endpoint(site, requestPath);
     const headers: Record<string, string> = { "X-TZ": timezoneOffset(), Referer: parseUrl(url).origin };
     if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
+    if (bearerToken && clientLoginSessionReceipt) headers["X-JMS-Client-Login-Session"] = clientLoginSessionReceipt;
     if (orgId) headers["X-JMS-ORG"] = orgId;
     try {
-      const response = await this.fetchSite(url, { headers, signal: AbortSignal.timeout(timeout) });
+      const response = await this.fetchSite(url, { headers, cache: "no-store", signal: AbortSignal.timeout(timeout) });
       return toApiResponse(response.status, await response.text());
     } catch (error) {
       return { status: 0, data: `request failed: ${error}`, success: false };
@@ -331,6 +585,7 @@ export class DesktopAuthService {
     if (typeof language !== "string" || !/^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(language)) {
       throw new Error("Invalid language code");
     }
+    this.currentLanguage = language;
     const session = this.sessions.get(this.currentSessionKey);
     if (!session) return;
 
@@ -352,17 +607,9 @@ export class DesktopAuthService {
     electronLog.info(`auth login start ${site}`);
     await this.startCallbackServer();
     if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
-    let oauthConfig: { client_id?: string };
+    let oauthConfig;
     try {
-      const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
-        signal: AbortSignal.timeout(10_000)
-      });
-      const text = await response.text();
-      if (!response.ok)
-        throw new Error(
-          `OAuth config endpoint returned ${response.status}: ${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-        );
-      oauthConfig = JSON.parse(text);
+      oauthConfig = await this.fetchOAuthConfig(site, sessionId);
     } catch (error) {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const message = `Failed to fetch OAuth config: ${error}`;
@@ -391,6 +638,7 @@ export class DesktopAuthService {
     authorizeUrl.searchParams.set("code_challenge_method", "S256");
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("scope", "write read");
+    authorizeUrl.searchParams.set("client_login_policy_version", "1");
 
     const callback = new Promise<ReturnType<typeof parseOAuthCallback>>((resolve) => {
       this.pendingAuth = { state, resolve };
@@ -411,12 +659,27 @@ export class DesktopAuthService {
         code_verifier: verifier
       });
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
-      const payload = await this.buildLoginPayload(site, token.access_token);
+      // Policy may change while the user authenticates in the browser. Token issuance
+      // is the authoritative point; discovery is only a legacy-server fallback.
+      const policy = token.client_login_policy ?? oauthConfig.client_login_policy;
+      if (token.client_login_policy) await this.applyClientLoginPolicy(site, sessionId, policy);
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const payload = {
+        ...(await this.buildLoginPayload(site, token.access_token, token.client_login_session_receipt)),
+        client_login_policy: policy,
+        client_login_session: token.client_login_session
+      };
       const approved = this.approveConnection(attempt, sessionId, payload);
       if (!approved.connection_id) {
         return approved.status === "success" ? { ...approved, status: "failure" } : approved;
       }
-      this.tokens[sessionId] = { ...token, client_id: clientId };
+      this.tokens[sessionId] = {
+        ...token,
+        client_id: clientId,
+        origin: site,
+        client_login_policy: policy
+      };
+      this.restoredSessionIds.delete(sessionId);
       await this.persistTokens();
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       electronLog.info(`auth login success ${site}`);
@@ -439,16 +702,30 @@ export class DesktopAuthService {
     if (!response.ok) {
       const error = new Error(
         `Token exchange failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-      ) as Error & { oauthError?: string };
+      ) as Error & { oauthError?: string; clientLoginReason?: string; clientLoginSession?: ClientLoginSession };
       error.oauthError = parseOAuthError(text);
+      error.clientLoginReason = parseClientLoginReason(text);
+      error.clientLoginSession = parseClientLoginSession(text);
       throw error;
     }
     const payload = parseJsonResponse(text);
     if (!payload.access_token) throw new Error("Token exchange response did not include access_token");
+    const expiresIn = Number(payload.expires_in);
     return {
       access_token: String(payload.access_token),
       refresh_token: payload.refresh_token ? String(payload.refresh_token) : null,
-      expires_at: expiresAt(payload.expires_in)
+      expires_in: Number.isFinite(expiresIn) ? expiresIn : null,
+      expires_at: expiresAt(expiresIn),
+      client_login_session: parseClientLoginSession(payload),
+      client_login_session_receipt:
+        typeof payload.client_login_session_receipt === "string" &&
+        payload.client_login_session_receipt.length <= 4096 &&
+        /^[A-Za-z0-9_.:-]+$/.test(payload.client_login_session_receipt)
+          ? payload.client_login_session_receipt
+          : "",
+      ...(payload.client_login_policy !== undefined
+        ? { client_login_policy: validateClientLoginPolicy(payload.client_login_policy) }
+        : {})
     };
   }
 
@@ -467,7 +744,10 @@ export class DesktopAuthService {
       if (provided) return provided;
       throw Object.assign(new Error(`no access token available for site ${site}`), { oauthError: "invalid_grant" });
     }
-    if (!stored.expires_at || stored.expires_at > Math.floor(Date.now() / 1000) + 60) return stored.access_token;
+    const refreshWindow =
+      Number.isFinite(stored.expires_in) && stored.expires_in > 0 ? Math.min(60, stored.expires_in / 10) : 60;
+    if (!stored.expires_at || stored.expires_at > Math.floor(Date.now() / 1000) + refreshWindow)
+      return stored.access_token;
     if (!stored.refresh_token)
       throw Object.assign(new Error(`refresh_token missing for site ${site}`), { oauthError: "invalid_grant" });
 
@@ -479,7 +759,10 @@ export class DesktopAuthService {
         const refreshed = await this.exchangeToken(site, {
           grant_type: "refresh_token",
           refresh_token: stored.refresh_token,
-          client_id: stored.client_id || ""
+          client_id: stored.client_id || "",
+          ...(stored.client_login_session_receipt
+            ? { client_login_session_receipt: stored.client_login_session_receipt }
+            : {})
         });
         const current = this.tokens[sessionId];
         if (current !== stored) {
@@ -487,21 +770,24 @@ export class DesktopAuthService {
           throw new Error(`auth session changed for site ${site}`);
         }
         this.tokens[sessionId] = {
+          ...stored,
           ...refreshed,
           refresh_token: refreshed.refresh_token || stored.refresh_token,
           client_id: stored.client_id || ""
         };
-        await this.persistTokens();
+        // Rotation preserves the interactive login; a new OAuth login never inherits this identity.
+        const activityBinding = this.activityBindings?.get(stored);
+        if (activityBinding) this.activityBindings.set(this.tokens[sessionId], activityBinding);
+        if (refreshed.client_login_policy) {
+          await this.applyClientLoginPolicy(site, sessionId, refreshed.client_login_policy);
+        } else {
+          await this.persistTokens();
+        }
+        this.recordClientLoginSession(sessionId, refreshed.access_token, refreshed);
         return refreshed.access_token;
       } catch (error) {
         if (error?.oauthError === "invalid_grant" && this.tokens[sessionId] === stored) {
-          delete this.tokens[sessionId];
-          try {
-            await this.persistTokens();
-          } catch (persistError) {
-            electronLog.warn("failed to remove expired auth token", persistError);
-          }
-          this.emitEvent("auth-session-expired", { sessionId }, "main");
+          await this.expireSession(sessionId, error.clientLoginReason, error.clientLoginSession);
         }
         throw error;
       }
@@ -514,30 +800,122 @@ export class DesktopAuthService {
     }
   }
 
+  recordClientLoginSession(sessionId, bearer, payload) {
+    const token = this.tokens[sessionId];
+    if (!token || token.access_token !== bearer || !payload) return;
+    if (typeof payload === "object" && !payload.client_login_session) return;
+    const info = parseClientLoginSession(payload);
+    if (!info) return;
+    const previous = token.client_login_session;
+    if (previous && Date.parse(previous.server_time) > Date.parse(info.server_time)) return;
+    token.client_login_session = info;
+    // Broadcast the same server snapshot to settings and main windows without another request.
+    this.emitEvent("client-login-session", { sessionId, session: info });
+  }
+
+  async expireSession(sessionId, reason = "unknown", sessionInfo?: ClientLoginSession) {
+    const token = this.tokens[sessionId];
+    const existed = Boolean(this.tokens[sessionId] || this.sessions?.has(sessionId));
+    delete this.tokens[sessionId];
+    this.sessions?.delete(sessionId);
+    if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
+    if (this.pendingConnection?.sessionId === sessionId) this.pendingConnection = null;
+    this.scheduleSessionCheck();
+    // Publish before awaiting disk IO: an old expiry must not arrive after a new login.
+    if (existed)
+      this.emitEvent(
+        "auth-session-expired",
+        {
+          sessionId,
+          reason,
+          policy: token?.client_login_policy,
+          session: sessionInfo
+        },
+        "main"
+      );
+    try {
+      await this.persistTokens();
+    } catch (error) {
+      electronLog.warn("failed to remove expired auth token", error);
+    }
+  }
+
+  async handleUnauthorized(session, bearer, status, body = "") {
+    let expired = status === 401;
+    if (status === 403) {
+      try {
+        const payload = JSON.parse(body);
+        expired =
+          ["not_authenticated", "authentication_failed"].includes(payload?.code) ||
+          (payload?.code === "client_session_expired" &&
+            (payload.client_login_reason === "unknown" || parseClientLoginReason(body) !== "unknown"));
+      } catch {
+        // Permission denials and non-JSON connector errors do not end authentication.
+      }
+    }
+    if (!expired || this.tokens[session.sessionKey]?.access_token !== bearer) return;
+    await this.expireSession(session.sessionKey, parseClientLoginReason(body), parseClientLoginSession(body));
+  }
+
   async bootstrapAuthSession({ site, sessionId, compatibilityConfirmationId = undefined }) {
     const attempt = await this.prepareConnection(site, sessionId, compatibilityConfirmationId, true);
     if (attempt.status !== "ready") return attempt;
     site = attempt.site;
     try {
+      // Only credentials restored from disk need a policy preflight. Active in-memory
+      // sessions are already bound to the policy used by their real authentication.
+      const restored = this.restoredSessionIds.has(sessionId);
+      const config = restored
+        ? await this.fetchOAuthConfig(site, sessionId)
+        : { client_login_policy: this.tokens[sessionId]?.client_login_policy };
+      if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (restored && config.client_login_policy?.reauth_on_exit && !this.tokens[sessionId]) {
+        return {
+          status: "auth-required",
+          client_login_policy: config.client_login_policy,
+          client_login_reason: "policy_changed"
+        };
+      }
       const bearer = await this.freshToken(site, sessionId);
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
-      const payload = await this.buildLoginPayload(site, bearer);
+      const payload = {
+        ...(await this.buildLoginPayload(site, bearer, this.tokens[sessionId]?.client_login_session_receipt)),
+        client_login_policy: config.client_login_policy,
+        client_login_session: this.tokens[sessionId]?.client_login_session
+      };
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
-      if (payload.profile?.status === 401 || payload.profile?.status === 403) return { status: "auth-required" };
+      if (payload.profile?.status === 401 || payload.profile?.status === 403) {
+        const reason = parseClientLoginReason(payload.profile.data);
+        const sessionInfo = parseClientLoginSession(payload.profile.data);
+        await this.expireSession(sessionId, reason, sessionInfo);
+        return {
+          status: "auth-required",
+          client_login_policy: config.client_login_policy,
+          client_login_reason: reason,
+          client_login_session: sessionInfo
+        };
+      }
       return this.approveConnection(attempt, sessionId, payload);
     } catch (error) {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
-      if (error?.oauthError === "invalid_grant") return { status: "auth-required" };
+      if (error?.oauthError === "invalid_grant") {
+        return {
+          status: "auth-required",
+          client_login_reason: error.clientLoginReason || "unknown",
+          client_login_session: error.clientLoginSession
+        };
+      }
       throw error;
     }
   }
 
-  async buildLoginPayload(site, bearer) {
+  async buildLoginPayload(site, bearer, clientLoginSessionReceipt = "") {
+    const credentials = { bearerToken: bearer, clientLoginSessionReceipt };
     const [profile, permissionOrgs, currentOrg, publicSettings] = await Promise.all([
-      this.requestApiResponse(site, USER_PROFILE, { bearerToken: bearer }),
-      this.requestApiResponse(site, USER_PERMISSIONS, { bearerToken: bearer }),
-      this.requestApiResponse(site, CURRENT_ORG, { bearerToken: bearer }),
-      this.requestApiResponse(site, PUBLIC_SETTINGS, { bearerToken: bearer })
+      this.requestApiResponse(site, USER_PROFILE, credentials),
+      this.requestApiResponse(site, USER_PERMISSIONS, credentials),
+      this.requestApiResponse(site, CURRENT_ORG, credentials),
+      this.requestApiResponse(site, PUBLIC_SETTINGS, credentials)
     ]);
     let settings: Record<string, unknown> = {};
     if (publicSettings.success) {
@@ -559,9 +937,88 @@ export class DesktopAuthService {
     };
   }
 
-  async apiRequest(request) {
-    const session = this.currentSession();
-    const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+  captureActivityBinding(): ClientActivityBinding | null {
+    const session = this.sessions.get(this.currentSessionKey);
+    const token = session && this.tokens[session.sessionKey];
+    if (!token || (token.origin && token.origin !== session.origin)) return null;
+    let binding = this.activityBindings.get(token);
+    if (!binding) {
+      binding = { sessionKey: session.sessionKey, origin: session.origin, nextActivityAt: 0, activityRequest: null };
+      this.activityBindings.set(token, binding);
+    }
+    return binding;
+  }
+
+  async reportActivity(binding: ClientActivityBinding | null | undefined) {
+    const boundSession = () => {
+      if (!binding) return;
+      const session = this.sessions.get(binding.sessionKey);
+      const token = this.tokens[binding.sessionKey];
+      if (
+        !session ||
+        session.origin !== binding.origin ||
+        !token ||
+        (token.origin && token.origin !== binding.origin) ||
+        this.activityBindings.get(token) !== binding ||
+        (token.client_login_policy?.max_idle_time ?? 0) <= 0
+      )
+        return;
+      return session;
+    };
+    const session = boundSession();
+    if (!session) return null;
+    const state = binding as ClientActivityState;
+    if (state.activityRequest) return state.activityRequest;
+    if (state.nextActivityAt > performance.now()) return null;
+    // All windows of this login share the budget, even after account switches or token rotation.
+    state.nextActivityAt = performance.now() + CLIENT_ACTIVITY_REPORT_INTERVAL;
+    const activityRequest = (async () => {
+      try {
+        const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+        // A refresh can overlap logout, reauthentication or switching back to this account.
+        const current = boundSession();
+        if (!current || this.tokens[session.sessionKey]?.access_token !== bearer) return null;
+        const result = await this.sendApiRequest(
+          current,
+          {
+            method: "POST",
+            path: CLIENT_SESSION_STATUS,
+            headers: { "Cache-Control": "no-cache" },
+            timeoutMs: 10_000
+          },
+          bearer
+        );
+        if (!boundSession()) return result;
+        this.recordClientLoginSession(session.sessionKey, bearer, result);
+        // An activity report also checks this login; ordinary API traffic does not schedule monitoring.
+        this.recordSessionValidation(current, bearer);
+        return result;
+      } catch (error) {
+        // Inactive asset logins are not polled; missing refresh credentials must also end their login.
+        if (error?.oauthError === "invalid_grant" && boundSession()) {
+          await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
+        }
+        throw error;
+      }
+    })();
+    state.activityRequest = activityRequest;
+    try {
+      return await activityRequest;
+    } finally {
+      if (state.activityRequest === activityRequest) state.activityRequest = null;
+    }
+  }
+
+  async apiRequest(request, activityBinding?: ClientActivityBinding | null) {
+    if (request.service !== "kael" && request.method === "POST" && request.path === CLIENT_SESSION_STATUS) {
+      // Input must retain its owner. An unbound renderer request cannot renew whichever account is now selected.
+      return this.reportActivity(activityBinding);
+    }
+    return this.sendApiRequest(this.currentSession(), request);
+  }
+
+  async sendApiRequest(session, request, bearer = "") {
+    bearer ||= await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
@@ -575,6 +1032,7 @@ export class DesktopAuthService {
     const headers = {
       Accept: "application/json",
       ...requestHeaders(request),
+      ...clientLoginSessionHeaders(request.service === "kael" ? undefined : this.tokens?.[session.sessionKey], bearer),
       "X-TZ": timezoneOffset(),
       Referer: url.origin,
       Authorization: `Bearer ${bearer}`
@@ -593,6 +1051,7 @@ export class DesktopAuthService {
     });
     const text = await response.text();
     if (!responseSucceeded(response.status)) {
+      if (request.service !== "kael") await this.handleUnauthorized(session, bearer, response.status, text);
       electronLog.warn(`api ${request.method} ${url.pathname} status=${response.status}`);
       throw new Error(
         `api ${request.method} ${url.pathname}: api request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
@@ -621,6 +1080,7 @@ export class DesktopAuthService {
     }
     const headers = {
       ...requestHeaders(request),
+      ...clientLoginSessionHeaders(request.service === "kael" ? undefined : this.tokens?.[session.sessionKey], bearer),
       Accept: "text/event-stream",
       "X-TZ": timezoneOffset(),
       Referer: url.origin,
@@ -638,6 +1098,7 @@ export class DesktopAuthService {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (request.service !== "kael") await this.handleUnauthorized(session, bearer, response.status, text);
       throw new Error(
         `api ${request.method} ${url.pathname}: api stream request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
       );
@@ -689,20 +1150,48 @@ export class DesktopAuthService {
     return parseJsonResponse(text);
   }
 
-  async logout({ site, sessionId }) {
+  hasExitSessions() {
+    return Object.values(this.tokens).some((token: any) => token.client_login_policy?.reauth_on_exit);
+  }
+
+  async revokeOnExit() {
+    await Promise.allSettled(
+      Object.entries(this.tokens)
+        .filter(([, token]: [string, any]) => token.client_login_policy?.reauth_on_exit)
+        .map(([sessionId, token]: [string, any]) => this.logout({ site: token.origin, sessionId, reason: "app_exit" }))
+    );
+  }
+
+  async logout({ site, sessionId, reason = "logout" }) {
     electronLog.info(`auth logout ${site}`);
     const token = this.tokens[sessionId];
     delete this.tokens[sessionId];
     this.sessions.delete(sessionId);
+    this.scheduleSessionCheck();
     if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
     if (this.pendingConnection?.sessionId === sessionId) this.cancelAuth();
     await this.persistTokens();
-    if (!token?.refresh_token) return;
+    if (!token) return;
+    const policy = token.client_login_policy;
+    if (policy && (policy.reauth_on_exit || policy.max_idle_time || policy.max_session_time)) {
+      try {
+        const response = await this.fetchSite(endpoint(site, CLIENT_SESSION_REVOKE), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.access_token}` },
+          signal: AbortSignal.timeout(3_000),
+          body: JSON.stringify({ reason })
+        });
+        if (response.ok) return;
+      } catch {
+        // Expired access tokens and older servers use the OAuth revocation endpoint below.
+      }
+    }
+    if (!token.refresh_token) return;
     try {
       await this.fetchSite(endpoint(site, OAUTH_REVOKE), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(3_000),
         body: new URLSearchParams({
           token: token.refresh_token,
           token_type_hint: "refresh_token",

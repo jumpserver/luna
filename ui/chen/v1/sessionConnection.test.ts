@@ -136,6 +136,7 @@ function mountSurface(firstToken = "old") {
     "#koko/composables/agent/types": { parseKokoMcpFrame: vi.fn() },
     "~/chen/composables/useChenSqlAiSessions": {
       getChenSqlAiSession: () => undefined,
+      invalidateChenSqlAiContext: vi.fn(),
       unregisterChenSqlAiSession: vi.fn(),
       registerChenSqlAiSession: vi.fn(),
       handleChenSqlAiWireMessage: () => true,

@@ -6,7 +6,20 @@ import {
   shortcutDefinitions
 } from "../../../ui/shared/shortcuts";
 import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
-import type { MenuItemConstructorOptions } from "electron";
+import { clientLoginExpiryMessage } from "../../../ui/utils/clientLoginPolicy";
+import type { ClientLoginPolicy, ClientLoginSession } from "../../../ui/types/index";
+import { normalizeLanguageCode } from "../../../i18n/language";
+import enMessages from "../../../i18n/locales/en.json";
+import esMessages from "../../../i18n/locales/es.json";
+import frMessages from "../../../i18n/locales/fr.json";
+import jaMessages from "../../../i18n/locales/ja.json";
+import koMessages from "../../../i18n/locales/ko.json";
+import ptBrMessages from "../../../i18n/locales/pt_br.json";
+import ruMessages from "../../../i18n/locales/ru.json";
+import viMessages from "../../../i18n/locales/vi.json";
+import zhMessages from "../../../i18n/locales/zh.json";
+import zhHantMessages from "../../../i18n/locales/zh_hant.json";
+import type { MenuItemConstructorOptions, WebContents } from "electron";
 import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -25,6 +38,7 @@ import {
   nativeTheme,
   net,
   Notification,
+  powerMonitor,
   protocol,
   shell,
   Tray
@@ -35,6 +49,7 @@ import { ApplicationConfigService } from "../apps/application-config";
 import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
+import { observeClientActivity } from "../auth/activity";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
 import { FaceEngineManager } from "../face/manager";
 import { isFaceLiveWebSocket } from "../face/socket-policy";
@@ -76,6 +91,7 @@ const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, St
 app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
+const windowActivityBindings = new WeakMap<WebContents, ReturnType<DesktopAuthService["captureActivityBinding"]>>();
 const subscriptions = new Map();
 const stores = new Map();
 let shortcutOverrides: ShortcutOverrides = {};
@@ -291,6 +307,38 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
+  if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
+}
+
+function notifyClientLoginExpired(payload: {
+  reason?: string;
+  policy?: ClientLoginPolicy;
+  session?: ClientLoginSession;
+}) {
+  const win = windows.get("main");
+  if (!win || win.isDestroyed() || win.isFocused() || !Notification.isSupported()) return;
+  const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
+  const messages = {
+    en: enMessages.Login,
+    es: esMessages.Login,
+    fr: frMessages.Login,
+    ja: jaMessages.Login,
+    ko: koMessages.Login,
+    pt_br: ptBrMessages.Login,
+    ru: ruMessages.Login,
+    vi: viMessages.Login,
+    zh: zhMessages.Login,
+    zh_hant: zhHantMessages.Login
+  }[language];
+  const message = clientLoginExpiryMessage(payload?.reason, payload?.policy, payload?.session, language);
+  const key = message.key.slice("Login.".length) as keyof typeof messages;
+  const body = messages[key].replace(/\{(\w+)\}/g, (placeholder, name) => message.params[name] ?? placeholder);
+  const notification = new Notification({ title: messages.SessionExpired, body });
+  notification.on("click", () => {
+    const mainWindow = createWindow("main");
+    if (mainWindow.isMinimized()) mainWindow.restore();
+  });
+  notification.show();
 }
 
 function clearDesktopEventSubscriptions(webContents) {
@@ -499,7 +547,11 @@ interface CreateWindowOptions {
   url?: string;
 }
 
-function createWindow(label = "main", options: CreateWindowOptions = {}) {
+function createWindow(
+  label = "main",
+  options: CreateWindowOptions = {},
+  activityBinding = authService?.captureActivityBinding() ?? null
+) {
   const existing = windows.get(label);
   if (existing && !existing.isDestroyed()) {
     existing.show();
@@ -537,6 +589,10 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   installConnectorSessionHooks(win.webContents.session);
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
+  windowActivityBindings.set(windowWebContents, activityBinding);
+  observeClientActivity(windowWebContents, () =>
+    authService.reportActivity(windowActivityBindings.get(windowWebContents))
+  );
 
   windowWebContents.on("before-input-event", (_event, input) => {
     // Let the renderer resolve scope/focus before consuming application shortcuts.
@@ -1105,7 +1161,11 @@ async function handleInvoke(event, request) {
   if (command === "plugin:window|theme") return nativeTheme.shouldUseDarkColors ? "dark" : "light";
   if (command === "plugin:window|get_all_windows") return [...windows.keys()];
   if (command === "plugin:webview|create_webview_window") {
-    createWindow(args.options.label, args.options);
+    createWindow(
+      args.options.label,
+      args.options,
+      String(args.options.label).startsWith("asset-") ? (windowActivityBindings.get(event.sender) ?? null) : undefined
+    );
     return null;
   }
 
@@ -1256,7 +1316,21 @@ async function handleInvoke(event, request) {
     }));
   }
 
-  if (command === "set_api_session") return authService.setSession(args);
+  if (command === "set_api_session") {
+    const result = authService.setSession(args);
+    if (result.status === "success") {
+      const binding = authService.captureActivityBinding();
+      for (const [label, target] of windows) {
+        const previous = windowActivityBindings.get(target.webContents);
+        // Asset windows keep their account when the main window switches accounts.
+        // An explicit activation of that same account can bind them to its new login.
+        if (!label.startsWith("asset-") || previous?.sessionKey === binding?.sessionKey) {
+          windowActivityBindings.set(target.webContents, binding);
+        }
+      }
+    }
+    return result;
+  }
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
@@ -1265,7 +1339,7 @@ async function handleInvoke(event, request) {
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
-  if (command === "api_request") return authService.apiRequest(args.request);
+  if (command === "api_request") return authService.apiRequest(args.request, windowActivityBindings.get(event.sender));
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
@@ -1317,6 +1391,19 @@ async function handleInvoke(event, request) {
   }
   if (command === "close_local_shell") return closeLocalShell(event, args.sessionId);
   if (command.includes("web_proxy")) {
+    // Capture ownership before asynchronous licence checks or view creation.
+    const ownerBinding = windowActivityBindings.get(event.sender);
+    const observeActivity = (contents: WebContents, enabled: () => boolean) => {
+      observeClientActivity(
+        contents,
+        () => {
+          const current = windowActivityBindings.get(event.sender);
+          const binding = current?.sessionKey === ownerBinding?.sessionKey ? current : ownerBinding;
+          return authService.reportActivity(binding);
+        },
+        enabled
+      );
+    };
     if (
       command === "start_web_proxy_recording" ||
       (command === "create_web_proxy_view" &&
@@ -1325,7 +1412,7 @@ async function handleInvoke(event, request) {
       const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
-    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
+    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args, observeActivity));
   }
   if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
   if (command === "open_settings_window") {
@@ -1567,10 +1654,27 @@ async function drainPendingProtocolUrls() {
 const initialProtocolUrl = findClientProtocolUrl(process.argv);
 if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
 
+let authExitFinished = false;
+let authExitPending = false;
 app.on("before-quit", (event) => {
-  if (!replayTranscoder?.isTranscoding || allowCloseDuringTranscode) return;
+  if (replayTranscoder?.isTranscoding && !allowCloseDuringTranscode) {
+    event.preventDefault();
+    confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+    return;
+  }
+  authService?.stopSessionMonitor();
+  if (authExitFinished) return;
+  if (authExitPending) {
+    event.preventDefault();
+    return;
+  }
+  if (!authService?.hasExitSessions()) return;
   event.preventDefault();
-  confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+  authExitPending = true;
+  void authService.revokeOnExit().finally(() => {
+    authExitFinished = true;
+    app.quit();
+  });
 });
 
 app.on("window-all-closed", () => {
@@ -1647,4 +1751,6 @@ app.whenReady().then(async () => {
     emitDesktopEvent("desktop://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   createWindow("main");
+  authService.startSessionMonitor();
+  powerMonitor.on("resume", () => void authService.checkSessions(true));
 });

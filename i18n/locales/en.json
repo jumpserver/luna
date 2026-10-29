@@ -1145,6 +1145,13 @@
     "SavedSites": "Saved sites",
     "SignedIn": "Signed in",
     "SessionExpired": "Login expired",
+    "ExpiredPolicyChanged": "Client security settings have changed. Please sign in again.",
+    "ExpiredLifetime": "Your login has reached its time limit. Please sign in again.",
+    "ExpiredIdle": "Your login expired because of inactivity. Please sign in again.",
+    "ExpiredRevoked": "Your login authorization has been revoked. Please sign in again.",
+    "ExpiredAppExit": "Client security settings require you to sign in again after exiting the application.",
+    "ExpiredLogout": "You have signed out. Please sign in again.",
+    "ExpiredUnknown": "Your login is no longer valid. Please sign in again.",
     "SignInAgain": "Sign in again",
     "SwitchFailed": "Could not switch sites. Check your connection and try again.",
     "DeleteSite": "Delete site: {name}",
@@ -1164,7 +1171,9 @@
     "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
-    "ServerError": "The server is temporarily unavailable. Please try again later."
+    "ServerError": "The server is temporarily unavailable. Please try again later.",
+    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again.",
+    "ExpiredIdleDetail": "Your login expired after {duration} of inactivity (limit: {limit}). Please sign in again."
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"
@@ -1273,7 +1282,21 @@
     "LoadFailed": "Failed to load user profile",
     "Retry": "Retry",
     "NoUser": "Not signed in",
-    "NoUserDescription": "Sign in to a JumpServer site to view user details."
+    "NoUserDescription": "Sign in to a JumpServer site to view user details.",
+    "ClientLoginInfo": "Client login validity",
+    "ClientLoginInfoDescription": "Administrator policy and the latest server-confirmed login status for this account. Accepted activity extends the idle deadline, but never the maximum login lifetime.",
+    "ClientLoginReauthOnExit": "Sign in again after exiting",
+    "ClientLoginMaxLifetime": "Maximum login lifetime",
+    "ClientLoginStartedAt": "This login started",
+    "ClientLoginIdleTimeout": "Idle timeout",
+    "ClientLoginIdleExpiry": "If there is no new activity",
+    "ClientLoginEffectiveExpiry": "Expected expiry",
+    "ClientLoginUnknown": "Not available yet",
+    "ClientLoginUnlimited": "Unlimited",
+    "ClientLoginCurrentUser": "Current user",
+    "ClientLoginExpiryHint": "The expiry time reflects the latest server-confirmed state and uses this device’s time zone.",
+    "ClientLoginActivityScope": "Real keyboard and mouse input in the main window, separate asset windows and built-in websites counts as activity. An open connection, background output and automatic refresh do not count.",
+    "ClientLoginActivityLimits": "Input in external software such as Xshell or MSTSC, and in some cross-origin embedded pages, cannot be captured. Using only these areas, watching without input for a long time, or failed reports due to network issues may still trigger the idle timeout. Time is measured from the last activity confirmed by the server."
   },
   "Setting": {
     "BackToApp": "Back to app",

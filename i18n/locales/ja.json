@@ -1145,6 +1145,13 @@
     "SavedSites": "保存済みサイト",
     "SignedIn": "ログイン済み",
     "SessionExpired": "ログイン期限切れ",
+    "ExpiredPolicyChanged": "クライアントのセキュリティ設定が変更されました。再度ログインしてください。",
+    "ExpiredLifetime": "ログインの有効期限に達しました。再度ログインしてください。",
+    "ExpiredIdle": "一定時間操作がなかったため、ログインが無効になりました。再度ログインしてください。",
+    "ExpiredRevoked": "ログインの認可が取り消されました。再度ログインしてください。",
+    "ExpiredAppExit": "クライアントのセキュリティ設定により、アプリケーション終了後は再度ログインする必要があります。",
+    "ExpiredLogout": "ログアウトしました。再度ログインしてください。",
+    "ExpiredUnknown": "ログインが無効になりました。再度ログインしてください。",
     "SignInAgain": "再ログイン",
     "SwitchFailed": "サイトを切り替えられませんでした。接続を確認して再試行してください。",
     "DeleteSite": "サイトを削除：{name}",
@@ -1164,7 +1171,9 @@
     "InvalidCertificateMac": "ログインに失敗しました。証明書が無効か、システムセキュリティによってブロックされています（macOS WebView）。有効な証明書をインストールするか、システムブラウザーで開いてください。",
     "InvalidCertificateGeneric": "ログインに失敗しました。証明書または安全な接続に問題があります。",
     "NetworkError": "ネットワークを利用できません。接続を確認してください。",
-    "ServerError": "サーバーは一時的に利用できません。後でもう一度お試しください。"
+    "ServerError": "サーバーは一時的に利用できません。後でもう一度お試しください。",
+    "ExpiredLifetimeDetail": "今回のログインは {expiresAt} に期限切れとなりました。再度ログインしてください。",
+    "ExpiredIdleDetail": "アイドル時間が {duration}（上限：{limit}）に達したため、ログインが失効しました。再度ログインしてください。"
   },
   "Asset": {
     "GetAssetFailed": "アセットの取得に失敗しました。更新して再試行してください"
@@ -1273,7 +1282,21 @@
     "LoadFailed": "ユーザープロファイルを読み込めませんでした",
     "Retry": "再試行",
     "NoUser": "未ログイン",
-    "NoUserDescription": "JumpServer サイトにログインするとユーザー詳細を表示できます。"
+    "NoUserDescription": "JumpServer サイトにログインするとユーザー詳細を表示できます。",
+    "ClientLoginInfo": "クライアントのログイン有効期間",
+    "ClientLoginInfoDescription": "このアカウントの管理者設定と、サーバーが最後に確認したログイン状態です。受理された操作報告によってアイドル期限は延長されますが、ログインの最大有効期間は延長されません。",
+    "ClientLoginReauthOnExit": "終了後に再ログイン",
+    "ClientLoginMaxLifetime": "ログインの最大有効期間",
+    "ClientLoginStartedAt": "今回のログイン開始時刻",
+    "ClientLoginIdleTimeout": "アイドルタイムアウト",
+    "ClientLoginIdleExpiry": "新たな操作がない場合",
+    "ClientLoginEffectiveExpiry": "失効予定時刻",
+    "ClientLoginUnknown": "未取得",
+    "ClientLoginUnlimited": "無制限",
+    "ClientLoginCurrentUser": "現在のユーザー",
+    "ClientLoginExpiryHint": "有効期限はサーバーが最後に確認した状態に基づき、この端末のタイムゾーンで表示されます。",
+    "ClientLoginActivityScope": "メインウィンドウ、独立したアセットウィンドウ、内蔵ブラウザーで表示するサイトでの実際のキーボード・マウス操作が活動として記録されます。接続の維持、バックグラウンド出力、自動更新は活動に含まれません。",
+    "ClientLoginActivityLimits": "Xshell、MSTSC などの外部ソフトウェアや、一部のクロスオリジン埋め込みページでの操作は取得できません。これらの領域だけを操作する場合、長時間操作せずに閲覧する場合、またはネットワークの問題で報告に失敗した場合も、アイドルタイムアウトが発生することがあります。時間はサーバーが最後に確認した活動から計算されます。"
   },
   "Setting": {
     "BackToApp": "アプリに戻る",
