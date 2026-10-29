@@ -12,7 +12,7 @@ import {
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopEmit, desktopInvoke, desktopListen, openDesktopAuthUrl } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { clientLoginReasonMessageKey } from "~/utils/clientLoginPolicy";
+import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 import RecentSites from "./recentSites.vue";
 
 const recentSiteLimit = 5;
@@ -57,7 +57,14 @@ const siteNameEdited = ref(false);
 const editingAccountId = ref("");
 const expiredLoginReason = computed(() => {
   const account = userMap.value[editingAccountId.value];
-  return account?.sessionExpired ? t(clientLoginReasonMessageKey(account.sessionExpiredReason)) : "";
+  if (!account?.sessionExpired) return "";
+  const message = clientLoginExpiryMessage(
+    account.sessionExpiredReason,
+    account.clientLoginPolicy,
+    account.clientLoginSession,
+    locale.value
+  );
+  return t(message.key, message.params);
 });
 const errorMessage = ref("");
 const loginBtn = ref(false);
@@ -1203,7 +1210,7 @@ onBeforeUnmount(() => {
     @confirm="handleConfirm"
     @clipboard="handleClipboard"
   >
-    <div class="space-y-3">
+    <div class="flex flex-col gap-6">
       <UAlert
         v-if="expiredLoginReason"
         color="warning"

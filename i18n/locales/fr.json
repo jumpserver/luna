@@ -1171,7 +1171,9 @@
     "InvalidCertificateMac": "Échec de la connexion : certificat invalide ou bloqué par la sécurité du système (WebView macOS). Installez un certificat valide ou ouvrez le site dans le navigateur système.",
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
-    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard."
+    "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
+    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}, il y a {elapsed}. Veuillez vous reconnecter.",
+    "ExpiredIdleDetail": "Votre connexion a expiré après {duration} d’inactivité (limite : {limit}). Veuillez vous reconnecter."
   },
   "Asset": {
     "GetAssetFailed": "Impossible de récupérer l’actif. Actualisez et réessayez"
@@ -1280,7 +1282,19 @@
     "LoadFailed": "Impossible de charger le profil utilisateur",
     "Retry": "Réessayer",
     "NoUser": "Non connecté",
-    "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur."
+    "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur.",
+    "ClientLoginInfo": "Validité de la connexion du client",
+    "ClientLoginInfoDescription": "Politique administrateur et dernier état de connexion confirmé par le serveur pour ce compte. Une activité acceptée prolonge le délai d’inactivité, mais jamais la durée maximale de connexion.",
+    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté",
+    "ClientLoginMaxLifetime": "Durée maximale de connexion",
+    "ClientLoginStartedAt": "Début de cette connexion",
+    "ClientLoginIdleTimeout": "Délai d’inactivité",
+    "ClientLoginIdleExpiry": "Sans nouvelle activité",
+    "ClientLoginEffectiveExpiry": "Expiration prévue",
+    "ClientLoginUnknown": "Pas encore disponible",
+    "ClientLoginUnlimited": "Illimitée",
+    "ClientLoginCurrentUser": "Utilisateur actuel",
+    "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil."
   },
   "Setting": {
     "BackToApp": "Retour à l’application",

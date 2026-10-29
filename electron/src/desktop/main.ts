@@ -6,7 +6,8 @@ import {
   shortcutDefinitions
 } from "../../../ui/shared/shortcuts";
 import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
-import { clientLoginReasonMessageKey } from "../../../ui/utils/clientLoginPolicy";
+import { clientLoginExpiryMessage } from "../../../ui/utils/clientLoginPolicy";
+import type { ClientLoginPolicy, ClientLoginSession } from "../../../ui/types/index";
 import { normalizeLanguageCode } from "../../../i18n/language";
 import enMessages from "../../../i18n/locales/en.json";
 import esMessages from "../../../i18n/locales/es.json";
@@ -307,7 +308,11 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
   if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
 }
 
-function notifyClientLoginExpired(payload: { reason?: string }) {
+function notifyClientLoginExpired(payload: {
+  reason?: string;
+  policy?: ClientLoginPolicy;
+  session?: ClientLoginSession;
+}) {
   const win = windows.get("main");
   if (!win || win.isDestroyed() || win.isFocused() || !Notification.isSupported()) return;
   const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
@@ -323,8 +328,10 @@ function notifyClientLoginExpired(payload: { reason?: string }) {
     zh: zhMessages.Login,
     zh_hant: zhHantMessages.Login
   }[language];
-  const key = clientLoginReasonMessageKey(payload?.reason).slice("Login.".length) as keyof typeof messages;
-  const notification = new Notification({ title: messages.SessionExpired, body: messages[key] });
+  const message = clientLoginExpiryMessage(payload?.reason, payload?.policy, payload?.session, language);
+  const key = message.key.slice("Login.".length) as keyof typeof messages;
+  const body = messages[key].replace(/\{(\w+)\}/g, (placeholder, name) => message.params[name] ?? placeholder);
+  const notification = new Notification({ title: messages.SessionExpired, body });
   notification.on("click", () => {
     const mainWindow = createWindow("main");
     if (mainWindow.isMinimized()) mainWindow.restore();

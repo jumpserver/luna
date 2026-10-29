@@ -10,6 +10,7 @@ import { electronLog } from "../shared/debug-log";
 import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
 import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
+import type { ClientLoginSession } from "../../../ui/types/index";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -58,6 +59,42 @@ function parseClientLoginReason(text: string) {
     // An unstructured error cannot establish why a login ended.
   }
   return "unknown";
+}
+
+function parseClientLoginSession(payload: unknown): ClientLoginSession | undefined {
+  try {
+    const response = (typeof payload === "string" ? JSON.parse(payload) : payload) as Record<string, unknown>;
+    const value = response?.client_login_session as Record<string, unknown>;
+    if (!value || typeof value !== "object") return;
+    const timestamp = (date: unknown) =>
+      typeof date === "string" && date.length <= 64 && /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(date)
+        ? Date.parse(date)
+        : NaN;
+    const start = timestamp(value.authenticated_at);
+    const activity = timestamp(value.last_activity_at);
+    const server = timestamp(value.server_time);
+    const expires = value.expires_at === null ? null : timestamp(value.expires_at);
+    const idle = value.idle_expires_at === null ? null : timestamp(value.idle_expires_at);
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(activity) ||
+      !Number.isFinite(server) ||
+      activity < start ||
+      server < activity ||
+      (expires !== null && (!Number.isFinite(expires) || expires < start)) ||
+      (idle !== null && (!Number.isFinite(idle) || idle < activity))
+    )
+      return;
+    return {
+      authenticated_at: String(value.authenticated_at),
+      expires_at: expires === null ? null : String(value.expires_at),
+      last_activity_at: String(value.last_activity_at),
+      idle_expires_at: idle === null ? null : String(value.idle_expires_at),
+      server_time: String(value.server_time)
+    };
+  } catch {
+    // Display metadata must never turn an otherwise valid login into an auth failure.
+  }
 }
 
 function clientLoginSessionHeaders(token, bearer: string): Record<string, string> {
@@ -229,7 +266,10 @@ export class DesktopAuthService {
           timeout: 10_000
         });
         if (this.sessions.get(session.sessionKey) !== session || this.currentSessionKey !== session.sessionKey) return;
-        if (response.status === 204) this.recordSessionValidation(session, bearer);
+        if (responseSucceeded(response.status)) {
+          this.recordClientLoginSession(session.sessionKey, bearer, response.data);
+          this.recordSessionValidation(session, bearer);
+        }
         await this.handleUnauthorized(session, bearer, response.status, response.data);
       } catch (error) {
         if (
@@ -237,7 +277,7 @@ export class DesktopAuthService {
           this.tokens[session.sessionKey] === stored &&
           this.sessions.get(session.sessionKey) === session
         ) {
-          await this.expireSession(session.sessionKey, error.clientLoginReason);
+          await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
         }
         // Network/server errors are not evidence of expiry; retry on the next tick.
       }
@@ -613,7 +653,8 @@ export class DesktopAuthService {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const payload = {
         ...(await this.buildLoginPayload(site, token.access_token, token.client_login_session_receipt)),
-        client_login_policy: policy
+        client_login_policy: policy,
+        client_login_session: token.client_login_session
       };
       const approved = this.approveConnection(attempt, sessionId, payload);
       if (!approved.connection_id) {
@@ -648,9 +689,10 @@ export class DesktopAuthService {
     if (!response.ok) {
       const error = new Error(
         `Token exchange failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-      ) as Error & { oauthError?: string; clientLoginReason?: string };
+      ) as Error & { oauthError?: string; clientLoginReason?: string; clientLoginSession?: ClientLoginSession };
       error.oauthError = parseOAuthError(text);
       error.clientLoginReason = parseClientLoginReason(text);
+      error.clientLoginSession = parseClientLoginSession(text);
       throw error;
     }
     const payload = parseJsonResponse(text);
@@ -661,6 +703,7 @@ export class DesktopAuthService {
       refresh_token: payload.refresh_token ? String(payload.refresh_token) : null,
       expires_in: Number.isFinite(expiresIn) ? expiresIn : null,
       expires_at: expiresAt(expiresIn),
+      client_login_session: parseClientLoginSession(payload),
       client_login_session_receipt:
         typeof payload.client_login_session_receipt === "string" &&
         payload.client_login_session_receipt.length <= 4096 &&
@@ -724,10 +767,11 @@ export class DesktopAuthService {
         } else {
           await this.persistTokens();
         }
+        this.recordClientLoginSession(sessionId, refreshed.access_token, refreshed);
         return refreshed.access_token;
       } catch (error) {
         if (error?.oauthError === "invalid_grant" && this.tokens[sessionId] === stored) {
-          await this.expireSession(sessionId, error.clientLoginReason);
+          await this.expireSession(sessionId, error.clientLoginReason, error.clientLoginSession);
         }
         throw error;
       }
@@ -740,19 +784,44 @@ export class DesktopAuthService {
     }
   }
 
-  async expireSession(sessionId, reason = "unknown") {
+  recordClientLoginSession(sessionId, bearer, payload) {
+    const token = this.tokens[sessionId];
+    if (!token || token.access_token !== bearer || !payload) return;
+    if (typeof payload === "object" && !payload.client_login_session) return;
+    const info = parseClientLoginSession(payload);
+    if (!info) return;
+    const previous = token.client_login_session;
+    if (previous && Date.parse(previous.server_time) > Date.parse(info.server_time)) return;
+    token.client_login_session = info;
+    // Broadcast the same server snapshot to settings and main windows without another request.
+    this.emitEvent("client-login-session", { sessionId, session: info });
+  }
+
+  async expireSession(sessionId, reason = "unknown", sessionInfo?: ClientLoginSession) {
+    const token = this.tokens[sessionId];
     const existed = Boolean(this.tokens[sessionId] || this.sessions?.has(sessionId));
     delete this.tokens[sessionId];
     this.sessions?.delete(sessionId);
     if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
     if (this.pendingConnection?.sessionId === sessionId) this.pendingConnection = null;
     this.scheduleSessionCheck();
+    // Publish before awaiting disk IO: an old expiry must not arrive after a new login.
+    if (existed)
+      this.emitEvent(
+        "auth-session-expired",
+        {
+          sessionId,
+          reason,
+          policy: token?.client_login_policy,
+          session: sessionInfo
+        },
+        "main"
+      );
     try {
       await this.persistTokens();
     } catch (error) {
       electronLog.warn("failed to remove expired auth token", error);
     }
-    if (existed) this.emitEvent("auth-session-expired", { sessionId, reason }, "main");
   }
 
   async handleUnauthorized(session, bearer, status, body = "") {
@@ -769,7 +838,7 @@ export class DesktopAuthService {
       }
     }
     if (!expired || this.tokens[session.sessionKey]?.access_token !== bearer) return;
-    await this.expireSession(session.sessionKey, parseClientLoginReason(body));
+    await this.expireSession(session.sessionKey, parseClientLoginReason(body), parseClientLoginSession(body));
   }
 
   async bootstrapAuthSession({ site, sessionId, compatibilityConfirmationId = undefined }) {
@@ -795,23 +864,30 @@ export class DesktopAuthService {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       const payload = {
         ...(await this.buildLoginPayload(site, bearer, this.tokens[sessionId]?.client_login_session_receipt)),
-        client_login_policy: config.client_login_policy
+        client_login_policy: config.client_login_policy,
+        client_login_session: this.tokens[sessionId]?.client_login_session
       };
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       if (payload.profile?.status === 401 || payload.profile?.status === 403) {
         const reason = parseClientLoginReason(payload.profile.data);
-        await this.expireSession(sessionId, reason);
+        const sessionInfo = parseClientLoginSession(payload.profile.data);
+        await this.expireSession(sessionId, reason, sessionInfo);
         return {
           status: "auth-required",
           client_login_policy: config.client_login_policy,
-          client_login_reason: reason
+          client_login_reason: reason,
+          client_login_session: sessionInfo
         };
       }
       return this.approveConnection(attempt, sessionId, payload);
     } catch (error) {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       if (error?.oauthError === "invalid_grant") {
-        return { status: "auth-required", client_login_reason: error.clientLoginReason || "unknown" };
+        return {
+          status: "auth-required",
+          client_login_reason: error.clientLoginReason || "unknown",
+          client_login_session: error.clientLoginSession
+        };
       }
       throw error;
     }
@@ -863,6 +939,7 @@ export class DesktopAuthService {
       )
         return null;
       const result = await this.sendApiRequest(session, request, bearer);
+      this.recordClientLoginSession(session.sessionKey, bearer, result);
       // An activity report also checks this login; ordinary API traffic does not schedule monitoring.
       this.recordSessionValidation(session, bearer);
       return result;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { clientLoginReasonMessageKey } from "~/utils/clientLoginPolicy";
+import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
@@ -16,7 +16,17 @@ const showLoginPrompt = computed(
     activeTab.value?.protocol !== "local-shell" &&
     !activeTab.value?.panes.some((pane) => pane.mode === "session")
 );
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const expiredLoginReason = computed(() => {
+  const account = currentUser.value;
+  const message = clientLoginExpiryMessage(
+    account?.sessionExpiredReason,
+    account?.clientLoginPolicy,
+    account?.clientLoginSession,
+    locale.value
+  );
+  return t(message.key, message.params);
+});
 const shortcuts = useAppShortcuts();
 const shortcutRows = computed(() => [
   {
@@ -81,7 +91,7 @@ const openLogin = () => {
               {{ t("WorkspaceEmpty.LoginHint") }}
             </div>
             <p v-if="currentUser?.sessionExpired" class="shrink-0 text-center text-warning" role="status">
-              {{ t(clientLoginReasonMessageKey(currentUser.sessionExpiredReason)) }}
+              {{ expiredLoginReason }}
             </p>
             <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
               {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}

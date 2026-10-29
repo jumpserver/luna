@@ -1171,7 +1171,9 @@
     "InvalidCertificateMac": "登入失敗：憑證無效或遭系統安全性封鎖（macOS WebView）。請安裝有效憑證，或在系統瀏覽器中開啟。",
     "InvalidCertificateGeneric": "登入失敗：證書或安全連線異常。",
     "NetworkError": "網路不可用，請檢查網路連線",
-    "ServerError": "伺服器暫時不可用，請稍後重試"
+    "ServerError": "伺服器暫時不可用，請稍後重試",
+    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期，已過期 {elapsed}。請重新登入。",
+    "ExpiredIdleDetail": "閒置已達 {duration}（限制 {limit}），登入已失效。請重新登入。"
   },
   "Asset": {
     "GetAssetFailed": "獲取資產失敗,請重新整理重試"
@@ -1280,7 +1282,19 @@
     "LoadFailed": "使用者資料載入失敗",
     "Retry": "重試",
     "NoUser": "尚未登入",
-    "NoUserDescription": "登入 JumpServer 站點後即可檢視使用者詳情。"
+    "NoUserDescription": "登入 JumpServer 站點後即可檢視使用者詳情。",
+    "ClientLoginInfo": "用戶端有效期資訊",
+    "ClientLoginInfoDescription": "目前帳號的管理員原則和伺服器最近確認的登入狀態。有效活動可順延閒置到期時間，但無法延長登入有效期上限。",
+    "ClientLoginReauthOnExit": "退出後重新登入",
+    "ClientLoginMaxLifetime": "最長登入有效期",
+    "ClientLoginStartedAt": "本次登入時間",
+    "ClientLoginIdleTimeout": "閒置逾時",
+    "ClientLoginIdleExpiry": "若無新活動",
+    "ClientLoginEffectiveExpiry": "本次到期時間",
+    "ClientLoginUnknown": "尚未取得",
+    "ClientLoginUnlimited": "不限",
+    "ClientLoginCurrentUser": "目前使用者",
+    "ClientLoginExpiryHint": "到期時間依據伺服器最近確認的狀態，依本機時區顯示。"
   },
   "Setting": {
     "BackToApp": "返回應用",

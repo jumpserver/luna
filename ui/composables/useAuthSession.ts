@@ -5,6 +5,7 @@ import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { confirmLeaveCurrentSiteSessions, hasActiveWorkspaceSessions } from "~/composables/useSiteAccountSwitch";
 import type {
   ConnectionInfo,
+  ClientLoginSession,
   ConnectionPreferenceInfo,
   CurrentOrg,
   PermissionOrgs,
@@ -30,7 +31,7 @@ import {
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
 import { pageLocation } from "~/utils/runtime";
-import { clientLoginReasonMessageKey } from "~/utils/clientLoginPolicy";
+import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 
 interface BootstrapResponse {
   data: string;
@@ -102,7 +103,7 @@ const parseApiData = <T>(value: { data?: string } | undefined, fallback: T): T =
 export const useAuthSession = () => {
   // vue-i18n's useI18n() requires setup(); this composable also runs from route middleware.
   const nuxtApp = useNuxtApp();
-  const t = (key: string) => String(nuxtApp.$i18n.t(key));
+  const t = (key: string, params: Record<string, string> = {}) => String(nuxtApp.$i18n.t(key, params));
   const toast = useToast();
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
@@ -167,6 +168,7 @@ export const useAuthSession = () => {
       name: profileData.name,
       bearerToken: bearer,
       clientLoginPolicy: payload.client_login_policy,
+      clientLoginSession: payload.client_login_session,
       site: resolvedSite,
       org: currentOrg || {
         id: "",
@@ -454,8 +456,7 @@ export const useAuthSession = () => {
 
         if (failure === "auth") {
           lastBootstrapFailure = null;
-          if (payload?.client_login_reason) userInfoStore.markSessionExpired(accountId, payload.client_login_reason);
-          else userInfoStore.markSessionExpired(accountId);
+          userInfoStore.markSessionExpired(accountId, payload?.client_login_reason, payload?.client_login_session);
           if (restored && expiredSessionNotice.value !== accountId) await promptDesktopLogin();
           return false;
         }
@@ -512,11 +513,10 @@ export const useAuthSession = () => {
     return bootstrapPromise;
   }
 
-  const handleDesktopAuthExpired = async (sessionId: string, reason?: string) => {
+  const handleDesktopAuthExpired = async (sessionId: string, reason?: string, session?: ClientLoginSession) => {
     if (!sessionId) return false;
     const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
-    if (reason) userInfoStore.markSessionExpired(sessionId, reason);
-    else userInfoStore.markSessionExpired(sessionId);
+    if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
     if (sessionId !== currentAccountId.value) return false;
 
     if (!alreadyExpired) expiredSessionNotice.value = sessionId;
@@ -525,11 +525,17 @@ export const useAuthSession = () => {
     return true;
   };
 
-  const expiredSessionDescription = computed(() =>
-    expiredSessionNotice.value
-      ? t(clientLoginReasonMessageKey(userMap.value[expiredSessionNotice.value]?.sessionExpiredReason))
-      : ""
-  );
+  const expiredSessionDescription = computed(() => {
+    const account = expiredSessionNotice.value ? userMap.value[expiredSessionNotice.value] : undefined;
+    if (!account) return "";
+    const message = clientLoginExpiryMessage(
+      account.sessionExpiredReason,
+      account.clientLoginPolicy,
+      account.clientLoginSession,
+      String(unref(nuxtApp.$i18n.locale) || "en")
+    );
+    return t(message.key, message.params);
+  });
   const dismissExpiredSessionNotice = async (login = false) => {
     const accountId = expiredSessionNotice.value;
     expiredSessionNotice.value = null;

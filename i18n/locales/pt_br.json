@@ -1171,7 +1171,9 @@
     "InvalidCertificateMac": "Falha no login: certificado inválido ou bloqueado pela segurança do sistema (WebView do macOS). Instale um certificado válido ou abra no navegador do sistema.",
     "InvalidCertificateGeneric": "Falha no login: problema no certificado ou na conexão segura.",
     "NetworkError": "Rede indisponível. Verifique a conectividade.",
-    "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde."
+    "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde.",
+    "ExpiredLifetimeDetail": "Este login expirou em {expiresAt}, há {elapsed}. Entre novamente.",
+    "ExpiredIdleDetail": "Seu login expirou após {duration} de inatividade (limite: {limit}). Entre novamente."
   },
   "Asset": {
     "GetAssetFailed": "Falha ao obter o ativo. Atualize e tente novamente"
@@ -1280,7 +1282,19 @@
     "LoadFailed": "Falha ao carregar o perfil do usuário",
     "Retry": "Tentar novamente",
     "NoUser": "Sessão não iniciada",
-    "NoUserDescription": "Entre em um site do JumpServer para ver os detalhes do usuário."
+    "NoUserDescription": "Entre em um site do JumpServer para ver os detalhes do usuário.",
+    "ClientLoginInfo": "Validade do login do cliente",
+    "ClientLoginInfoDescription": "Política do administrador e último estado de login confirmado pelo servidor para esta conta. A atividade aceita adia o prazo de inatividade, mas nunca a duração máxima do login.",
+    "ClientLoginReauthOnExit": "Entrar novamente após sair",
+    "ClientLoginMaxLifetime": "Duração máxima do login",
+    "ClientLoginStartedAt": "Início deste login",
+    "ClientLoginIdleTimeout": "Tempo limite de inatividade",
+    "ClientLoginIdleExpiry": "Se não houver nova atividade",
+    "ClientLoginEffectiveExpiry": "Expiração prevista",
+    "ClientLoginUnknown": "Ainda não disponível",
+    "ClientLoginUnlimited": "Sem limite",
+    "ClientLoginCurrentUser": "Usuário atual",
+    "ClientLoginExpiryHint": "A expiração reflete o último estado confirmado pelo servidor e usa o fuso horário deste dispositivo."
   },
   "Setting": {
     "BackToApp": "Voltar ao aplicativo",

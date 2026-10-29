@@ -1171,7 +1171,9 @@
     "InvalidCertificateMac": "Đăng nhập thất bại: chứng chỉ không hợp lệ hoặc bị bảo mật hệ thống chặn (WebView macOS). Hãy cài chứng chỉ hợp lệ hoặc mở trong trình duyệt hệ thống.",
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
-    "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau."
+    "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
+    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}, cách đây {elapsed}. Vui lòng đăng nhập lại.",
+    "ExpiredIdleDetail": "Đăng nhập đã hết hạn sau {duration} không hoạt động (giới hạn: {limit}). Vui lòng đăng nhập lại."
   },
   "Asset": {
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
@@ -1280,7 +1282,19 @@
     "LoadFailed": "Không thể tải hồ sơ người dùng",
     "Retry": "Thử lại",
     "NoUser": "Chưa đăng nhập",
-    "NoUserDescription": "Đăng nhập vào một trang JumpServer để xem chi tiết người dùng."
+    "NoUserDescription": "Đăng nhập vào một trang JumpServer để xem chi tiết người dùng.",
+    "ClientLoginInfo": "Thời hạn đăng nhập của ứng dụng",
+    "ClientLoginInfoDescription": "Chính sách của quản trị viên và trạng thái đăng nhập gần nhất được máy chủ xác nhận cho tài khoản này. Hoạt động được chấp nhận sẽ gia hạn thời điểm hết hạn do không hoạt động, nhưng không kéo dài thời hạn đăng nhập tối đa.",
+    "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát",
+    "ClientLoginMaxLifetime": "Thời hạn đăng nhập tối đa",
+    "ClientLoginStartedAt": "Bắt đầu lần đăng nhập này",
+    "ClientLoginIdleTimeout": "Thời gian chờ khi không hoạt động",
+    "ClientLoginIdleExpiry": "Nếu không có hoạt động mới",
+    "ClientLoginEffectiveExpiry": "Thời điểm hết hạn dự kiến",
+    "ClientLoginUnknown": "Chưa có thông tin",
+    "ClientLoginUnlimited": "Không giới hạn",
+    "ClientLoginCurrentUser": "Người dùng hiện tại",
+    "ClientLoginExpiryHint": "Thời điểm hết hạn dựa trên trạng thái gần nhất được máy chủ xác nhận và hiển thị theo múi giờ của thiết bị này."
   },
   "Setting": {
     "BackToApp": "Quay lại ứng dụng",

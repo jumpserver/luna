@@ -1171,7 +1171,9 @@
     "InvalidCertificateMac": "로그인 실패: 인증서가 유효하지 않거나 시스템 보안에 의해 차단되었습니다(macOS WebView). 유효한 인증서를 설치하거나 시스템 브라우저에서 여세요.",
     "InvalidCertificateGeneric": "로그인 실패: 인증서 또는 보안 연결에 문제가 있습니다.",
     "NetworkError": "네트워크를 사용할 수 없습니다. 연결 상태를 확인하세요.",
-    "ServerError": "서버를 일시적으로 사용할 수 없습니다. 나중에 다시 시도하세요."
+    "ServerError": "서버를 일시적으로 사용할 수 없습니다. 나중에 다시 시도하세요.",
+    "ExpiredLifetimeDetail": "이번 로그인은 {expiresAt}에 만료되었으며 {elapsed}이 지났습니다. 다시 로그인해 주세요.",
+    "ExpiredIdleDetail": "유휴 시간이 {duration}(제한: {limit})에 도달하여 로그인이 만료되었습니다. 다시 로그인해 주세요."
   },
   "Asset": {
     "GetAssetFailed": "자산을 가져오지 못했습니다. 새로 고침 후 다시 시도하세요"
@@ -1280,7 +1282,19 @@
     "LoadFailed": "사용자 프로필을 불러오지 못했습니다",
     "Retry": "다시 시도",
     "NoUser": "로그인하지 않음",
-    "NoUserDescription": "사용자 상세 정보를 보려면 JumpServer 사이트에 로그인하세요."
+    "NoUserDescription": "사용자 상세 정보를 보려면 JumpServer 사이트에 로그인하세요.",
+    "ClientLoginInfo": "클라이언트 로그인 유효기간",
+    "ClientLoginInfoDescription": "현재 계정의 관리자 정책과 서버가 마지막으로 확인한 로그인 상태입니다. 서버가 수락한 활동은 유휴 만료 시간을 연장하지만 최대 로그인 유효기간은 연장하지 않습니다.",
+    "ClientLoginReauthOnExit": "종료 후 다시 로그인",
+    "ClientLoginMaxLifetime": "최대 로그인 유효기간",
+    "ClientLoginStartedAt": "이번 로그인 시작 시간",
+    "ClientLoginIdleTimeout": "유휴 시간 초과",
+    "ClientLoginIdleExpiry": "새 활동이 없을 경우",
+    "ClientLoginEffectiveExpiry": "예상 만료 시간",
+    "ClientLoginUnknown": "아직 확인되지 않음",
+    "ClientLoginUnlimited": "제한 없음",
+    "ClientLoginCurrentUser": "현재 사용자",
+    "ClientLoginExpiryHint": "만료 시간은 서버가 마지막으로 확인한 상태를 기준으로 이 기기의 시간대로 표시됩니다."
   },
   "Setting": {
     "BackToApp": "앱으로 돌아가기",

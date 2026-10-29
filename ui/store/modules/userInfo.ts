@@ -2,6 +2,7 @@ import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import type {
   ClientLoginPolicy,
   ClientLoginReason,
+  ClientLoginSession,
   ConnectionInfo,
   ConnectionPreferenceInfo,
   CurrentOrg,
@@ -153,7 +154,25 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = l;
     };
 
-    const markSessionExpired = (accountId: string, reason?: string) => {
+    const setClientLoginSession = (accountId: string, session: ClientLoginSession) => {
+      const user = userMap.value[accountId];
+      if (!user) return false;
+      const previous = user.clientLoginSession;
+      if (
+        previous &&
+        (Date.parse(previous.authenticated_at) > Date.parse(session.authenticated_at) ||
+          (Date.parse(previous.authenticated_at) === Date.parse(session.authenticated_at) &&
+            Date.parse(previous.server_time) > Date.parse(session.server_time)))
+      )
+        return false;
+      // A site can contain multiple accounts; activity and deadlines belong to one login only.
+      user.clientLoginSession = session;
+      if (accountId === currentAccountId.value && currentUser.value) currentUser.value.clientLoginSession = session;
+      return true;
+    };
+
+    const markSessionExpired = (accountId: string, reason?: string, session?: ClientLoginSession) => {
+      if (session && !setClientLoginSession(accountId, session)) return false;
       const user = userMap.value[accountId];
       const incomingReason = normalizeClientLoginReason(reason);
       const expiredReason =
@@ -171,6 +190,7 @@ export const useUserInfoStore = defineStore(
           currentUser.value.bearerToken = "";
         }
       }
+      return true;
     };
 
     const setClientLoginPolicy = (accountId: string, policy: ClientLoginPolicy) => {
@@ -353,7 +373,7 @@ export const useUserInfoStore = defineStore(
           });
         }
         if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
-          markSessionExpired(accountId, result?.client_login_reason);
+          markSessionExpired(accountId, result?.client_login_reason, result?.client_login_session);
           options.onAuthRequired?.();
           return false;
         }
@@ -373,7 +393,8 @@ export const useUserInfoStore = defineStore(
           bearerToken: result.bearer,
           sessionExpired: false,
           sessionExpiredReason: undefined,
-          clientLoginPolicy: result.client_login_policy
+          clientLoginPolicy: result.client_login_policy,
+          clientLoginSession: result.client_login_session
         };
       }
       enforceOrganizationLicense(nextUser);
@@ -649,6 +670,7 @@ export const useUserInfoStore = defineStore(
       setUserLoggedIn,
       markSessionExpired,
       setClientLoginPolicy,
+      setClientLoginSession,
       setCommandExecutionEnabled,
       setOrganizations,
       setRdpClientOption,

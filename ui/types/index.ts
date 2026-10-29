@@ -183,6 +183,14 @@ export interface ClientLoginPolicy {
   max_session_time: number;
 }
 
+export interface ClientLoginSession {
+  authenticated_at: string;
+  expires_at: string | null;
+  last_activity_at: string;
+  idle_expires_at: string | null;
+  server_time: string;
+}
+
 export type ClientLoginReason =
   | "policy_changed"
   | "absolute_timeout"
@@ -201,6 +209,7 @@ export interface UserData {
   language?: string;
   bearerToken: string;
   clientLoginPolicy?: ClientLoginPolicy;
+  clientLoginSession?: ClientLoginSession;
   system_roles: RoleType[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
@@ -216,6 +225,7 @@ export interface UserIntiInfo {
   xpack_license_valid?: boolean;
   security_command_execution?: boolean;
   client_login_policy?: ClientLoginPolicy;
+  client_login_session?: ClientLoginSession;
   resolved_site?: string;
   profile: {
     data: string;

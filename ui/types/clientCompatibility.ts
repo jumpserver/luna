@@ -1,4 +1,4 @@
-import type { ClientLoginPolicy, ClientLoginReason } from "./index";
+import type { ClientLoginPolicy, ClientLoginReason, ClientLoginSession } from "./index";
 
 export type CompatibilityFailure = "client-too-old" | "core-too-old";
 export type CompatibilityUnknownReason =
@@ -28,5 +28,6 @@ export interface DesktopConnectionResult {
   compatibility_confirmation_id?: number;
   connection_id?: number;
   client_login_policy?: ClientLoginPolicy;
+  client_login_session?: ClientLoginSession;
   client_login_reason?: ClientLoginReason;
 }

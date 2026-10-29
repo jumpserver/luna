@@ -111,12 +111,12 @@ describe("desktop session expiry", () => {
     const auth = useAuthSession();
 
     await expect(auth.handleDesktopAuthExpired("account-2", "idle_timeout")).resolves.toBe(false);
-    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-2", "idle_timeout");
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-2", "idle_timeout", undefined);
     expect(mocks.store.setUserLoggedIn).not.toHaveBeenCalled();
     expect(auth.expiredSessionNotice.value).toBeNull();
 
     await expect(auth.handleDesktopAuthExpired("account-1", "policy_changed")).resolves.toBe(true);
-    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-1", "policy_changed");
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-1", "policy_changed", undefined);
     expect(mocks.store.loggedIn).toBe(false);
     expect(auth.expiredSessionNotice.value).toBe("account-1");
     expect(auth.expiredSessionDescription.value).toBe("Login.ExpiredPolicyChanged");

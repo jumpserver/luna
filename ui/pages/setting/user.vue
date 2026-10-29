@@ -3,10 +3,13 @@ import type { LabeledValue, UserData, UserProfile } from "~/types";
 import { getUserProfile } from "~/composables/useApiRequest";
 import { useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { formatClientLoginDuration, formatClientLoginTimestamp } from "~/utils/clientLoginPolicy";
 
 interface DetailRow {
   label: string;
   value: string;
+  highlighted?: boolean;
+  hint?: string;
 }
 
 const { t, locale } = useI18n();
@@ -15,6 +18,7 @@ const { switchAccount: switchSiteAccount } = useSiteAccountSwitch();
 const { loggedIn, currentAccountId, currentUser, userMap } = storeToRefs(userInfoStore);
 
 const profile = ref<UserProfile | null>(null);
+const profileAccountId = ref("");
 const loading = ref(false);
 const switchingAccount = ref(false);
 const loadError = ref("");
@@ -95,6 +99,59 @@ const loginRows = computed<DetailRow[]>(() => [
   { label: t("UserProfile.ExpiresAt"), value: formatDate(profile.value?.date_expired) }
 ]);
 
+const clientLoginRows = computed<DetailRow[]>(() => {
+  const policy = currentUser.value?.clientLoginPolicy;
+  const session = currentUser.value?.clientLoginSession;
+  const unknown = t("UserProfile.ClientLoginUnknown");
+  const timestamp = (value?: string | null) => formatClientLoginTimestamp(value, locale.value) || unknown;
+  const duration = (minutes?: number) => {
+    if (minutes === undefined || !Number.isFinite(minutes) || minutes < 0) return unknown;
+    return minutes === 0
+      ? t("UserProfile.ClientLoginUnlimited")
+      : formatClientLoginDuration(minutes * 60, locale.value);
+  };
+  const absoluteDeadline = session?.expires_at ? Date.parse(session.expires_at) : NaN;
+  const idleDeadline = session?.idle_expires_at ? Date.parse(session.idle_expires_at) : NaN;
+  const hasAbsoluteDeadline = Boolean(policy && policy.max_session_time > 0 && Number.isFinite(absoluteDeadline));
+  const hasIdleDeadline = Boolean(policy && policy.max_idle_time > 0 && Number.isFinite(idleDeadline));
+  const idleExpiresFirst = hasIdleDeadline && (!hasAbsoluteDeadline || idleDeadline < absoluteDeadline);
+  let effectiveExpiry = unknown;
+  if (session && policy) {
+    if (policy.max_session_time === 0 && policy.max_idle_time === 0) {
+      effectiveExpiry = t("UserProfile.ClientLoginUnlimited");
+    } else if (
+      (policy.max_session_time === 0 || hasAbsoluteDeadline) &&
+      (policy.max_idle_time === 0 || hasIdleDeadline)
+    ) {
+      effectiveExpiry = timestamp(idleExpiresFirst ? session.idle_expires_at : session.expires_at);
+    }
+  }
+  return [
+    { label: t("UserProfile.ClientLoginStartedAt"), value: timestamp(session?.authenticated_at), highlighted: true },
+    {
+      label: t("UserProfile.ClientLoginEffectiveExpiry"),
+      hint: idleExpiresFirst ? t("UserProfile.ClientLoginIdleExpiry") : undefined,
+      value: effectiveExpiry,
+      highlighted: true
+    },
+    {
+      label: t("UserProfile.ClientLoginReauthOnExit"),
+      value: policy ? t(policy.reauth_on_exit ? "UserProfile.Enabled" : "UserProfile.Disabled") : unknown
+    },
+    { label: t("UserProfile.ClientLoginMaxLifetime"), value: duration(policy?.max_session_time) },
+    {
+      label: t("UserProfile.ClientLoginIdleTimeout"),
+      value: policy?.max_idle_time === 0 ? t("UserProfile.Disabled") : duration(policy?.max_idle_time)
+    }
+  ];
+});
+
+const clientLoginAccount = computed(() => {
+  const username = profileAccountId.value === currentAccountId.value ? profile.value?.username : "";
+  const name = currentUser.value?.name || "—";
+  return username && username !== name ? `${name} (${username})` : name;
+});
+
 const systemRoles = computed(() => (profile.value?.system_roles || []).map(roleLabel));
 const organizationRoles = computed(() => (profile.value?.org_roles || []).map(roleLabel));
 
@@ -118,6 +175,7 @@ async function loadProfile() {
   }
 
   const sequence = ++requestSequence;
+  const accountId = currentAccountId.value;
   loading.value = true;
   loadError.value = "";
 
@@ -125,6 +183,7 @@ async function loadProfile() {
     const value = await getUserProfile();
     if (sequence !== requestSequence) return;
     profile.value = value;
+    profileAccountId.value = accountId;
     avatarFailed.value = false;
   } catch (error) {
     if (sequence !== requestSequence) return;
@@ -214,6 +273,40 @@ watch(
             />
           </div>
         </SettingsGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        v-if="isDesktopRuntime()"
+        :title="t('UserProfile.ClientLoginInfo')"
+        :description="t('UserProfile.ClientLoginInfoDescription')"
+      >
+        <SettingsGroup>
+          <div class="space-y-1 px-4 py-3 text-sm">
+            <p class="break-all text-highlighted">
+              <span class="text-muted">{{ t("UserProfile.CurrentSite") }} ·</span>
+              {{ currentUser?.siteName || currentUser?.site }}
+              <span v-if="currentUser?.siteName" class="text-muted">({{ currentUser?.site }})</span>
+            </p>
+            <p class="break-words text-highlighted">
+              <span class="text-muted">{{ t("UserProfile.ClientLoginCurrentUser") }} ·</span>
+              {{ clientLoginAccount }}
+            </p>
+          </div>
+          <div
+            v-for="row in clientLoginRows"
+            :key="row.label"
+            class="flex flex-wrap items-start justify-between gap-x-8 gap-y-1 px-4 py-3 text-sm"
+          >
+            <div>
+              <span :class="row.highlighted ? 'font-medium text-highlighted' : 'text-muted'">{{ row.label }}</span>
+              <p v-if="row.hint" class="mt-1 text-xs text-muted">{{ row.hint }}</p>
+            </div>
+            <span class="min-w-0 break-words text-right text-highlighted" :class="{ 'font-medium': row.highlighted }">
+              {{ row.value }}
+            </span>
+          </div>
+        </SettingsGroup>
+        <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
       </SettingsSection>
 
       <div v-if="loading" class="space-y-6">

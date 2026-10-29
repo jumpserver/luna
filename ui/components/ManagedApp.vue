@@ -83,6 +83,7 @@ const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
 const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
 const unlistenAuthSessionExpired = ref<DesktopUnlistenFn | null>(null);
 const unlistenClientLoginPolicy = ref<DesktopUnlistenFn | null>(null);
+const unlistenClientLoginSession = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 const {
   confirmOpen: siteLeaveConfirmOpen,
@@ -366,12 +367,20 @@ onMounted(async () => {
         // Rewrite old localStorage copies before a process-only login is restored or published.
         userInfoStore.$persist();
       });
-      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string; reason?: string }>(
-        "auth-session-expired",
-        ({ payload }) => {
-          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""), payload?.reason);
-        }
-      );
+      unlistenClientLoginSession.value = await desktopListen<{
+        sessionId: string;
+        session: import("~/types/index").ClientLoginSession;
+      }>("client-login-session", ({ payload }) => {
+        if (payload?.sessionId && payload.session)
+          userInfoStore.setClientLoginSession(payload.sessionId, payload.session);
+      });
+      unlistenAuthSessionExpired.value = await desktopListen<{
+        sessionId?: string;
+        reason?: string;
+        session?: import("~/types/index").ClientLoginSession;
+      }>("auth-session-expired", ({ payload }) => {
+        void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""), payload?.reason, payload?.session);
+      });
     } catch (err) {
       console.error("listen auth-session-expired failed", err);
     }
@@ -460,6 +469,7 @@ onBeforeUnmount(() => {
   unlistenWebProtocolUrl.value?.();
   unlistenAuthSessionExpired.value?.();
   unlistenClientLoginPolicy.value?.();
+  unlistenClientLoginSession.value?.();
 });
 </script>
 
