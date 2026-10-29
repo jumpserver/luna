@@ -2321,6 +2321,14 @@
     "factStartupCost": "Startup cost"
   },
   "Chen": {
+    "GoSnippetNoCore": "SQL snippets require a Core login; local queries, files and history remain available.",
+    "GoSnippetCoreChanged": "The Core account or organization has changed. Reopen this database session to use snippets.",
+    "GoSnippetUnsupported": "Core SQL snippets do not support {dialect}.",
+    "GoSnippetPublic": "Saved SQL is public in Core and visible to users with snippet access. Existing private snippets remain private.",
+    "GoSnippetCopyDenied": "Saving SQL to Core requires copy permission.",
+    "GoSnippetPasteDenied": "Inserting requires paste permission and an editable query.",
+    "GoSnippetRequired": "Enter a name and non-empty SQL.",
+    "GoSnippetLimit": "Use a name of at most 128 characters and SQL of at most 65,536 characters.",
     "TerminatedByAdmin": "Terminated by admin {name}",
     "DatabaseExplorer": "Database Explorer",
     "RecentlyTables": "Recently tables",

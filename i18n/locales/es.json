@@ -2138,6 +2138,14 @@
     "factStartupCost": "Coste inicial"
   },
   "Chen": {
+    "GoSnippetNoCore": "Los fragmentos SQL requieren iniciar sesión en Core; las consultas locales, los archivos y el historial siguen disponibles.",
+    "GoSnippetCoreChanged": "La cuenta u organización de Core ha cambiado. Vuelva a abrir esta sesión de base de datos para usar fragmentos.",
+    "GoSnippetUnsupported": "Los fragmentos SQL de Core no admiten {dialect}.",
+    "GoSnippetPublic": "El SQL guardado es público en Core y visible para los usuarios con acceso a fragmentos. Los fragmentos privados existentes siguen siendo privados.",
+    "GoSnippetCopyDenied": "Guardar SQL en Core requiere permiso de copia.",
+    "GoSnippetPasteDenied": "La inserción requiere permiso para pegar y una consulta editable.",
+    "GoSnippetRequired": "Introduzca un nombre y SQL no vacío.",
+    "GoSnippetLimit": "El nombre admite hasta 128 caracteres y el SQL hasta 65.536 caracteres.",
     "TerminatedByAdmin": "Terminado por el administrador {name}",
     "DatabaseExplorer": "Explorador de base de datos",
     "RecentlyTables": "Tablas recientes",

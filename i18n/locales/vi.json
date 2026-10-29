@@ -2138,6 +2138,14 @@
     "factStartupCost": "Chi phí khởi động"
   },
   "Chen": {
+    "GoSnippetNoCore": "Đoạn SQL yêu cầu đăng nhập Core; truy vấn cục bộ, tệp và lịch sử vẫn dùng được.",
+    "GoSnippetCoreChanged": "Tài khoản hoặc tổ chức Core đã thay đổi. Hãy mở lại phiên cơ sở dữ liệu để dùng đoạn SQL.",
+    "GoSnippetUnsupported": "Đoạn SQL của Core không hỗ trợ {dialect}.",
+    "GoSnippetPublic": "SQL đã lưu có phạm vi công khai trong Core và người có quyền truy cập đoạn SQL có thể xem. Các đoạn riêng tư hiện có vẫn giữ nguyên phạm vi riêng tư.",
+    "GoSnippetCopyDenied": "Lưu SQL vào Core yêu cầu quyền sao chép.",
+    "GoSnippetPasteDenied": "Chèn yêu cầu quyền dán và truy vấn có thể chỉnh sửa.",
+    "GoSnippetRequired": "Nhập tên và SQL không rỗng.",
+    "GoSnippetLimit": "Tên tối đa 128 ký tự và SQL tối đa 65.536 ký tự.",
     "TerminatedByAdmin": "Quản trị viên {name} đã ngắt kết nối.",
     "DatabaseExplorer": "Trình duyệt cơ sở dữ liệu",
     "RecentlyTables": "Bảng gần đây",

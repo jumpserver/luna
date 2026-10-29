@@ -2138,6 +2138,14 @@
     "factStartupCost": "시작 비용"
   },
   "Chen": {
+    "GoSnippetNoCore": "SQL 스니펫을 사용하려면 Core 로그인이 필요합니다. 로컬 쿼리, 파일 및 기록은 계속 사용할 수 있습니다.",
+    "GoSnippetCoreChanged": "Core 계정 또는 조직이 변경되었습니다. 스니펫을 사용하려면 데이터베이스 세션을 다시 여세요.",
+    "GoSnippetUnsupported": "Core SQL 스니펫은 {dialect}을(를) 지원하지 않습니다.",
+    "GoSnippetPublic": "저장한 SQL은 Core에서 공개되며 스니펫 접근 권한이 있는 사용자가 볼 수 있습니다. 기존 비공개 스니펫은 비공개로 유지됩니다.",
+    "GoSnippetCopyDenied": "SQL을 Core에 저장하려면 복사 권한이 필요합니다.",
+    "GoSnippetPasteDenied": "삽입하려면 붙여넣기 권한과 편집 가능한 쿼리가 필요합니다.",
+    "GoSnippetRequired": "이름과 비어 있지 않은 SQL을 입력하세요.",
+    "GoSnippetLimit": "이름은 최대 128자, SQL은 최대 65,536자까지 입력할 수 있습니다.",
     "TerminatedByAdmin": "{name} 관리자 연결이 끊겼습니다",
     "DatabaseExplorer": "데이터베이스 탐색기",
     "RecentlyTables": "최근 사용한 테이블",

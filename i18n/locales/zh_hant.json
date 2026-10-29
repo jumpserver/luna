@@ -2138,6 +2138,14 @@
     "factStartupCost": "啟動成本"
   },
   "Chen": {
+    "GoSnippetNoCore": "SQL 片段需要 Core 登入；本機查詢、檔案和歷史仍可使用。",
+    "GoSnippetCoreChanged": "Core 帳號或組織已切換，請重新開啟資料庫工作階段後使用片段。",
+    "GoSnippetUnsupported": "Core SQL 片段不支援 {dialect}。",
+    "GoSnippetPublic": "儲存的 SQL 在 Core 中為公開範圍，具有片段存取權限的使用者可見。既有私人片段仍保持私人。",
+    "GoSnippetCopyDenied": "將 SQL 儲存至 Core 需要複製權限。",
+    "GoSnippetPasteDenied": "插入需要貼上權限及可編輯的查詢草稿。",
+    "GoSnippetRequired": "請輸入名稱和非空 SQL。",
+    "GoSnippetLimit": "名稱最多 128 個字元，SQL 最多 65,536 個字元。",
     "TerminatedByAdmin": "{name} 管理員中斷連接。",
     "DatabaseExplorer": "資料庫資源管理",
     "RecentlyTables": "最近使用的資料表",

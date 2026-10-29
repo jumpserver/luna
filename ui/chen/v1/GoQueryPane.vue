@@ -3,11 +3,16 @@ import type { ChenGoApi, GoEditPlan, GoExecution, GoExportFormat, GoSession } fr
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
+import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
-import { computed, ref, useId, useTemplateRef, watch } from "vue";
+import { computed, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
+import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
+import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
 import GoExportPanel from "./GoExportPanel.vue";
@@ -58,12 +63,143 @@ const editor = ref<{
   explain: () => void;
   format: () => void;
   insertText: (text: string) => void;
+  appendText: (text: string) => boolean;
   snapshot: () => GoSqlEditorSnapshot;
   replaceDocument: (sql: string) => boolean;
 } | null>(null);
+const maximized = ref<"editor" | "results" | null>(null);
+const coreUser = useUserInfoStore();
+const toast = useToast();
+const coreIdentity = () =>
+  JSON.stringify([coreUser.currentAccountId, coreUser.currentSite, coreUser.currentUser?.userId, coreUser.orgId]);
+// Bind this query to its original Core account/organization; Chen credentials are never used here.
+const originalCoreIdentity = coreIdentity();
+const snippetUnavailable = computed(() => {
+  if (!coreUser.loggedIn) return t("Chen.GoSnippetNoCore");
+  if (
+    coreIdentity() !== originalCoreIdentity ||
+    (props.reviewCoreSite && props.reviewCoreSite !== coreUser.currentSite)
+  )
+    return t("Chen.GoSnippetCoreChanged");
+  // Core AdHocModules has no aliases for other Chen dialects.
+  if (!["mysql", "mariadb", "postgresql", "sqlserver", "oracle"].includes(props.session.dialect))
+    return t("Chen.GoSnippetUnsupported", { dialect: props.session.dialect });
+  return "";
+});
+const snippetsAvailable = computed(() => !snippetUnavailable.value && props.visible && props.session.state === "ready");
+const canSaveSnippet = computed(() => snippetsAvailable.value && props.session.permissions.can_copy);
+const canInsertSnippet = computed(
+  () => snippetsAvailable.value && props.session.permissions.can_paste && props.query.kind !== "preview"
+);
+const sqlSnippets = useChenSqlSnippets(() => props.session.dialect);
+const saveSnippetOpen = ref(false);
+const selectSnippetOpen = ref(false);
+const snippetError = ref("");
+let snippetGeneration = 0;
+function resetSnippets() {
+  snippetGeneration += 1;
+  saveSnippetOpen.value = false;
+  selectSnippetOpen.value = false;
+  snippetError.value = "";
+  sqlSnippets.reset();
+}
+watch(
+  () => [
+    props.query.id,
+    props.query.kind,
+    props.session.id,
+    props.session.dialect,
+    props.session.state,
+    props.visible,
+    coreIdentity(),
+    coreUser.loggedIn,
+    props.session.permissions.can_copy,
+    props.session.permissions.can_paste
+  ],
+  resetSnippets,
+  { flush: "sync" }
+);
+onBeforeUnmount(resetSnippets);
+
+async function loadSnippetPage(page: number) {
+  if (!snippetsAvailable.value || sqlSnippets.deletingId.value) return;
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    await sqlSnippets.load(page);
+  } catch (cause) {
+    if (generation === snippetGeneration) snippetError.value = `${t("Chen.LoadSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
+function openSnippets() {
+  if (!snippetsAvailable.value) return;
+  selectSnippetOpen.value = true;
+  void loadSnippetPage(1);
+}
+function openSaveSnippet() {
+  if (!canSaveSnippet.value || sqlSnippets.saving.value) return;
+  snippetError.value = "";
+  saveSnippetOpen.value = true;
+}
+async function saveSnippet(name: string) {
+  if (!saveSnippetOpen.value || !canSaveSnippet.value || sqlSnippets.saving.value) return;
+  const sql = editor.value?.snapshot().documentSql ?? props.query.sql;
+  if (!name.trim() || !sql.trim()) {
+    snippetError.value = t("Chen.GoSnippetRequired");
+    return;
+  }
+  if ([...name.trim()].length > 128 || [...sql].length > 65536) {
+    snippetError.value = t("Chen.GoSnippetLimit");
+    return;
+  }
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    await sqlSnippets.save(name.trim(), sql);
+    if (generation !== snippetGeneration) return;
+    saveSnippetOpen.value = false;
+    toast.add({ title: t("Chen.SaveSucceeded"), color: "success" });
+  } catch (cause) {
+    if (generation === snippetGeneration) snippetError.value = `${t("Chen.SaveSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
+function insertSnippet(snippet: ChenSqlSnippet) {
+  if (
+    !selectSnippetOpen.value ||
+    !canInsertSnippet.value ||
+    sqlSnippets.loading.value ||
+    sqlSnippets.deletingId.value ||
+    !sqlSnippets.snippets.value.includes(snippet) ||
+    snippet.module !== props.session.dialect
+  )
+    return;
+  if (editor.value?.appendText(snippet.args)) {
+    maximized.value = null;
+    selectSnippetOpen.value = false;
+  }
+}
+async function deleteSnippet(snippet: ChenSqlSnippet) {
+  if (
+    !selectSnippetOpen.value ||
+    !snippetsAvailable.value ||
+    sqlSnippets.loading.value ||
+    sqlSnippets.deletingId.value ||
+    !sqlSnippets.snippets.value.includes(snippet)
+  )
+    return;
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    // Core enforces AdHoc RBAC and IsOwnerOrAdminWritable; paste permission does not grant deletion.
+    await sqlSnippets.remove(snippet.id);
+    if (generation === snippetGeneration) toast.add({ title: t("Chen.DeleteSucceeded"), color: "success" });
+  } catch (cause) {
+    if (generation === snippetGeneration)
+      snippetError.value = `${t("Chen.DeleteSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
 const scope = ref("empty");
 const editorError = ref("");
-const maximized = ref<"editor" | "results" | null>(null);
 const historyOpen = ref(false);
 const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
@@ -339,6 +475,37 @@ defineExpose({
         title="Alt Shift F"
         @click="editor?.format()"
       />
+      <UTooltip
+        :text="
+          snippetUnavailable ||
+          (!session.permissions.can_copy ? t('Chen.GoSnippetCopyDenied') : t('Chen.GoSnippetPublic'))
+        "
+      >
+        <span class="inline-flex" tabindex="0">
+          <UButton
+            icon="i-lucide-bookmark-plus"
+            :label="t('Chen.SaveSql')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!canSaveSnippet || sqlSnippets.saving.value"
+            @click="openSaveSnippet"
+          />
+        </span>
+      </UTooltip>
+      <UTooltip :text="snippetUnavailable || t('Chen.SelectSql')">
+        <span class="inline-flex" tabindex="0">
+          <UButton
+            icon="i-lucide-book-open"
+            :label="t('Chen.SelectSql')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!snippetsAvailable"
+            @click="openSnippets"
+          />
+        </span>
+      </UTooltip>
       <input ref="sqlFile" type="file" accept=".sql,text/plain,application/sql" class="hidden" @change="loadSqlFile" />
       <UButton
         v-if="session.permissions.can_upload"
@@ -448,6 +615,30 @@ defineExpose({
         @click="maximize('editor')"
       />
     </div>
+    <SqlSnippetSaveDialog
+      v-if="saveSnippetOpen"
+      v-model:open="saveSnippetOpen"
+      :saving="sqlSnippets.saving.value"
+      :hint="t('Chen.GoSnippetPublic')"
+      :error="snippetError"
+      @confirm="saveSnippet"
+    />
+    <SqlSnippetSelectDialog
+      v-if="selectSnippetOpen"
+      v-model:open="selectSnippetOpen"
+      :snippets="sqlSnippets.snippets.value"
+      :loading="sqlSnippets.loading.value"
+      :deleting-id="sqlSnippets.deletingId.value"
+      :page="sqlSnippets.page.value"
+      :page-size="sqlSnippets.pageSize"
+      :total="sqlSnippets.total.value"
+      :insert-disabled="!canInsertSnippet"
+      :insert-hint="!canInsertSnippet ? t('Chen.GoSnippetPasteDenied') : ''"
+      :error="snippetError"
+      @insert="insertSnippet"
+      @delete="deleteSnippet"
+      @page-change="loadSnippetPage"
+    />
     <div
       v-if="editorError"
       role="alert"

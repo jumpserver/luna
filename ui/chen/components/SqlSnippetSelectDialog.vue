@@ -11,6 +11,9 @@ const props = defineProps<{
   page: number;
   pageSize: number;
   total: number;
+  insertDisabled?: boolean;
+  insertHint?: string;
+  error?: string;
 }>();
 
 const emit = defineEmits<{
@@ -29,6 +32,16 @@ const visible = computed({
   set: (open: boolean) => emit("update:open", open)
 });
 
+watch(
+  () => props.open,
+  (open) => {
+    if (!open) {
+      deleteDialogOpen.value = false;
+      deleteCandidate.value = null;
+    }
+  }
+);
+
 function requestDelete(snippet: ChenSqlSnippet) {
   deleteCandidate.value = snippet;
   deleteDialogOpen.value = true;
@@ -39,7 +52,7 @@ function cancelDelete() {
 }
 
 function confirmDelete() {
-  if (!deleteCandidate.value) return;
+  if (!deleteCandidate.value || props.deletingId || props.loading) return;
   emit("delete", deleteCandidate.value);
   deleteDialogOpen.value = false;
   deleteCandidate.value = null;
@@ -54,6 +67,8 @@ function confirmDelete() {
     :ui="{ content: 'sm:max-w-3xl' }"
   >
     <template #body>
+      <p v-if="error" role="alert" class="mb-3 text-sm text-error">{{ error }}</p>
+      <p v-if="insertHint" class="mb-3 text-sm text-muted">{{ insertHint }}</p>
       <div v-if="loading" class="grid min-h-32 place-items-center text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
@@ -82,7 +97,14 @@ function confirmDelete() {
                 </td>
                 <td class="px-3 py-2">
                   <div class="flex justify-end gap-1">
-                    <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">{{ t("Chen.Insert") }}</UButton>
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      :disabled="insertDisabled || Boolean(deletingId)"
+                      @click="emit('insert', snippet)"
+                    >
+                      {{ t("Chen.Insert") }}
+                    </UButton>
                     <UButton
                       size="xs"
                       color="error"
@@ -103,6 +125,7 @@ function confirmDelete() {
         <div v-if="total > pageSize" class="mt-3 flex items-center justify-between gap-3">
           <span class="text-xs text-muted">{{ t("Chen.SavedSqlCount", { count: total }) }}</span>
           <UPagination
+            :disabled="Boolean(deletingId)"
             :page="page"
             :items-per-page="pageSize"
             :total="total"
