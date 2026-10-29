@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildWatermarkViewer,
+  interpolateWatermark,
   isWatermarkSettingEnabled,
   resolveWatermarkTemplate,
   shouldShowAppWatermark,
@@ -8,25 +9,61 @@ import {
 } from "~/utils/watermark";
 
 describe("resolveWatermarkTemplate", () => {
-  it("prefers console content over session content", () => {
-    const consoleContent = ["console $", "{name}"].join("");
-    const sessionContent = ["session $", "{name}"].join("");
+  const consoleContent = `\${userName}(\${name})`;
+  const sessionContent = `\${name}(\${userName})(\${assetAddress})\n\${assetName}`;
+
+  it("uses console content outside asset sessions", () => {
     expect(
-      resolveWatermarkTemplate({
-        SECURITY_WATERMARK_CONSOLE_CONTENT: consoleContent,
-        SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
-      })
+      resolveWatermarkTemplate(
+        {
+          SECURITY_WATERMARK_CONSOLE_CONTENT: consoleContent,
+          SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
+        },
+        false
+      )
     ).toBe(consoleContent);
   });
 
-  it("falls back to session content when console is blank", () => {
-    const sessionContent = ["session $", "{name}"].join("");
-    expect(
-      resolveWatermarkTemplate({
-        SECURITY_WATERMARK_CONSOLE_CONTENT: "  ",
+  it("renders session asset fields even when console content is configured", () => {
+    const template = resolveWatermarkTemplate(
+      {
+        SECURITY_WATERMARK_CONSOLE_CONTENT: consoleContent,
         SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
+      },
+      true
+    );
+    expect(
+      interpolateWatermark(template, {
+        name: "张三",
+        userName: "zhangsan",
+        assetName: "服务器01",
+        assetAddress: "192.168.1.1"
       })
+    ).toBe("张三(zhangsan)(192.168.1.1)\n服务器01");
+  });
+
+  it("falls back to session content when console is blank", () => {
+    expect(
+      resolveWatermarkTemplate(
+        {
+          SECURITY_WATERMARK_CONSOLE_CONTENT: "  ",
+          SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
+        },
+        false
+      )
     ).toBe(sessionContent);
+  });
+
+  it.each([undefined, "", "  "])("falls back to console content when session content is %j", (sessionContent) => {
+    expect(
+      resolveWatermarkTemplate(
+        {
+          SECURITY_WATERMARK_CONSOLE_CONTENT: consoleContent,
+          SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
+        },
+        true
+      )
+    ).toBe(consoleContent);
   });
 });
 
