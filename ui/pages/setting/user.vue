@@ -270,98 +270,24 @@ watch(
         </template>
       </UAlert>
 
-      <template v-else-if="profile">
-        <SettingsGroup :divided="false">
-          <div class="flex items-center gap-4 px-4 py-3">
-            <UAvatar
-              :src="avatarUrl"
-              :alt="profile.name || profile.username"
-              color="primary"
-              size="xl"
-              class="shrink-0"
-              @error="avatarFailed = true"
-            />
-            <div class="min-w-0">
-              <h2 class="truncate font-sans text-sm font-medium text-highlighted">
-                {{ profile.name || profile.username }}
-              </h2>
-              <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
-            </div>
+      <SettingsGroup v-else-if="profile" :divided="false">
+        <div class="flex items-center gap-4 px-4 py-3">
+          <UAvatar
+            :src="avatarUrl"
+            :alt="profile.name || profile.username"
+            color="primary"
+            size="xl"
+            class="shrink-0"
+            @error="avatarFailed = true"
+          />
+          <div class="min-w-0">
+            <h2 class="truncate font-sans text-sm font-medium text-highlighted">
+              {{ profile.name || profile.username }}
+            </h2>
+            <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
           </div>
-        </SettingsGroup>
-
-        <SettingsSection :title="t('UserProfile.BasicInfo')">
-          <SettingsGroup>
-            <div
-              v-for="row in basicRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
-
-        <SettingsSection :title="t('UserProfile.AccountAndRoles')">
-          <SettingsGroup>
-            <div
-              v-for="row in accountRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
-            </div>
-            <div class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
-              <span class="shrink-0 text-muted">{{ t("UserProfile.SystemRoles") }}</span>
-              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
-                <UBadge v-for="role in systemRoles" :key="role" color="neutral" variant="subtle" size="sm">
-                  {{ role }}
-                </UBadge>
-                <span v-if="systemRoles.length === 0" class="text-highlighted">—</span>
-              </div>
-            </div>
-            <div v-if="organizationRoles.length" class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
-              <span class="shrink-0 text-muted">{{ t("UserProfile.OrganizationRoles") }}</span>
-              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
-                <UBadge v-for="role in organizationRoles" :key="role" color="neutral" variant="subtle" size="sm">
-                  {{ role }}
-                </UBadge>
-              </div>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
-
-        <SettingsSection :title="t('UserProfile.SecurityStatus')">
-          <SettingsGroup>
-            <div class="flex items-center justify-between gap-8 px-4 py-3">
-              <span class="text-sm text-muted">{{ t("UserProfile.AccountStatus") }}</span>
-              <UBadge :color="accountStatus.color" variant="subtle">{{ accountStatus.label }}</UBadge>
-            </div>
-            <div class="flex items-center justify-between gap-8 px-4 py-3">
-              <span class="text-sm text-muted">{{ t("UserProfile.MFA") }}</span>
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-muted">{{ choiceLabel(profile.mfa_level) }}</span>
-                <UBadge :color="mfaStatus.color" variant="subtle">{{ mfaStatus.label }}</UBadge>
-              </div>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
-
-        <SettingsSection :title="t('UserProfile.LoginInfo')">
-          <SettingsGroup>
-            <div
-              v-for="row in loginRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 text-right text-highlighted">{{ row.value }}</span>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
-      </template>
+        </div>
+      </SettingsGroup>
 
       <SettingsSection
         v-if="isDesktopRuntime()"
@@ -435,6 +361,80 @@ watch(
         </SettingsGroup>
         <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
       </SettingsSection>
+
+      <template v-if="!loading && !loadError && profile">
+        <SettingsSection :title="t('UserProfile.BasicInfo')">
+          <SettingsGroup>
+            <div
+              v-for="row in basicRows"
+              :key="row.label"
+              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
+            >
+              <span class="shrink-0 text-muted">{{ row.label }}</span>
+              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
+            </div>
+          </SettingsGroup>
+        </SettingsSection>
+
+        <SettingsSection :title="t('UserProfile.AccountAndRoles')">
+          <SettingsGroup>
+            <div
+              v-for="row in accountRows"
+              :key="row.label"
+              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
+            >
+              <span class="shrink-0 text-muted">{{ row.label }}</span>
+              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
+            </div>
+            <div class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
+              <span class="shrink-0 text-muted">{{ t("UserProfile.SystemRoles") }}</span>
+              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
+                <UBadge v-for="role in systemRoles" :key="role" color="neutral" variant="subtle" size="sm">
+                  {{ role }}
+                </UBadge>
+                <span v-if="systemRoles.length === 0" class="text-highlighted">—</span>
+              </div>
+            </div>
+            <div v-if="organizationRoles.length" class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
+              <span class="shrink-0 text-muted">{{ t("UserProfile.OrganizationRoles") }}</span>
+              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
+                <UBadge v-for="role in organizationRoles" :key="role" color="neutral" variant="subtle" size="sm">
+                  {{ role }}
+                </UBadge>
+              </div>
+            </div>
+          </SettingsGroup>
+        </SettingsSection>
+
+        <SettingsSection :title="t('UserProfile.SecurityStatus')">
+          <SettingsGroup>
+            <div class="flex items-center justify-between gap-8 px-4 py-3">
+              <span class="text-sm text-muted">{{ t("UserProfile.AccountStatus") }}</span>
+              <UBadge :color="accountStatus.color" variant="subtle">{{ accountStatus.label }}</UBadge>
+            </div>
+            <div class="flex items-center justify-between gap-8 px-4 py-3">
+              <span class="text-sm text-muted">{{ t("UserProfile.MFA") }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-muted">{{ choiceLabel(profile.mfa_level) }}</span>
+                <UBadge :color="mfaStatus.color" variant="subtle">{{ mfaStatus.label }}</UBadge>
+              </div>
+            </div>
+          </SettingsGroup>
+        </SettingsSection>
+
+        <SettingsSection :title="t('UserProfile.LoginInfo')">
+          <SettingsGroup>
+            <div
+              v-for="row in loginRows"
+              :key="row.label"
+              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
+            >
+              <span class="shrink-0 text-muted">{{ row.label }}</span>
+              <span class="min-w-0 text-right text-highlighted">{{ row.value }}</span>
+            </div>
+          </SettingsGroup>
+        </SettingsSection>
+      </template>
     </template>
   </div>
 </template>
