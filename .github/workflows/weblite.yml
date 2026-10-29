@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: WebLite version or tag (e.g., v5.1.0 or weblite-v5.1.0-rc1)
+        description: >-
+          WebLite version or tag (e.g., v5.1.0 or weblite-v5.1.0-build2).
+          Suffix tags upload to the base version release and replace matching assets.
         required: true
         type: string
       windows_sign_mode:
@@ -33,12 +35,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release:
+    name: prepare WebLite prerelease
+    concurrency:
+      group: weblite-release-prepare
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Sync WebLite version
+        id: version
+        run: node scripts/set-version.js
+
+      - name: Validate release handling
+        run: node --test --test-concurrency=1 scripts/set-version.test.mjs scripts/github-release.test.mjs
+
+      - name: Create or reuse release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: node scripts/github-release.mjs prepare
+
   build:
+    needs: release
+    concurrency:
+      group: weblite-package-${{ needs.release.outputs.tag }}
+      cancel-in-progress: false
     runs-on: windows-latest
     env:
       WINDOWS_SIGN_MODE: ${{ inputs.windows_sign_mode || vars.WINDOWS_SIGN_MODE || 'optional' }}
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -52,11 +90,7 @@ jobs:
           cache: pnpm
 
       - name: Sync WebLite version
-        id: version
         run: node scripts/set-version.js
-
-      - name: Validate release version handling
-        run: node --test --test-concurrency=1 scripts/set-version.test.mjs
 
       - name: Verify WiX Toolset
         shell: pwsh
@@ -122,30 +156,9 @@ jobs:
           retention-days: 14
           path: release/weblite/*.msi
 
-  release:
-    name: publish WebLite prerelease
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v7
-        with:
-          name: weblite-Windows-x64
-          path: release-assets
-
-      - name: Generate release checksums
-        shell: bash
-        run: |
-          cd release-assets
-          sha256sum ./*.msi > SHA256SUMS
-
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.build.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          files: release-assets/*
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          BUILD_VERSION: ${{ needs.release.outputs.version }}
+        run: node scripts/github-release.mjs upload release/weblite Windows-x64

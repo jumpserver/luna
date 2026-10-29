@@ -39,7 +39,7 @@ test("client tags preserve the installer version and leave WebLite unchanged", (
   assert.equal(readFileSync(path.join(root, files[2]), "utf8"), weblite);
   assert.equal(
     readFileSync(path.join(root, "outputs"), "utf8"),
-    "target=client\nversion=5.1.1-rc.2\ntag=client-v5.1.1-rc.2\n"
+    "target=client\nversion=5.1.1-rc.2\ntag=client-v5.1.1\n"
   );
 });
 
@@ -58,6 +58,26 @@ test("WebLite tags and manual versions only update the WebLite package", (contex
     [files[0], files[1], files[3]].map((file) => readFileSync(path.join(root, file), "utf8")),
     unchanged
   );
+});
+
+test("rebuild suffixes and metadata share the base release while keeping the package version", (context) => {
+  const root = workspace(context);
+  for (const target of ["client", "weblite"]) {
+    for (const version of ["5.1.0", "5.1.0-build1", "5.1.0-build2", "5.1.0-beta.2+sha.abc", "5.1.0+sha.def"]) {
+      const result = setVersion(root, target, `${target}-v${version}`);
+      assert.equal(result.status, 0, result.stderr);
+      const outputs = Object.fromEntries(
+        readFileSync(path.join(root, "outputs"), "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => line.split("="))
+      );
+      assert.equal(outputs.tag, `${target}-v5.1.0`);
+      assert.equal(outputs.version, version);
+      const manifest = target === "client" ? "electron/package.json" : "applets/weblite/package.json";
+      assert.equal(JSON.parse(readFileSync(path.join(root, manifest), "utf8")).version, version);
+    }
+  }
 });
 
 test("invalid and cross-product release inputs fail before modifying packages", (context) => {

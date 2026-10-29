@@ -41,6 +41,11 @@ Desktop releases use `client-v<version>` tags; WebLite releases use `weblite-v<v
 They are built independently from `dev`, with package names such as `JumpServer-5.1.0-Setup.exe`
 and `JumpServer-WebLite-5.1.0-x64.msi`. Web image releases continue to use `v<version>` tags.
 
+For repeat builds, push a new tag such as `client-v5.1.0-build2` or `weblite-v5.1.0-build2`.
+These builds reuse the `client-v5.1.0` or `weblite-v5.1.0` release and overwrite matching assets
+as each platform finishes. Download filenames use `5.1.0`; the version inside the package keeps
+the build suffix. Existing tags are kept in place.
+
 Enter your JumpServer site address and sign in. The desktop app also provides local shells, external terminal and database client launch, offline recording playback, and MP4 conversion. The FFmpeg plugin for H.264 encoding can be downloaded in Settings.
 
 Browsers can open the client through `jms2://` links. Desktop OAuth uses `jms2://auth/callback`, which must be allowed by the server's OAuth application. The legacy client's `jms://` scheme remains separate.

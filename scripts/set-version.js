@@ -42,7 +42,8 @@ if (target === "client") {
   writeFileSync(appConfigPath, appConfig.replace(/version: "[^"]*"/, `version: "${version}"`));
 }
 
-const tag = `${target}-v${version}`;
+// Suffix tags identify rebuilds; all builds of a version share one release.
+const tag = `${target}-v${match[1]}.${match[2]}.${match[3]}`;
 if (process.env.GITHUB_OUTPUT) {
   appendFileSync(process.env.GITHUB_OUTPUT, `target=${target}\nversion=${version}\ntag=${tag}\n`);
 }
