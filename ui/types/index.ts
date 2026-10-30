@@ -178,7 +178,7 @@ export interface UserProfile {
 export interface ClientLoginPolicy {
   reauth_on_exit: boolean;
   // Minutes; 0 disables the limit.
-  max_idle_time: number;
+  idle_lock_time: number;
   // Minutes; 0 disables the limit.
   max_session_time: number;
 }
@@ -186,15 +186,15 @@ export interface ClientLoginPolicy {
 export interface ClientLoginSession {
   authenticated_at: string;
   expires_at: string | null;
-  last_activity_at: string;
-  idle_expires_at: string | null;
+  policy_expires_at?: string | null;
+  effective_expires_at?: string | null;
+  expiry_reason?: "absolute_timeout" | "policy_changed" | null;
   server_time: string;
 }
 
 export type ClientLoginReason =
   | "policy_changed"
   | "absolute_timeout"
-  | "idle_timeout"
   | "security_revoke"
   | "app_exit"
   | "logout"

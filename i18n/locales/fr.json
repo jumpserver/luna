@@ -1147,7 +1147,6 @@
     "SessionExpired": "Connexion expirée",
     "ExpiredPolicyChanged": "Les paramètres de sécurité du client ont changé. Veuillez vous reconnecter.",
     "ExpiredLifetime": "Votre session a atteint sa durée maximale. Veuillez vous reconnecter.",
-    "ExpiredIdle": "Votre session a expiré en raison de votre inactivité. Veuillez vous reconnecter.",
     "ExpiredRevoked": "Votre autorisation de connexion a été révoquée. Veuillez vous reconnecter.",
     "ExpiredAppExit": "Les paramètres de sécurité du client exigent une nouvelle connexion après avoir quitté l’application.",
     "ExpiredLogout": "Vous vous êtes déconnecté. Veuillez vous reconnecter.",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
     "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
-    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter.",
-    "ExpiredIdleDetail": "Votre connexion a expiré après {duration} d’inactivité (limite : {limit}). Veuillez vous reconnecter."
+    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter."
   },
   "Asset": {
     "GetAssetFailed": "Impossible de récupérer l’actif. Actualisez et réessayez"
@@ -1284,19 +1282,19 @@
     "NoUser": "Non connecté",
     "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur.",
     "ClientLoginInfo": "Validité de la connexion du client",
-    "ClientLoginInfoDescription": "Politique administrateur et dernier état de connexion confirmé par le serveur pour ce compte. Une activité acceptée prolonge le délai d’inactivité, mais jamais la durée maximale de connexion.",
+    "ClientLoginInfoDescription": "Paramètres administrateur et horaires de connexion du site et du compte actuels. Une modification programme une déconnexion distincte sans prolonger la durée initiale.",
     "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté",
     "ClientLoginMaxLifetime": "Durée maximale de connexion",
     "ClientLoginStartedAt": "Début de cette connexion",
-    "ClientLoginIdleTimeout": "Délai d’inactivité",
-    "ClientLoginIdleExpiry": "Sans nouvelle activité",
     "ClientLoginEffectiveExpiry": "Expiration prévue",
     "ClientLoginUnknown": "Pas encore disponible",
     "ClientLoginUnlimited": "Illimitée",
     "ClientLoginCurrentUser": "Utilisateur actuel",
     "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil.",
-    "ClientLoginActivityScope": "Les actions réelles au clavier et à la souris dans la fenêtre principale, les fenêtres de ressources séparées et les sites web intégrés comptent comme activité. Une connexion ouverte, les sorties en arrière-plan et l’actualisation automatique ne comptent pas.",
-    "ClientLoginActivityLimits": "Les actions dans des logiciels externes comme Xshell ou MSTSC et dans certaines pages intégrées d’une autre origine ne peuvent pas être captées. Utiliser uniquement ces zones, regarder longtemps sans intervenir ou rencontrer un échec de transmission dû au réseau peut donc déclencher le délai d’inactivité. Le calcul part de la dernière activité confirmée par le serveur."
+    "ClientLoginActivityScope": "Les entrées clavier et souris du système, y compris dans les applications externes, réinitialisent uniquement le délai du site et du compte actifs. Aucune activité n’est envoyée au serveur.",
+    "ClientLoginActivityLimits": "La page principale et les fenêtres gérées se verrouillent ensemble ; seul la page principale permet le déverrouillage. La session et les connexions restent actives. Les applications externes ne sont pas protégées. Les sessions nouvelles et restaurées démarrent verrouillées si cette option est activée.",
+    "ClientLoginIdleLock": "Verrouillage après inactivité",
+    "ClientLoginPolicyExpiry": "Déconnexion prévue après une modification administrateur"
   },
   "Setting": {
     "BackToApp": "Retour à l’application",
@@ -3322,5 +3320,24 @@
       "application": "Application · hors des paramètres et des boîtes de dialogue",
       "terminal": "Terminal · lorsque l’IA du terminal est disponible et que le terminal a le focus"
     }
+  },
+  "ClientLock": {
+    "Title": "Client verrouillé",
+    "Description": "Saisissez le mot de passe de verrouillage de ce compte. Les connexions restent actives.",
+    "MainOnly": "Cette fenêtre est verrouillée. Déverrouillez ce compte depuis la page principale.",
+    "Password": "Mot de passe de verrouillage du client",
+    "Unlock": "Déverrouiller",
+    "Unset": "Aucun mot de passe de verrouillage. Définissez-le dans les paramètres personnels Web de ce site et de ce compte, puis revenez et actualisez.",
+    "SetPassword": "Définir le mot de passe",
+    "Reset": "Réinitialiser le mot de passe",
+    "Refresh": "Actualiser",
+    "Logout": "Se déconnecter",
+    "GoToMain": "Page principale",
+    "LoadFailed": "Chargement impossible. Vérifiez la connexion et réessayez.",
+    "UnlockFailed": "Échec du déverrouillage. Vérifiez le mot de passe et la connexion.",
+    "TooManyAttempts": "Trop de tentatives. Réessayez dans une minute.",
+    "LifetimeSoon": "La durée maximale de connexion expire bientôt. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
+    "PolicyChangedSoon": "L’administrateur a modifié la configuration. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
+    "IdleSoon": "Sans saisie, le client se verrouillera à {at}. Déverrouillez-le sur la page principale avec son mot de passe."
   }
 }

@@ -115,27 +115,14 @@ const clientLoginRows = computed<DetailRow[]>(() => {
       ? t("UserProfile.ClientLoginUnlimited")
       : formatClientLoginDuration(minutes * 60, locale.value);
   };
-  const absoluteDeadline = session?.expires_at ? Date.parse(session.expires_at) : NaN;
-  const idleDeadline = session?.idle_expires_at ? Date.parse(session.idle_expires_at) : NaN;
-  const hasAbsoluteDeadline = Boolean(policy && policy.max_session_time > 0 && Number.isFinite(absoluteDeadline));
-  const hasIdleDeadline = Boolean(policy && policy.max_idle_time > 0 && Number.isFinite(idleDeadline));
-  const idleExpiresFirst = hasIdleDeadline && (!hasAbsoluteDeadline || idleDeadline < absoluteDeadline);
-  let effectiveExpiry = unknown;
-  if (session && policy) {
-    if (policy.max_session_time === 0 && policy.max_idle_time === 0) {
-      effectiveExpiry = t("UserProfile.ClientLoginUnlimited");
-    } else if (
-      (policy.max_session_time === 0 || hasAbsoluteDeadline) &&
-      (policy.max_idle_time === 0 || hasIdleDeadline)
-    ) {
-      effectiveExpiry = timestamp(idleExpiresFirst ? session.idle_expires_at : session.expires_at);
-    }
-  }
+  const deadline = session?.effective_expires_at ?? session?.expires_at;
+  const effectiveExpiry =
+    session && policy ? (deadline ? timestamp(deadline) : t("UserProfile.ClientLoginUnlimited")) : unknown;
   return [
     { label: t("UserProfile.ClientLoginStartedAt"), value: timestamp(session?.authenticated_at), highlighted: true },
     {
       label: t("UserProfile.ClientLoginEffectiveExpiry"),
-      hint: idleExpiresFirst ? t("UserProfile.ClientLoginIdleExpiry") : undefined,
+      hint: session?.expiry_reason === "policy_changed" ? t("UserProfile.ClientLoginPolicyExpiry") : undefined,
       value: effectiveExpiry,
       highlighted: true
     },
@@ -145,8 +132,8 @@ const clientLoginRows = computed<DetailRow[]>(() => {
     },
     { label: t("UserProfile.ClientLoginMaxLifetime"), value: duration(policy?.max_session_time) },
     {
-      label: t("UserProfile.ClientLoginIdleTimeout"),
-      value: policy?.max_idle_time === 0 ? t("UserProfile.Disabled") : duration(policy?.max_idle_time)
+      label: t("UserProfile.ClientLoginIdleLock"),
+      value: policy?.idle_lock_time === 0 ? t("UserProfile.Disabled") : duration(policy?.idle_lock_time)
     }
   ];
 });

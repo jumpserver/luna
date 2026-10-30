@@ -1147,7 +1147,6 @@
     "SessionExpired": "Phiên đăng nhập đã hết hạn",
     "ExpiredPolicyChanged": "Cài đặt bảo mật của máy khách đã thay đổi. Vui lòng đăng nhập lại.",
     "ExpiredLifetime": "Phiên đăng nhập đã đạt thời hạn tối đa. Vui lòng đăng nhập lại.",
-    "ExpiredIdle": "Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.",
     "ExpiredRevoked": "Quyền đăng nhập của bạn đã bị thu hồi. Vui lòng đăng nhập lại.",
     "ExpiredAppExit": "Cài đặt bảo mật của máy khách yêu cầu đăng nhập lại sau khi thoát ứng dụng.",
     "ExpiredLogout": "Bạn đã đăng xuất. Vui lòng đăng nhập lại.",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
     "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
-    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại.",
-    "ExpiredIdleDetail": "Đăng nhập đã hết hạn sau {duration} không hoạt động (giới hạn: {limit}). Vui lòng đăng nhập lại."
+    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại."
   },
   "Asset": {
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
@@ -1284,19 +1282,19 @@
     "NoUser": "Chưa đăng nhập",
     "NoUserDescription": "Đăng nhập vào một trang JumpServer để xem chi tiết người dùng.",
     "ClientLoginInfo": "Thời hạn đăng nhập của ứng dụng",
-    "ClientLoginInfoDescription": "Chính sách của quản trị viên và trạng thái đăng nhập gần nhất được máy chủ xác nhận cho tài khoản này. Hoạt động được chấp nhận sẽ gia hạn thời điểm hết hạn do không hoạt động, nhưng không kéo dài thời hạn đăng nhập tối đa.",
+    "ClientLoginInfoDescription": "Cấu hình quản trị và thời gian đăng nhập của trang, tài khoản hiện tại. Thay đổi cấu hình đặt thời điểm đăng xuất riêng, không kéo dài thời hạn ban đầu.",
     "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát",
     "ClientLoginMaxLifetime": "Thời hạn đăng nhập tối đa",
     "ClientLoginStartedAt": "Bắt đầu lần đăng nhập này",
-    "ClientLoginIdleTimeout": "Thời gian chờ khi không hoạt động",
-    "ClientLoginIdleExpiry": "Nếu không có hoạt động mới",
     "ClientLoginEffectiveExpiry": "Thời điểm hết hạn dự kiến",
     "ClientLoginUnknown": "Chưa có thông tin",
     "ClientLoginUnlimited": "Không giới hạn",
     "ClientLoginCurrentUser": "Người dùng hiện tại",
     "ClientLoginExpiryHint": "Thời điểm hết hạn dựa trên trạng thái gần nhất được máy chủ xác nhận và hiển thị theo múi giờ của thiết bị này.",
-    "ClientLoginActivityScope": "Thao tác bàn phím và chuột thực tế trong cửa sổ chính, cửa sổ tài sản riêng và các trang web tích hợp được tính là hoạt động. Kết nối đang mở, đầu ra nền và tự động làm mới không được tính.",
-    "ClientLoginActivityLimits": "Không thể ghi nhận thao tác trong phần mềm bên ngoài như Xshell hoặc MSTSC và một số trang nhúng khác nguồn. Chỉ thao tác trong các khu vực này, chỉ xem trong thời gian dài hoặc gửi báo cáo thất bại do sự cố mạng vẫn có thể gây hết thời gian chờ do không hoạt động. Thời gian được tính từ hoạt động cuối cùng do máy chủ xác nhận."
+    "ClientLoginActivityScope": "Thao tác bàn phím và chuột của hệ thống, kể cả ứng dụng ngoài, chỉ đặt lại bộ đếm cho trang và tài khoản đang kích hoạt. Không báo cáo hoạt động lên máy chủ.",
+    "ClientLoginActivityLimits": "Trang chính và cửa sổ tài sản được quản lý khóa cùng nhau; chỉ mở khóa ở trang chính. Phiên đăng nhập và kết nối vẫn hoạt động. Ứng dụng ngoài không được bảo vệ. Khi bật, đăng nhập mới và phiên khôi phục bắt đầu ở trạng thái khóa.",
+    "ClientLoginIdleLock": "Khóa khi không hoạt động",
+    "ClientLoginPolicyExpiry": "Thời điểm đăng xuất sau khi quản trị viên đổi cấu hình"
   },
   "Setting": {
     "BackToApp": "Quay lại ứng dụng",
@@ -3322,5 +3320,24 @@
       "application": "Ứng dụng · ngoài phần cài đặt và hộp thoại",
       "terminal": "Terminal · khi AI của terminal khả dụng và terminal đang được lấy nét"
     }
+  },
+  "ClientLock": {
+    "Title": "Ứng dụng khách đã khóa",
+    "Description": "Nhập mật khẩu khóa của tài khoản này để tiếp tục. Kết nối vẫn hoạt động.",
+    "MainOnly": "Cửa sổ đã khóa. Mở khóa tài khoản này tại trang chính.",
+    "Password": "Mật khẩu khóa ứng dụng khách",
+    "Unlock": "Mở khóa",
+    "Unset": "Chưa đặt mật khẩu khóa. Hãy đặt trong cài đặt cá nhân trên web của trang và tài khoản này, rồi quay lại và làm mới.",
+    "SetPassword": "Đặt mật khẩu khóa",
+    "Reset": "Đặt lại mật khẩu khóa",
+    "Refresh": "Làm mới",
+    "Logout": "Đăng xuất",
+    "GoToMain": "Đến trang chính",
+    "LoadFailed": "Không thể tải. Kiểm tra kết nối và thử lại.",
+    "UnlockFailed": "Mở khóa thất bại. Kiểm tra mật khẩu và kết nối.",
+    "TooManyAttempts": "Quá nhiều lần thử. Vui lòng đợi một phút.",
+    "LifetimeSoon": "Thời hạn đăng nhập tối đa sắp hết. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
+    "PolicyChangedSoon": "Quản trị viên đã đổi cấu hình. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
+    "IdleSoon": "Nếu không có thao tác, ứng dụng khách sẽ khóa lúc {at}. Mở khóa bằng mật khẩu tại trang chính."
   }
 }

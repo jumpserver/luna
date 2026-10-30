@@ -49,7 +49,6 @@ import { ApplicationConfigService } from "../apps/application-config";
 import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
-import { observeClientActivity } from "../auth/activity";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
 import { FaceEngineManager } from "../face/manager";
 import { isFaceLiveWebSocket } from "../face/socket-policy";
@@ -91,7 +90,39 @@ const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, St
 app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
-const windowActivityBindings = new WeakMap<WebContents, ReturnType<DesktopAuthService["captureActivityBinding"]>>();
+const windowSessionBindings = new WeakMap<WebContents, ReturnType<DesktopAuthService["captureSessionBinding"]>>();
+const lockedWindowCommands = new Set([
+  "plugin:event|listen",
+  "plugin:event|unlisten",
+  "plugin:store|load",
+  "plugin:store|get",
+  "plugin:store|has",
+  "plugin:store|keys",
+  "plugin:store|values",
+  "plugin:store|entries",
+  "plugin:store|length",
+  "close_window",
+  "minimize_window",
+  "toggle_maximize_window",
+  "plugin:app|version",
+  "plugin:app|name",
+  "plugin:os|locale",
+  "set_api_org",
+  "get_config",
+  "get_ffmpeg_plugin_status",
+  "list_system_fonts",
+  "api_stream_cancel",
+  "resize_local_shell",
+  "close_local_shell",
+  "face_engine_status",
+  "face_engine_process_frame",
+  "face_engine_stop_session",
+  "set_web_proxy_view_active",
+  "set_web_proxy_view_bounds",
+  "set_web_proxy_view_color_scheme",
+  "close_web_proxy_view",
+  "cancel_transcode"
+]);
 const subscriptions = new Map();
 const stores = new Map();
 let shortcutOverrides: ShortcutOverrides = {};
@@ -110,9 +141,11 @@ const allowedPaths = new Set([
   process.resourcesPath,
   path.join(projectRoot, "plugins")
 ]);
+let clientPolicyNotices = { sessionId: "", notices: [] };
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
+let idleLockTimer: ReturnType<typeof setInterval> | undefined;
 let trayRecentConnections = [];
 let trayQuickConnectEnabled = false;
 let applicationConfig;
@@ -302,12 +335,41 @@ function sendCallback(webContents, callbackId, payload) {
 }
 
 function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) {
+  if (name === "client-policy-notices" && !targetLabel) {
+    clientPolicyNotices = payload as typeof clientPolicyNotices;
+    for (const [label, win] of windows) {
+      const binding = windowSessionBindings.get(win.webContents);
+      const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+      emitDesktopEvent(name, notices, label);
+    }
+    return;
+  }
+  if (name === "client-lock-changed") {
+    for (const win of windows.values()) syncWindowLock(win);
+    return;
+  }
   for (const [id, subscription] of subscriptions) {
     if (subscription.name !== name) continue;
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
   if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
+}
+
+function syncWindowLock(win) {
+  if (win.isDestroyed()) return;
+  const bound = authService.lockState(windowSessionBindings.get(win.webContents) ?? null);
+  const canUnlock = labelForWindow(win) === "main";
+  const state = { ...bound, locked: bound.locked && (!canUnlock || !bound.expired), canUnlock };
+  webProxyManager.setHostLocked(win.webContents.id, state.locked);
+  emitDesktopEvent("client-lock-state", state, labelForWindow(win));
+  return state;
+}
+
+function checkIdleLocks() {
+  const idleSeconds = powerMonitor.getSystemIdleTime();
+  authService.lockIdleSessions(idleSeconds);
+  authService.updatePolicyNotices(idleSeconds);
 }
 
 function notifyClientLoginExpired(payload: {
@@ -550,10 +612,11 @@ interface CreateWindowOptions {
 function createWindow(
   label = "main",
   options: CreateWindowOptions = {},
-  activityBinding = authService?.captureActivityBinding() ?? null
+  sessionBinding = authService?.captureSessionBinding() ?? null
 ) {
   const existing = windows.get(label);
   if (existing && !existing.isDestroyed()) {
+    syncWindowLock(existing);
     existing.show();
     existing.focus();
     electronLog.info(`window focus ${label}`);
@@ -589,12 +652,9 @@ function createWindow(
   installConnectorSessionHooks(win.webContents.session);
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
-  windowActivityBindings.set(windowWebContents, activityBinding);
-  observeClientActivity(windowWebContents, () =>
-    authService.reportActivity(windowActivityBindings.get(windowWebContents))
-  );
+  windowSessionBindings.set(windowWebContents, sessionBinding);
 
-  windowWebContents.on("before-input-event", (_event, input) => {
+  windowWebContents.on("before-input-event", (event, input) => {
     // Let the renderer resolve scope/focus before consuming application shortcuts.
     // Native menus still show the configured accelerators and retain their click actions.
     const key = {
@@ -604,6 +664,15 @@ function createWindow(
       altKey: input.alt,
       shiftKey: input.shift
     };
+    if (
+      input.type === "keyDown" &&
+      !shortcutRecorders.has(windowWebContents) &&
+      matchesShortcut(key, "Mod+KeyL", shortcutEnvironment.mac)
+    ) {
+      event.preventDefault();
+      authService.lockSessions(true);
+      return;
+    }
     const applicationShortcut = shortcutDefinitions.some(({ id }) =>
       shortcutBindings(id, shortcutOverrides, shortcutEnvironment).some((binding) =>
         matchesShortcut(key, binding, shortcutEnvironment.mac)
@@ -628,8 +697,10 @@ function createWindow(
   }
 
   windows.set(label, win);
+  syncWindowLock(win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => {
+    syncWindowLock(win);
     win.show();
     if (allowDevTools && app.isPackaged) windowWebContents.openDevTools({ mode: "detach" });
   });
@@ -645,6 +716,7 @@ function createWindow(
   windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
   });
+  windowWebContents.on("did-finish-load", () => syncWindowLock(win));
   windowWebContents.on("render-process-gone", () => clearDesktopEventSubscriptions(windowWebContents));
   win.on("closed", () => {
     electronLog.info(`window closed ${label}`);
@@ -855,13 +927,16 @@ function sendMenuCommand(command) {
     return;
   }
   const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed() && syncWindowLock(focused)?.locked) return;
   const label = menuCommandTargetLabel(focused && !focused.isDestroyed() ? labelForWindow(focused) : "");
   emitDesktopEvent("desktop-menu-command", command, label);
 }
 
 function sendMainWindowEvent(name, payload) {
   const win = showMainWindow();
-  const emit = () => emitDesktopEvent(name, payload, "main");
+  const emit = () => {
+    if (!syncWindowLock(win)?.locked) emitDesktopEvent(name, payload, "main");
+  };
   if (win.webContents.isLoadingMainFrame()) {
     win.webContents.once("did-finish-load", () => setTimeout(emit, 0));
     return;
@@ -874,6 +949,11 @@ function buildMenu() {
   const appSubmenu: MenuItemConstructorOptions[] = [
     { label: labels.about, click: openAboutWindow },
     { type: "separator" },
+    {
+      label: prefersZh() ? "锁定客户端" : "Lock Client",
+      accelerator: "CmdOrCtrl+L",
+      click: () => authService.lockSessions(true)
+    },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
     { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" },
@@ -1113,6 +1193,35 @@ async function handleInvoke(event, request) {
   }
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
+  const binding = windowSessionBindings.get(event.sender) ?? null;
+  if (command === "client_lock_state") return syncWindowLock(win);
+  if (command === "client_policy_notices")
+    return binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+  if (command === "client_lock_show_main") return void showMainWindow();
+  if (["client_lock_info", "client_unlock", "client_lock_logout", "client_lock_settings"].includes(command)) {
+    if (labelForWindow(win) !== "main") throw new Error("Unlock on the main page");
+    if (command === "client_lock_info") return authService.lockInfo(binding);
+    if (command === "client_unlock") return authService.unlockSession(binding, args);
+    if (command === "client_lock_settings") {
+      const info = await authService.lockInfo(binding);
+      return shell.openExternal(info.settingsUrl);
+    }
+    const result = await authService.logoutLockedSession(binding);
+    // Explicit logout closes that account's managed windows; ordinary locking keeps them running.
+    for (const [label, target] of windows) {
+      if (label.startsWith("asset-") && windowSessionBindings.get(target.webContents) === binding) target.close();
+    }
+    return result;
+  }
+  if (
+    authService.lockState(binding).locked &&
+    (!authService.lockState(binding).expired || labelForWindow(win) !== "main") &&
+    !lockedWindowCommands.has(command) &&
+    !command.startsWith("plugin:window|") &&
+    !command.startsWith("plugin:path|")
+  ) {
+    throw new Error("client_locked");
+  }
 
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
@@ -1127,6 +1236,8 @@ async function handleInvoke(event, request) {
   }
   if (command === "plugin:event|unlisten") return subscriptions.delete(args.eventId);
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
+    if (["client-lock-state", "client-lock-changed", "client-policy-notices"].includes(args.event))
+      throw new Error("Client lock events are owned by the main process");
     emitDesktopEvent(args.event, args.payload);
     return null;
   }
@@ -1164,7 +1275,7 @@ async function handleInvoke(event, request) {
     createWindow(
       args.options.label,
       args.options,
-      String(args.options.label).startsWith("asset-") ? (windowActivityBindings.get(event.sender) ?? null) : undefined
+      String(args.options.label).startsWith("asset-") ? (windowSessionBindings.get(event.sender) ?? null) : undefined
     );
     return null;
   }
@@ -1319,15 +1430,18 @@ async function handleInvoke(event, request) {
   if (command === "set_api_session") {
     const result = authService.setSession(args);
     if (result.status === "success") {
-      const binding = authService.captureActivityBinding();
+      const binding = authService.captureSessionBinding();
       for (const [label, target] of windows) {
-        const previous = windowActivityBindings.get(target.webContents);
+        const previous = windowSessionBindings.get(target.webContents);
         // Asset windows keep their account when the main window switches accounts.
         // An explicit activation of that same account can bind them to its new login.
         if (!label.startsWith("asset-") || previous?.sessionKey === binding?.sessionKey) {
-          windowActivityBindings.set(target.webContents, binding);
+          windowSessionBindings.set(target.webContents, binding);
+          syncWindowLock(target);
         }
       }
+      void authService.checkSessions(true);
+      checkIdleLocks();
     }
     return result;
   }
@@ -1339,7 +1453,7 @@ async function handleInvoke(event, request) {
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
-  if (command === "api_request") return authService.apiRequest(args.request, windowActivityBindings.get(event.sender));
+  if (command === "api_request") return authService.apiRequest(args.request, binding);
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
@@ -1391,19 +1505,6 @@ async function handleInvoke(event, request) {
   }
   if (command === "close_local_shell") return closeLocalShell(event, args.sessionId);
   if (command.includes("web_proxy")) {
-    // Capture ownership before asynchronous licence checks or view creation.
-    const ownerBinding = windowActivityBindings.get(event.sender);
-    const observeActivity = (contents: WebContents, enabled: () => boolean) => {
-      observeClientActivity(
-        contents,
-        () => {
-          const current = windowActivityBindings.get(event.sender);
-          const binding = current?.sessionKey === ownerBinding?.sessionKey ? current : ownerBinding;
-          return authService.reportActivity(binding);
-        },
-        enabled
-      );
-    };
     if (
       command === "start_web_proxy_recording" ||
       (command === "create_web_proxy_view" &&
@@ -1412,7 +1513,7 @@ async function handleInvoke(event, request) {
       const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
-    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args, observeActivity));
+    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
   }
   if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
   if (command === "open_settings_window") {
@@ -1602,6 +1703,11 @@ function describeProtocolUrl(rawUrl) {
 }
 
 async function processIncomingProtocolUrl(value: string) {
+  const binding = authService.captureSessionBinding();
+  if (authService.lockState(binding).locked) {
+    showMainWindow();
+    return false;
+  }
   if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return false;
   const payload = decodeClientProtocolPayload(value);
   if (isWebAssetClientProtocolPayload(payload)) {
@@ -1663,6 +1769,7 @@ app.on("before-quit", (event) => {
     return;
   }
   authService?.stopSessionMonitor();
+  clearInterval(idleLockTimer);
   if (authExitFinished) return;
   if (authExitPending) {
     event.preventDefault();
@@ -1752,5 +1859,11 @@ app.whenReady().then(async () => {
   });
   createWindow("main");
   authService.startSessionMonitor();
-  powerMonitor.on("resume", () => void authService.checkSessions(true));
+  idleLockTimer = setInterval(checkIdleLocks, 1_000);
+  idleLockTimer.unref();
+  powerMonitor.on("suspend", () => authService.lockSessions());
+  powerMonitor.on("resume", () => {
+    checkIdleLocks();
+    void authService.checkSessions(true);
+  });
 });

@@ -40,35 +40,46 @@ compatibility decision while still refreshing credentials and validating the
 profile. A new login, site/account switch, logout or client restart requires
 a new check.
 
-Core owns login validity. It checks the fixed login deadline, idle deadline and
-revocation on API requests, token refreshes and new asset connections. An expired
-login cannot be revived by activity or refresh. Daily token cleanup only reclaims
-records; it does not determine whether a login is valid.
+Core owns login validity: its fixed deadline and revocation are checked on API
+requests and refreshes. Activity and refresh never extend that deadline. Daily
+token cleanup reclaims records and does not determine login validity. Connection
+tokens follow their own expiry and permissions.
 
-Desktop login monitoring has two inputs, both coordinated by the main process:
+The main process reads `GET /api/v1/authentication/client-login-session/status/`
+for the active account every 30 seconds, including while hidden or unfocused.
+Successful token refresh replaces the pending status read. Inactive saved accounts
+are checked when selected, while their absolute login deadlines continue to run.
+Network errors do not invalidate a login. Confirmed expiry shows a persistent
+reason and a background system notification when supported.
 
-- Real input: when idle timeout is enabled, renderer windows notify the main
-  process at most once per second to limit IPC traffic. The main process shares
-  one activity POST per 10 seconds across windows. Core validates the login
-  before recording its own receipt time as the last activity time.
-- Status checks: the main process checks the current account every 30 seconds
-  while it remains logged in, including when unfocused or minimized. A successful
-  activity POST postpones this read-only GET by 30 seconds because it already
-  checked the login. Ordinary business responses do not reschedule the monitor.
-  Concurrent activity reports and checks are coalesced; sleep/resume forces a check.
+`idle_lock_time` is a separate local screen lock, in minutes (0 disables it).
+The main process samples system keyboard/mouse idle time every second without
+network traffic. Only the active site/account has an idle timer; switching accounts
+starts a fresh interval and never unlocks an already locked account. Input in
+external applications counts as system activity, but those applications are not
+protected by the client lock. Suspending locks the active protected account.
 
-Input reports are sampled: the idle deadline uses the last accepted activity
-report, not an exact timestamp for every mouse or keyboard event. No background
-check or token refresh updates that activity time. Inactive saved accounts are
-checked on switching/restoration, and their server-side deadlines keep running.
-Network errors do not mean the login expired. Explicit authentication failures
-show a persistent reason dialog; confirmation opens login, while closing dismisses
-only the notice. Background windows also receive a system notification when supported.
+Protected new and restored logins start locked. The main page and its managed
+asset windows are shielded without disconnecting transports; only the main page
+can unlock. `GET .../client-login-session/unlock/` reports whether the current
+account has a password and its site-specific web settings URL. `POST` to that
+same endpoint verifies `{password}` for the bearer account, with five attempts
+per minute. The main process alone clears the lock; renderer events cannot do so.
+Passwords are never persisted by the client. Locked native website views remain
+hidden even when tabs or asynchronous callbacks request visibility.
 
-Access tokens last at most one hour and are capped by the login deadline. Requests
-refresh them when they have at most 60 seconds left (or 10% of their issued lifetime
-for shorter tokens). Concurrent refreshes are shared. A refresh during a status
-check replaces that check, but never extends either login deadline.
+Lina Personal settings → Login authentication → Client credentials manages the
+independent client lock password and the existing file-encryption password.
+`GET/PATCH /api/v1/users/profile/client-credentials/` accepts only a web session;
+PATCH follows the existing sensitive-operation confirmation policy. The client
+password is a Django password hash; the file password retains its encrypted
+storage and existing file encryption/decryption behavior. Empty fields preserve
+existing values. Links include the expected user ID so a browser signed into a
+different account cannot silently configure the wrong account.
+
+Access tokens last at most one hour, capped by the login deadline. Requests refresh
+them when at most 60 seconds remain (or 10% for shorter tokens). Concurrent refreshes
+are shared. Refresh never extends the login or unlocks the client.
 
 Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
 For desktop review, use local test servers and release-versioned test builds:

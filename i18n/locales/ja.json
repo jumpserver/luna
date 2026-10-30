@@ -1147,7 +1147,6 @@
     "SessionExpired": "ログイン期限切れ",
     "ExpiredPolicyChanged": "クライアントのセキュリティ設定が変更されました。再度ログインしてください。",
     "ExpiredLifetime": "ログインの有効期限に達しました。再度ログインしてください。",
-    "ExpiredIdle": "一定時間操作がなかったため、ログインが無効になりました。再度ログインしてください。",
     "ExpiredRevoked": "ログインの認可が取り消されました。再度ログインしてください。",
     "ExpiredAppExit": "クライアントのセキュリティ設定により、アプリケーション終了後は再度ログインする必要があります。",
     "ExpiredLogout": "ログアウトしました。再度ログインしてください。",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "ログインに失敗しました。証明書または安全な接続に問題があります。",
     "NetworkError": "ネットワークを利用できません。接続を確認してください。",
     "ServerError": "サーバーは一時的に利用できません。後でもう一度お試しください。",
-    "ExpiredLifetimeDetail": "今回のログインは {expiresAt} に期限切れとなりました。再度ログインしてください。",
-    "ExpiredIdleDetail": "アイドル時間が {duration}（上限：{limit}）に達したため、ログインが失効しました。再度ログインしてください。"
+    "ExpiredLifetimeDetail": "今回のログインは {expiresAt} に期限切れとなりました。再度ログインしてください。"
   },
   "Asset": {
     "GetAssetFailed": "アセットの取得に失敗しました。更新して再試行してください"
@@ -1284,19 +1282,19 @@
     "NoUser": "未ログイン",
     "NoUserDescription": "JumpServer サイトにログインするとユーザー詳細を表示できます。",
     "ClientLoginInfo": "クライアントのログイン有効期間",
-    "ClientLoginInfoDescription": "このアカウントの管理者設定と、サーバーが最後に確認したログイン状態です。受理された操作報告によってアイドル期限は延長されますが、ログインの最大有効期間は延長されません。",
+    "ClientLoginInfoDescription": "現在のサイトとアカウントの管理者設定およびログイン時刻です。設定変更による終了時刻は元の有効期間と別に管理され、延長しません。",
     "ClientLoginReauthOnExit": "終了後に再ログイン",
     "ClientLoginMaxLifetime": "ログインの最大有効期間",
     "ClientLoginStartedAt": "今回のログイン開始時刻",
-    "ClientLoginIdleTimeout": "アイドルタイムアウト",
-    "ClientLoginIdleExpiry": "新たな操作がない場合",
     "ClientLoginEffectiveExpiry": "失効予定時刻",
     "ClientLoginUnknown": "未取得",
     "ClientLoginUnlimited": "無制限",
     "ClientLoginCurrentUser": "現在のユーザー",
     "ClientLoginExpiryHint": "有効期限はサーバーが最後に確認した状態に基づき、この端末のタイムゾーンで表示されます。",
-    "ClientLoginActivityScope": "メインウィンドウ、独立したアセットウィンドウ、内蔵ブラウザーで表示するサイトでの実際のキーボード・マウス操作が活動として記録されます。接続の維持、バックグラウンド出力、自動更新は活動に含まれません。",
-    "ClientLoginActivityLimits": "Xshell、MSTSC などの外部ソフトウェアや、一部のクロスオリジン埋め込みページでの操作は取得できません。これらの領域だけを操作する場合、長時間操作せずに閲覧する場合、またはネットワークの問題で報告に失敗した場合も、アイドルタイムアウトが発生することがあります。時間はサーバーが最後に確認した活動から計算されます。"
+    "ClientLoginActivityScope": "外部アプリを含むシステムのキーボードとマウス入力で、現在のサイトとアカウントのみのタイマーをリセットします。操作はサーバーに送信しません。",
+    "ClientLoginActivityLimits": "メイン画面と管理対象の資産ウィンドウをロックし、メイン画面でのみ解除できます。ログインと接続は維持されます。外部アプリは保護されません。有効時は新規・復元ログインもロック状態から開始します。",
+    "ClientLoginIdleLock": "アイドルロック",
+    "ClientLoginPolicyExpiry": "管理者の設定変更による終了時刻"
   },
   "Setting": {
     "BackToApp": "アプリに戻る",
@@ -3322,5 +3320,24 @@
       "application": "アプリ · 設定とダイアログ以外",
       "terminal": "ターミナル · ターミナル AI が利用可能でフォーカスがあるとき"
     }
+  },
+  "ClientLock": {
+    "Title": "クライアントはロックされています",
+    "Description": "このアカウントのクライアントロックパスワードを入力してください。接続は維持されます。",
+    "MainOnly": "このウィンドウはロックされています。メイン画面でこのアカウントを解除してください。",
+    "Password": "クライアントロックパスワード",
+    "Unlock": "ロック解除",
+    "Unset": "ロックパスワードが未設定です。このサイトとアカウントの Web 個人設定で設定し、戻って更新してください。",
+    "SetPassword": "ロックパスワードを設定",
+    "Reset": "ロックパスワードを再設定",
+    "Refresh": "更新",
+    "Logout": "ログアウト",
+    "GoToMain": "メイン画面へ",
+    "LoadFailed": "読み込めません。接続を確認して再試行してください。",
+    "UnlockFailed": "解除できません。パスワードと接続を確認してください。",
+    "TooManyAttempts": "試行回数が多すぎます。1分後に再試行してください。",
+    "LifetimeSoon": "ログインの最大有効期間がまもなく終了します。{at} にログアウトします。その後、再ログインしてください。",
+    "PolicyChangedSoon": "管理者が設定を変更しました。{at} にログアウトします。その後、再ログインしてください。",
+    "IdleSoon": "入力がない場合、{at} にロックします。メイン画面でクライアントロックパスワードを入力して解除してください。"
   }
 }

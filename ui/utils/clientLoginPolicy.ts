@@ -4,7 +4,6 @@ import { toIntlLocale } from "../../i18n/language";
 const clientLoginReasonMessages: Record<ClientLoginReason, string> = {
   policy_changed: "Login.ExpiredPolicyChanged",
   absolute_timeout: "Login.ExpiredLifetime",
-  idle_timeout: "Login.ExpiredIdle",
   security_revoke: "Login.ExpiredRevoked",
   app_exit: "Login.ExpiredAppExit",
   logout: "Login.ExpiredLogout",
@@ -20,7 +19,7 @@ export const clientLoginReasonMessageKey = (reason: unknown) =>
   clientLoginReasonMessages[normalizeClientLoginReason(reason)];
 
 export const clientLoginPolicyEnabled = (policy?: ClientLoginPolicy) =>
-  Boolean(policy && (policy.reauth_on_exit || policy.max_idle_time || policy.max_session_time));
+  Boolean(policy && (policy.reauth_on_exit || policy.idle_lock_time || policy.max_session_time));
 
 export function formatClientLoginTimestamp(value: string | null | undefined, locale = "en"): string {
   const timestamp = typeof value === "string" && value ? Date.parse(value) : NaN;
@@ -70,21 +69,6 @@ export function clientLoginExpiryMessage(
         key: "Login.ExpiredLifetimeDetail",
         params: {
           expiresAt: formatClientLoginTimestamp(session.expires_at, locale)
-        }
-      };
-    }
-  }
-  if (reason === "idle_timeout") {
-    const lastActivity = Date.parse(session.last_activity_at);
-    const idleDeadline = session.idle_expires_at ? Date.parse(session.idle_expires_at) : NaN;
-    const limitSeconds = (idleDeadline - lastActivity) / 1000;
-    const idleSeconds = (now - lastActivity) / 1000;
-    if (Number.isFinite(limitSeconds) && limitSeconds > 0 && now >= idleDeadline) {
-      return {
-        key: "Login.ExpiredIdleDetail",
-        params: {
-          duration: formatClientLoginDuration(idleSeconds, locale),
-          limit: formatClientLoginDuration(limitSeconds, locale)
         }
       };
     }

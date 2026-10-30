@@ -1142,7 +1142,6 @@
     "SessionExpired": "登录已失效",
     "ExpiredPolicyChanged": "客户端安全设置已变更，请重新登录。",
     "ExpiredLifetime": "本次登录已达到有效期，请重新登录。",
-    "ExpiredIdle": "因长时间未操作，登录已失效，请重新登录。",
     "ExpiredRevoked": "登录授权已撤销，请重新登录。",
     "ExpiredAppExit": "根据客户端安全设置，退出客户端后需要重新登录。",
     "ExpiredLogout": "已退出登录，请重新登录。",
@@ -1167,8 +1166,7 @@
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "网络不可用，请检查网络连接",
     "ServerError": "服务器暂时不可用，请稍后重试",
-    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。",
-    "ExpiredIdleDetail": "空闲已达到 {duration}（限制 {limit}），登录已失效。请重新登录。"
+    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。"
   },
   "Loading": {
     "Loading": "加载中",
@@ -1284,19 +1282,19 @@
     "NoUser": "尚未登录",
     "NoUserDescription": "登录 JumpServer 站点后即可查看用户详情。",
     "ClientLoginInfo": "客户端有效期信息",
-    "ClientLoginInfoDescription": "当前账号的管理员策略和服务器最近确认的登录状态。有效活动可顺延空闲到期时间，但不能延长登录有效期上限。",
+    "ClientLoginInfoDescription": "当前站点、当前账号的管理员配置及本次登录时间。配置变更会单独安排退出，不延长原有有效期。",
     "ClientLoginReauthOnExit": "退出后重新登录",
     "ClientLoginMaxLifetime": "最长登录有效期",
     "ClientLoginStartedAt": "本次登录时间",
-    "ClientLoginIdleTimeout": "空闲超时",
-    "ClientLoginIdleExpiry": "若无新活动",
     "ClientLoginEffectiveExpiry": "本次到期时间",
     "ClientLoginUnknown": "暂未获取",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "当前用户",
     "ClientLoginExpiryHint": "到期时间依据服务器最近确认的状态，按本机时区显示。",
-    "ClientLoginActivityScope": "主窗口、独立资产窗口及内置网站中的真实键盘、鼠标操作会计入活动；连接在线、后台输出和自动刷新不算活动。",
-    "ClientLoginActivityLimits": "Xshell、MSTSC 等外部软件和部分跨域内嵌页面中的操作无法采集。仅在这些区域操作、长时间只观看，或网络异常导致上报失败时，仍可能触发空闲超时；以服务器最后确认的活动时间为准。"
+    "ClientLoginActivityScope": "根据本机系统键鼠输入判断空闲，其他程序中的操作也计入；只对当前激活的站点和账号计时，无需向服务器上报活动。",
+    "ClientLoginActivityLimits": "主页面和客户端管理的资产窗口一起锁定，只能在主页面输入当前账号的锁屏密码解锁。登录和连接保持；外部软件不受此锁屏保护。启用后，新登录及恢复的登录默认锁定。",
+    "ClientLoginIdleLock": "空闲锁屏",
+    "ClientLoginPolicyExpiry": "管理员变更配置后的退出时间"
   },
   "Setting": {
     "BackToApp": "返回应用",
@@ -3322,5 +3320,24 @@
       "application": "应用 · 设置和对话框以外",
       "terminal": "终端 · 聚焦且终端 AI 可用时"
     }
+  },
+  "ClientLock": {
+    "Title": "客户端已锁定",
+    "Description": "输入当前账号的客户端锁屏密码继续使用，已有连接保持运行。",
+    "MainOnly": "当前窗口已锁定，请在主页面解锁此账号。",
+    "Password": "客户端锁屏密码",
+    "Unlock": "解锁",
+    "Unset": "尚未设置客户端锁屏密码。请前往此站点、此账号的 Web 个人设置中设置，返回后点击刷新。",
+    "SetPassword": "设置锁屏密码",
+    "Reset": "重设锁屏密码",
+    "Refresh": "刷新",
+    "Logout": "退出账号",
+    "GoToMain": "前往主页面",
+    "LoadFailed": "加载失败，请检查网络后重试。",
+    "UnlockFailed": "解锁失败，请检查锁屏密码和网络后重试。",
+    "TooManyAttempts": "尝试次数过多，请等待一分钟后重试。",
+    "LifetimeSoon": "最长有效期即将到期，客户端将在 {at} 退出，届时需要重新登录。",
+    "PolicyChangedSoon": "管理员已修改配置，客户端将在 {at} 退出，届时需要重新登录。",
+    "IdleSoon": "如无操作，客户端将在 {at} 锁屏，届时请在主页面输入客户端锁屏密码解锁。"
   }
 }

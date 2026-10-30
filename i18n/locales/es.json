@@ -1147,7 +1147,6 @@
     "SessionExpired": "Sesión caducada",
     "ExpiredPolicyChanged": "La configuración de seguridad del cliente ha cambiado. Inicie sesión de nuevo.",
     "ExpiredLifetime": "Su sesión ha alcanzado el límite de duración. Inicie sesión de nuevo.",
-    "ExpiredIdle": "Su sesión ha caducado por inactividad. Inicie sesión de nuevo.",
     "ExpiredRevoked": "Se ha revocado la autorización de su sesión. Inicie sesión de nuevo.",
     "ExpiredAppExit": "La configuración de seguridad del cliente requiere que inicie sesión de nuevo después de salir de la aplicación.",
     "ExpiredLogout": "Ha cerrado la sesión. Inicie sesión de nuevo.",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
     "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
-    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión.",
-    "ExpiredIdleDetail": "La sesión caducó tras {duration} de inactividad (límite: {limit}). Vuelva a iniciar sesión."
+    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión."
   },
   "Asset": {
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
@@ -1284,19 +1282,19 @@
     "NoUser": "Sin iniciar sesión",
     "NoUserDescription": "Inicie sesión en un sitio de JumpServer para ver los detalles del usuario.",
     "ClientLoginInfo": "Validez del inicio de sesión del cliente",
-    "ClientLoginInfoDescription": "Política del administrador y último estado de inicio de sesión confirmado por el servidor para esta cuenta. La actividad aceptada amplía el plazo de inactividad, pero nunca la duración máxima del inicio de sesión.",
+    "ClientLoginInfoDescription": "Configuración del administrador y horarios del sitio y cuenta actuales. Un cambio programa un cierre independiente sin ampliar la vigencia original.",
     "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir",
     "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión",
     "ClientLoginStartedAt": "Inicio de esta sesión",
-    "ClientLoginIdleTimeout": "Tiempo de espera por inactividad",
-    "ClientLoginIdleExpiry": "Si no hay nueva actividad",
     "ClientLoginEffectiveExpiry": "Caducidad prevista",
     "ClientLoginUnknown": "Aún no disponible",
     "ClientLoginUnlimited": "Sin límite",
     "ClientLoginCurrentUser": "Usuario actual",
     "ClientLoginExpiryHint": "La caducidad refleja el último estado confirmado por el servidor y usa la zona horaria de este dispositivo.",
-    "ClientLoginActivityScope": "Las acciones reales del teclado y el ratón en la ventana principal, en ventanas independientes de activos y en sitios web integrados cuentan como actividad. Una conexión abierta, la salida en segundo plano y la actualización automática no cuentan.",
-    "ClientLoginActivityLimits": "No se pueden registrar las acciones en programas externos como Xshell o MSTSC ni en algunas páginas integradas de otro origen. Usar solo esas áreas, observar durante mucho tiempo sin interactuar o sufrir fallos de envío por problemas de red puede provocar el tiempo de espera por inactividad. El tiempo se calcula desde la última actividad confirmada por el servidor."
+    "ClientLoginActivityScope": "El teclado y el ratón del sistema, incluso en aplicaciones externas, reinician solo el temporizador del sitio y cuenta activos. No se envía actividad al servidor.",
+    "ClientLoginActivityLimits": "La página principal y las ventanas gestionadas se bloquean juntas; solo se desbloquean desde la página principal. La sesión y las conexiones continúan. Las aplicaciones externas no están protegidas. Las sesiones nuevas y restauradas comienzan bloqueadas si está habilitado.",
+    "ClientLoginIdleLock": "Bloqueo por inactividad",
+    "ClientLoginPolicyExpiry": "Cierre programado tras un cambio del administrador"
   },
   "Setting": {
     "BackToApp": "Volver a la aplicación",
@@ -3322,5 +3320,24 @@
       "application": "Aplicación · fuera de los ajustes y diálogos",
       "terminal": "Terminal · cuando la IA del terminal está disponible y el terminal tiene el foco"
     }
+  },
+  "ClientLock": {
+    "Title": "Cliente bloqueado",
+    "Description": "Introduce la contraseña de bloqueo de esta cuenta. Las conexiones siguen activas.",
+    "MainOnly": "Esta ventana está bloqueada. Desbloquea esta cuenta en la página principal.",
+    "Password": "Contraseña de bloqueo del cliente",
+    "Unlock": "Desbloquear",
+    "Unset": "No hay contraseña de bloqueo. Configúrala en los ajustes personales web de este sitio y cuenta, vuelve y actualiza.",
+    "SetPassword": "Configurar contraseña",
+    "Reset": "Restablecer contraseña",
+    "Refresh": "Actualizar",
+    "Logout": "Cerrar sesión",
+    "GoToMain": "Ir a la página principal",
+    "LoadFailed": "No se pudo cargar. Comprueba la conexión e inténtalo de nuevo.",
+    "UnlockFailed": "No se pudo desbloquear. Comprueba la contraseña y la conexión.",
+    "TooManyAttempts": "Demasiados intentos. Espera un minuto.",
+    "LifetimeSoon": "La duración máxima de sesión está por vencer. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
+    "PolicyChangedSoon": "El administrador cambió la configuración. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
+    "IdleSoon": "Sin actividad, el cliente se bloqueará el {at}. Desbloquéalo con su contraseña en la página principal."
   }
 }

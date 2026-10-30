@@ -5,6 +5,7 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import os from "node:os";
+import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import test, { mock } from "node:test";
 import { runInNewContext } from "node:vm";
@@ -61,6 +62,7 @@ async function setupNavigation(
   let preferences: any;
   const views = new Map();
   const scope = {
+    lockedHosts: new Set<number>(),
     requireRecording: false,
     direct: false,
     allowManualNavigation,
@@ -102,7 +104,7 @@ async function setupNavigation(
   };
   const api = new Function(
     ...Object.keys(scope),
-    `${source}\nreturn {
+    `${stripTypeScriptTypes(source)}\nreturn {
       create: (args) => createWebProxyView(event, win, args),
       invoke: async (command, args) => { ${commands} }
     };`
@@ -608,6 +610,7 @@ async function setupAutofill() {
   const scriptStarted = deferred<void>();
   const script = { hooks: null as any, cancel: mock.fn(), completeVerification: mock.fn(async () => true) };
   const scope = {
+    lockedHosts: new Set<number>(),
     webProxyViews: views,
     emitDesktopEvent: (name, state) => events.push({ name, state }),
     normalizedWebOrigin,
@@ -644,7 +647,7 @@ async function setupAutofill() {
   };
   const api = new Function(
     ...Object.keys(scope),
-    `${source}\nreturn { startWebProxyAutofillWait, captureWebProxyPreview, tryWebProxyAutofill, finishWebProxyAutofill, checkWebProxyLoginSuccess, completeWebProxyVerification, emitWebProxyState, syncWebProxyVisibility };`
+    `${stripTypeScriptTypes(source)}\nreturn { startWebProxyAutofillWait, captureWebProxyPreview, tryWebProxyAutofill, finishWebProxyAutofill, checkWebProxyLoginSuccess, completeWebProxyVerification, emitWebProxyState, syncWebProxyVisibility };`
   )(...Object.values(scope));
   return {
     api,

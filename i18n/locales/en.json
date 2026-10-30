@@ -1147,7 +1147,6 @@
     "SessionExpired": "Login expired",
     "ExpiredPolicyChanged": "Client security settings have changed. Please sign in again.",
     "ExpiredLifetime": "Your login has reached its time limit. Please sign in again.",
-    "ExpiredIdle": "Your login expired because of inactivity. Please sign in again.",
     "ExpiredRevoked": "Your login authorization has been revoked. Please sign in again.",
     "ExpiredAppExit": "Client security settings require you to sign in again after exiting the application.",
     "ExpiredLogout": "You have signed out. Please sign in again.",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
     "ServerError": "The server is temporarily unavailable. Please try again later.",
-    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again.",
-    "ExpiredIdleDetail": "Your login expired after {duration} of inactivity (limit: {limit}). Please sign in again."
+    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again."
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"
@@ -1284,19 +1282,19 @@
     "NoUser": "Not signed in",
     "NoUserDescription": "Sign in to a JumpServer site to view user details.",
     "ClientLoginInfo": "Client login validity",
-    "ClientLoginInfoDescription": "Administrator policy and the latest server-confirmed login status for this account. Accepted activity extends the idle deadline, but never the maximum login lifetime.",
+    "ClientLoginInfoDescription": "Administrator policy and login times for the current site and account. A policy change schedules a separate exit without extending the original lifetime.",
     "ClientLoginReauthOnExit": "Sign in again after exiting",
     "ClientLoginMaxLifetime": "Maximum login lifetime",
     "ClientLoginStartedAt": "This login started",
-    "ClientLoginIdleTimeout": "Idle timeout",
-    "ClientLoginIdleExpiry": "If there is no new activity",
     "ClientLoginEffectiveExpiry": "Expected expiry",
     "ClientLoginUnknown": "Not available yet",
     "ClientLoginUnlimited": "Unlimited",
     "ClientLoginCurrentUser": "Current user",
     "ClientLoginExpiryHint": "The expiry time reflects the latest server-confirmed state and uses this device’s time zone.",
-    "ClientLoginActivityScope": "Real keyboard and mouse input in the main window, separate asset windows and built-in websites counts as activity. An open connection, background output and automatic refresh do not count.",
-    "ClientLoginActivityLimits": "Input in external software such as Xshell or MSTSC, and in some cross-origin embedded pages, cannot be captured. Using only these areas, watching without input for a long time, or failed reports due to network issues may still trigger the idle timeout. Time is measured from the last activity confirmed by the server."
+    "ClientLoginActivityScope": "System keyboard and mouse input, including input in external applications, resets the idle timer for the active site and account only. Activity is not reported to the server.",
+    "ClientLoginActivityLimits": "The main page and managed asset windows lock together; unlock only on the main page. Login and connections continue. External applications are not protected. When enabled, new and restored logins start locked.",
+    "ClientLoginIdleLock": "Idle lock",
+    "ClientLoginPolicyExpiry": "Exit scheduled after an administrator policy change"
   },
   "Setting": {
     "BackToApp": "Back to app",
@@ -3322,5 +3320,24 @@
       "application": "Application · outside settings and dialogs",
       "terminal": "Terminal · when terminal AI is available and focused"
     }
+  },
+  "ClientLock": {
+    "Title": "Client locked",
+    "Description": "Enter the client lock password for this account to continue. Connections remain active.",
+    "MainOnly": "This window is locked. Unlock this account on the main page.",
+    "Password": "Client lock password",
+    "Unlock": "Unlock",
+    "Unset": "No client lock password is set. Set it in the web personal settings for this site and account, then return and refresh.",
+    "SetPassword": "Set lock password",
+    "Reset": "Reset lock password",
+    "Refresh": "Refresh",
+    "Logout": "Sign out",
+    "GoToMain": "Go to main page",
+    "LoadFailed": "Unable to load. Check the connection and retry.",
+    "UnlockFailed": "Unlock failed. Check the password and connection, then retry.",
+    "TooManyAttempts": "Too many attempts. Wait one minute and retry.",
+    "LifetimeSoon": "The maximum login lifetime is ending. The client will sign out at {at}; sign in again afterwards.",
+    "PolicyChangedSoon": "The administrator changed the client policy. The client will sign out at {at}; sign in again afterwards.",
+    "IdleSoon": "The client will lock at {at} if there is no input. Enter the client lock password on the main page to unlock."
   }
 }

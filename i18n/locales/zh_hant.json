@@ -1147,7 +1147,6 @@
     "SessionExpired": "登入已失效",
     "ExpiredPolicyChanged": "客戶端安全設定已變更，請重新登入。",
     "ExpiredLifetime": "本次登入已達到有效期限，請重新登入。",
-    "ExpiredIdle": "因長時間未操作，登入已失效，請重新登入。",
     "ExpiredRevoked": "登入授權已撤銷，請重新登入。",
     "ExpiredAppExit": "根據客戶端安全設定，結束客戶端後需要重新登入。",
     "ExpiredLogout": "已登出，請重新登入。",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "登入失敗：證書或安全連線異常。",
     "NetworkError": "網路不可用，請檢查網路連線",
     "ServerError": "伺服器暫時不可用，請稍後重試",
-    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期。請重新登入。",
-    "ExpiredIdleDetail": "閒置已達 {duration}（限制 {limit}），登入已失效。請重新登入。"
+    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期。請重新登入。"
   },
   "Asset": {
     "GetAssetFailed": "獲取資產失敗,請重新整理重試"
@@ -1284,19 +1282,19 @@
     "NoUser": "尚未登入",
     "NoUserDescription": "登入 JumpServer 站點後即可檢視使用者詳情。",
     "ClientLoginInfo": "用戶端有效期資訊",
-    "ClientLoginInfoDescription": "目前帳號的管理員原則和伺服器最近確認的登入狀態。有效活動可順延閒置到期時間，但無法延長登入有效期上限。",
+    "ClientLoginInfoDescription": "目前網站、目前帳號的管理員設定及本次登入時間。設定變更會另行安排登出，不延長原有有效期。",
     "ClientLoginReauthOnExit": "退出後重新登入",
     "ClientLoginMaxLifetime": "最長登入有效期",
     "ClientLoginStartedAt": "本次登入時間",
-    "ClientLoginIdleTimeout": "閒置逾時",
-    "ClientLoginIdleExpiry": "若無新活動",
     "ClientLoginEffectiveExpiry": "本次到期時間",
     "ClientLoginUnknown": "尚未取得",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "目前使用者",
     "ClientLoginExpiryHint": "到期時間依據伺服器最近確認的狀態，依本機時區顯示。",
-    "ClientLoginActivityScope": "主視窗、獨立資產視窗及內建網站中的實際鍵盤、滑鼠操作會計入活動；連線在線、背景輸出和自動重新整理不算活動。",
-    "ClientLoginActivityLimits": "Xshell、MSTSC 等外部軟體和部分跨來源內嵌頁面中的操作無法擷取。僅在這些區域操作、長時間只觀看，或網路異常導致回報失敗時，仍可能觸發閒置逾時；以伺服器最後確認的活動時間為準。"
+    "ClientLoginActivityScope": "依本機系統鍵鼠輸入判斷閒置，其他程式操作亦計入；僅對目前啟用的網站與帳號計時，無須向伺服器回報活動。",
+    "ClientLoginActivityLimits": "主頁面與用戶端管理的資產視窗一起鎖定，只能在主頁面輸入目前帳號的鎖定密碼解鎖。登入及連線保持；外部軟體不受此鎖定保護。啟用後，新登入及還原的登入預設鎖定。",
+    "ClientLoginIdleLock": "閒置鎖定",
+    "ClientLoginPolicyExpiry": "管理員變更設定後的登出時間"
   },
   "Setting": {
     "BackToApp": "返回應用",
@@ -3322,5 +3320,24 @@
       "application": "應用程式 · 設定和對話框以外",
       "terminal": "終端機 · 聚焦且終端機 AI 可用時"
     }
+  },
+  "ClientLock": {
+    "Title": "用戶端已鎖定",
+    "Description": "輸入目前帳號的用戶端鎖定密碼以繼續使用，現有連線保持執行。",
+    "MainOnly": "此視窗已鎖定，請在主頁面解鎖此帳號。",
+    "Password": "用戶端鎖定密碼",
+    "Unlock": "解鎖",
+    "Unset": "尚未設定用戶端鎖定密碼。請前往此網站、此帳號的 Web 個人設定完成設定，返回後按重新整理。",
+    "SetPassword": "設定鎖定密碼",
+    "Reset": "重設鎖定密碼",
+    "Refresh": "重新整理",
+    "Logout": "登出帳號",
+    "GoToMain": "前往主頁面",
+    "LoadFailed": "載入失敗，請檢查網路後重試。",
+    "UnlockFailed": "解鎖失敗，請檢查密碼與網路後重試。",
+    "TooManyAttempts": "嘗試次數過多，請等待一分鐘後重試。",
+    "LifetimeSoon": "最長有效期即將到期，用戶端將於 {at} 登出，屆時需要重新登入。",
+    "PolicyChangedSoon": "管理員已修改設定，用戶端將於 {at} 登出，屆時需要重新登入。",
+    "IdleSoon": "若無操作，用戶端將於 {at} 鎖定，屆時請在主頁面輸入用戶端鎖定密碼解鎖。"
   }
 }
