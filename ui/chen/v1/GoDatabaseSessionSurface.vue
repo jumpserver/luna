@@ -51,6 +51,7 @@ import { acceptEditExecution, createEditDraft, editDirty } from "./dataEditing";
 import { readChenEvents } from "./events";
 import GoCatalogTree from "./GoCatalogTree.vue";
 import GoObjectPane from "./GoObjectPane.vue";
+import GoOverviewPane from "./GoOverviewPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
@@ -63,6 +64,7 @@ import {
   createQueryTab,
   exportActive,
   hasMoreResultRows,
+  isQueryWorkspaceTab,
   loadQueryPlan,
   normalizeResultLoading,
   objectKey,
@@ -167,7 +169,7 @@ interface QueryPaneHandle {
 }
 const queryPanes = new Map<string, QueryPaneHandle>();
 const tabStrip = ref<HTMLElement>();
-const queries = computed(() => tabs.value.filter((tab): tab is QueryWorkspaceTab => tab.kind !== "object"));
+const queries = computed(() => tabs.value.filter((tab): tab is QueryWorkspaceTab => isQueryWorkspaceTab(tab)));
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeId.value));
 const sessionReady = computed(() => session.value?.state === "ready");
 const insertTarget = computed(() => (activeTab.value?.kind === "query" ? activeTab.value : undefined));
@@ -358,10 +360,10 @@ function tabMenu(tab: ChenWorkspaceTab) {
   const others = tabs.value.filter((item) => item.id !== tab.id);
   const right = tabs.value.slice(index + 1);
   const cannotClose = (list: ChenWorkspaceTab[]) =>
-    !list.length || list.some((item) => item.kind !== "object" && item.busy);
+    !list.length || list.some((item) => isQueryWorkspaceTab(item) && item.busy);
   return [
     { label: t("Chen.GoV1RenameTab"), icon: "i-lucide-pencil", onSelect: () => renameTab(tab) },
-    ...(tab.kind !== "object"
+    ...(isQueryWorkspaceTab(tab)
       ? [
           {
             label: t("Chen.GoV1DuplicateQuery"),
@@ -374,7 +376,7 @@ function tabMenu(tab: ChenWorkspaceTab) {
     {
       label: t("Chen.GoV1CloseTab"),
       icon: "i-lucide-x",
-      disabled: tab.kind !== "object" && tab.busy,
+      disabled: isQueryWorkspaceTab(tab) && tab.busy,
       onSelect: () => closeTab(tab)
     },
     {
@@ -870,6 +872,19 @@ function openObject(object: GoCatalogObject) {
   activeId.value = id;
   drawer.value = false;
 }
+function openOverview(context: QueryContext) {
+  if (!sessionReady.value || context.database !== defaultContext.value.database) return;
+  const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
+  if (!tabs.value.some((tab) => tab.id === id))
+    tabs.value.push({
+      id,
+      kind: "overview",
+      title: `${t("Chen.GoOverviewTitle")} · ${context.schema || context.database}`,
+      context: { ...context }
+    });
+  activeId.value = id;
+  drawer.value = false;
+}
 async function submit(query: QueryWorkspaceTab, sql: string, version: number, plan = false) {
   if (
     !isCurrent(query) ||
@@ -1118,12 +1133,12 @@ function finishClose(value: boolean) {
   closeResolver = undefined;
 }
 async function closeTabs(list: ChenWorkspaceTab[]) {
-  const queries = list.filter((tab): tab is QueryWorkspaceTab => tab.kind !== "object");
+  const queries = list.filter((tab): tab is QueryWorkspaceTab => isQueryWorkspaceTab(tab));
   if (queries.some((query) => query.busy) || !(await confirmClose(queries))) return;
   for (const tab of list) await closeTab(tab, true);
 }
 async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
-  if (tab.kind !== "object") {
+  if (isQueryWorkspaceTab(tab)) {
     if (tab.busy || tab.exportBusy || (!confirmed && !(await confirmClose([tab]))) || !isCurrent(tab)) return;
     if (
       session.value?.can_cancel === false &&
@@ -1200,18 +1215,21 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   if (disposed || request !== replacement) return;
   retireConnection(connection);
   closeSqlAi();
-  tabs.value = tabs.value.map((tab) => {
-    if (tab.kind === "object") return { ...tab };
-    tab.closed = true;
-    tab.loadGeneration++;
-    return {
-      ...newQueryTab(tab.title, tab.context, tab.sql),
-      id: tab.id,
-      kind: tab.kind,
-      baselineSql: tab.baselineSql,
-      browseObject: tab.browseObject
-    };
-  });
+  tabs.value = tabs.value
+    .filter((tab) => tab.kind !== "overview")
+    .map((tab) => {
+      if (tab.kind === "object") return { ...tab };
+      tab.closed = true;
+      tab.loadGeneration++;
+      return {
+        ...newQueryTab(tab.title, tab.context, tab.sql),
+        id: tab.id,
+        kind: tab.kind,
+        baselineSql: tab.baselineSql,
+        browseObject: tab.browseObject
+      };
+    });
+  if (!tabs.value.some((tab) => tab.id === activeId.value)) activeId.value = tabs.value[0]?.id || "";
   session.value = null;
   defaultContext.value = { database: "", schema: "" };
   schemaEdit.value = null;
@@ -1445,6 +1463,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :can-insert="!!insertTarget"
           @insert="insertName"
           @object="openObject"
+          @overview="openOverview"
           @browse="(object) => newQuery({ database: object.database, schema: object.schema }, object, false, true)"
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
@@ -1508,18 +1527,20 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               >
                 <UIcon
                   :name="
-                    item.kind === 'object'
-                      ? 'i-lucide-table-properties'
-                      : executionActive(item.execution)
-                        ? 'i-lucide-loader-circle'
-                        : 'i-lucide-file-code-2'
+                    item.kind === 'overview'
+                      ? 'i-lucide-list-tree'
+                      : item.kind === 'object'
+                        ? 'i-lucide-table-properties'
+                        : executionActive(item.execution)
+                          ? 'i-lucide-loader-circle'
+                          : 'i-lucide-file-code-2'
                   "
                   class="size-3.5 shrink-0"
-                  :class="{ 'animate-spin': item.kind !== 'object' && executionActive(item.execution) }"
+                  :class="{ 'animate-spin': isQueryWorkspaceTab(item) && executionActive(item.execution) }"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ item.title }}</span>
                 <span
-                  v-if="item.kind !== 'object' && queryDirty(item)"
+                  v-if="isQueryWorkspaceTab(item) && queryDirty(item)"
                   :title="t('Chen.GoV1MemoryDraft')"
                   class="text-warning"
                 >
@@ -1531,7 +1552,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   size="xs"
                   color="neutral"
                   variant="ghost"
-                  :disabled="item.kind !== 'object' && item.busy"
+                  :disabled="isQueryWorkspaceTab(item) && item.busy"
                   @click.stop="closeTab(item)"
                   @dblclick.stop
                 />
@@ -1555,8 +1576,19 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           <UButton :label="t('Chen.NewQuery')" size="sm" :disabled="!sessionReady" @click="newQuery()" />
         </div>
         <div v-for="item in tabs" v-show="activeId === item.id" :key="item.id" class="flex min-h-0 flex-1 flex-col">
+          <GoOverviewPane
+            v-if="item.kind === 'overview'"
+            :api="api"
+            :session-id="session.id"
+            :scope="item.context"
+            :dialect="session.dialect"
+            :ready="sessionReady && eventConnected && !authenticationUnknown"
+            :visible="activeId === item.id"
+            :can-copy="session.permissions.can_copy"
+            @object="openObject"
+          />
           <GoObjectPane
-            v-if="item.kind === 'object'"
+            v-else-if="item.kind === 'object'"
             :object="item.object"
             :dialect="session.dialect"
             :api="api"

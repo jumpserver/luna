@@ -1,3 +1,5 @@
+import { parseOverview } from "./overview";
+import type { OverviewOptions } from "./overview";
 import type { ChenExecutionPlan } from "~/chen/types/plan";
 import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 import { buildHeaders, chenPath } from "~/chen/api/client";
@@ -223,6 +225,7 @@ export interface GoRelation {
   kind: string;
 }
 export interface GoCatalogObject {
+  object_type?: string;
   database: string;
   schema: string;
   name: string;
@@ -475,6 +478,15 @@ export function createChenGoApi(
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
+    catalogOverview: async (sessionId: string, options: OverviewOptions, signal?: AbortSignal) =>
+      parseOverview(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/overview?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        )
+      ),
     catalogDdl: (sessionId: string, schema: string, table: string, signal?: AbortSignal) =>
       request<GoCatalogSection>(
         `/sessions/${id(sessionId)}/catalog/ddl?${catalogQuery({ schema, table })}`,
