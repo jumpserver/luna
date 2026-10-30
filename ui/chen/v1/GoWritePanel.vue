@@ -65,7 +65,7 @@ const locked = computed(
     draft.value.refreshRequired ||
     policyPending.value
 );
-const supported = computed(() => draft.value.metadata?.supported === true);
+const supported = computed(() => !props.query.readOnly && draft.value.metadata?.supported === true);
 const canChange = computed(() => supported.value && !locked.value && !metadataBusy.value);
 const canInsert = computed(
   () =>
