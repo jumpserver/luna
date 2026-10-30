@@ -3362,8 +3362,8 @@
     "LoadFailed": "載入失敗，請檢查網路後重試。",
     "UnlockFailed": "解鎖失敗，請檢查密碼與網路後重試。",
     "TooManyAttempts": "嘗試次數過多，請等待一分鐘後重試。",
-    "LifetimeSoon": "最長有效期即將到期，用戶端將於 {at} 登出，屆時需要重新登入。",
-    "PolicyChangedSoon": "管理員已修改設定，用戶端將於 {at} 登出，屆時需要重新登入。",
+    "LifetimeSoon": "最長有效期即將到期，用戶端將於 {at} 登出，到期後需要重新登入。",
+    "PolicyChangedSoon": "管理員已修改設定，用戶端將於 {at} 登出，到期後需要重新登入。",
     "IdleSoon": "若無操作，用戶端將於 {at} 鎖定，屆時請在主頁面輸入用戶端鎖定密碼解鎖。",
     "ManagePassword": "管理鎖定密碼"
   }

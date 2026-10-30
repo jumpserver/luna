@@ -3362,8 +3362,8 @@
     "LoadFailed": "加载失败，请检查网络后重试。",
     "UnlockFailed": "解锁失败，请检查锁屏密码和网络后重试。",
     "TooManyAttempts": "尝试次数过多，请等待一分钟后重试。",
-    "LifetimeSoon": "最长有效期即将到期，客户端将在 {at} 退出，届时需要重新登录。",
-    "PolicyChangedSoon": "管理员已修改配置，客户端将在 {at} 退出，届时需要重新登录。",
+    "LifetimeSoon": "最长有效期即将到期，客户端将在 {at} 退出，到期后需要重新登录。",
+    "PolicyChangedSoon": "管理员已修改配置，客户端将在 {at} 退出，到期后需要重新登录。",
     "IdleSoon": "如无操作，客户端将在 {at} 锁屏，届时请在主页面输入客户端锁屏密码解锁。",
     "ManagePassword": "管理锁屏密码"
   }
