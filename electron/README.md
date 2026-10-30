@@ -76,8 +76,8 @@ renderer events cannot clear it.
 Passwords are never persisted by the client. Locked native website views remain
 hidden even when tabs or asynchronous callbacks request visibility.
 
-Lina Personal settings → Login authentication → Client credentials manages the
-independent client lock password and the existing file-encryption password.
+Lina Personal settings → User authentication has separate Client credentials
+and File encryption tabs for the client lock password and existing file password.
 `GET/PATCH /api/v1/users/profile/client-credentials/` accepts only a web session;
 PATCH follows the existing sensitive-operation confirmation policy. The client
 password is a Django password hash; the file password retains its encrypted
