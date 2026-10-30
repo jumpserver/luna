@@ -21,6 +21,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   object: [object: GoCatalogObject];
+  overview: [context: QueryContext];
   query: [context: QueryContext, object?: GoCatalogObject];
   preview: [object: GoCatalogObject];
   insert: [text: string];
@@ -235,6 +236,22 @@ async function refresh(current = root.value.children[0]!) {
 function menu(current: Node) {
   const context = { database: props.database, schema: current.schema };
   return [
+    ...(["database", "schema"].includes(current.type)
+      ? [
+          {
+            label: t("Chen.GoOverviewOpen"),
+            icon: "i-lucide-list-tree",
+            disabled: !props.ready,
+            onSelect: () => {
+              if (props.ready)
+                emit("overview", {
+                  database: props.database,
+                  schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
+                });
+            }
+          }
+        ]
+      : []),
     ...(["database", "schema", "object", "column"].includes(current.type)
       ? [
           {
