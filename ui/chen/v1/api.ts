@@ -196,6 +196,8 @@ export interface GoCatalogSection {
   error?: string | { code?: string; message?: string };
 }
 export interface GoCatalogInspect {
+  column_ordinals?: Record<string, number>;
+  columns_restricted?: boolean;
   database: string;
   schema: string;
   table: string;

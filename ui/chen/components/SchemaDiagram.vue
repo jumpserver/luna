@@ -9,12 +9,14 @@ const props = withDefaults(
     searchable?: boolean;
     openable?: boolean;
     initialTableName?: string;
+    showDetails?: boolean;
   }>(),
   {
     title: "",
     searchable: true,
     openable: true,
-    initialTableName: ""
+    initialTableName: "",
+    showDetails: false
   }
 );
 
@@ -23,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const markerId = `schema-diagram-${useId().replace(/[^\w-]/g, "")}`;
 const displayTitle = computed(() => props.title || t("Chen.SchemaDiagram"));
 
 const viewport = shallowRef<HTMLElement | null>(null);
@@ -53,17 +56,20 @@ function tableId(schema: string | null | undefined, table: string) {
 const allTables = computed(() =>
   props.tables.map((table) => ({
     ...table,
-    id: tableId(table.schema, table.name)
+    id: table.id ?? tableId(table.schema, table.name)
   }))
 );
 const allTablesById = computed(() => new Map(allTables.value.map((table) => [table.id, table])));
 const allRelationships = computed(() =>
   allTables.value.flatMap((source) =>
-    source.foreignKeys.flatMap((foreignKey) => {
-      if (!foreignKey.referencedTable) return [];
-      const targetId = tableId(foreignKey.referencedSchema || source.schema, foreignKey.referencedTable);
+    source.foreignKeys.flatMap((foreignKey, index) => {
+      if (!foreignKey.referencedId && !foreignKey.referencedTable) return [];
+      const targetId =
+        foreignKey.referencedId ?? tableId(foreignKey.referencedSchema || source.schema, foreignKey.referencedTable!);
       if (!allTablesById.value.has(targetId)) return [];
-      return [{ id: `${source.id}:${foreignKey.name}:${targetId}`, sourceId: source.id, targetId, foreignKey }];
+      return [
+        { id: JSON.stringify([source.id, foreignKey.name, targetId, index]), sourceId: source.id, targetId, foreignKey }
+      ];
     })
   )
 );
@@ -160,34 +166,33 @@ const entities = computed(() =>
 
 const relationLines = computed(() => {
   const byId = new Map(entities.value.map((entity) => [entity.id, entity]));
-  return allRelationships.value.flatMap((relationship) => {
+  return allRelationships.value.flatMap((relationship, index) => {
     const source = byId.get(relationship.sourceId);
     const target = byId.get(relationship.targetId);
     if (!source || !target) return [];
     const sourceColumn = relationship.foreignKey.columns[0];
     const targetColumn = relationship.foreignKey.referencedColumns[0];
-    const sourceIndex = Math.max(
-      0,
-      Math.min(
-        maxVisibleColumns - 1,
-        source.columns.findIndex((column) => column.name === sourceColumn)
-      )
-    );
-    const targetIndex = Math.max(
-      0,
-      Math.min(
-        maxVisibleColumns - 1,
-        target.columns.findIndex((column) => column.name === targetColumn)
-      )
-    );
+    // Hidden or unknown columns connect to the table header, never an unrelated visible row.
+    const columnY = (columns: ChenSchemaDiagramTable["columns"], name: string | undefined) => {
+      const index = columns.findIndex((column) => column.name === name);
+      return index >= 0 && index < maxVisibleColumns
+        ? headerHeight + index * rowHeight + rowHeight / 2
+        : headerHeight / 2;
+    };
     const targetIsRight = target.x >= source.x;
+    const self = source.id === target.id;
+    const x1 = targetIsRight ? source.x + entityWidth : source.x;
+    const x2 = self ? x1 : targetIsRight ? target.x : target.x + entityWidth;
+    const y1 = source.y + columnY(source.columns, sourceColumn);
+    const y2 = target.y + columnY(target.columns, targetColumn);
+    const bend = 36 + (index % 12) * 12;
+    const path = self
+      ? `M ${x1} ${y1} C ${x1 + bend} ${y1 - bend}, ${x1 + bend} ${y2 + bend}, ${x2} ${y2}`
+      : `M ${x1} ${y1} C ${(x1 + x2) / 2 + bend} ${y1}, ${(x1 + x2) / 2 - bend} ${y2}, ${x2} ${y2}`;
     return [
       {
         ...relationship,
-        x1: targetIsRight ? source.x + entityWidth : source.x,
-        y1: source.y + headerHeight + sourceIndex * rowHeight + rowHeight / 2,
-        x2: targetIsRight ? target.x : target.x + entityWidth,
-        y2: target.y + headerHeight + targetIndex * rowHeight + rowHeight / 2
+        path
       }
     ];
   });
@@ -196,7 +201,7 @@ const relationLines = computed(() => {
 function chooseTable(id: string, syncSearch = false) {
   selectedId.value = id;
   focusMode.value = false;
-  showRelated.value = false;
+  showRelated.value = props.showDetails;
   if (syncSearch) searchQuery.value = allTablesById.value.get(id)?.name || "";
 }
 
@@ -314,9 +319,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
 </script>
 
 <template>
-  <div class="relative h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-background)]">
+  <div class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--workspace-surface-background)]">
     <div
-      class="absolute inset-x-3 top-3 z-30 flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-default bg-[var(--app-surface-overlay)] p-2 shadow-sm"
+      class="z-30 m-3 flex min-w-0 shrink-0 flex-wrap items-center gap-2 rounded-lg border border-default bg-[var(--app-surface-overlay)] p-2 shadow-sm"
     >
       <div class="mr-1 shrink-0">
         <div class="text-xs font-semibold">{{ displayTitle }}</div>
@@ -359,7 +364,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
             <span class="truncate">{{ match.name }}</span>
             <span class="shrink-0 text-[10px] text-muted">{{ match.schema }}</span>
           </button>
-          <div v-if="!searchMatches.length" class="px-2 py-2 text-xs text-muted">{{ t("Chen.NoMatchingTables") }}</div>
+          <div v-if="!searchMatches.length" class="px-2 py-2 text-xs text-muted">
+            {{ t("Chen.NoMatchingTables") }}
+          </div>
         </div>
       </div>
 
@@ -425,12 +432,14 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     </div>
 
     <div
-      v-if="searchable && showRelated && selectedTable"
+      v-if="searchable && showRelated && selectedTable && !showDetails"
       class="absolute bottom-3 left-3 z-30 w-64 overflow-hidden rounded-lg border border-default bg-[var(--app-surface-overlay)] shadow-lg"
     >
       <div class="border-b border-default px-3 py-2">
         <div class="truncate text-xs font-semibold">{{ selectedTable.name }}</div>
-        <div class="text-[10px] text-muted">{{ t("Chen.DirectlyRelatedTables", { count: relatedTables.length }) }}</div>
+        <div class="text-[10px] text-muted">
+          {{ t("Chen.DirectlyRelatedTables", { count: relatedTables.length }) }}
+        </div>
       </div>
       <div class="max-h-56 overflow-auto p-1">
         <button
@@ -454,7 +463,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
 
     <div
       ref="viewport"
-      class="diagram-grid h-full touch-none overflow-hidden"
+      class="diagram-grid relative min-h-0 flex-1 touch-none overflow-hidden"
       :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
       @wheel.prevent="handleWheel"
       @pointerdown="startDrag"
@@ -473,7 +482,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         <svg class="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden="true">
           <defs>
             <marker
-              id="schema-diagram-relation-end"
+              :id="markerId"
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
@@ -487,11 +496,13 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           <path
             v-for="line in relationLines"
             :key="line.id"
-            :d="`M ${line.x1} ${line.y1} C ${(line.x1 + line.x2) / 2} ${line.y1}, ${(line.x1 + line.x2) / 2} ${line.y2}, ${line.x2} ${line.y2}`"
+            :d="line.path"
+            :data-diagram-edge="line.foreignKey.name"
+            :stroke-dasharray="line.foreignKey.incomplete ? '5 4' : undefined"
             fill="none"
             stroke="var(--app-text-muted)"
             stroke-width="1.5"
-            marker-end="url(#schema-diagram-relation-end)"
+            :marker-end="`url(#${markerId})`"
             class="transition-opacity duration-200"
             :style="{ opacity: relationOpacity(line.sourceId, line.targetId) }"
           />
@@ -500,6 +511,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         <section
           v-for="entity in entities"
           :key="entity.id"
+          :data-diagram-node="entity.id"
           class="absolute overflow-hidden rounded-lg border bg-[var(--app-surface-card)] shadow-md transition-all duration-200"
           :class="
             entity.id === selectedId
@@ -529,7 +541,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               <UIcon name="i-lucide-table-2" class="size-4 shrink-0 text-primary" />
               <div class="min-w-0 flex-1">
                 <div class="truncate text-xs font-semibold">{{ entity.name }}</div>
-                <div class="truncate text-[10px] text-muted">{{ entity.schema }}</div>
+                <div class="truncate text-[10px] text-muted">
+                  {{ [entity.database, entity.schema].filter(Boolean).join(" / ") }}
+                  <span v-if="entity.metadataStatus">· {{ t(`Chen.GoDiagram${entity.metadataStatus}`) }}</span>
+                </div>
               </div>
             </button>
             <UButton
@@ -554,7 +569,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
                 :class="entity.primaryColumns.has(column.name) ? 'text-warning' : 'text-muted'"
               />
               <span class="min-w-0 flex-1 truncate font-ui-mono">{{ column.name }}</span>
-              <span class="max-w-24 truncate text-muted">{{ column.nativeType }}</span>
+              <span class="max-w-24 truncate text-muted">{{ column.nativeType ?? t("Chen.GoDiagramUnknown") }}</span>
             </div>
             <div v-if="entity.columns.length > maxVisibleColumns" class="h-6 px-3 py-1 text-[10px] text-muted">
               {{ t("Chen.MoreColumns", { count: entity.columns.length - maxVisibleColumns }) }}
@@ -563,6 +578,45 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           <div v-else class="flex h-7 items-center px-3 text-[11px] text-muted">{{ t("Chen.NoColumns") }}</div>
         </section>
       </div>
+    </div>
+    <div
+      v-if="showDetails"
+      class="max-h-64 shrink-0 overflow-auto border-t border-default bg-[var(--workspace-surface-background)] p-3 text-xs"
+      data-diagram-details
+    >
+      <p v-if="!selectedTable" class="text-muted">{{ t("Chen.GoDiagramSelectDetails") }}</p>
+      <template v-else>
+        <p class="break-words font-semibold">
+          {{ selectedTable.database }} / {{ selectedTable.schema || t("Chen.GoDiagramUnknown") }} /
+          {{ selectedTable.name }}
+        </p>
+        <p v-if="selectedTable.metadataStatus" class="mt-1 text-muted">
+          {{ t(`Chen.GoDiagram${selectedTable.metadataStatus}`) }}
+        </p>
+        <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <span v-for="column in selectedTable.columns" :key="column.name" class="break-all font-ui-mono">
+            {{ column.ordinal ?? "?" }}. {{ column.name }} · {{ column.nativeType ?? t("Chen.GoDiagramUnknown") }} ·
+            {{ column.nullable === null ? t("Chen.GoDiagramUnknown") : column.nullable ? "NULL" : "NOT NULL" }}
+            <span v-if="selectedTable.primaryKey.includes(column.name)">· PK</span>
+          </span>
+        </div>
+        <div
+          v-for="(foreignKey, index) in selectedTable.foreignKeys"
+          :key="index"
+          class="mt-2 border-t border-default pt-2"
+          data-diagram-constraint
+        >
+          <p class="break-words font-medium">
+            {{ foreignKey.name || t("Chen.GoDiagramUnknown") }} →
+            {{ foreignKey.referencedSchema || t("Chen.GoDiagramUnknown") }} /
+            {{ foreignKey.referencedTable || t("Chen.GoDiagramUnknown") }}
+          </p>
+          <p v-if="foreignKey.incomplete" class="text-warning">{{ t("Chen.GoDiagramIncompleteConstraint") }}</p>
+          <p v-for="(column, pair) in foreignKey.columns" :key="pair" class="break-all font-ui-mono">
+            {{ foreignKey.ordinals?.[pair] ?? "?" }}. {{ column }} → {{ foreignKey.referencedColumns[pair] ?? "?" }}
+          </p>
+        </div>
+      </template>
     </div>
   </div>
 </template>
