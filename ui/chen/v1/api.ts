@@ -109,7 +109,7 @@ export interface GoBrowseRequest {
   schema?: string;
   table?: string;
   source_result_id?: string;
-  action?: "page" | "count" | "export";
+  action?: "page" | "append" | "count" | "export";
   where?: string;
   filter?: GoBrowseFilter;
   sort?: GoBrowseOrder[];
@@ -118,6 +118,8 @@ export interface GoBrowseRequest {
   format?: GoExportFormat;
 }
 export interface GoBrowsePage {
+  max_loaded_rows?: number;
+  limit_reached?: "rows" | "bytes";
   supported: boolean;
   reason?: string;
   database: string;
@@ -449,8 +451,12 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
-    exportCached: (resultId: string, format: GoExportFormat, requestId: string) =>
-      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", { format, request_id: requestId }),
+    exportCached: (resultId: string, format: GoExportFormat, requestId: string, rows?: number) =>
+      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", {
+        format,
+        request_id: requestId,
+        ...(rows !== undefined ? { rows } : {})
+      }),
     getExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}`),
     cancelExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}/cancel`, "POST"),
     deleteExport: (exportId: string) => request<void>(`/exports/${id(exportId)}`, "DELETE"),

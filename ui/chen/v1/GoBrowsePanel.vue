@@ -46,11 +46,6 @@ const operators = computed(() =>
     }[op]
   }))
 );
-const sizes = computed(() =>
-  [...new Set([Math.min(50, applied.value?.max_page_size || 1000), 100, 200, 500, 1000, draft.value.page_size])]
-    .filter((n) => n <= (applied.value?.max_page_size || 1000))
-    .sort((a, b) => a - b)
-);
 function mode(structured: boolean) {
   if (locked.value) return;
   if (structured) {
@@ -118,7 +113,7 @@ const total = computed(() =>
           :aria-expanded="expanded"
           @click="expanded = !expanded"
         />
-        <span v-if="applied" data-browse-range>
+        <span v-if="applied && query.loadingSettings.mode === 'page'" data-browse-range>
           {{
             t("Chen.GoBrowseRange", {
               first: query.rows?.rows.length ? applied.offset + 1 : 0,
@@ -136,9 +131,14 @@ const total = computed(() =>
           :disabled="locked || !applied"
           @click="count"
         />
-        <span v-if="applied?.has_more === true">{{ t("Chen.GoBrowseMore") }}</span>
-        <span v-else-if="applied?.has_more === false">{{ t("Chen.GoBrowseEnd") }}</span>
+        <span v-if="query.loadingSettings.mode === 'page' && applied?.has_more === true">
+          {{ t("Chen.GoBrowseMore") }}
+        </span>
+        <span v-else-if="query.loadingSettings.mode === 'page' && applied?.has_more === false">
+          {{ t("Chen.GoBrowseEnd") }}
+        </span>
         <UButton
+          v-if="query.loadingSettings.mode === 'page'"
           size="xs"
           icon="i-lucide-chevron-left"
           color="neutral"
@@ -148,6 +148,7 @@ const total = computed(() =>
           @click="page(Math.max(0, applied!.offset - applied!.page_size))"
         />
         <UButton
+          v-if="query.loadingSettings.mode === 'page'"
           size="xs"
           icon="i-lucide-chevron-right"
           color="neutral"
@@ -269,8 +270,6 @@ const total = computed(() =>
             :aria-label="t('Chen.GoBrowseDirection')"
             :disabled="locked"
           />
-          <span>{{ t("Chen.GoBrowseSize") }}</span>
-          <USelect v-model="draft.page_size" :items="sizes" :aria-label="t('Chen.GoBrowseSize')" :disabled="locked" />
           <UButton size="xs" :label="t('Chen.ApplyFilter')" :disabled="locked" @click="submit()" />
           <UButton
             size="xs"

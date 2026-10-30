@@ -13,7 +13,7 @@ const emit = defineEmits<{
   start: [
     mode: "cached" | "query",
     format: GoExportFormat,
-    snapshot: { sql: string; resultId: string; version: number }
+    snapshot: { sql: string; resultId: string; version: number; rows?: number }
   ];
   sync: [];
   cancel: [];
@@ -67,7 +67,10 @@ function show() {
     sql: props.query.rows?.browse?.supported ? props.query.rows.browse.full_sql : props.query.resultSql,
     resultId: props.query.resultId,
     version: props.query.resultExecution?.id === props.query.execution?.id ? props.query.executionVersion : 0,
-    rows: props.query.rows?.total_rows || 0,
+    rows:
+      (props.query.loadingSettings.mode === "continuous"
+        ? props.query.rows?.rows.length
+        : props.query.rows?.total_rows) || 0,
     truncated: !!props.query.rows?.truncated
   };
   mode.value = "cached";
@@ -192,7 +195,15 @@ useIntervalFn(() => {
         <template v-if="ready && !active && !job">
           <div class="flex flex-wrap gap-2">
             <UButton
-              :label="t(query.rows?.browse?.supported ? 'Chen.GoBrowseExportPage' : 'Chen.GoV1ExportCached')"
+              :label="
+                t(
+                  query.loadingSettings.mode === 'continuous'
+                    ? 'Chen.GoBrowseExportLoaded'
+                    : query.rows?.browse?.supported
+                      ? 'Chen.GoBrowseExportPage'
+                      : 'Chen.GoV1ExportCached'
+                )
+              "
               :aria-pressed="mode === 'cached'"
               :variant="mode === 'cached' ? 'soft' : 'ghost'"
               color="neutral"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoBrowseRequest, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { QueryWorkspaceTab } from "./workspace";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
@@ -22,7 +22,7 @@ import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
-import { loadQueryPlan } from "./workspace";
+import { hasMoreResultRows, loadQueryPlan, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -39,6 +39,8 @@ const emit = defineEmits<{
   uploadSql: [sql: string];
   refreshData: [];
   browse: [request: GoBrowseRequest];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [automatic: boolean];
   run: [sql: string, version: number];
   explain: [sql: string, version: number];
   cancel: [];
@@ -47,7 +49,7 @@ const emit = defineEmits<{
   export: [
     mode: "cached" | "query",
     format: GoExportFormat,
-    snapshot: { sql: string; resultId: string; version: number }
+    snapshot: { sql: string; resultId: string; version: number; rows?: number }
   ];
   exportSync: [];
   exportCancel: [];
@@ -902,7 +904,12 @@ defineExpose({
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
           <span
-            v-if="query.resultPane === 'results' && query.rows && !query.rows.browse?.supported"
+            v-if="
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported
+            "
             class="ml-auto text-muted"
           >
             {{ query.rows.rows.length ? query.rows.offset + 1 : 0 }}–{{ query.rows.offset + query.rows.rows.length }} /
@@ -910,7 +917,11 @@ defineExpose({
           </span>
           <UButton
             v-if="
-              query.resultPane === 'results' && query.rows && !query.rows.browse?.supported && query.rows.offset > 0
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported &&
+              query.rows.offset > 0
             "
             icon="i-lucide-chevron-left"
             :aria-label="t('Chen.GoV1Previous')"
@@ -918,11 +929,14 @@ defineExpose({
             color="neutral"
             variant="ghost"
             :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy"
-            @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - 200))"
+            @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - query.loadingSettings.batchSize))"
           />
           <UButton
             v-if="
-              query.resultPane === 'results' && !query.rows?.browse?.supported && query.rows?.next_offset !== undefined
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              !query.rows?.browse?.supported &&
+              query.rows?.next_offset !== undefined
             "
             icon="i-lucide-chevron-right"
             :aria-label="t('Chen.GoV1Next')"
@@ -1095,17 +1109,63 @@ defineExpose({
           </div>
           <ExecutionPlanTree :plan="shownPlan" :loading="planLoading" preserve-raw />
         </div>
-        <GoWritePanel
-          v-else-if="query.rows"
-          :key="query.rows.id"
-          :visible="visible"
-          :query="query"
-          :session="session"
-          :api="api"
-          class="min-h-0 flex-1"
-          @apply="emit('applyEdits', $event)"
-          @refresh="emit('refreshData')"
-        />
+        <template v-else-if="query.rows">
+          <GoWritePanel
+            :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
+            :visible="visible"
+            :query="query"
+            :session="session"
+            :api="api"
+            class="min-h-0 flex-1"
+            @apply="emit('applyEdits', $event)"
+            @refresh="emit('refreshData')"
+            @loading-settings="emit('loadingSettings', $event)"
+            @load-more="emit('loadMore', $event)"
+          />
+          <div
+            v-if="query.loadingSettings.mode === 'continuous'"
+            role="status"
+            data-continuous-status
+            class="flex shrink-0 flex-wrap items-center gap-2 border-t border-default px-3 py-1.5 text-xs"
+          >
+            <span class="tabular-nums">{{ t("Chen.GoBrowseLoaded", { rows: query.rows.rows.length }) }}</span>
+            <span
+              v-if="
+                query.loadingRows || (executionActive(query.execution) && query.executionBrowse?.action === 'append')
+              "
+              class="text-muted"
+            >
+              {{ t("Chen.GoBrowseLoadingMore") }}
+            </span>
+            <span v-else-if="editDirty(query.edit) || query.edit.refreshRequired" class="text-warning">
+              {{ t("Chen.GoBrowseScrollDirty") }}
+            </span>
+            <span v-else-if="query.loadMoreFailed || query.resultLoadError" class="text-warning">
+              {{ t("Chen.GoBrowseLoadMoreFailed") }}
+            </span>
+            <span v-else-if="query.rows.browse?.limit_reached === 'rows'" class="text-warning">
+              {{ t("Chen.GoBrowseCacheLimit", { rows: query.rows.browse.max_loaded_rows }) }}
+            </span>
+            <span v-else-if="query.rows.truncated && !hasMoreResultRows(query)" class="text-warning">
+              {{ t("Chen.GoBrowseCacheStopped") }}
+            </span>
+            <span v-else-if="!hasMoreResultRows(query)" class="text-muted">
+              {{ t(query.rows.browse?.supported ? "Chen.GoBrowseEnd" : "Chen.GoBrowseCacheEnd") }}
+            </span>
+            <UButton
+              v-if="hasMoreResultRows(query)"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              class="ml-auto"
+              :label="
+                t(query.loadMoreFailed || query.resultLoadError ? 'Chen.GoBrowseRetryMore' : 'Chen.GoBrowseLoadMore')
+              "
+              :disabled="!ready || resultLoadingLocked(query)"
+              @click="emit('loadMore', false)"
+            />
+          </div>
+        </template>
         <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
           <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
             {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}

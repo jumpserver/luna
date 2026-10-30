@@ -11,6 +11,7 @@ import type {
   GoRows
 } from "./api";
 import type { GoEditDraft } from "./dataEditing";
+import { useStorage } from "@vueuse/core";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
@@ -42,6 +43,9 @@ export interface QueryWorkspaceTab {
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
   browseObject?: GoCatalogObject;
+  loadingSettings: GoResultLoadingSettings;
+  pendingLoading: GoResultLoadingSettings | null;
+  loadMoreFailed: boolean;
   browseDraft: GoBrowseDraft;
   browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
@@ -49,7 +53,7 @@ export interface QueryWorkspaceTab {
   executionBrowse?: GoBrowseRequest;
   exportJob: GoExport | null;
   exportBusy: boolean;
-  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string } | null;
+  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
   resultSql: string;
   rows: GoRows | null;
@@ -67,7 +71,14 @@ export interface QueryWorkspaceTab {
   } | null;
   busy: boolean;
   loadingRows: boolean;
-  resultLoadError: { message: string; id: string; offset: number; execution: GoExecution; sql: string } | null;
+  resultLoadError: {
+    append?: boolean;
+    message: string;
+    id: string;
+    offset: number;
+    execution: GoExecution;
+    sql: string;
+  } | null;
   loadGeneration: number;
   error: string;
   closed: boolean;
@@ -107,6 +118,9 @@ export function createQueryTab(
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
+    loadingSettings: { mode: "page", batchSize: 200 },
+    pendingLoading: null,
+    loadMoreFailed: false,
     browseDraft: { where: "", sort: [], page_size: 200 },
     browseCount: null,
     exportJob: null,
@@ -294,4 +308,63 @@ export async function loadQueryPlan(query: QueryWorkspaceTab, api: Pick<ChenGoAp
   } finally {
     if (current()) query.loadingPlan = false;
   }
+}
+
+export interface GoResultLoadingSettings {
+  mode: "page" | "continuous";
+  batchSize: number;
+}
+export function normalizeResultLoading(value: unknown): GoResultLoadingSettings {
+  const saved = value && typeof value === "object" ? (value as Partial<GoResultLoadingSettings>) : {};
+  return {
+    mode: saved.mode === "continuous" ? "continuous" : "page",
+    batchSize:
+      Number.isInteger(saved.batchSize) && saved.batchSize! > 0 && saved.batchSize! <= 1000 ? saved.batchSize! : 200
+  };
+}
+export function useResultLoadingPreferences() {
+  return useStorage<GoResultLoadingSettings>(
+    "jumpserver-client:chen-result-loading",
+    normalizeResultLoading(null),
+    undefined,
+    {
+      serializer: {
+        read: (raw) => {
+          try {
+            return normalizeResultLoading(JSON.parse(raw));
+          } catch {
+            return normalizeResultLoading(null);
+          }
+        },
+        write: (value) => JSON.stringify(normalizeResultLoading(value))
+      },
+      onError: () => {}
+    }
+  );
+}
+export function resultLoadingLocked(query: QueryWorkspaceTab) {
+  return (
+    query.closed ||
+    query.console?.state !== "ready" ||
+    query.busy ||
+    query.loadingRows ||
+    !!query.pending ||
+    executionActive(query.execution) ||
+    query.edit.busy ||
+    query.edit.refreshRequired ||
+    editDirty(query.edit)
+  );
+}
+export function hasMoreResultRows(query: QueryWorkspaceTab) {
+  const rows = query.rows;
+  if (!rows || query.loadingSettings.mode !== "continuous") return false;
+  // Cached rows may still be unread after a recoverable HTTP failure.
+  if (rows.next_offset !== undefined) return true;
+  return (
+    rows.browse?.supported === true &&
+    rows.browse.has_more === true &&
+    !rows.browse.limit_reached &&
+    !rows.truncated &&
+    rows.rows.length < (rows.browse.max_loaded_rows || 10000)
+  );
 }

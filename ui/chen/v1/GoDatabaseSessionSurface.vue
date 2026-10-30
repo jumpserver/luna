@@ -11,7 +11,7 @@ import type {
   GoSession
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { ChenWorkspaceTab, QueryContext, QueryWorkspaceTab } from "./workspace";
+import type { ChenWorkspaceTab, GoResultLoadingSettings, QueryContext, QueryWorkspaceTab } from "./workspace";
 import type {
   ChenSqlAiFrameSender,
   ChenSqlAiOperation,
@@ -62,19 +62,30 @@ import {
   closeWarnings,
   createQueryTab,
   exportActive,
+  hasMoreResultRows,
   loadQueryPlan,
+  normalizeResultLoading,
   objectKey,
   objectSelect,
   queryDirty,
   reconcileExport,
+  resultLoadingLocked,
   reviewSubmission,
   tabContext,
+  useResultLoadingPreferences,
   warningSubmission
 } from "./workspace";
 
 const props = defineProps<{ tab?: WorkspaceSessionTab; selector?: string }>();
 const { t } = useI18n();
 const toast = useToast();
+const loadingPreferences = useResultLoadingPreferences();
+function newQueryTab(...args: Parameters<typeof createQueryTab>) {
+  const query = createQueryTab(...args);
+  query.loadingSettings = normalizeResultLoading(loadingPreferences.value);
+  query.browseDraft.page_size = query.loadingSettings.batchSize;
+  return query;
+}
 const aiPanel = props.tab ? useAiPanel() : null;
 const workspace = props.tab ? useWorkspaceTabs() : null;
 const userInfo = props.tab ? useUserInfoStore() : null;
@@ -396,14 +407,16 @@ async function loadRows(
   id: string,
   offset = 0,
   execution = query.resultExecution || query.execution,
-  sql = execution?.id === query.execution?.id ? query.executionSql : query.resultSql
+  sql = execution?.id === query.execution?.id ? query.executionSql : query.resultSql,
+  append = false
 ) {
   if (!execution || editDirty(query.edit) || query.edit.busy) return;
   const generation = ++query.loadGeneration;
   query.loadingRows = true;
   query.resultLoadError = null;
   try {
-    const limit = query.browseObject ? query.executionBrowse?.page_size || query.rows?.browse?.page_size || 200 : 200;
+    const settings = query.pendingLoading || query.loadingSettings;
+    const limit = settings.batchSize;
     const page = await api.rows(id, offset, limit);
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
@@ -415,7 +428,23 @@ async function loadRows(
           page_size: page.browse.page_size
         };
       }
-      query.rows = page;
+      if (append) {
+        const previous = query.rows;
+        if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset)
+          return;
+        query.rows = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+      } else query.rows = page;
+      if (query.pendingLoading) {
+        query.loadingSettings = { ...query.pendingLoading };
+        loadingPreferences.value = { ...query.pendingLoading };
+        query.browseDraft.page_size = query.pendingLoading.batchSize;
+        query.pendingLoading = null;
+      }
+      if (page.browse?.supported) {
+        query.browseDraft.page_size = page.browse.page_size;
+        query.loadingSettings.batchSize = page.browse.page_size;
+      }
+      query.loadMoreFailed = false;
       if (changedResult) query.browseCount = null;
       if (changedResult) query.edit = createEditDraft();
       query.resultId = id;
@@ -431,19 +460,26 @@ async function loadRows(
       query.resultSql = sql;
     }
   } catch (cause) {
-    if (isCurrent(query) && generation === query.loadGeneration)
-      query.resultLoadError = { message: failureText(cause), id, offset, execution, sql };
+    if (isCurrent(query) && generation === query.loadGeneration) {
+      query.resultLoadError = { message: failureText(cause), id, offset, execution, sql, append };
+      if (append) query.loadMoreFailed = true;
+    }
   } finally {
     if (generation === query.loadGeneration) query.loadingRows = false;
   }
 }
 function retryRows(query: QueryWorkspaceTab) {
   const failed = query.resultLoadError;
-  if (failed) void loadRows(query, failed.id, failed.offset, failed.execution, failed.sql);
+  if (failed) void loadRows(query, failed.id, failed.offset, failed.execution, failed.sql, failed.append);
 }
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
+  if (!["queued", "running", "waiting_review", "cancel_requested", "succeeded"].includes(value.status)) {
+    if (query.executionBrowse?.action === "append") query.loadMoreFailed = true;
+    if (!["command_review_required", "command_warning_confirmation_required"].includes(value.error?.code || ""))
+      query.pendingLoading = null;
+  }
   if (value.status === "succeeded" && value.browse_count && value.browse_count.source_result_id === query.rows?.id)
     query.browseCount = value.browse_count;
   if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
@@ -453,9 +489,17 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     (!query.executionBrowse || value.status === "succeeded") &&
     value.result_ids?.length &&
     query.resultExecution?.id !== value.id &&
-    !query.loadingRows
+    !query.loadingRows &&
+    !query.resultLoadError
   )
-    void loadRows(query, value.result_ids[0]!, 0, query.execution, query.executionSql);
+    void loadRows(
+      query,
+      value.result_ids[0]!,
+      query.executionBrowse?.action === "append" ? query.executionBrowse.offset || 0 : 0,
+      query.execution,
+      query.executionSql,
+      query.executionBrowse?.action === "append"
+    );
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
   if (!isCurrent(query) || query.exportJob?.id !== value.id) return;
@@ -622,7 +666,7 @@ async function newQuery(
   if (object && !preview && !browse && !session.value?.permissions.can_paste) return;
   const sql = object ? objectSelect(object, session.value!.dialect, preview) : chenSampleSql(session.value!.dialect);
   const query = reactive(
-    createQueryTab(
+    newQueryTab(
       `${t(preview ? "Chen.GoV1Preview" : "Chen.Query")} ${++queryNumber}`,
       context,
       sql,
@@ -665,9 +709,56 @@ async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) 
       request ||
       (query.rows?.browse?.supported
         ? { source_result_id: query.rows.id, offset: query.rows.browse.offset }
-        : { schema: query.browseObject.schema, table: query.browseObject.name })
+        : {
+            schema: query.browseObject.schema,
+            table: query.browseObject.name,
+            ...(["postgresql", "mysql"].includes(session.value!.dialect)
+              ? { page_size: query.loadingSettings.batchSize }
+              : {})
+          })
   };
   await recoverSubmission(query);
+}
+async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSettings) {
+  if (!sessionReady.value || resultLoadingLocked(query)) return;
+  const settings = normalizeResultLoading(input);
+  settings.batchSize = Math.min(
+    settings.batchSize,
+    query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000
+  );
+  if (settings.mode === query.loadingSettings.mode && settings.batchSize === query.loadingSettings.batchSize) return;
+  query.pendingLoading = settings;
+  query.loadMoreFailed = false;
+  if (query.rows?.browse?.supported) {
+    await browseTable(query, { source_result_id: query.rows.id, page_size: settings.batchSize, offset: 0 });
+  } else if (query.rows) await loadRows(query, query.rows.id, 0);
+  else {
+    query.loadingSettings = settings;
+    query.browseDraft.page_size = settings.batchSize;
+    loadingPreferences.value = { ...settings };
+    query.pendingLoading = null;
+  }
+}
+async function loadMore(query: QueryWorkspaceTab, automatic = false) {
+  if (
+    !sessionReady.value ||
+    resultLoadingLocked(query) ||
+    !hasMoreResultRows(query) ||
+    (automatic && query.loadMoreFailed)
+  )
+    return;
+  query.loadMoreFailed = false;
+  const rows = query.rows!;
+  if (query.resultLoadError) {
+    retryRows(query);
+    return;
+  }
+  if (rows.next_offset !== undefined) {
+    await loadRows(query, rows.id, rows.next_offset, undefined, undefined, true);
+  } else if (rows.browse?.supported) {
+    await browseTable(query, { action: "append", source_result_id: rows.id, offset: rows.rows.length });
+    if (query.error) query.loadMoreFailed = true;
+  }
 }
 async function applyEdits(query: QueryWorkspaceTab, plan: GoEditPlan) {
   if (
@@ -743,7 +834,7 @@ function applySchemaSql(id: string, sql: string, execute: boolean): boolean {
   )
     return false;
   const scope = connection;
-  const query = reactive(createQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
+  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
@@ -767,7 +858,7 @@ watch(
 async function restoreQuery(context: QueryContext, sql: string, uploaded = false) {
   if (!sessionReady.value || !(uploaded ? session.value?.permissions.can_upload : session.value?.permissions.can_paste))
     return;
-  const query = reactive(createQueryTab(`${t("Chen.Query")} ${++queryNumber}`, context, sql, true));
+  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
@@ -877,7 +968,10 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     await syncExecution(query);
   } catch (cause) {
     if (!isCurrent(query)) return;
-    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) query.pending = null;
+    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) {
+      query.pending = null;
+      query.pendingLoading = null;
+    }
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
   } finally {
     if (isCurrent(query)) query.busy = false;
@@ -887,7 +981,7 @@ async function startExport(
   query: QueryWorkspaceTab,
   mode: "query" | "cached",
   format: GoExportFormat,
-  snapshot: { sql: string; resultId: string; version: number }
+  snapshot: { sql: string; resultId: string; version: number; rows?: number }
 ) {
   if (
     !isCurrent(query) ||
@@ -919,12 +1013,12 @@ async function startExport(
   }
   if (!snapshot.resultId) return;
   // On an unknown HTTP outcome, recover exactly the same request before offering another export.
-  query.pendingCachedExport ||= { resultId: snapshot.resultId, format, id: newChenRequestId() };
+  query.pendingCachedExport ||= { resultId: snapshot.resultId, format, id: newChenRequestId(), rows: snapshot.rows };
   const pending = query.pendingCachedExport;
   query.exportBusy = true;
   query.error = "";
   try {
-    const value = await api.exportCached(pending.resultId, pending.format, pending.id);
+    const value = await api.exportCached(pending.resultId, pending.format, pending.id, pending.rows);
     if (!isCurrent(query) || session.value?.state === "closed") return;
     query.pendingCachedExport = null;
     query.exportJob = value;
@@ -1111,7 +1205,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
     tab.closed = true;
     tab.loadGeneration++;
     return {
-      ...createQueryTab(tab.title, tab.context, tab.sql),
+      ...newQueryTab(tab.title, tab.context, tab.sql),
       id: tab.id,
       kind: tab.kind,
       baselineSql: tab.baselineSql,
@@ -1490,6 +1584,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             @upload-sql="restoreQuery(item.context, $event, true)"
             @refresh-data="refreshData(item)"
             @browse="(request) => browseTable(item, request)"
+            @loading-settings="(settings) => changeLoading(item, settings)"
+            @load-more="(automatic) => loadMore(item, automatic)"
             @sql="updateQuerySql(item, $event)"
             @restore="(sql: string) => restoreQuery(item.context, sql)"
             @run="(sql, version) => submit(item, sql, version)"
