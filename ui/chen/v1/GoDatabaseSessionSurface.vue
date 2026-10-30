@@ -58,6 +58,7 @@ import { acceptEditExecution, createEditDraft, editDirty } from "./dataEditing";
 import { readChenEvents } from "./events";
 import GoCatalogTree from "./GoCatalogTree.vue";
 import GoObjectPane from "./GoObjectPane.vue";
+import GoOverviewPane from "./GoOverviewPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
@@ -927,6 +928,19 @@ function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "
   drawer.value = false;
   objectSection(tab, section);
 }
+function openOverview(context: QueryContext) {
+  if (!sessionReady.value || context.database !== defaultContext.value.database) return;
+  const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
+  if (!tabs.value.some((tab) => tab.id === id))
+    tabs.value.push({
+      id,
+      kind: "overview",
+      title: `${t("Chen.GoOverviewTitle")} · ${context.schema || context.database}`,
+      context: { ...context }
+    });
+  activeId.value = id;
+  drawer.value = false;
+}
 async function submit(query: QueryWorkspaceTab, sql: string, version: number, plan = false) {
   if (
     !isCurrent(query) ||
@@ -1263,7 +1277,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   retireConnection(connection);
   closeSqlAi();
   tabs.value = tabs.value
-
+    .filter((tab) => tab.kind !== "overview")
     .map((tab) => {
       const query = workspaceQuery(tab);
       if (!query) return { ...tab };
@@ -1521,6 +1535,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           @insert="insertName"
           @object="(object, section) => openObject(object, section)"
           @browse="(object) => openObject(object)"
+          @overview="openOverview"
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
           @preview="(object) => openObject(object)"
@@ -1583,11 +1598,13 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               >
                 <UIcon
                   :name="
-                    item.kind === 'object'
-                      ? 'i-lucide-table-properties'
-                      : executionActive(workspaceQuery(item)?.execution || null)
-                        ? 'i-lucide-loader-circle'
-                        : 'i-lucide-file-code-2'
+                    item.kind === 'overview'
+                      ? 'i-lucide-list-tree'
+                      : item.kind === 'object'
+                        ? 'i-lucide-table-properties'
+                        : executionActive(workspaceQuery(item)?.execution || null)
+                          ? 'i-lucide-loader-circle'
+                          : 'i-lucide-file-code-2'
                   "
                   class="size-3.5 shrink-0"
                   :class="{ 'animate-spin': executionActive(workspaceQuery(item)?.execution || null) }"
@@ -1630,8 +1647,19 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           <UButton :label="t('Chen.NewQuery')" size="sm" :disabled="!sessionReady" @click="newQuery()" />
         </div>
         <div v-for="item in tabs" v-show="activeId === item.id" :key="item.id" class="flex min-h-0 flex-1 flex-col">
+          <GoOverviewPane
+            v-if="item.kind === 'overview'"
+            :api="api"
+            :session-id="session.id"
+            :scope="item.context"
+            :dialect="session.dialect"
+            :ready="sessionReady && eventConnected && !authenticationUnknown"
+            :visible="activeId === item.id"
+            :can-copy="session.permissions.can_copy"
+            @object="openObject"
+          />
           <GoObjectPane
-            v-if="item.kind === 'object'"
+            v-else-if="item.kind === 'object'"
             :object="item.object"
             :section="item.section"
             :active="activeId === item.id"

@@ -94,8 +94,13 @@ export interface ObjectWorkspaceTab {
   section: ObjectWorkspaceSection;
   data: QueryWorkspaceTab | null;
 }
-
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab;
+export interface OverviewWorkspaceTab {
+  id: string;
+  kind: "overview";
+  title: string;
+  context: QueryContext;
+}
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
 export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
   return tab.kind === "query" || tab.kind === "preview";
 }
