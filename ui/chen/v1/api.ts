@@ -217,6 +217,7 @@ export function createChenGoApi(
   fetchImpl: typeof fetch = fetch,
   options: { mode?: "single" | "managed" } = {}
 ) {
+  // Chen authenticates with explicit tokens, never ambient Core cookies, including across endpoints.
   // This token stays in the workspace closure: no URL, localStorage or query-string credentials.
   let token = "";
   const authenticationRequestId = newChenRequestId();
@@ -248,7 +249,7 @@ export function createChenGoApi(
   ): Promise<T> {
     const response = await fetchImpl(chenPath(`/api/v1${path}`, endpointUrl), {
       method,
-      credentials: single ? "omit" : "include",
+      credentials: "omit",
       signal,
       headers: {
         ...headers(method !== "GET"),
@@ -455,7 +456,7 @@ export function createChenGoApi(
       ),
     async events(sessionId: string, after: number, signal: AbortSignal) {
       const response = await fetchImpl(chenPath(`/api/v1/sessions/${id(sessionId)}/events`, endpointUrl), {
-        credentials: single ? "omit" : "include",
+        credentials: "omit",
         signal,
         headers: { ...headers(), Accept: "text/event-stream", ...(after ? { "Last-Event-ID": String(after) } : {}) }
       });
