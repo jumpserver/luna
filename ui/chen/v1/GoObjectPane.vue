@@ -3,7 +3,9 @@ import type { ChenGoApi, GoCatalogColumn, GoCatalogObject } from "./api";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
+import { diagramObjectId } from "./diagram";
 import GoObjectDetails from "./GoObjectDetails.vue";
+import GoObjectDiagram from "./GoObjectDiagram.vue";
 const props = defineProps<{
   object: GoCatalogObject;
   dialect: string;
@@ -14,7 +16,10 @@ const props = defineProps<{
   canPaste: boolean;
 }>();
 const emit = defineEmits<{ query: []; preview: []; browse: []; schemaEdit: [mode: "alter" | "index"] }>();
-const details = ref(false);
+const view = ref<"columns" | "details" | "diagram">("columns");
+const detailsVisited = ref(false);
+const diagramVisited = ref(false);
+const identity = computed(() => diagramObjectId(props.sessionId, props.object));
 const { t } = useI18n();
 const columns = ref<GoCatalogColumn[]>([]);
 const cursor = ref<string>();
@@ -63,8 +68,27 @@ onMounted(() => load());
 watch(
   () => props.ready,
   (ready) => {
+    if (!ready) {
+      controller?.abort();
+      busy.value = false;
+    }
     if (ready && !columns.value.length && !busy.value) void load();
   }
+);
+watch(
+  identity,
+  () => {
+    controller?.abort();
+    busy.value = false;
+    columns.value = [];
+    cursor.value = undefined;
+    hasMore.value = false;
+    error.value = "";
+    search.value = "";
+    if (props.object.kind !== "table" && view.value === "diagram") view.value = "columns";
+    void load();
+  },
+  { flush: "sync" }
 );
 onBeforeUnmount(() => controller?.abort());
 function preventCopy(event: ClipboardEvent) {
@@ -117,6 +141,7 @@ function preventCopy(event: ClipboardEvent) {
       </UDropdownMenu>
       <UBadge color="neutral" variant="soft" size="xs">{{ t("Chen.GoV1Structure") }}</UBadge>
       <UButton
+        v-if="view === 'columns'"
         icon="i-lucide-refresh-cw"
         :label="t('Chen.GoV1Refresh')"
         size="xs"
@@ -148,22 +173,50 @@ function preventCopy(event: ClipboardEvent) {
       <UButton
         :label="t('Chen.Columns')"
         size="xs"
-        :color="details ? 'neutral' : 'primary'"
+        :color="view === 'columns' ? 'primary' : 'neutral'"
         variant="ghost"
-        :aria-pressed="!details"
-        @click="details = false"
+        :aria-pressed="view === 'columns'"
+        @click="view = 'columns'"
       />
       <UButton
         :label="t('Chen.GoV1ObjectDetails')"
         size="xs"
-        :color="details ? 'primary' : 'neutral'"
+        :color="view === 'details' ? 'primary' : 'neutral'"
         variant="ghost"
-        :aria-pressed="details"
-        @click="details = true"
+        :aria-pressed="view === 'details'"
+        @click="
+          view = 'details';
+          detailsVisited = true;
+        "
+      />
+      <UButton
+        v-if="object.kind === 'table'"
+        :label="t('Chen.GoDiagramTitle')"
+        size="xs"
+        :color="view === 'diagram' ? 'primary' : 'neutral'"
+        variant="ghost"
+        :aria-pressed="view === 'diagram'"
+        @click="
+          view = 'diagram';
+          diagramVisited = true;
+        "
       />
     </div>
+    <GoObjectDiagram
+      v-if="diagramVisited && object.kind === 'table'"
+      v-show="view === 'diagram'"
+      :api="api"
+      :session-id="sessionId"
+      :object="object"
+      :dialect="dialect"
+      :ready="ready"
+      :active="view === 'diagram'"
+      :can-copy="canCopy"
+    />
     <GoObjectDetails
-      v-if="details"
+      v-if="detailsVisited"
+      v-show="view === 'details'"
+      :key="identity"
       :api="api"
       :session-id="sessionId"
       :object="object"
@@ -171,7 +224,7 @@ function preventCopy(event: ClipboardEvent) {
       :can-copy="canCopy"
     />
     <div
-      v-show="!details"
+      v-show="view === 'columns'"
       class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-default px-3 py-2"
     >
       <UInput
@@ -206,7 +259,7 @@ function preventCopy(event: ClipboardEvent) {
       <p v-if="object.comment" class="w-full break-words text-xs text-muted">{{ object.comment }}</p>
       <p v-if="!ready" class="w-full text-xs text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
-    <div v-if="error" role="alert" class="flex items-center gap-2 px-4 py-2 text-xs text-error">
+    <div v-if="error && view === 'columns'" role="alert" class="flex items-center gap-2 px-4 py-2 text-xs text-error">
       {{ error }}
       <UButton
         :label="t('Chen.GoV1Retry')"
@@ -218,7 +271,7 @@ function preventCopy(event: ClipboardEvent) {
       />
     </div>
     <div
-      v-show="!details"
+      v-show="view === 'columns'"
       ref="columnTable"
       role="region"
       :aria-label="t('Chen.GoV1Structure')"

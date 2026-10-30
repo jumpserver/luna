@@ -1,4 +1,13 @@
-import type { GoCatalogObject, GoConsole, GoExecution, GoExport, GoExportFormat, GoRows } from "./api";
+import type {
+  ChenGoApi,
+  GoPlan,
+  GoCatalogObject,
+  GoConsole,
+  GoExecution,
+  GoExport,
+  GoExportFormat,
+  GoRows
+} from "./api";
 import type { GoEditDraft } from "./dataEditing";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
@@ -21,6 +30,12 @@ export interface QueryWorkspaceTab {
   executionSql: string;
   executionVersion: number;
   executionPlan: boolean;
+  resultPane: "results" | "plan";
+  plan: GoPlan | null;
+  planAttempt: GoPlan | null;
+  planLoadedId: string;
+  loadingPlan: boolean;
+  planLoadError: string;
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
@@ -79,6 +94,12 @@ export function createQueryTab(
     executionSql: "",
     executionVersion: 0,
     executionPlan: false,
+    resultPane: "results",
+    plan: null,
+    planAttempt: null,
+    planLoadedId: "",
+    loadingPlan: false,
+    planLoadError: "",
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
@@ -175,11 +196,13 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   if (executionActive(query.execution)) query.execution = { ...query.execution!, status: "unknown" };
   query.loadGeneration++;
   query.loadingRows = false;
+  query.loadingPlan = false;
 }
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (query.closed || value.console_id !== query.console?.id || query.pending) return false;
   if (query.execution && value.id !== query.execution.id) return false;
   query.execution = reconcileExecution(query.execution, value);
+  query.executionPlan = !!query.execution.plan;
   if (query.resultExecution?.id === value.id) query.resultExecution = reconcileExecution(query.resultExecution, value);
   return true;
 }
@@ -228,4 +251,41 @@ export function reconcileExport(current: GoExport, value: GoExport): GoExport {
   if (exportActive(current) && exportActive(value) && rank[value.status]! < rank[current.status]!) return current;
   if (!exportActive(current) && current.status !== value.status && value.status !== "expired") return current;
   return { ...value, rows: Math.max(current.rows, value.rows), bytes: Math.max(current.bytes, value.bytes) };
+}
+
+// Plan resources belong to an execution and its original console. Late responses
+// must not replace another submission, reconnect, closed tab or previous result.
+export async function loadQueryPlan(query: QueryWorkspaceTab, api: Pick<ChenGoApi, "plan">) {
+  const execution = query.execution;
+  if (!execution?.plan || executionActive(execution) || query.loadingPlan || query.closed || query.pending) return;
+  const generation = query.loadGeneration;
+  const consoleId = query.console?.id;
+  query.loadingPlan = true;
+  query.planLoadError = "";
+  const current = () =>
+    !query.closed &&
+    !query.pending &&
+    query.loadGeneration === generation &&
+    query.execution?.id === execution.id &&
+    query.console?.id === consoleId;
+  try {
+    const plan = await api.plan(execution.id);
+    if (!current()) return;
+    if (
+      plan.executionId !== execution.id ||
+      plan.consoleId !== consoleId ||
+      plan.requestId !== execution.plan.request_id
+    )
+      throw new Error("Plan identity does not match the execution");
+    query.planLoadedId = execution.id;
+    query.planAttempt = plan;
+    if (plan.status === "SUCCESS" || plan.status === "RAW_ONLY") query.plan = plan;
+  } catch (cause) {
+    if (current()) {
+      query.planLoadedId = execution.id;
+      query.planLoadError = cause instanceof Error ? cause.message : String(cause);
+    }
+  } finally {
+    if (current()) query.loadingPlan = false;
+  }
 }

@@ -1,4 +1,15 @@
-export type PlanDatabase = "postgresql" | "mysql" | "mariadb" | "oracle" | "sqlserver" | "db2" | "dm" | "clickhouse";
+export type PlanDatabase =
+  | "postgresql"
+  | "mysql"
+  | "mariadb"
+  | "oracle"
+  | "sqlserver"
+  | "db2"
+  | "dm"
+  | "dameng"
+  | "oceanbase-mysql"
+  | "oceanbase-oracle"
+  | "clickhouse";
 export type PlanMode = "ESTIMATED";
 export type PlanStatus =
   | "SUCCESS"
@@ -34,6 +45,7 @@ export type ChenNormalizedNodeType =
 export interface ChenExecutionPlanCapabilities {
   supported: boolean;
   structured: boolean;
+  hierarchy?: boolean;
   raw: boolean;
   cost: boolean;
   estimatedRows: boolean;
@@ -53,7 +65,7 @@ export interface PlanEffects {
   sessionState: "UNCHANGED" | "RESTORED" | "UNKNOWN";
   transactionState: "UNCHANGED" | "PARTICIPATED" | "FAILED" | "UNKNOWN";
   auxiliaryStorage: "NONE" | "CLEANED" | "RESIDUAL" | "UNKNOWN";
-  connectionDisposition: "REUSE" | "DISCARD";
+  connectionDisposition: "REUSE" | "DISCARD" | "UNKNOWN";
 }
 export interface PlanDiagnostic {
   code: string;
@@ -71,9 +83,9 @@ export interface ChenPlanNode {
   detail: string | null;
   table: string | null;
   relation: string | null;
-  rows: number | null;
-  cost: number | null;
-  startupCost: number | null;
+  rows: number | string | null;
+  cost: number | string | null;
+  startupCost: number | string | null;
   rowsMeaning: string | null;
   costMeaning: string | null;
   predicates: Record<string, string>;

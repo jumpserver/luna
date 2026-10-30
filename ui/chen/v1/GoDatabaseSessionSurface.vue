@@ -50,6 +50,7 @@ import {
   closeWarnings,
   createQueryTab,
   exportActive,
+  loadQueryPlan,
   objectKey,
   objectSelect,
   queryDirty,
@@ -421,7 +422,14 @@ function retryRows(query: QueryWorkspaceTab) {
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
-  if (value.result_ids?.length && query.resultExecution?.id !== value.id && !query.loadingRows)
+  if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
+    void loadQueryPlan(query, api);
+  if (
+    !query.execution?.plan &&
+    value.result_ids?.length &&
+    query.resultExecution?.id !== value.id &&
+    !query.loadingRows
+  )
     void loadRows(query, value.result_ids[0]!, 0, query.execution, query.executionSql);
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
@@ -646,28 +654,83 @@ async function refreshData(query: QueryWorkspaceTab) {
   if (query.browseObject) await browseTable(query);
   else if (query.resultSql) await submit(query, query.resultSql, query.executionVersion);
 }
-const schemaEdit = ref<{ context: QueryContext; object?: GoCatalogObject; mode: "create" | "alter" | "index" } | null>(
-  null
-);
-function openSchemaEditor(
+interface SchemaEdit {
+  id: string;
+  sessionId: string;
+  context: QueryContext;
+  object?: GoCatalogObject;
+  mode: "create" | "alter" | "index";
+  transferSql: (sql: string, execute: boolean) => boolean;
+  close: () => void;
+}
+const schemaEdit = ref<SchemaEdit | null>(null);
+const schemaEditor = useTemplateRef<InstanceType<typeof GoSchemaEditor>>("schemaEditor");
+async function confirmSchemaDiscard() {
+  const target = schemaEdit.value;
+  if (!target) return true;
+  const confirmed = await schemaEditor.value?.confirmDiscard();
+  return !!confirmed && !disposed && schemaEdit.value === target;
+}
+async function confirmSessionLeave(preserveSqlDrafts = false) {
+  const target = schemaEdit.value;
+  const scope = connection;
+  if (!(await confirmSchemaDiscard()) || !(await confirmClose(queries.value, preserveSqlDrafts))) return false;
+  return !disposed && connection === scope && schemaEdit.value === target;
+}
+async function openSchemaEditor(
   mode: "create" | "alter" | "index",
   object?: GoCatalogObject,
   context = tabContext(activeTab.value, defaultContext.value)
 ) {
-  if (!sessionReady.value) return;
-  schemaEdit.value = { context: object ? { database: object.database, schema: object.schema } : context, object, mode };
+  const sessionId = session.value?.id;
+  if (!sessionReady.value || !(await confirmSchemaDiscard()) || !sessionReady.value || session.value?.id !== sessionId)
+    return;
+  const id = newChenRequestId();
+  schemaEdit.value = {
+    id,
+    sessionId: sessionId!,
+    mode,
+    object,
+    context: { ...(object ? { database: object.database, schema: object.schema } : context) },
+    transferSql: (sql, execute) => applySchemaSql(id, sql, execute),
+    close: () => {
+      if (schemaEdit.value?.id === id) schemaEdit.value = null;
+    }
+  };
 }
-async function applySchemaSql(sql: string, execute: boolean) {
+function applySchemaSql(id: string, sql: string, execute: boolean): boolean {
   const target = schemaEdit.value;
-  if (!target || !sessionReady.value) return;
-  schemaEdit.value = null;
+  if (
+    disposed ||
+    !target ||
+    target.id !== id ||
+    !sessionReady.value ||
+    target.sessionId !== session.value?.id ||
+    !sql.trim()
+  )
+    return false;
+  const scope = connection;
   const query = reactive(createQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
-  await connectQuery(query);
-  if (execute && query.console) await submit(query, sql, 1);
+  // Acknowledge only after SQL is in a query draft. Connection/execution failures leave that draft available.
+  schemaEdit.value = null;
+  void (async () => {
+    await connectQuery(query);
+    if (execute && connection === scope && isCurrent(query) && query.console) await submit(query, sql, 1);
+  })();
+  return true;
 }
+// Forced server closure is authoritative, including while a discard confirmation is open.
+watch(
+  () => [session.value?.id, session.value?.state],
+  () => {
+    if (schemaEdit.value && (session.value?.id !== schemaEdit.value.sessionId || session.value?.state === "closed"))
+      schemaEdit.value = null;
+  },
+  { flush: "sync" }
+);
 async function restoreQuery(context: QueryContext, sql: string, uploaded = false) {
   if (!sessionReady.value || !(uploaded ? session.value?.permissions.can_upload : session.value?.permissions.can_paste))
     return;
@@ -699,32 +762,14 @@ async function submit(query: QueryWorkspaceTab, sql: string, version: number, pl
   query.loadGeneration++;
   query.loadingRows = false;
   query.resultLoadError = null;
+  query.loadingPlan = false;
+  query.planLoadError = "";
+  query.resultPane = plan ? "plan" : "results";
   query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { plan: true } : {}) };
   await recoverSubmission(query);
 }
 async function explainQuery(query: QueryWorkspaceTab, sql: string, version: number) {
-  if (
-    !isCurrent(query) ||
-    !sessionReady.value ||
-    query.console?.state !== "ready" ||
-    query.busy ||
-    query.pending ||
-    executionActive(query.execution)
-  )
-    return;
-  const consoleId = query.console.id;
-  query.busy = true;
-  query.error = "";
-  let prepared: string | undefined;
-  try {
-    prepared = (await api.explain(consoleId, sql)).sql;
-  } catch (cause) {
-    if (isCurrent(query)) query.error = failureText(cause);
-  } finally {
-    if (isCurrent(query)) query.busy = false;
-  }
-  if (!prepared || !isCurrent(query) || query.console?.id !== consoleId || !sessionReady.value) return;
-  await submit(query, prepared, version, true);
+  await submit(query, sql, version, true);
 }
 async function recoverSubmission(query: QueryWorkspaceTab) {
   const pending = query.pending;
@@ -765,7 +810,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
               pending.version,
               pending.id,
               pending.submitReview,
-              pending.confirmWarnings
+              pending.confirmWarnings,
+              !!pending.plan
             );
     if (!isCurrent(query)) return;
     query.pending = null;
@@ -776,7 +822,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       query.baselineSql = value.sql;
     }
     query.executionVersion = pending.version;
-    query.executionPlan = !!pending.plan;
+    query.executionPlan = !!value.plan;
+    query.resultPane = value.plan ? "plan" : "results";
     query.executionConfirmWarnings = !!pending.confirmWarnings;
     query.executionSubmitReview = !!pending.submitReview;
     query.executionExportFormat = pending.exportFormat;
@@ -988,6 +1035,14 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.resultId = "";
   query.resultExecution = null;
   query.resultSql = "";
+  query.loadGeneration++;
+  query.loadingPlan = false;
+  query.plan = null;
+  query.planAttempt = null;
+  query.planLoadedId = "";
+  query.planLoadError = "";
+  query.executionPlan = false;
+  query.resultPane = "results";
   await connectQuery(query);
 }
 async function replaceConnection(nextEndpoint: string, nextCredential: string) {
@@ -995,7 +1050,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   const request = ++replacement;
   if (!nextCredential || connection?.identity === identity) return;
   // SQL drafts survive reconnect. Server-bound edits, pending submissions and transactions do not.
-  const confirmation = (replacementConfirmation ||= confirmClose(queries.value, true));
+  const confirmation = (replacementConfirmation ||= confirmSessionLeave(true));
   const confirmed = await confirmation;
   if (replacementConfirmation === confirmation) replacementConfirmation = null;
   if (!confirmed) {
@@ -1070,7 +1125,7 @@ function startSession(): Promise<void> {
 }
 async function closeSession() {
   const scope = connection;
-  if (!scope?.session || busy.value || !(await confirmClose(queries.value)) || !isConnectionCurrent(scope)) return;
+  if (!scope?.session || busy.value || !(await confirmSessionLeave()) || !isConnectionCurrent(scope)) return;
   busy.value = true;
   try {
     await scope.api.closeSession(scope.session.id);
@@ -1086,7 +1141,7 @@ async function closeSession() {
   }
 }
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (Object.values(closeWarnings(queries.value)).some(Boolean)) {
+  if (schemaEditor.value?.dirty || Object.values(closeWarnings(queries.value)).some(Boolean)) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -1095,7 +1150,7 @@ function preventCopy(event: ClipboardEvent) {
   if (session.value && !session.value.permissions.can_copy) event.preventDefault();
 }
 const unregisterCloseGuard = props.tab
-  ? registerWorkspaceSessionCloseGuard(props.tab.id, () => confirmClose(queries.value))
+  ? registerWorkspaceSessionCloseGuard(props.tab.id, () => confirmSessionLeave())
   : undefined;
 onMounted(() => {
   window.addEventListener("beforeunload", beforeUnload);
@@ -1410,6 +1465,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             @reconnect="reconnect(item)"
             @rows="(id, offset) => loadRows(item, id, offset)"
             @retry-rows="retryRows(item)"
+            @pane="(pane) => (item.resultPane = pane)"
           />
         </div>
         <div
@@ -1422,15 +1478,15 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     </div>
     <GoSchemaEditor
       v-if="schemaEdit && session"
-      :key="session.id"
+      :key="schemaEdit.id"
+      ref="schemaEditor"
       :session="session"
       :api="api"
       :context="schemaEdit.context"
       :object="schemaEdit.object"
       :mode="schemaEdit.mode"
-      @close="schemaEdit = null"
-      @execute="applySchemaSql($event, true)"
-      @draft="applySchemaSql($event, false)"
+      :transfer-sql="schemaEdit.transferSql"
+      @close="schemaEdit.close"
     />
     <UModal
       :open="!!renameTarget"
