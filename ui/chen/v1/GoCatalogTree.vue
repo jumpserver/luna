@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogObject, GoCatalogPage } from "./api";
-import type { QueryContext } from "./workspace";
+import type { ObjectWorkspaceSection, QueryContext } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
@@ -20,7 +20,7 @@ const props = defineProps<{
   canInsert: boolean;
 }>();
 const emit = defineEmits<{
-  object: [object: GoCatalogObject];
+  object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
   query: [context: QueryContext, object?: GoCatalogObject];
   preview: [object: GoCatalogObject];
   insert: [text: string];
@@ -268,10 +268,10 @@ function menu(current: Node) {
           {
             label: t("Chen.GoV1Structure"),
             icon: "i-lucide-panel-top",
-            onSelect: () => emit("object", current.object!)
+            onSelect: () => emit("object", current.object!, "structure")
           },
           {
-            label: t("Chen.GoV1Preview200"),
+            label: t("Chen.GoTableWorkspaceData"),
             icon: "i-lucide-table",
             disabled: !props.ready,
             onSelect: () => emit("preview", current.object!)
@@ -284,14 +284,14 @@ function menu(current: Node) {
           }
         ]
       : []),
-    ...(current.object?.kind === "table"
+    ...(current.object
       ? [
+          { label: "DDL", icon: "i-lucide-file-code-2", onSelect: () => emit("object", current.object!, "ddl") },
           {
-            label: t("Chen.GoWriteBrowse"),
-            icon: "i-lucide-table-properties",
-            disabled: !props.ready || props.dialect === "clickhouse",
-            description: props.dialect === "clickhouse" ? t("Chen.ClickHouseDataViewReadOnly") : undefined,
-            onSelect: () => emit("browse", current.object!)
+            label: t("Chen.GoDiagramTitle"),
+            icon: "i-lucide-git-fork",
+            disabled: current.object.kind !== "table",
+            onSelect: () => emit("object", current.object!, "diagram")
           }
         ]
       : []),

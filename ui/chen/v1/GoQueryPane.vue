@@ -30,6 +30,7 @@ const props = defineProps<{
   api: ChenGoApi;
   single: boolean;
   visible: boolean;
+  dataOnly?: boolean;
   reviewCoreSite?: string;
   aiAvailable?: boolean;
 }>();
@@ -366,11 +367,13 @@ function maximize(pane: "editor" | "results") {
   maximized.value = maximized.value === pane ? null : pane;
 }
 const gridRows = computed(() =>
-  maximized.value === "editor"
+  props.dataOnly
     ? "minmax(0, 1fr)"
-    : maximized.value === "results"
+    : maximized.value === "editor"
       ? "minmax(0, 1fr)"
-      : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
+      : maximized.value === "results"
+        ? "minmax(0, 1fr)"
+        : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
 );
 const sqlFile = ref<HTMLInputElement>();
 async function loadSqlFile(event: Event) {
@@ -396,7 +399,9 @@ function preventCopy(event: ClipboardEvent) {
 defineExpose({
   snapshot: () => editor.value?.snapshot(),
   replaceDocument: (sql: string) => editor.value?.replaceDocument(sql) ?? false,
-  focus: () => editor.value?.focus(),
+  focus: () => {
+    if (props.visible && !props.dataOnly) editor.value?.focus();
+  },
   run: () => editor.value?.run(),
   insertText: (text: string) => {
     if (!props.session.permissions.can_paste || props.query.kind === "preview") return;
@@ -408,11 +413,53 @@ defineExpose({
 
 <template>
   <div
-    class="flex h-full min-h-0 min-w-0 flex-col"
+    class="flex min-h-0 min-w-0 flex-1 flex-col"
     data-chen-query
     :data-chen-execution-state="query.execution?.status || 'idle'"
   >
-    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
+    <div
+      v-if="dataOnly && (!query.rows || !ready || query.pending || active)"
+      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2"
+    >
+      <UButton
+        :label="t('Chen.GoV1Refresh')"
+        icon="i-lucide-refresh-cw"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :disabled="!canRun"
+        @click="emit('refreshData')"
+      />
+      <UButton
+        v-if="session.state === 'ready' && !ready"
+        :label="t('Chen.GoV1NewConnection')"
+        size="xs"
+        color="warning"
+        variant="soft"
+        :disabled="query.busy"
+        @click="emit('reconnect')"
+      />
+      <UButton
+        v-if="query.pending && !query.busy"
+        :label="t('Chen.GoV1RecoverSubmission')"
+        size="xs"
+        color="warning"
+        variant="soft"
+        :disabled="!ready"
+        @click="emit('recover')"
+      />
+      <UButton
+        v-if="executionActive(query.execution)"
+        :label="t('Chen.GoV1Cancel')"
+        icon="i-lucide-square"
+        size="xs"
+        color="neutral"
+        variant="soft"
+        :disabled="!executionCanCancel(query.execution, session.can_cancel)"
+        @click="emit('cancel')"
+      />
+    </div>
+    <div v-if="!dataOnly" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
       <UButton
         v-if="session.state === 'ready' && !ready"
         :label="t('Chen.GoV1NewConnection')"
@@ -813,11 +860,19 @@ defineExpose({
       </template>
     </UModal>
     <div v-if="query.kind === 'preview'" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
-      {{ t(query.browseObject ? "Chen.GoWriteBrowseHint" : "Chen.GoV1PreviewHint") }}
+      {{
+        t(
+          query.readOnly
+            ? "Chen.GoTableWorkspaceReadOnly"
+            : query.browseObject
+              ? "Chen.GoWriteBrowseHint"
+              : "Chen.GoV1PreviewHint"
+        )
+      }}
     </div>
     <GoBrowsePanel v-if="query.browseObject" :query="query" :session="session" @submit="emit('browse', $event)" />
     <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
+      <div v-if="!dataOnly" v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
         <MonacoSqlEditor
           ref="editor"
           :model-value="query.sql"
@@ -837,6 +892,7 @@ defineExpose({
         />
       </div>
       <div
+        v-if="!dataOnly"
         v-show="!maximized"
         role="separator"
         tabindex="0"
@@ -947,6 +1003,7 @@ defineExpose({
             @click="emit('rows', query.resultId, query.rows.next_offset)"
           />
           <UButton
+            v-if="!dataOnly"
             :class="{ 'ml-auto': !query.rows }"
             :icon="maximized === 'results' ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
             :aria-label="t(maximized === 'results' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeResults')"
@@ -958,6 +1015,7 @@ defineExpose({
           />
         </div>
         <div
+          v-if="!dataOnly"
           class="flex shrink-0 gap-1 border-b border-default px-2 py-1"
           role="group"
           :aria-label="t('Chen.GoV1Result')"

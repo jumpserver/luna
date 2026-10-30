@@ -43,6 +43,7 @@ export interface QueryWorkspaceTab {
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
   browseObject?: GoCatalogObject;
+  readOnly?: boolean;
   loadingSettings: GoResultLoadingSettings;
   pendingLoading: GoResultLoadingSettings | null;
   loadMoreFailed: boolean;
@@ -83,14 +84,34 @@ export interface QueryWorkspaceTab {
   error: string;
   closed: boolean;
 }
+export type ObjectWorkspaceSection = "data" | "structure" | "ddl" | "diagram";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
   title: string;
   object: GoCatalogObject;
+  sessionId: string;
+  section: ObjectWorkspaceSection;
+  data: QueryWorkspaceTab | null;
 }
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab;
 
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab;
+export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
+  return tab.kind === "query" || tab.kind === "preview";
+}
+
+// An object owns at most one execution context, visible to every query lifecycle consumer.
+export function workspaceQuery(tab: ChenWorkspaceTab): QueryWorkspaceTab | null {
+  return tab.kind === "object" ? tab.data : isQueryWorkspaceTab(tab) ? tab : null;
+}
+export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] {
+  return tabs.flatMap((tab) => workspaceQuery(tab) || []);
+}
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
+  // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
+  // client-side folding would conflate distinct objects on case-sensitive databases.
+  return JSON.stringify([sessionId, object.database, object.schema, object.kind, object.name]);
+}
 export function createQueryTab(
   title: string,
   context: QueryContext,
@@ -169,7 +190,10 @@ export function objectSelect(object: GoCatalogObject, dialect: string, preview =
       return `SELECT * FROM ${name} LIMIT 200;`;
   }
 }
-export function tabContext(tab: ChenWorkspaceTab | undefined, fallback: QueryContext): QueryContext {
+export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab, "kind" | "object">>(
+  tab: T | undefined,
+  fallback: QueryContext
+): QueryContext {
   if (!tab) return { ...fallback };
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
   return { ...tab.context };
