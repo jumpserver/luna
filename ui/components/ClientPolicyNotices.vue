@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCssVar, useElementSize } from "@vueuse/core";
 import { formatClientLoginTimestamp } from "~/utils/clientLoginPolicy";
 
 export interface ClientPolicyNotice {
@@ -10,6 +11,17 @@ export interface ClientPolicyNotice {
 defineProps<{ notices: ClientPolicyNotice[] }>();
 defineEmits<{ dismiss: [id: string] }>();
 const { t, locale } = useI18n();
+const noticeArea = useTemplateRef<HTMLElement>("noticeArea");
+const { height: noticeHeight } = useElementSize(noticeArea);
+const nativeNoticeInset = useCssVar("--workspace-client-policy-notice-inset");
+// ponytail: reserve a bottom strip because native views sit above HTML.
+// Floating over page content would require a separate trusted native overlay.
+watchEffect(() => {
+  nativeNoticeInset.value = noticeHeight.value > 0 ? `${noticeHeight.value + 32}px` : "0px";
+});
+onBeforeUnmount(() => {
+  nativeNoticeInset.value = "0px";
+});
 const messages = {
   absolute_timeout: "ClientLock.LifetimeSoon",
   policy_changed: "ClientLock.PolicyChangedSoon",
@@ -20,7 +32,8 @@ const messages = {
 <template>
   <aside
     v-if="notices.length"
-    class="fixed bottom-4 right-4 z-[450] flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3"
+    ref="noticeArea"
+    class="fixed bottom-4 right-4 z-[450] flex max-h-[calc(100vh-2rem)] w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 overflow-y-auto"
     aria-live="polite"
   >
     <UCard v-for="notice in notices" :key="notice.id" :ui="{ body: 'p-4 sm:p-4' }">
