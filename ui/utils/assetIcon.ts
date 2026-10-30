@@ -3,6 +3,7 @@ import { withBase } from "ufo";
 const iconMap: Record<string, string> = {
   windows: "/icons/windows.svg",
   linux: "/icons/linux.svg",
+  macos: "/icons/macos.svg",
   unix: "/icons/linux.svg",
   other: "/icons/linux.svg",
   mysql: "/icons/mysql.svg",
@@ -30,6 +31,7 @@ function resolveAssetIconPath(type?: string) {
   const key = String(type || "linux").toLowerCase();
   if (Object.hasOwn(iconMap, key)) return iconMap[key]!;
   if (key.includes("k8s") || key.includes("kubernetes")) return iconMap.kubernetes!;
+  if (key.includes("macos")) return iconMap.macos!;
   if (key.includes("linux") || key.includes("unix")) return iconMap.linux!;
   if (key.includes("windows")) return iconMap.windows!;
   if (key.includes("web")) return iconMap.website!;
@@ -72,6 +74,7 @@ export function resolveAssetIconFromCandidates(values: (string | undefined)[], b
   const resolve = (src: string, fallback: string) => ({ src: withAppBase(src, baseURL), fallback });
 
   if (has("k8s") || has("kubernetes")) return resolve(iconMap.kubernetes!, "i-lucide-container");
+  if (has("macos")) return resolve(iconMap.macos!, "i-tabler-brand-apple");
   if (has("linux") || has("unix")) return resolve(iconMap.linux!, "i-lucide-terminal");
   if (has("windows")) return resolve(iconMap.windows!, "i-lucide-terminal");
   if (has("mysql")) return resolve(iconMap.mysql!, "i-lucide-database");
