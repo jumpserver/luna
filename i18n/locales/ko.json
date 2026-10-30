@@ -1303,6 +1303,8 @@
     "NoSearchResults": "일치하는 설정 없음",
     "UserDescription": "사용자 프로필, 보안 상태 및 사이트 계정입니다.",
     "GeneralDescription": "언어 및 연결 기본값입니다.",
+    "Security": "보안",
+    "SecurityDescription": "클라이언트 로그인 유효 기간 및 화면 잠금.",
     "AppearanceDescription": "테마, 색상, 글꼴 및 편집기 모양입니다.",
     "ThemeModeDescription": "시스템 설정을 따르거나 항상 라이트 또는 다크 모드를 사용합니다.",
     "ThemePalette": "테마 스타일",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "시도 횟수가 너무 많습니다. 1분 후 다시 시도하세요.",
     "LifetimeSoon": "최대 로그인 유효기간이 곧 끝납니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
     "PolicyChangedSoon": "관리자가 설정을 변경했습니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
-    "IdleSoon": "입력이 없으면 {at}에 잠깁니다. 기본 화면에서 클라이언트 잠금 비밀번호로 해제하세요.",
+    "IdleSoon": "입력이 없어 {seconds}초 후 잠깁니다. 마우스를 움직이거나 키를 누르면 취소됩니다.",
     "ManagePassword": "잠금 비밀번호 관리"
   }
 }

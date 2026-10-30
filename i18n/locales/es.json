@@ -1303,6 +1303,8 @@
     "NoSearchResults": "No hay ajustes coincidentes",
     "UserDescription": "Perfil de usuario, estado de seguridad y cuentas de sitios.",
     "GeneralDescription": "Idioma y valores predeterminados de conexión.",
+    "Security": "Seguridad",
+    "SecurityDescription": "Vigencia del inicio de sesión y bloqueo del cliente.",
     "AppearanceDescription": "Tema, colores, fuentes y apariencia del editor.",
     "ThemeModeDescription": "Siga el sistema o use siempre una apariencia clara u oscura.",
     "ThemePalette": "Estilos del tema",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "Demasiados intentos. Espera un minuto.",
     "LifetimeSoon": "La duración máxima de sesión está por vencer. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
     "PolicyChangedSoon": "El administrador cambió la configuración. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
-    "IdleSoon": "Sin actividad, el cliente se bloqueará el {at}. Desbloquéalo con su contraseña en la página principal.",
+    "IdleSoon": "El cliente se bloqueará en {seconds} segundos por inactividad. Mueve el ratón o pulsa una tecla para cancelar.",
     "ManagePassword": "Gestionar contraseña de bloqueo"
   }
 }

@@ -20,6 +20,8 @@ export interface ClientSessionBinding {
 
 interface ClientSessionBindingState extends ClientSessionBinding {
   unlockedAt: number;
+  lastIdleSeconds?: number;
+  idleNoticeRevision?: number;
   locked?: boolean;
   serverClock?: { serverTime: number; observedAt: number };
   verifying?: Promise<unknown>;
@@ -1115,12 +1117,19 @@ export class DesktopAuthService {
       const minutes = token.client_login_policy?.idle_lock_time;
       if (!token.client_locked && minutes > 0 && Number.isFinite(idleSeconds) && idleSeconds >= 0) {
         const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
-        const remaining = minutes * 60 - idle;
-        if (remaining > 0 && remaining <= 3 * 60) {
+        // A new input starts a new warning, including after the previous one was dismissed.
+        const resumed = binding.lastIdleSeconds !== undefined && idle < binding.lastIdleSeconds;
+        if (resumed) {
+          binding.idleNoticeRevision = (binding.idleNoticeRevision || 0) + 1;
+        }
+        binding.lastIdleSeconds = idle;
+        const remainingSeconds = Math.ceil(minutes * 60 - idle);
+        if (!resumed && idle > 0 && remainingSeconds > 0 && remainingSeconds < 60) {
           notices.push({
-            id: `${session.sessionKey}:idle:${binding.unlockedAt}`,
+            id: `${session.sessionKey}:idle:${binding.unlockedAt}:${binding.idleNoticeRevision || 0}`,
             kind: "idle_lock",
-            at: new Date(Date.now() + remaining * 1000).toISOString()
+            at: new Date(Date.now() + (minutes * 60 - idle) * 1000).toISOString(),
+            remainingSeconds
           });
         }
       }

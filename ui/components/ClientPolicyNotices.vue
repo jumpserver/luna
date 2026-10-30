@@ -5,6 +5,7 @@ export interface ClientPolicyNotice {
   id: string;
   kind: "absolute_timeout" | "policy_changed" | "idle_lock";
   at: string;
+  remainingSeconds?: number;
 }
 defineProps<{ notices: ClientPolicyNotice[] }>();
 defineEmits<{ dismiss: [id: string] }>();
@@ -26,7 +27,12 @@ const messages = {
       <div class="flex items-start gap-3">
         <UIcon name="i-lucide-clock-alert" class="mt-0.5 size-5 shrink-0 text-warning" />
         <p class="flex-1 text-sm">
-          {{ t(messages[notice.kind], { at: formatClientLoginTimestamp(notice.at, locale) }) }}
+          {{
+            t(messages[notice.kind], {
+              at: formatClientLoginTimestamp(notice.at, locale),
+              seconds: notice.remainingSeconds
+            })
+          }}
         </p>
         <UButton
           icon="i-lucide-x"

@@ -1303,6 +1303,8 @@
     "NoSearchResults": "一致する設定はありません",
     "UserDescription": "ユーザープロファイル、セキュリティ状態、サイトアカウント。",
     "GeneralDescription": "言語と接続の既定値。",
+    "Security": "セキュリティ",
+    "SecurityDescription": "クライアントのログイン有効期間と画面ロック。",
     "AppearanceDescription": "テーマ、色、フォント、エディターの外観。",
     "ThemeModeDescription": "システムに従うか、常にライトまたはダークの外観を使用します。",
     "ThemePalette": "テーマスタイル",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "試行回数が多すぎます。1分後に再試行してください。",
     "LifetimeSoon": "ログインの最大有効期間がまもなく終了します。{at} にログアウトします。その後、再ログインしてください。",
     "PolicyChangedSoon": "管理者が設定を変更しました。{at} にログアウトします。その後、再ログインしてください。",
-    "IdleSoon": "入力がない場合、{at} にロックします。メイン画面でクライアントロックパスワードを入力して解除してください。",
+    "IdleSoon": "操作がないため、あと {seconds} 秒でロックします。マウスを動かすかキーを押すと取り消せます。",
     "ManagePassword": "ロックパスワードを管理"
   }
 }

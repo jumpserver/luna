@@ -1303,6 +1303,8 @@
     "NoSearchResults": "Không có cài đặt phù hợp",
     "UserDescription": "Hồ sơ người dùng, trạng thái bảo mật và tài khoản trang web.",
     "GeneralDescription": "Ngôn ngữ và mặc định kết nối.",
+    "Security": "Bảo mật",
+    "SecurityDescription": "Thời hạn đăng nhập và khóa màn hình ứng dụng khách.",
     "AppearanceDescription": "Giao diện, màu sắc, phông chữ và giao diện trình soạn thảo.",
     "ThemeModeDescription": "Theo hệ thống hoặc luôn dùng giao diện sáng/tối.",
     "ThemePalette": "Kiểu giao diện",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "Quá nhiều lần thử. Vui lòng đợi một phút.",
     "LifetimeSoon": "Thời hạn đăng nhập tối đa sắp hết. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
     "PolicyChangedSoon": "Quản trị viên đã đổi cấu hình. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
-    "IdleSoon": "Nếu không có thao tác, ứng dụng khách sẽ khóa lúc {at}. Mở khóa bằng mật khẩu tại trang chính.",
+    "IdleSoon": "Ứng dụng khách sẽ khóa sau {seconds} giây không hoạt động. Di chuyển chuột hoặc nhấn phím để hủy.",
     "ManagePassword": "Quản lý mật khẩu khóa"
   }
 }

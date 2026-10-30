@@ -1303,6 +1303,8 @@
     "NoSearchResults": "没有匹配的设置",
     "UserDescription": "用户资料、安全状态与站点账户。",
     "GeneralDescription": "语言与连接默认选项。",
+    "Security": "安全",
+    "SecurityDescription": "客户端登录有效期和锁屏。",
     "AppearanceDescription": "主题、颜色、字体与编辑器外观。",
     "ThemeModeDescription": "选择跟随系统，或始终使用浅色、深色外观。",
     "ThemePalette": "主题样式",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "尝试次数过多，请等待一分钟后重试。",
     "LifetimeSoon": "最长有效期即将到期，客户端将在 {at} 退出，到期后需要重新登录。",
     "PolicyChangedSoon": "管理员已修改配置，客户端将在 {at} 退出，到期后需要重新登录。",
-    "IdleSoon": "如无操作，客户端将在 {at} 锁屏，届时请在主页面输入客户端锁屏密码解锁。",
+    "IdleSoon": "空闲即将超时，{seconds} 秒后锁屏。移动鼠标或按键可取消。",
     "ManagePassword": "管理锁屏密码"
   }
 }

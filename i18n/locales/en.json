@@ -1304,6 +1304,8 @@
     "NoSearchResults": "No matching settings",
     "UserDescription": "User profile, security status, and site accounts.",
     "GeneralDescription": "Language and connection defaults.",
+    "Security": "Security",
+    "SecurityDescription": "Client login lifetime and screen locking.",
     "AppearanceDescription": "Theme, colors, fonts, and editor appearance.",
     "ThemeModeDescription": "Follow the system or always use a light or dark appearance.",
     "ThemePalette": "Theme styles",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "Too many attempts. Wait one minute and retry.",
     "LifetimeSoon": "The maximum login lifetime is ending. The client will sign out at {at}; sign in again afterwards.",
     "PolicyChangedSoon": "The administrator changed the client policy. The client will sign out at {at}; sign in again afterwards.",
-    "IdleSoon": "The client will lock at {at} if there is no input. Enter the client lock password on the main page to unlock.",
+    "IdleSoon": "The client will lock in {seconds} seconds due to inactivity. Move the mouse or press a key to cancel.",
     "ManagePassword": "Manage lock password"
   }
 }

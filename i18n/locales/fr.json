@@ -1304,6 +1304,8 @@
     "NoSearchResults": "Aucun paramètre correspondant",
     "UserDescription": "Profil utilisateur, état de sécurité et comptes des sites.",
     "GeneralDescription": "Langue et paramètres de connexion par défaut.",
+    "Security": "Sécurité",
+    "SecurityDescription": "Durée de connexion et verrouillage du client.",
     "AppearanceDescription": "Thème, couleurs, polices et apparence de l’éditeur.",
     "ThemeModeDescription": "Suivre le système ou toujours utiliser une apparence claire ou sombre.",
     "ThemePalette": "Styles de thème",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "Trop de tentatives. Réessayez dans une minute.",
     "LifetimeSoon": "La durée maximale de connexion expire bientôt. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
     "PolicyChangedSoon": "L’administrateur a modifié la configuration. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
-    "IdleSoon": "Sans saisie, le client se verrouillera à {at}. Déverrouillez-le sur la page principale avec son mot de passe.",
+    "IdleSoon": "Le client se verrouillera dans {seconds} secondes d’inactivité. Bougez la souris ou appuyez sur une touche pour annuler.",
     "ManagePassword": "Gérer le mot de passe de verrouillage"
   }
 }

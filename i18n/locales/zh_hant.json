@@ -1303,6 +1303,8 @@
     "NoSearchResults": "沒有匹配的設定",
     "UserDescription": "使用者資料、安全狀態與站點帳戶。",
     "GeneralDescription": "語言與連線預設選項。",
+    "Security": "安全",
+    "SecurityDescription": "用戶端登入有效期與鎖定。",
     "AppearanceDescription": "主題、顏色、字型與編輯器外觀。",
     "ThemeModeDescription": "選擇跟隨系統，或始終使用淺色、深色外觀。",
     "ThemePalette": "主題樣式",
@@ -3364,7 +3366,7 @@
     "TooManyAttempts": "嘗試次數過多，請等待一分鐘後重試。",
     "LifetimeSoon": "最長有效期即將到期，用戶端將於 {at} 登出，到期後需要重新登入。",
     "PolicyChangedSoon": "管理員已修改設定，用戶端將於 {at} 登出，到期後需要重新登入。",
-    "IdleSoon": "若無操作，用戶端將於 {at} 鎖定，屆時請在主頁面輸入用戶端鎖定密碼解鎖。",
+    "IdleSoon": "閒置即將逾時，{seconds} 秒後鎖定。移動滑鼠或按鍵即可取消。",
     "ManagePassword": "管理鎖定密碼"
   }
 }
