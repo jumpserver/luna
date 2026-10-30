@@ -24,6 +24,7 @@ describe("asset icon URLs", () => {
     ["DB2", "db2.png"],
     ["IBM DB2", "db2.png"],
     ["Linux", "linux.svg"],
+    ["macOS", "macos.svg"],
     ["Windows", "windows.svg"],
     ["Windows_AD", "windows.svg"],
     ["Website", "chrome.svg"],
@@ -34,6 +35,11 @@ describe("asset icon URLs", () => {
     expect(icon.src).toBe(`/luna/icons/${filename}`);
     expect(resolveAssetIconFromCandidates([undefined, platform, "asset"], "/luna/")).toEqual(icon);
     expect(resolveAssetIconSrc(platform, "/luna/")).toBe(icon.src);
+  });
+
+  it("keeps unix platforms on the linux icon", () => {
+    expect(resolveAssetIconFromFields({ platform: "Unix", type: "unix" }).src).toBe("/icons/linux.svg");
+    expect(resolveAssetIconFromCandidates(["BSD", "unix", "host"]).src).toBe("/icons/linux.svg");
   });
 
   it("keeps a known database vendor ahead of the generic database category", () => {
