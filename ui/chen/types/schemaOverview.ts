@@ -52,12 +52,15 @@ export interface ChenSchemaOverviewIndex {
 
 export interface ChenSchemaDiagramColumn {
   name: string;
-  ordinal: number;
-  nativeType: string;
-  nullable: boolean;
+  ordinal: number | null;
+  nativeType: string | null;
+  nullable: boolean | null;
 }
 
 export interface ChenSchemaDiagramForeignKey {
+  referencedId?: string;
+  incomplete?: boolean;
+  ordinals?: (number | null)[];
   name: string;
   columns: string[];
   referencedSchema: string | null;
@@ -66,6 +69,10 @@ export interface ChenSchemaDiagramForeignKey {
 }
 
 export interface ChenSchemaDiagramTable {
+  // Explicit scoped identities override the legacy schema/name identity.
+  id?: string;
+  database?: string;
+  metadataStatus?: "Current" | "NotLoaded" | "External" | "Unknown";
   schema: string;
   name: string;
   columns: ChenSchemaDiagramColumn[];
