@@ -33,6 +33,7 @@ defineExpose({ focus: () => surface.value?.focus() });
 <template>
   <WebProxySurface
     ref="surface"
+    :style="{ paddingBottom: 'var(--workspace-client-policy-notice-inset, 0px)' }"
     :request="request"
     :bridge="desktopWebProxy"
     :active="activeTabId === ownerTabId"

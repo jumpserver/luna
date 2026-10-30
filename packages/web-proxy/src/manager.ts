@@ -1,5 +1,4 @@
 import { WebContentsView, session as electronSession } from "electron";
-import type { WebContents } from "electron";
 import {
   buildAutofillProbeScript,
   buildAutofillScript,
@@ -30,7 +29,6 @@ interface ManagerOptions {
   allowManualNavigation?: boolean;
   createSession?: () => Promise<any>;
 }
-type ActivityObserver = (contents: WebContents, enabled: () => boolean) => void;
 export function createWebProxyManager({
   emit: emitDesktopEvent,
   labelForWindow,
@@ -41,6 +39,7 @@ export function createWebProxyManager({
   createSession
 }: ManagerOptions) {
   const webProxyViews = new Map();
+  const lockedHosts = new Set<number>();
   function parseWebProxyUrl(rawUrl, schemes, description) {
     const url = parseUrl(rawUrl);
     if (!schemes.includes(url.protocol) || !url.hostname || url.username || url.password) {
@@ -161,10 +160,20 @@ export function createWebProxyManager({
 
   function syncWebProxyVisibility(managed) {
     const previewing = managed.autofillPending && !managed.autofillPreviewFrozen;
-    const visible = managed.active && (!managed.autofillVisibilityBlocked || previewing);
+    const active = managed.active && !lockedHosts.has(managed.hostWebContentsId);
+    const visible = active && (!managed.autofillVisibilityBlocked || previewing);
     managed.view.setVisible(visible);
-    managed.inputShield?.setVisible(managed.active && previewing);
+    managed.inputShield?.setVisible(active && previewing);
     if (visible) (previewing ? managed.inputShield : managed.view)?.webContents.focus();
+  }
+
+  function setHostLocked(hostId: number, locked: boolean) {
+    if (lockedHosts.has(hostId) === locked) return;
+    if (locked) lockedHosts.add(hostId);
+    else lockedHosts.delete(hostId);
+    for (const managed of webProxyViews.values()) {
+      if (managed.hostWebContentsId === hostId) syncWebProxyVisibility(managed);
+    }
   }
 
   function removeWebProxyInputShield(managed) {
@@ -477,7 +486,7 @@ export function createWebProxyManager({
     return { jpeg, signature };
   }
 
-  async function createWebProxyView(event, win, args, observeActivity = null) {
+  async function createWebProxyView(event, win, args) {
     const label = String(args.label || "");
     validateWebProxyLabel(label);
     if (webProxyViews.has(label)) throw new Error("Web Proxy view label already exists");
@@ -566,14 +575,6 @@ export function createWebProxyManager({
       webSessionError: null
     };
     webProxyViews.set(label, managed);
-    observeActivity?.(
-      view.webContents,
-      () => webProxyViews.get(label) === managed && managed.active && !managed.autofillVisibilityBlocked
-    );
-    observeActivity?.(
-      inputShield.webContents,
-      () => webProxyViews.get(label) === managed && managed.active && managed.autofillVisibilityBlocked
-    );
     view.webContents.on("login", (authEvent, details, authInfo, callback) => {
       if (!authInfo.isProxy) return;
       authEvent.preventDefault();
@@ -841,8 +842,8 @@ export function createWebProxyManager({
     }
   }
 
-  async function invoke(command, event, win, args, observeActivity?: ActivityObserver) {
-    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args, observeActivity);
+  async function invoke(command, event, win, args) {
+    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args);
     if (command === "set_web_proxy_view_color_scheme") {
       const managed = webProxyView(event, args.label);
       return setWebProxyColorScheme(managed.view.webContents, args.colorScheme);
@@ -1003,6 +1004,7 @@ export function createWebProxyManager({
     throw new Error("Unsupported Web Proxy command");
   }
   function disposeHost(windowWebContentsId) {
+    lockedHosts.delete(windowWebContentsId);
     for (const [viewLabel, managed] of webProxyViews) {
       if (managed.hostWebContentsId !== windowWebContentsId) continue;
       webProxyViews.delete(viewLabel);
@@ -1021,5 +1023,5 @@ export function createWebProxyManager({
       if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
   }
-  return { invoke, disposeHost, views: webProxyViews };
+  return { invoke, disposeHost, setHostLocked, views: webProxyViews };
 }

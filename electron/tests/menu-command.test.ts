@@ -58,6 +58,7 @@ test("the native close-tab shortcut targets the focused workspace without closin
         getFocusedWindow: () => (focusedLabel ? { label: focusedLabel, isDestroyed: () => false } : null)
       },
       labelForWindow: (window: { label: string }) => window.label,
+      syncWindowLock: () => ({ locked: false }),
       emitDesktopEvent: (...args: unknown[]) => events.push(args),
       Menu: {
         buildFromTemplate: (items: MenuItemConstructorOptions[]) => items,

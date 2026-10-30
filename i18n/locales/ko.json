@@ -1147,7 +1147,6 @@
     "SessionExpired": "로그인 만료",
     "ExpiredPolicyChanged": "클라이언트 보안 설정이 변경되었습니다. 다시 로그인하세요.",
     "ExpiredLifetime": "로그인 유효 기간이 만료되었습니다. 다시 로그인하세요.",
-    "ExpiredIdle": "장시간 활동이 없어 로그인이 만료되었습니다. 다시 로그인하세요.",
     "ExpiredRevoked": "로그인 권한이 취소되었습니다. 다시 로그인하세요.",
     "ExpiredAppExit": "클라이언트 보안 설정에 따라 애플리케이션 종료 후 다시 로그인해야 합니다.",
     "ExpiredLogout": "로그아웃되었습니다. 다시 로그인하세요.",
@@ -1172,8 +1171,7 @@
     "InvalidCertificateGeneric": "로그인 실패: 인증서 또는 보안 연결에 문제가 있습니다.",
     "NetworkError": "네트워크를 사용할 수 없습니다. 연결 상태를 확인하세요.",
     "ServerError": "서버를 일시적으로 사용할 수 없습니다. 나중에 다시 시도하세요.",
-    "ExpiredLifetimeDetail": "이번 로그인은 {expiresAt}에 만료되었습니다. 다시 로그인해 주세요.",
-    "ExpiredIdleDetail": "유휴 시간이 {duration}(제한: {limit})에 도달하여 로그인이 만료되었습니다. 다시 로그인해 주세요."
+    "ExpiredLifetimeDetail": "이번 로그인은 {expiresAt}에 만료되었습니다. 다시 로그인해 주세요."
   },
   "Asset": {
     "GetAssetFailed": "자산을 가져오지 못했습니다. 새로 고침 후 다시 시도하세요"
@@ -1284,19 +1282,20 @@
     "NoUser": "로그인하지 않음",
     "NoUserDescription": "사용자 상세 정보를 보려면 JumpServer 사이트에 로그인하세요.",
     "ClientLoginInfo": "클라이언트 로그인 유효기간",
-    "ClientLoginInfoDescription": "현재 계정의 관리자 정책과 서버가 마지막으로 확인한 로그인 상태입니다. 서버가 수락한 활동은 유휴 만료 시간을 연장하지만 최대 로그인 유효기간은 연장하지 않습니다.",
+    "ClientLoginInfoDescription": "현재 사이트와 계정의 관리자 설정 및 로그인 시간입니다. 설정 변경에 따른 종료 시간은 원래 유효기간을 연장하지 않고 별도로 적용됩니다.",
     "ClientLoginReauthOnExit": "종료 후 다시 로그인",
     "ClientLoginMaxLifetime": "최대 로그인 유효기간",
     "ClientLoginStartedAt": "이번 로그인 시작 시간",
-    "ClientLoginIdleTimeout": "유휴 시간 초과",
-    "ClientLoginIdleExpiry": "새 활동이 없을 경우",
     "ClientLoginEffectiveExpiry": "예상 만료 시간",
     "ClientLoginUnknown": "아직 확인되지 않음",
     "ClientLoginUnlimited": "제한 없음",
     "ClientLoginCurrentUser": "현재 사용자",
     "ClientLoginExpiryHint": "만료 시간은 서버가 마지막으로 확인한 상태를 기준으로 이 기기의 시간대로 표시됩니다.",
-    "ClientLoginActivityScope": "기본 창, 별도 자산 창, 내장 웹사이트에서 실제로 수행한 키보드와 마우스 조작이 활동으로 기록됩니다. 연결 유지, 백그라운드 출력, 자동 새로고침은 활동에 포함되지 않습니다.",
-    "ClientLoginActivityLimits": "Xshell, MSTSC 같은 외부 프로그램과 일부 교차 출처 내장 페이지의 조작은 수집할 수 없습니다. 이러한 영역에서만 조작하거나, 오랫동안 보기만 하거나, 네트워크 문제로 보고가 실패하면 유휴 시간 초과가 발생할 수 있습니다. 시간은 서버가 마지막으로 확인한 활동을 기준으로 계산됩니다."
+    "ClientLoginActivityScope": "시스템 키보드와 마우스 입력으로 현재 사이트와 계정의 유휴 시간만 판단합니다. 각 작업을 보고하지 않으며, 유휴 제한 도달 또는 수동 잠금 시 서버에 이번 로그인의 잠금을 요청합니다.",
+    "ClientLoginActivityLimits": "유휴 시간이 초과되면 비밀번호가 없어도 기본 화면과 관리되는 자산 창을 잠급니다. 기본 화면에서 서버의 비밀번호 검증에 성공해야 해제됩니다. 새 로그인은 정상 진입하며 잠긴 로그인은 복원 후에도 잠깁니다. 외부 프로그램 창은 보호되지 않습니다.",
+    "ClientLoginIdleLock": "유휴 잠금",
+    "ClientLoginPolicyExpiry": "관리자 설정 변경에 따른 종료 시간",
+    "ClientLockShortcut": "자동 잠금이 꺼져 있어도 {shortcut}로 현재 계정을 언제든 잠글 수 있습니다."
   },
   "Setting": {
     "BackToApp": "앱으로 돌아가기",
@@ -1304,6 +1303,8 @@
     "NoSearchResults": "일치하는 설정 없음",
     "UserDescription": "사용자 프로필, 보안 상태 및 사이트 계정입니다.",
     "GeneralDescription": "언어 및 연결 기본값입니다.",
+    "Security": "보안",
+    "SecurityDescription": "클라이언트 로그인 유효 기간 및 화면 잠금.",
     "AppearanceDescription": "테마, 색상, 글꼴 및 편집기 모양입니다.",
     "ThemeModeDescription": "시스템 설정을 따르거나 항상 라이트 또는 다크 모드를 사용합니다.",
     "ThemePalette": "테마 스타일",
@@ -3399,5 +3400,25 @@
       "application": "앱 · 설정 및 대화 상자 외부",
       "terminal": "터미널 · 터미널 AI를 사용할 수 있고 터미널에 포커스가 있을 때"
     }
+  },
+  "ClientLock": {
+    "Title": "클라이언트가 잠겼습니다",
+    "Description": "계속하려면 이 계정의 클라이언트 잠금 비밀번호를 입력하세요. 연결은 유지됩니다.",
+    "MainOnly": "이 창은 잠겼습니다. 기본 화면에서 이 계정의 잠금을 해제하세요.",
+    "Password": "클라이언트 잠금 비밀번호",
+    "Unlock": "잠금 해제",
+    "Unset": "잠금 비밀번호가 없습니다. 이 사이트와 계정의 웹 개인 설정에서 설정한 후 돌아와 새로 고치세요.",
+    "SetPassword": "잠금 비밀번호 설정",
+    "Reset": "잠금 비밀번호 재설정",
+    "Refresh": "새로 고침",
+    "Logout": "로그아웃",
+    "GoToMain": "기본 화면으로",
+    "LoadFailed": "불러오지 못했습니다. 연결을 확인하고 다시 시도하세요.",
+    "UnlockFailed": "잠금 해제에 실패했습니다. 비밀번호와 연결을 확인하세요.",
+    "TooManyAttempts": "시도 횟수가 너무 많습니다. 1분 후 다시 시도하세요.",
+    "LifetimeSoon": "최대 로그인 유효기간이 곧 끝납니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
+    "PolicyChangedSoon": "관리자가 설정을 변경했습니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
+    "IdleSoon": "입력이 없어 {seconds}초 후 잠깁니다. 마우스를 움직이거나 키를 누르면 취소됩니다.",
+    "ManagePassword": "잠금 비밀번호 관리"
   }
 }

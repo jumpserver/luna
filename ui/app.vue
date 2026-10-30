@@ -8,6 +8,8 @@ const ManagedApp = defineAsyncComponent(() => import("~/components/ManagedApp.vu
 </script>
 
 <template>
-  <SingleAppShell v-if="single" />
-  <ManagedApp v-else />
+  <ClientLockGuard>
+    <SingleAppShell v-if="single" />
+    <ManagedApp v-else />
+  </ClientLockGuard>
 </template>
