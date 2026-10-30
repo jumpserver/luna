@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  GoBrowseRequest,
   GoCatalogObject,
   GoConsole,
   GoEditPlan,
@@ -19,7 +20,18 @@ import type {
 } from "~/chen/composables/useChenSqlAiSessions";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { useElementSize, useLocalStorage } from "@vueuse/core";
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, useTemplateRef, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  toRaw,
+  useId,
+  useTemplateRef,
+  watch
+} from "vue";
 import { useI18n } from "vue-i18n";
 import { parseKokoMcpFrame } from "#koko/composables/agent/types";
 import {
@@ -391,10 +403,20 @@ async function loadRows(
   query.loadingRows = true;
   query.resultLoadError = null;
   try {
-    const page = await api.rows(id, offset);
+    const limit = query.browseObject ? query.executionBrowse?.page_size || query.rows?.browse?.page_size || 200 : 200;
+    const page = await api.rows(id, offset, limit);
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
+      if (page.browse?.supported && !query.rows?.browse?.supported) {
+        query.browseDraft = {
+          where: page.browse.where,
+          filter: page.browse.filter ? structuredClone(toRaw(page.browse.filter)) : undefined,
+          sort: page.browse.sort.map((item) => ({ ...item })),
+          page_size: page.browse.page_size
+        };
+      }
       query.rows = page;
+      if (changedResult) query.browseCount = null;
       if (changedResult) query.edit = createEditDraft();
       query.resultId = id;
       // Row loading may finish after more statements or audit updates arrive.
@@ -422,10 +444,13 @@ function retryRows(query: QueryWorkspaceTab) {
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
+  if (value.status === "succeeded" && value.browse_count && value.browse_count.source_result_id === query.rows?.id)
+    query.browseCount = value.browse_count;
   if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
     void loadQueryPlan(query, api);
   if (
     !query.execution?.plan &&
+    (!query.executionBrowse || value.status === "succeeded") &&
     value.result_ids?.length &&
     query.resultExecution?.id !== value.id &&
     !query.loadingRows
@@ -617,7 +642,7 @@ async function newQuery(
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
 }
-async function browseTable(query: QueryWorkspaceTab) {
+async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) {
   if (
     !query.browseObject ||
     !sessionReady.value ||
@@ -625,14 +650,22 @@ async function browseTable(query: QueryWorkspaceTab) {
     query.busy ||
     query.pending ||
     executionActive(query.execution) ||
+    query.loadingRows ||
+    query.edit.busy ||
     editDirty(query.edit)
   )
     return;
+  query.loadGeneration++;
+  query.resultLoadError = null;
   query.pending = {
     sql: objectSelect(query.browseObject, session.value!.dialect, true),
     version: 1,
     id: newChenRequestId(),
-    browse: query.browseObject
+    browse:
+      request ||
+      (query.rows?.browse?.supported
+        ? { source_result_id: query.rows.id, offset: query.rows.browse.offset }
+        : { schema: query.browseObject.schema, table: query.browseObject.name })
   };
   await recoverSubmission(query);
 }
@@ -788,11 +821,12 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       : pending.browse
         ? await api.browse(
             query.console.id,
-            pending.browse.schema,
-            pending.browse.name,
+            pending.browse.schema || "",
+            pending.browse.table || "",
             pending.id,
             pending.submitReview,
-            pending.confirmWarnings
+            pending.confirmWarnings,
+            pending.browse
           )
         : pending.exportFormat
           ? await api.exportQuery(
@@ -870,7 +904,16 @@ async function startExport(
   if (mode === "query") {
     if (query.pendingCachedExport) return;
     if (query.console?.state !== "ready" || executionActive(query.execution) || !snapshot.sql.trim()) return;
-    query.pending = { sql: snapshot.sql, version: snapshot.version, id: newChenRequestId(), exportFormat: format };
+    if (query.browseObject && !query.rows?.browse?.supported) return;
+    query.pending = {
+      sql: snapshot.sql,
+      version: snapshot.version,
+      id: newChenRequestId(),
+      exportFormat: format,
+      ...(query.browseObject
+        ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }
+        : {})
+    };
     await recoverSubmission(query);
     return;
   }
@@ -1446,6 +1489,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             @apply-edits="applyEdits(item, $event)"
             @upload-sql="restoreQuery(item.context, $event, true)"
             @refresh-data="refreshData(item)"
+            @browse="(request) => browseTable(item, request)"
             @sql="updateQuerySql(item, $event)"
             @restore="(sql: string) => restoreQuery(item.context, sql)"
             @run="(sql, version) => submit(item, sql, version)"

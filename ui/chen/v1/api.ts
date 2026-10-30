@@ -35,6 +35,7 @@ export interface GoPlan extends ChenExecutionPlan {
   limits: { maxBytes: number; maxNodes: number; maxDepth: number };
 }
 export interface GoExecution {
+  browse_count?: { source_result_id: string; total: string };
   plan?: GoPlanIdentity;
   id: string;
   export_id?: string;
@@ -94,7 +95,53 @@ export interface GoDownloadTicket {
   fields: { ticket: string };
   expires_at: string;
 }
+export interface GoBrowseOrder {
+  column: string;
+  desc: boolean;
+}
+export interface GoBrowseFilter {
+  op: string;
+  column?: string;
+  values?: string[];
+  children?: GoBrowseFilter[];
+}
+export interface GoBrowseRequest {
+  schema?: string;
+  table?: string;
+  source_result_id?: string;
+  action?: "page" | "count" | "export";
+  where?: string;
+  filter?: GoBrowseFilter;
+  sort?: GoBrowseOrder[];
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoBrowsePage {
+  supported: boolean;
+  reason?: string;
+  database: string;
+  schema: string;
+  table: string;
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  stable: boolean;
+  has_more: boolean | null;
+  full_sql: string;
+}
+export interface GoBrowseDraft {
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  page_size: number;
+}
 export interface GoRows {
+  browse?: GoBrowsePage;
   id: string;
   columns: { name: string; data_type: string }[];
   rows: unknown[][];
@@ -342,11 +389,11 @@ export function createChenGoApi(
       table: string,
       requestId: string,
       submitReview = false,
-      confirmWarnings = false
+      confirmWarnings = false,
+      scope?: GoBrowseRequest
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/browse`, "POST", {
-        schema,
-        table,
+        ...(scope || { schema, table }),
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})

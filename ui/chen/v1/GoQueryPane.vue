@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
+import type { ChenGoApi, GoBrowseRequest, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
@@ -16,6 +16,7 @@ import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
+import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
@@ -37,6 +38,7 @@ const emit = defineEmits<{
   applyEdits: [plan: GoEditPlan];
   uploadSql: [sql: string];
   refreshData: [];
+  browse: [request: GoBrowseRequest];
   run: [sql: string, version: number];
   explain: [sql: string, version: number];
   cancel: [];
@@ -811,6 +813,7 @@ defineExpose({
     <div v-if="query.kind === 'preview'" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
       {{ t(query.browseObject ? "Chen.GoWriteBrowseHint" : "Chen.GoV1PreviewHint") }}
     </div>
+    <GoBrowsePanel v-if="query.browseObject" :query="query" :session="session" @submit="emit('browse', $event)" />
     <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
       <div v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
         <MonacoSqlEditor
@@ -898,12 +901,17 @@ defineExpose({
           >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
-          <span v-if="query.resultPane === 'results' && query.rows" class="ml-auto text-muted">
+          <span
+            v-if="query.resultPane === 'results' && query.rows && !query.rows.browse?.supported"
+            class="ml-auto text-muted"
+          >
             {{ query.rows.rows.length ? query.rows.offset + 1 : 0 }}–{{ query.rows.offset + query.rows.rows.length }} /
             {{ query.rows.total_rows }}{{ query.rows.truncated ? "+" : "" }} {{ t("Chen.GoV1RowsUnit") }}
           </span>
           <UButton
-            v-if="query.resultPane === 'results' && query.rows && query.rows.offset > 0"
+            v-if="
+              query.resultPane === 'results' && query.rows && !query.rows.browse?.supported && query.rows.offset > 0
+            "
             icon="i-lucide-chevron-left"
             :aria-label="t('Chen.GoV1Previous')"
             size="xs"
@@ -913,7 +921,9 @@ defineExpose({
             @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - 200))"
           />
           <UButton
-            v-if="query.resultPane === 'results' && query.rows?.next_offset !== undefined"
+            v-if="
+              query.resultPane === 'results' && !query.rows?.browse?.supported && query.rows?.next_offset !== undefined
+            "
             icon="i-lucide-chevron-right"
             :aria-label="t('Chen.GoV1Next')"
             size="xs"

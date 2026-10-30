@@ -1,5 +1,7 @@
 import type {
   ChenGoApi,
+  GoBrowseDraft,
+  GoBrowseRequest,
   GoPlan,
   GoCatalogObject,
   GoConsole,
@@ -40,9 +42,11 @@ export interface QueryWorkspaceTab {
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
   browseObject?: GoCatalogObject;
+  browseDraft: GoBrowseDraft;
+  browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
-  executionBrowse?: GoCatalogObject;
+  executionBrowse?: GoBrowseRequest;
   exportJob: GoExport | null;
   exportBusy: boolean;
   pendingCachedExport: { resultId: string; format: GoExportFormat; id: string } | null;
@@ -59,7 +63,7 @@ export interface QueryWorkspaceTab {
     plan?: boolean;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
-    browse?: GoCatalogObject;
+    browse?: GoBrowseRequest;
   } | null;
   busy: boolean;
   loadingRows: boolean;
@@ -103,6 +107,8 @@ export function createQueryTab(
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
+    browseDraft: { where: "", sort: [], page_size: 200 },
+    browseCount: null,
     exportJob: null,
     exportBusy: false,
     pendingCachedExport: null,
