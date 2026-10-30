@@ -2307,6 +2307,7 @@
     "TableDisplaySettings": "Cài đặt hiển thị bảng",
     "TableDisplay": "Hiển thị bảng",
     "TableDisplayHint": "Áp dụng cho mọi bảng kết quả cơ sở dữ liệu.",
+    "GoGridPreferenceResultScope": "Chế độ hiển thị cột chỉ áp dụng cho kết quả hiện tại và được đặt lại khi có kết quả mới.",
     "NullValues": "Giá trị NULL",
     "MarkEmptyStrings": "Đánh dấu chuỗi rỗng",
     "ZebraStripes": "Màu hàng xen kẽ",

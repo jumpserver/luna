@@ -2307,6 +2307,7 @@
     "TableDisplaySettings": "テーブルの表示設定",
     "TableDisplay": "テーブル表示",
     "TableDisplayHint": "すべてのデータベース結果グリッドに適用されます。",
+    "GoGridPreferenceResultScope": "列の表示設定は現在の結果にのみ適用され、新しい結果でリセットされます。",
     "NullValues": "NULL 値",
     "MarkEmptyStrings": "空文字列に印を付ける",
     "ZebraStripes": "行の背景色を交互に表示",

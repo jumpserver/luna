@@ -2490,6 +2490,7 @@
     "TableDisplaySettings": "Paramètres d’affichage du tableau",
     "TableDisplay": "Affichage du tableau",
     "TableDisplayHint": "Appliqué à toutes les grilles de résultats de base de données.",
+    "GoGridPreferenceResultScope": "La visibilité des colonnes s’applique au résultat actuel et est réinitialisée pour les nouveaux résultats.",
     "NullValues": "Valeurs NULL",
     "MarkEmptyStrings": "Signaler les chaînes vides",
     "ZebraStripes": "Lignes alternées",
