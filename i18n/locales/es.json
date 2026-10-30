@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "Sin límite",
     "ClientLoginCurrentUser": "Usuario actual",
     "ClientLoginExpiryHint": "La caducidad refleja el último estado confirmado por el servidor y usa la zona horaria de este dispositivo.",
-    "ClientLoginActivityScope": "El teclado y el ratón del sistema, incluso en aplicaciones externas, reinician solo el temporizador del sitio y cuenta activos. No se envía actividad al servidor.",
-    "ClientLoginActivityLimits": "La página principal y las ventanas gestionadas se bloquean juntas; solo se desbloquean desde la página principal. La sesión y las conexiones continúan. Las aplicaciones externas no están protegidas. Las sesiones nuevas y restauradas comienzan bloqueadas si está habilitado.",
+    "ClientLoginActivityScope": "Las entradas del teclado y ratón del sistema determinan la inactividad solo del sitio y la cuenta activos. No se informa cada acción; al vencer el plazo o bloquear manualmente se solicita al servidor que bloquee esta sesión.",
+    "ClientLoginActivityLimits": "El plazo bloquea la página principal y las ventanas de activos administradas, incluso sin contraseña configurada. Solo se desbloquea desde la página principal tras verificar la contraseña en el servidor. Un nuevo inicio de sesión entra normalmente; una sesión bloqueada sigue así al restaurarla. Las ventanas externas no están protegidas.",
     "ClientLoginIdleLock": "Bloqueo por inactividad",
-    "ClientLoginPolicyExpiry": "Cierre programado tras un cambio del administrador"
+    "ClientLoginPolicyExpiry": "Cierre programado tras un cambio del administrador",
+    "ClientLockShortcut": "Pulsa {shortcut} para bloquear la cuenta actual en cualquier momento, aunque el bloqueo automático esté desactivado."
   },
   "Setting": {
     "BackToApp": "Volver a la aplicación",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "Demasiados intentos. Espera un minuto.",
     "LifetimeSoon": "La duración máxima de sesión está por vencer. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
     "PolicyChangedSoon": "El administrador cambió la configuración. El cliente cerrará sesión el {at}; después debes iniciar sesión de nuevo.",
-    "IdleSoon": "Sin actividad, el cliente se bloqueará el {at}. Desbloquéalo con su contraseña en la página principal."
+    "IdleSoon": "Sin actividad, el cliente se bloqueará el {at}. Desbloquéalo con su contraseña en la página principal.",
+    "ManagePassword": "Gestionar contraseña de bloqueo"
   }
 }

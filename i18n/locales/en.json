@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "Unlimited",
     "ClientLoginCurrentUser": "Current user",
     "ClientLoginExpiryHint": "The expiry time reflects the latest server-confirmed state and uses this device’s time zone.",
-    "ClientLoginActivityScope": "System keyboard and mouse input, including input in external applications, resets the idle timer for the active site and account only. Activity is not reported to the server.",
-    "ClientLoginActivityLimits": "The main page and managed asset windows lock together; unlock only on the main page. Login and connections continue. External applications are not protected. When enabled, new and restored logins start locked.",
+    "ClientLoginActivityScope": "System keyboard and mouse input determines inactivity for the active site and account only. Activity is not reported for each action; an idle timeout or manual lock sends one request to lock this login on the server.",
+    "ClientLoginActivityLimits": "Idle timeout locks the main page and its managed asset windows even without a lock password. Unlock only on the main page after server password verification. New logins open normally; previously locked logins stay locked after restoration. External application windows are not protected.",
     "ClientLoginIdleLock": "Idle lock",
-    "ClientLoginPolicyExpiry": "Exit scheduled after an administrator policy change"
+    "ClientLoginPolicyExpiry": "Exit scheduled after an administrator policy change",
+    "ClientLockShortcut": "Press {shortcut} to lock the current account at any time, even when automatic locking is disabled."
   },
   "Setting": {
     "BackToApp": "Back to app",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "Too many attempts. Wait one minute and retry.",
     "LifetimeSoon": "The maximum login lifetime is ending. The client will sign out at {at}; sign in again afterwards.",
     "PolicyChangedSoon": "The administrator changed the client policy. The client will sign out at {at}; sign in again afterwards.",
-    "IdleSoon": "The client will lock at {at} if there is no input. Enter the client lock password on the main page to unlock."
+    "IdleSoon": "The client will lock at {at} if there is no input. Enter the client lock password on the main page to unlock.",
+    "ManagePassword": "Manage lock password"
   }
 }

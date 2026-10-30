@@ -23,6 +23,7 @@ interface ClientSessionBindingState extends ClientSessionBinding {
   locked?: boolean;
   serverClock?: { serverTime: number; observedAt: number };
   verifying?: Promise<unknown>;
+  lockRequest?: Promise<void>;
 }
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
@@ -32,6 +33,7 @@ const OAUTH_REVOKE = "/core/auth/oauth2-provider/revoke/";
 const CLIENT_SESSION_REVOKE = "/api/v1/authentication/client-login-session/revoke/";
 const CLIENT_SESSION_STATUS = "/api/v1/authentication/client-login-session/status/";
 const CLIENT_SESSION_CHECK_INTERVAL = 30_000;
+const CLIENT_SESSION_LOCK = "/api/v1/authentication/client-login-session/lock/";
 const CLIENT_SESSION_UNLOCK = "/api/v1/authentication/client-login-session/unlock/";
 const USER_PROFILE = "/api/v1/users/profile/";
 const USER_PERMISSIONS = "/api/v1/users/profile/permissions/";
@@ -101,7 +103,8 @@ function parseClientLoginSession(payload: unknown): ClientLoginSession | undefin
       policy_expires_at: policyExpires === null ? null : String(value.policy_expires_at),
       effective_expires_at: effectiveExpires === null ? null : new Date(effectiveExpires).toISOString(),
       expiry_reason: value.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout",
-      server_time: String(value.server_time)
+      server_time: String(value.server_time),
+      ...(typeof value.locked === "boolean" ? { locked: value.locked } : {})
     };
   } catch {
     // Display metadata must never turn an otherwise valid login into an auth failure.
@@ -261,6 +264,7 @@ export class DesktopAuthService {
       // Network failures also wait for the next interval, without a retry storm.
       session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
       try {
+        if (stored.client_lock_pending) await this.syncSessionLock(this.sessionBinding(session.sessionKey));
         const bearer = await this.freshToken(session.origin, session.sessionKey);
         if (
           this.sessions.get(session.sessionKey) !== session ||
@@ -333,7 +337,6 @@ export class DesktopAuthService {
       // Migrate any credentials written by an older client after this policy was enabled.
       for (const [sessionId, token] of Object.entries(this.tokens) as [string, any][]) {
         if (token.client_login_policy?.reauth_on_exit) delete this.tokens[sessionId];
-        else if (token.client_login_policy?.idle_lock_time > 0) token.client_locked = true;
       }
       await this.persistTokens();
       electronLog.info(`auth tokens restored sites=${Object.keys(this.tokens).length}`);
@@ -392,10 +395,8 @@ export class DesktopAuthService {
         JSON.stringify(stored.client_login_policy) !== JSON.stringify(policy) ||
         this.restoredSessionIds.has(key);
       stored.origin = site;
-      if (policy.idle_lock_time > 0 && !stored.client_login_policy?.idle_lock_time) stored.client_locked = true;
       stored.client_login_policy = policy;
       if (policy.reauth_on_exit && this.restoredSessionIds.has(key)) delete this.tokens[key];
-      else if (policy.idle_lock_time > 0 && this.restoredSessionIds.has(key)) stored.client_locked = true;
       this.restoredSessionIds.delete(key);
     }
     if (changed) {
@@ -703,8 +704,7 @@ export class DesktopAuthService {
         origin: site,
         client_login_policy: policy,
         username: JSON.parse(payload.profile.data).username,
-        // Start every protected login locked, including authorizations that reuse browser SSO.
-        client_locked: policy.idle_lock_time > 0
+        client_locked: false
       };
       this.restoredSessionIds.delete(sessionId);
       this.recordClientLoginSession(sessionId, token.access_token, token);
@@ -800,9 +800,7 @@ export class DesktopAuthService {
         this.tokens[sessionId] = {
           ...stored,
           ...refreshed,
-          client_locked:
-            stored.client_locked ||
-            (!stored.client_login_policy?.idle_lock_time && refreshed.client_login_policy?.idle_lock_time > 0),
+          client_locked: stored.client_locked,
           refresh_token: refreshed.refresh_token || stored.refresh_token,
           client_id: stored.client_id || ""
         };
@@ -842,6 +840,15 @@ export class DesktopAuthService {
     const previous = token.client_login_session;
     if (previous && Date.parse(previous.server_time) > Date.parse(info.server_time)) return;
     token.client_login_session = info;
+    if (typeof info.locked === "boolean") {
+      const locked = info.locked || token.client_lock_pending === true;
+      if (token.client_locked !== locked) {
+        token.client_locked = locked;
+        this.lockRevision += 1;
+        this.emitEvent("client-lock-changed");
+        void this.persistTokens().catch((error) => electronLog.warn("failed to persist server lock", error));
+      }
+    }
     const binding = this.sessionBinding(sessionId);
     if (binding) binding.serverClock = { serverTime: Date.parse(info.server_time), observedAt: performance.now() };
     // Broadcast the same server snapshot to settings and main windows without another request.
@@ -883,6 +890,10 @@ export class DesktopAuthService {
     if (status === 403) {
       try {
         const payload = JSON.parse(body);
+        if (payload?.code === "client_locked") {
+          this.recordClientLoginSession(session.sessionKey, bearer, payload);
+          return;
+        }
         expired =
           ["not_authenticated", "authentication_failed"].includes(payload?.code) ||
           (payload?.code === "client_session_expired" &&
@@ -921,6 +932,9 @@ export class DesktopAuthService {
         client_login_policy: config.client_login_policy,
         client_login_session: this.tokens[sessionId]?.client_login_session
       };
+      const status = payload.client_session_status;
+      if (status?.success) this.recordClientLoginSession(sessionId, bearer, status.data);
+      payload.client_login_session = this.tokens[sessionId]?.client_login_session;
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       if (payload.profile?.status === 401 || payload.profile?.status === 403) {
         const reason = parseClientLoginReason(payload.profile.data);
@@ -949,11 +963,12 @@ export class DesktopAuthService {
 
   async buildLoginPayload(site, bearer, clientLoginSessionReceipt = "") {
     const credentials = { bearerToken: bearer, clientLoginSessionReceipt };
-    const [profile, permissionOrgs, currentOrg, publicSettings] = await Promise.all([
+    const [profile, permissionOrgs, currentOrg, publicSettings, clientStatus] = await Promise.all([
       this.requestApiResponse(site, USER_PROFILE, credentials),
       this.requestApiResponse(site, USER_PERMISSIONS, credentials),
       this.requestApiResponse(site, CURRENT_ORG, credentials),
-      this.requestApiResponse(site, PUBLIC_SETTINGS, credentials)
+      this.requestApiResponse(site, PUBLIC_SETTINGS, credentials),
+      this.requestApiResponse(site, CLIENT_SESSION_STATUS, credentials)
     ]);
     let settings: Record<string, unknown> = {};
     if (publicSettings.success) {
@@ -966,7 +981,8 @@ export class DesktopAuthService {
     return {
       status: "success",
       bearer,
-      profile,
+      profile: clientStatus.status === 401 ? clientStatus : profile,
+      client_session_status: clientStatus,
       resolved_site: site,
       current_org: currentOrg,
       xpack_license_valid: settings.XPACK_LICENSE_IS_VALID === true,
@@ -1038,9 +1054,39 @@ export class DesktopAuthService {
     const token = session && this.tokens[session.sessionKey];
     if (!token || (!manual && !token.client_login_policy?.idle_lock_time) || token.client_locked) return;
     token.client_locked = true;
+    token.client_lock_pending = true;
     this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
     void this.persistTokens().catch((error) => electronLog.warn("failed to persist client lock", error));
+    void this.syncSessionLock(this.sessionBinding(session.sessionKey)).catch((error) =>
+      electronLog.warn("client lock pending server confirmation", error)
+    );
+  }
+
+  async syncSessionLock(binding: ClientSessionBinding | null | undefined) {
+    const token = this.boundToken(binding);
+    if (!token?.client_lock_pending) return;
+    const state = binding as ClientSessionBindingState;
+    if (state.lockRequest) return state.lockRequest;
+    const pending = (async () => {
+      const session = this.getBoundSession(binding);
+      const result = await this.sendApiRequest(session, {
+        method: "POST",
+        path: CLIENT_SESSION_LOCK,
+        timeoutMs: 10_000
+      });
+      const current = this.boundToken(binding);
+      if (!current) return;
+      current.client_lock_pending = false;
+      this.recordClientLoginSession(session.sessionKey, current.access_token, result);
+      await this.persistTokens();
+    })();
+    state.lockRequest = pending;
+    try {
+      await pending;
+    } finally {
+      if (state.lockRequest === pending) delete state.lockRequest;
+    }
   }
 
   updatePolicyNotices(idleSeconds: number) {
@@ -1093,6 +1139,7 @@ export class DesktopAuthService {
 
   async lockInfo(binding: ClientSessionBinding | null | undefined) {
     const session = this.requireLockedSession(binding);
+    await this.syncSessionLock(binding);
     const result = await this.sendApiRequest(session, {
       method: "GET",
       path: CLIENT_SESSION_UNLOCK,
@@ -1119,6 +1166,8 @@ export class DesktopAuthService {
     const revision = this.lockRevision;
     const verification = (async () => {
       const session = this.requireLockedSession(binding);
+      await this.syncSessionLock(binding);
+      this.requireLockedSession(binding);
       const result = await this.sendApiRequest(session, {
         method: "POST",
         path: CLIENT_SESSION_UNLOCK,

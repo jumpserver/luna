@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "Sem limite",
     "ClientLoginCurrentUser": "Usuário atual",
     "ClientLoginExpiryHint": "A expiração reflete o último estado confirmado pelo servidor e usa o fuso horário deste dispositivo.",
-    "ClientLoginActivityScope": "Entradas de teclado e mouse do sistema, inclusive em aplicativos externos, reiniciam apenas o temporizador do site e conta ativos. A atividade não é enviada ao servidor.",
-    "ClientLoginActivityLimits": "A página principal e as janelas gerenciadas bloqueiam juntas; desbloqueie apenas na página principal. A sessão e as conexões continuam. Aplicativos externos não são protegidos. Novos logins e logins restaurados começam bloqueados quando ativado.",
+    "ClientLoginActivityScope": "As entradas do teclado e mouse do sistema determinam a inatividade apenas do site e da conta ativos. Cada ação não é enviada; ao atingir o prazo ou bloquear manualmente, uma solicitação bloqueia este login no servidor.",
+    "ClientLoginActivityLimits": "O prazo bloqueia a página principal e as janelas de ativos gerenciadas, mesmo sem senha configurada. O desbloqueio ocorre apenas na página principal após o servidor verificar a senha. Novos logins abrem normalmente; logins já bloqueados permanecem bloqueados ao restaurar. Janelas externas não são protegidas.",
     "ClientLoginIdleLock": "Bloqueio por inatividade",
-    "ClientLoginPolicyExpiry": "Saída agendada após alteração do administrador"
+    "ClientLoginPolicyExpiry": "Saída agendada após alteração do administrador",
+    "ClientLockShortcut": "Pressione {shortcut} para bloquear a conta atual a qualquer momento, mesmo com o bloqueio automático desativado."
   },
   "Setting": {
     "BackToApp": "Voltar ao aplicativo",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "Muitas tentativas. Aguarde um minuto.",
     "LifetimeSoon": "A duração máxima do login está terminando. O cliente sairá em {at}; entre novamente depois.",
     "PolicyChangedSoon": "O administrador alterou a configuração. O cliente sairá em {at}; entre novamente depois.",
-    "IdleSoon": "Sem atividade, o cliente será bloqueado em {at}. Desbloqueie na página principal com a senha do cliente."
+    "IdleSoon": "Sem atividade, o cliente será bloqueado em {at}. Desbloqueie na página principal com a senha do cliente.",
+    "ManagePassword": "Gerenciar senha de bloqueio"
   }
 }

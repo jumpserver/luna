@@ -52,19 +52,27 @@ are checked when selected, while their absolute login deadlines continue to run.
 Network errors do not invalidate a login. Confirmed expiry shows a persistent
 reason and a background system notification when supported.
 
-`idle_lock_time` is a separate local screen lock, in minutes (0 disables it).
+`idle_lock_time` controls screen locking, in minutes (0 disables automatic locking).
 The main process samples system keyboard/mouse idle time every second without
-network traffic. Only the active site/account has an idle timer; switching accounts
+reporting each action. At timeout or manual lock it shields the windows immediately
+and sends one `POST .../client-login-session/lock/` to record the server lock.
+Offline locks remain shielded and pending requests retry on the status interval;
+unlock waits for server synchronization. Only the active site/account has an idle timer; switching accounts
 starts a fresh interval and never unlocks an already locked account. Input in
 external applications counts as system activity, but those applications are not
 protected by the client lock. Suspending locks the active protected account.
 
-Protected new and restored logins start locked. The main page and its managed
-asset windows are shielded without disconnecting transports; only the main page
-can unlock. `GET .../client-login-session/unlock/` reports whether the current
+New logins open normally. Restoring an already locked login preserves its lock.
+Idle timeout locks even when no lock password has been configured. The main page
+and its managed asset windows are shielded without disconnecting transports;
+only the main page can unlock. `GET .../client-login-session/unlock/` reports whether the current
 account has a password and its site-specific web settings URL. `POST` to that
 same endpoint verifies `{password}` for the bearer account, with five attempts
-per minute. The main process alone clears the lock; renderer events cannot do so.
+per minute, and clears `ClientLoginSession.is_locked` only after verification.
+Business API requests are denied with `403 client_locked` while locked; status,
+lock/unlock/revoke and read-only identity bootstrap remain available. Refresh
+preserves the lock. The main process releases the shield after server success;
+renderer events cannot clear it.
 Passwords are never persisted by the client. Locked native website views remain
 hidden even when tabs or asynchronous callbacks request visibility.
 

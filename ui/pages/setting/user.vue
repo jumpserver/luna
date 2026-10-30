@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { LabeledValue, UserData, UserProfile } from "~/types";
-import { getUserProfile } from "~/composables/useApiRequest";
+import { apiRequest, getUserProfile } from "~/composables/useApiRequest";
 import { useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
+import { desktopOpener } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { formatClientLoginDuration, formatClientLoginTimestamp } from "~/utils/clientLoginPolicy";
 
@@ -13,9 +14,34 @@ interface DetailRow {
 }
 
 const { t, locale } = useI18n();
+const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const { switchAccount: switchSiteAccount } = useSiteAccountSwitch();
 const { loggedIn, currentAccountId, currentUser, userMap } = storeToRefs(userInfoStore);
+const { isMacOS } = usePlatform();
+const lockShortcut = computed(() => (isMacOS.value ? "⌘L" : "Ctrl+L"));
+const openingCredentials = ref(false);
+
+async function openClientCredentials() {
+  const accountId = currentAccountId.value;
+  const site = currentUser.value?.site;
+  if (!site || openingCredentials.value) return;
+  openingCredentials.value = true;
+  try {
+    const info = await apiRequest<{ settings_path: string }>({
+      method: "GET",
+      path: "/api/v1/authentication/client-login-session/unlock/"
+    });
+    if (accountId !== currentAccountId.value) return;
+    const url = new URL(info.settings_path, site);
+    if (url.origin !== new URL(site).origin || url.pathname !== "/ui/") throw new Error("Invalid settings URL");
+    await desktopOpener.openUrl(url.toString());
+  } catch {
+    toast.add({ title: t("ClientLock.LoadFailed"), color: "error" });
+  } finally {
+    openingCredentials.value = false;
+  }
+}
 
 const profile = ref<UserProfile | null>(null);
 const profileAccountId = ref("");
@@ -346,11 +372,31 @@ watch(
             </span>
           </div>
         </SettingsGroup>
-        <div class="space-y-2 text-xs leading-relaxed text-muted">
-          <p>{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
-          <p>{{ t("UserProfile.ClientLoginActivityScope") }}</p>
-          <p>{{ t("UserProfile.ClientLoginActivityLimits") }}</p>
-        </div>
+        <p class="text-xs leading-relaxed text-muted">{{ t("UserProfile.ClientLoginExpiryHint") }}</p>
+        <UAlert
+          color="neutral"
+          variant="soft"
+          icon="i-lucide-lock-keyhole"
+          :title="t('UserProfile.ClientLoginIdleLock')"
+        >
+          <template #description>
+            <div class="space-y-2 text-xs leading-relaxed">
+              <p>{{ t("UserProfile.ClientLoginActivityLimits") }}</p>
+              <p>{{ t("UserProfile.ClientLoginActivityScope") }}</p>
+              <p>{{ t("UserProfile.ClientLockShortcut", { shortcut: lockShortcut }) }}</p>
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="xs"
+                icon="i-lucide-external-link"
+                :loading="openingCredentials"
+                @click="openClientCredentials"
+              >
+                {{ t("ClientLock.ManagePassword") }}
+              </UButton>
+            </div>
+          </template>
+        </UAlert>
       </SettingsSection>
 
       <template v-if="!loading && !loadError && profile">

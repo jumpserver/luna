@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "Không giới hạn",
     "ClientLoginCurrentUser": "Người dùng hiện tại",
     "ClientLoginExpiryHint": "Thời điểm hết hạn dựa trên trạng thái gần nhất được máy chủ xác nhận và hiển thị theo múi giờ của thiết bị này.",
-    "ClientLoginActivityScope": "Thao tác bàn phím và chuột của hệ thống, kể cả ứng dụng ngoài, chỉ đặt lại bộ đếm cho trang và tài khoản đang kích hoạt. Không báo cáo hoạt động lên máy chủ.",
-    "ClientLoginActivityLimits": "Trang chính và cửa sổ tài sản được quản lý khóa cùng nhau; chỉ mở khóa ở trang chính. Phiên đăng nhập và kết nối vẫn hoạt động. Ứng dụng ngoài không được bảo vệ. Khi bật, đăng nhập mới và phiên khôi phục bắt đầu ở trạng thái khóa.",
+    "ClientLoginActivityScope": "Thời gian không hoạt động chỉ tính cho trang và tài khoản đang dùng, dựa trên bàn phím và chuột của hệ thống. Không gửi từng thao tác; khi hết thời gian hoặc khóa thủ công, ứng dụng gửi yêu cầu khóa phiên đăng nhập này tới máy chủ.",
+    "ClientLoginActivityLimits": "Hết thời gian sẽ khóa trang chính và cửa sổ tài sản được quản lý, kể cả khi chưa đặt mật khẩu. Chỉ trang chính có thể mở khóa sau khi máy chủ xác minh mật khẩu. Đăng nhập mới mở bình thường; phiên đã khóa vẫn khóa sau khi khôi phục. Cửa sổ ứng dụng ngoài không được bảo vệ.",
     "ClientLoginIdleLock": "Khóa khi không hoạt động",
-    "ClientLoginPolicyExpiry": "Thời điểm đăng xuất sau khi quản trị viên đổi cấu hình"
+    "ClientLoginPolicyExpiry": "Thời điểm đăng xuất sau khi quản trị viên đổi cấu hình",
+    "ClientLockShortcut": "Nhấn {shortcut} để khóa tài khoản hiện tại bất cứ lúc nào, kể cả khi tắt khóa tự động."
   },
   "Setting": {
     "BackToApp": "Quay lại ứng dụng",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "Quá nhiều lần thử. Vui lòng đợi một phút.",
     "LifetimeSoon": "Thời hạn đăng nhập tối đa sắp hết. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
     "PolicyChangedSoon": "Quản trị viên đã đổi cấu hình. Ứng dụng khách sẽ đăng xuất lúc {at}; sau đó cần đăng nhập lại.",
-    "IdleSoon": "Nếu không có thao tác, ứng dụng khách sẽ khóa lúc {at}. Mở khóa bằng mật khẩu tại trang chính."
+    "IdleSoon": "Nếu không có thao tác, ứng dụng khách sẽ khóa lúc {at}. Mở khóa bằng mật khẩu tại trang chính.",
+    "ManagePassword": "Quản lý mật khẩu khóa"
   }
 }

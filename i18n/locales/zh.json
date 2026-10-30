@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "当前用户",
     "ClientLoginExpiryHint": "到期时间依据服务器最近确认的状态，按本机时区显示。",
-    "ClientLoginActivityScope": "根据本机系统键鼠输入判断空闲，其他程序中的操作也计入；只对当前激活的站点和账号计时，无需向服务器上报活动。",
-    "ClientLoginActivityLimits": "主页面和客户端管理的资产窗口一起锁定，只能在主页面输入当前账号的锁屏密码解锁。登录和连接保持；外部软件不受此锁屏保护。启用后，新登录及恢复的登录默认锁定。",
+    "ClientLoginActivityScope": "根据本机系统键鼠输入判断空闲，只对当前激活的站点和账号计时。平时不逐次上报活动；达到空闲超时或手动锁定时，通知服务器锁定本次登录。",
+    "ClientLoginActivityLimits": "空闲超时即锁定主页面和对应资产窗口，即使尚未设置密码。只能在主页面通过后端验证密码后解锁。新登录正常进入，已锁定的登录恢复后仍锁定。外部软件窗口不受保护。",
     "ClientLoginIdleLock": "空闲锁屏",
-    "ClientLoginPolicyExpiry": "管理员变更配置后的退出时间"
+    "ClientLoginPolicyExpiry": "管理员变更配置后的退出时间",
+    "ClientLockShortcut": "随时可按 {shortcut} 锁定当前账号；关闭自动锁屏也可手动锁定。"
   },
   "Setting": {
     "BackToApp": "返回应用",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "尝试次数过多，请等待一分钟后重试。",
     "LifetimeSoon": "最长有效期即将到期，客户端将在 {at} 退出，届时需要重新登录。",
     "PolicyChangedSoon": "管理员已修改配置，客户端将在 {at} 退出，届时需要重新登录。",
-    "IdleSoon": "如无操作，客户端将在 {at} 锁屏，届时请在主页面输入客户端锁屏密码解锁。"
+    "IdleSoon": "如无操作，客户端将在 {at} 锁屏，届时请在主页面输入客户端锁屏密码解锁。",
+    "ManagePassword": "管理锁屏密码"
   }
 }

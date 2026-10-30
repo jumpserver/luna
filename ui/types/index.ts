@@ -184,6 +184,7 @@ export interface ClientLoginPolicy {
 }
 
 export interface ClientLoginSession {
+  locked?: boolean;
   authenticated_at: string;
   expires_at: string | null;
   policy_expires_at?: string | null;

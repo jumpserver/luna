@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "제한 없음",
     "ClientLoginCurrentUser": "현재 사용자",
     "ClientLoginExpiryHint": "만료 시간은 서버가 마지막으로 확인한 상태를 기준으로 이 기기의 시간대로 표시됩니다.",
-    "ClientLoginActivityScope": "외부 프로그램을 포함한 시스템 키보드와 마우스 입력은 현재 활성 사이트와 계정의 타이머만 초기화합니다. 활동은 서버에 보고하지 않습니다.",
-    "ClientLoginActivityLimits": "기본 화면과 관리되는 자산 창을 잠그며 기본 화면에서만 해제할 수 있습니다. 로그인과 연결은 유지됩니다. 외부 프로그램은 보호되지 않습니다. 활성화하면 새 로그인과 복원된 로그인도 잠금 상태로 시작합니다.",
+    "ClientLoginActivityScope": "시스템 키보드와 마우스 입력으로 현재 사이트와 계정의 유휴 시간만 판단합니다. 각 작업을 보고하지 않으며, 유휴 제한 도달 또는 수동 잠금 시 서버에 이번 로그인의 잠금을 요청합니다.",
+    "ClientLoginActivityLimits": "유휴 시간이 초과되면 비밀번호가 없어도 기본 화면과 관리되는 자산 창을 잠급니다. 기본 화면에서 서버의 비밀번호 검증에 성공해야 해제됩니다. 새 로그인은 정상 진입하며 잠긴 로그인은 복원 후에도 잠깁니다. 외부 프로그램 창은 보호되지 않습니다.",
     "ClientLoginIdleLock": "유휴 잠금",
-    "ClientLoginPolicyExpiry": "관리자 설정 변경에 따른 종료 시간"
+    "ClientLoginPolicyExpiry": "관리자 설정 변경에 따른 종료 시간",
+    "ClientLockShortcut": "자동 잠금이 꺼져 있어도 {shortcut}로 현재 계정을 언제든 잠글 수 있습니다."
   },
   "Setting": {
     "BackToApp": "앱으로 돌아가기",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "시도 횟수가 너무 많습니다. 1분 후 다시 시도하세요.",
     "LifetimeSoon": "최대 로그인 유효기간이 곧 끝납니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
     "PolicyChangedSoon": "관리자가 설정을 변경했습니다. {at}에 로그아웃되며 이후 다시 로그인해야 합니다.",
-    "IdleSoon": "입력이 없으면 {at}에 잠깁니다. 기본 화면에서 클라이언트 잠금 비밀번호로 해제하세요."
+    "IdleSoon": "입력이 없으면 {at}에 잠깁니다. 기본 화면에서 클라이언트 잠금 비밀번호로 해제하세요.",
+    "ManagePassword": "잠금 비밀번호 관리"
   }
 }

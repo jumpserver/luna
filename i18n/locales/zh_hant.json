@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "目前使用者",
     "ClientLoginExpiryHint": "到期時間依據伺服器最近確認的狀態，依本機時區顯示。",
-    "ClientLoginActivityScope": "依本機系統鍵鼠輸入判斷閒置，其他程式操作亦計入；僅對目前啟用的網站與帳號計時，無須向伺服器回報活動。",
-    "ClientLoginActivityLimits": "主頁面與用戶端管理的資產視窗一起鎖定，只能在主頁面輸入目前帳號的鎖定密碼解鎖。登入及連線保持；外部軟體不受此鎖定保護。啟用後，新登入及還原的登入預設鎖定。",
+    "ClientLoginActivityScope": "依據本機系統鍵盤滑鼠輸入判斷閒置，只對目前啟用的站點與帳號計時。平時不逐次回報活動；閒置逾時或手動鎖定時，通知伺服器鎖定本次登入。",
+    "ClientLoginActivityLimits": "閒置逾時即鎖定主頁面與對應資產視窗，即使尚未設定密碼。只能在主頁面通過後端密碼驗證後解鎖。新登入正常進入，已鎖定的登入恢復後仍鎖定。外部軟體視窗不受保護。",
     "ClientLoginIdleLock": "閒置鎖定",
-    "ClientLoginPolicyExpiry": "管理員變更設定後的登出時間"
+    "ClientLoginPolicyExpiry": "管理員變更設定後的登出時間",
+    "ClientLockShortcut": "隨時可按 {shortcut} 鎖定目前帳號；停用自動鎖定仍可手動鎖定。"
   },
   "Setting": {
     "BackToApp": "返回應用",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "嘗試次數過多，請等待一分鐘後重試。",
     "LifetimeSoon": "最長有效期即將到期，用戶端將於 {at} 登出，屆時需要重新登入。",
     "PolicyChangedSoon": "管理員已修改設定，用戶端將於 {at} 登出，屆時需要重新登入。",
-    "IdleSoon": "若無操作，用戶端將於 {at} 鎖定，屆時請在主頁面輸入用戶端鎖定密碼解鎖。"
+    "IdleSoon": "若無操作，用戶端將於 {at} 鎖定，屆時請在主頁面輸入用戶端鎖定密碼解鎖。",
+    "ManagePassword": "管理鎖定密碼"
   }
 }

@@ -1291,10 +1291,11 @@
     "ClientLoginUnlimited": "Illimitée",
     "ClientLoginCurrentUser": "Utilisateur actuel",
     "ClientLoginExpiryHint": "L’échéance correspond au dernier état confirmé par le serveur et s’affiche dans le fuseau horaire de cet appareil.",
-    "ClientLoginActivityScope": "Les entrées clavier et souris du système, y compris dans les applications externes, réinitialisent uniquement le délai du site et du compte actifs. Aucune activité n’est envoyée au serveur.",
-    "ClientLoginActivityLimits": "La page principale et les fenêtres gérées se verrouillent ensemble ; seul la page principale permet le déverrouillage. La session et les connexions restent actives. Les applications externes ne sont pas protégées. Les sessions nouvelles et restaurées démarrent verrouillées si cette option est activée.",
+    "ClientLoginActivityScope": "Les entrées clavier et souris du système déterminent l’inactivité du site et du compte actifs uniquement. Aucune activité n’est envoyée à chaque action ; le délai ou un verrouillage manuel envoie une demande de verrouillage au serveur.",
+    "ClientLoginActivityLimits": "Le délai verrouille la page principale et les fenêtres de ressources gérées, même sans mot de passe défini. Seule la page principale permet de déverrouiller après vérification du mot de passe par le serveur. Une nouvelle connexion s’ouvre normalement ; une connexion déjà verrouillée le reste après restauration. Les fenêtres externes ne sont pas protégées.",
     "ClientLoginIdleLock": "Verrouillage après inactivité",
-    "ClientLoginPolicyExpiry": "Déconnexion prévue après une modification administrateur"
+    "ClientLoginPolicyExpiry": "Déconnexion prévue après une modification administrateur",
+    "ClientLockShortcut": "Appuyez sur {shortcut} pour verrouiller le compte actif à tout moment, même si le verrouillage automatique est désactivé."
   },
   "Setting": {
     "BackToApp": "Retour à l’application",
@@ -3363,6 +3364,7 @@
     "TooManyAttempts": "Trop de tentatives. Réessayez dans une minute.",
     "LifetimeSoon": "La durée maximale de connexion expire bientôt. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
     "PolicyChangedSoon": "L’administrateur a modifié la configuration. Le client se déconnectera à {at}. Reconnectez-vous ensuite.",
-    "IdleSoon": "Sans saisie, le client se verrouillera à {at}. Déverrouillez-le sur la page principale avec son mot de passe."
+    "IdleSoon": "Sans saisie, le client se verrouillera à {at}. Déverrouillez-le sur la page principale avec son mot de passe.",
+    "ManagePassword": "Gérer le mot de passe de verrouillage"
   }
 }
