@@ -1,3 +1,4 @@
+import type { ChenExecutionPlan } from "~/chen/types/plan";
 import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 import { buildHeaders, chenPath } from "~/chen/api/client";
 import { newChenRequestId } from "./requestId";
@@ -19,7 +20,22 @@ export interface GoConsole {
   schema: string;
   state: string;
 }
+export interface GoPlanIdentity {
+  request_id: string;
+  mode: "ESTIMATED";
+  dialect: string;
+  database: string;
+  schema: string;
+  generated_sql?: string;
+}
+export interface GoPlan extends ChenExecutionPlan {
+  executionId: string;
+  consoleId: string;
+  context: GoPlanIdentity;
+  limits: { maxBytes: number; maxNodes: number; maxDepth: number };
+}
 export interface GoExecution {
+  plan?: GoPlanIdentity;
   id: string;
   export_id?: string;
   sql?: string;
@@ -308,10 +324,12 @@ export function createChenGoApi(
       documentVersion: number,
       requestId: string,
       submitReview = false,
-      confirmWarnings = false
+      confirmWarnings = false,
+      estimatedPlan = false
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/executions`, "POST", {
         sql,
+        ...(estimatedPlan ? { plan_mode: "ESTIMATED" } : {}),
         document_version: documentVersion,
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
@@ -363,6 +381,7 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
+    plan: (executionId: string) => request<GoPlan>(`/executions/${id(executionId)}/plan`),
     explain: (consoleId: string, sql: string) =>
       request<{ sql: string }>(`/consoles/${id(consoleId)}/explain`, "POST", { sql }),
     exportQuery: (

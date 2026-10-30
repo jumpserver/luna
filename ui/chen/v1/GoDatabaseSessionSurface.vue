@@ -50,6 +50,7 @@ import {
   closeWarnings,
   createQueryTab,
   exportActive,
+  loadQueryPlan,
   objectKey,
   objectSelect,
   queryDirty,
@@ -421,7 +422,14 @@ function retryRows(query: QueryWorkspaceTab) {
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
-  if (value.result_ids?.length && query.resultExecution?.id !== value.id && !query.loadingRows)
+  if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
+    void loadQueryPlan(query, api);
+  if (
+    !query.execution?.plan &&
+    value.result_ids?.length &&
+    query.resultExecution?.id !== value.id &&
+    !query.loadingRows
+  )
     void loadRows(query, value.result_ids[0]!, 0, query.execution, query.executionSql);
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
@@ -699,32 +707,14 @@ async function submit(query: QueryWorkspaceTab, sql: string, version: number, pl
   query.loadGeneration++;
   query.loadingRows = false;
   query.resultLoadError = null;
+  query.loadingPlan = false;
+  query.planLoadError = "";
+  query.resultPane = plan ? "plan" : "results";
   query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { plan: true } : {}) };
   await recoverSubmission(query);
 }
 async function explainQuery(query: QueryWorkspaceTab, sql: string, version: number) {
-  if (
-    !isCurrent(query) ||
-    !sessionReady.value ||
-    query.console?.state !== "ready" ||
-    query.busy ||
-    query.pending ||
-    executionActive(query.execution)
-  )
-    return;
-  const consoleId = query.console.id;
-  query.busy = true;
-  query.error = "";
-  let prepared: string | undefined;
-  try {
-    prepared = (await api.explain(consoleId, sql)).sql;
-  } catch (cause) {
-    if (isCurrent(query)) query.error = failureText(cause);
-  } finally {
-    if (isCurrent(query)) query.busy = false;
-  }
-  if (!prepared || !isCurrent(query) || query.console?.id !== consoleId || !sessionReady.value) return;
-  await submit(query, prepared, version, true);
+  await submit(query, sql, version, true);
 }
 async function recoverSubmission(query: QueryWorkspaceTab) {
   const pending = query.pending;
@@ -765,7 +755,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
               pending.version,
               pending.id,
               pending.submitReview,
-              pending.confirmWarnings
+              pending.confirmWarnings,
+              !!pending.plan
             );
     if (!isCurrent(query)) return;
     query.pending = null;
@@ -776,7 +767,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       query.baselineSql = value.sql;
     }
     query.executionVersion = pending.version;
-    query.executionPlan = !!pending.plan;
+    query.executionPlan = !!value.plan;
+    query.resultPane = value.plan ? "plan" : "results";
     query.executionConfirmWarnings = !!pending.confirmWarnings;
     query.executionSubmitReview = !!pending.submitReview;
     query.executionExportFormat = pending.exportFormat;
@@ -988,6 +980,14 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.resultId = "";
   query.resultExecution = null;
   query.resultSql = "";
+  query.loadGeneration++;
+  query.loadingPlan = false;
+  query.plan = null;
+  query.planAttempt = null;
+  query.planLoadedId = "";
+  query.planLoadError = "";
+  query.executionPlan = false;
+  query.resultPane = "results";
   await connectQuery(query);
 }
 async function replaceConnection(nextEndpoint: string, nextCredential: string) {
@@ -1410,6 +1410,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             @reconnect="reconnect(item)"
             @rows="(id, offset) => loadRows(item, id, offset)"
             @retry-rows="retryRows(item)"
+            @pane="(pane) => (item.resultPane = pane)"
           />
         </div>
         <div
