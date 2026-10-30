@@ -2307,6 +2307,7 @@
     "TableDisplaySettings": "表格顯示設置",
     "TableDisplay": "表格顯示",
     "TableDisplayHint": "應用於所有數據庫結果表格。",
+    "GoGridPreferenceResultScope": "欄位顯示僅用於目前結果，切換結果後重設。",
     "NullValues": "NULL 值",
     "MarkEmptyStrings": "標記空字符串",
     "ZebraStripes": "斑馬紋",

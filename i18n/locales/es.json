@@ -2307,6 +2307,7 @@
     "TableDisplaySettings": "Ajustes de visualización de tablas",
     "TableDisplay": "Visualización de tablas",
     "TableDisplayHint": "Se aplica a todas las cuadrículas de resultados de bases de datos.",
+    "GoGridPreferenceResultScope": "La visibilidad de columnas solo se aplica al resultado actual y se restablece con nuevos resultados.",
     "NullValues": "Valores NULL",
     "MarkEmptyStrings": "Marcar cadenas vacías",
     "ZebraStripes": "Filas alternas",

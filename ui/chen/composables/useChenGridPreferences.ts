@@ -1,6 +1,6 @@
 import type { ChenDataViewMeta } from "~/chen/types";
 
-import { useLocalStorage } from "@vueuse/core";
+import { useStorage } from "@vueuse/core";
 
 export type ChenNullDisplay = "keyword" | "parenthesized" | "blank";
 
@@ -22,11 +22,49 @@ const DEFAULT_CHEN_GRID_PREFERENCES: ChenGridPreferences = {
   hiddenFieldsByGrid: {}
 };
 
+// Validate persisted data before either the old workbench or the Go grid consumes it.
+export function normalizeChenGridPreferences(value: unknown): ChenGridPreferences {
+  const saved =
+    value && typeof value === "object" && !Array.isArray(value) ? (value as Partial<ChenGridPreferences>) : {};
+  const preferences = { ...DEFAULT_CHEN_GRID_PREFERENCES, hiddenFieldsByGrid: {} };
+  if (["keyword", "parenthesized", "blank"].includes(saved.nullDisplay as string))
+    preferences.nullDisplay = saved.nullDisplay!;
+  for (const key of ["showEmptyStrings", "stripedRows", "showCellBorders", "compactRows"] as const) {
+    if (typeof saved[key] === "boolean") preferences[key] = saved[key];
+  }
+  if (
+    saved.hiddenFieldsByGrid &&
+    typeof saved.hiddenFieldsByGrid === "object" &&
+    !Array.isArray(saved.hiddenFieldsByGrid)
+  ) {
+    preferences.hiddenFieldsByGrid = Object.fromEntries(
+      Object.entries(saved.hiddenFieldsByGrid)
+        .filter(([, fields]) => Array.isArray(fields) && fields.every((field) => typeof field === "string"))
+        .map(([key, fields]) => [key, [...new Set(fields)]])
+    );
+  }
+  return preferences;
+}
+
 export function useChenGridPreferences() {
-  return useLocalStorage<ChenGridPreferences>(
+  return useStorage<ChenGridPreferences>(
     "jumpserver-client:chen-grid-preferences",
-    DEFAULT_CHEN_GRID_PREFERENCES,
-    { mergeDefaults: true }
+    normalizeChenGridPreferences(null),
+    undefined,
+    {
+      serializer: {
+        read: (raw) => {
+          try {
+            return normalizeChenGridPreferences(JSON.parse(raw));
+          } catch {
+            return normalizeChenGridPreferences(null);
+          }
+        },
+        write: (value) => JSON.stringify(normalizeChenGridPreferences(value))
+      },
+      // Storage can be denied in browsers and Electron; preferences stay usable in memory.
+      onError: () => {}
+    }
   );
 }
 

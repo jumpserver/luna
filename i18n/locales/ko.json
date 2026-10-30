@@ -2307,6 +2307,7 @@
     "TableDisplaySettings": "테이블 표시 설정",
     "TableDisplay": "테이블 표시",
     "TableDisplayHint": "모든 데이터베이스 결과 그리드에 적용됩니다.",
+    "GoGridPreferenceResultScope": "열 표시 설정은 현재 결과에만 적용되며 새 결과에서 초기화됩니다.",
     "NullValues": "NULL 값",
     "MarkEmptyStrings": "빈 문자열 표시",
     "ZebraStripes": "행 배경색 교차 표시",

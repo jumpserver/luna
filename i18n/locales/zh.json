@@ -2484,6 +2484,7 @@
     "TableDisplaySettings": "表格显示设置",
     "TableDisplay": "表格显示",
     "TableDisplayHint": "应用于所有数据库结果表格。",
+    "GoGridPreferenceResultScope": "列显示仅用于当前结果，切换结果后重置。",
     "NullValues": "NULL 值",
     "MarkEmptyStrings": "标记空字符串",
     "ZebraStripes": "斑马纹",

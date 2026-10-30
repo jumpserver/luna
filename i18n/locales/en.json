@@ -2490,6 +2490,7 @@
     "TableDisplaySettings": "Table display settings",
     "TableDisplay": "Table display",
     "TableDisplayHint": "Applied to all database result grids.",
+    "GoGridPreferenceResultScope": "Column visibility applies only to this result and resets for new results.",
     "NullValues": "NULL values",
     "MarkEmptyStrings": "Mark empty strings",
     "ZebraStripes": "Zebra stripes",
