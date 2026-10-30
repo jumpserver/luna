@@ -13,7 +13,7 @@ const emit = defineEmits<{
   start: [
     mode: "cached" | "query",
     format: GoExportFormat,
-    snapshot: { sql: string; resultId: string; version: number }
+    snapshot: { sql: string; resultId: string; version: number; rows?: number }
   ];
   sync: [];
   cancel: [];
@@ -54,7 +54,8 @@ const canStart = computed(
     !active.value &&
     (mode.value === "cached"
       ? !!snapshot.value.resultId
-      : !!snapshot.value.sql &&
+      : (!props.query.browseObject || props.query.rows?.browse?.supported) &&
+        !!snapshot.value.sql &&
         !["queued", "running", "waiting_review", "cancel_requested"].includes(props.query.execution?.status || ""))
 );
 const cancelSupported = computed(
@@ -63,10 +64,13 @@ const cancelSupported = computed(
 function show() {
   if (!props.session.permissions.can_download || (!props.ready && !job.value)) return;
   snapshot.value = {
-    sql: props.query.resultSql,
+    sql: props.query.rows?.browse?.supported ? props.query.rows.browse.full_sql : props.query.resultSql,
     resultId: props.query.resultId,
     version: props.query.resultExecution?.id === props.query.execution?.id ? props.query.executionVersion : 0,
-    rows: props.query.rows?.total_rows || 0,
+    rows:
+      (props.query.loadingSettings.mode === "continuous"
+        ? props.query.rows?.rows.length
+        : props.query.rows?.total_rows) || 0,
     truncated: !!props.query.rows?.truncated
   };
   mode.value = "cached";
@@ -191,18 +195,26 @@ useIntervalFn(() => {
         <template v-if="ready && !active && !job">
           <div class="flex flex-wrap gap-2">
             <UButton
-              :label="t('Chen.GoV1ExportCached')"
+              :label="
+                t(
+                  query.loadingSettings.mode === 'continuous'
+                    ? 'Chen.GoBrowseExportLoaded'
+                    : query.rows?.browse?.supported
+                      ? 'Chen.GoBrowseExportPage'
+                      : 'Chen.GoV1ExportCached'
+                )
+              "
               :aria-pressed="mode === 'cached'"
               :variant="mode === 'cached' ? 'soft' : 'ghost'"
               color="neutral"
               @click="mode = 'cached'"
             />
             <UButton
-              :label="t('Chen.GoV1ExportFull')"
+              :label="t(query.browseObject ? 'Chen.GoBrowseExportFull' : 'Chen.GoV1ExportFull')"
               :aria-pressed="mode === 'query'"
               :variant="mode === 'query' ? 'soft' : 'ghost'"
               color="neutral"
-              :disabled="!!query.pendingCachedExport"
+              :disabled="!!query.pendingCachedExport || (!!query.browseObject && !query.rows?.browse?.supported)"
               @click="mode = 'query'"
             />
           </div>
@@ -213,7 +225,9 @@ useIntervalFn(() => {
             {{ t("Chen.GoV1ExportIncomplete") }}
           </p>
           <template v-if="mode === 'query'">
-            <p class="text-warning">{{ t("Chen.GoV1ExportFullConfirm") }}</p>
+            <p class="text-warning">
+              {{ t(query.browseObject ? "Chen.GoBrowseExportConfirm" : "Chen.GoV1ExportFullConfirm") }}
+            </p>
             <pre
               class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-default bg-elevated p-3 text-xs"
               :class="{ 'select-none': !session.permissions.can_copy }"

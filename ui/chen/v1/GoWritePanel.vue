@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCopySelection, GoEditColumn, GoEditPlan, GoSession } from "./api";
-import type { QueryWorkspaceTab } from "./workspace";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenDataViewField } from "~/chen/types";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -22,9 +22,15 @@ import {
 } from "./dataEditing";
 import GoResultGrid from "./GoResultGrid.client.vue";
 import { newChenRequestId } from "./requestId";
+import { hasMoreResultRows, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi; visible?: boolean }>();
-const emit = defineEmits<{ apply: [plan: GoEditPlan]; refresh: [] }>();
+const emit = defineEmits<{
+  apply: [plan: GoEditPlan];
+  refresh: [];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [automatic: boolean];
+}>();
 const { t } = useI18n();
 const error = ref("");
 const selected = ref<number[]>([]);
@@ -60,7 +66,7 @@ const locked = computed(
     policyPending.value
 );
 const supported = computed(() => draft.value.metadata?.supported === true);
-const canChange = computed(() => supported.value && !locked.value);
+const canChange = computed(() => supported.value && !locked.value && !metadataBusy.value);
 const canInsert = computed(
   () =>
     canChange.value &&
@@ -110,25 +116,61 @@ async function loadMetadata() {
   controller = new AbortController();
   const current = controller;
   const rowSet = props.query.rows;
+  const previous = draft.value.metadata;
+  const prefix =
+    previous?.supported &&
+    previous.version === rowSet.id &&
+    previous.offset === rowSet.offset &&
+    previous.row_refs.length < rowSet.rows.length
+      ? [...previous.row_refs]
+      : [];
   metadataBusy.value = true;
-  draft.value.metadata = null;
   try {
     const metadata = await props.api.editMetadata(
       props.query.console.id,
       rowSet.id,
-      rowSet.offset,
-      Math.max(1, rowSet.rows.length),
+      rowSet.offset + prefix.length,
+      Math.min(1000, Math.max(1, rowSet.rows.length - prefix.length)),
       current.signal
     );
+    if (current.signal.aborted || props.query.rows !== rowSet) return;
+    if (metadata.supported && (metadata.version !== rowSet.id || metadata.offset !== rowSet.offset + prefix.length))
+      throw new Error(t("Chen.GoBrowseMetadataChanged"));
+    if (metadata.supported) {
+      metadata.offset = rowSet.offset;
+      metadata.row_refs = [...prefix, ...metadata.row_refs];
+      for (let offset = metadata.row_refs.length; offset < rowSet.rows.length;) {
+        const next = await props.api.editMetadata(
+          props.query.console.id,
+          rowSet.id,
+          rowSet.offset + offset,
+          Math.min(1000, rowSet.rows.length - offset),
+          current.signal
+        );
+        if (current.signal.aborted || props.query.rows !== rowSet) return;
+        if (
+          !next.supported ||
+          next.version !== metadata.version ||
+          next.offset !== rowSet.offset + offset ||
+          !next.row_refs.length
+        )
+          throw new Error(t("Chen.GoBrowseMetadataChanged"));
+        metadata.row_refs.push(...next.row_refs);
+        offset += next.row_refs.length;
+      }
+    }
     if (!current.signal.aborted && props.query.rows === rowSet) draft.value.metadata = metadata;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
+    if (!current.signal.aborted) {
+      draft.value.metadata = null;
+      error.value = chenErrorText(cause, t);
+    }
   } finally {
     if (!current.signal.aborted) metadataBusy.value = false;
   }
 }
 watch(
-  () => [props.query.rows?.id, props.query.rows?.offset, props.query.console?.id],
+  () => [props.query.rows?.id, props.query.rows?.offset, props.query.rows?.rows.length, props.query.console?.id],
   () => void loadMetadata(),
   { immediate: true }
 );
@@ -407,6 +449,16 @@ function discard() {
     <GoResultGrid
       ref="grid"
       :rows="rows"
+      :loading-settings="query.loadingSettings"
+      :loading-settings-disabled="locked || dirty || metadataBusy"
+      :max-batch-size="query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000"
+      :can-load-more="
+        session.state === 'ready' &&
+        !resultLoadingLocked(query) &&
+        !metadataBusy &&
+        !query.loadMoreFailed &&
+        hasMoreResultRows(query)
+      "
       :active="visible !== false"
       :nullable-columns="draft.metadata?.columns.filter((column) => column.nullable).map((column) => column.index)"
       :can-copy="session.permissions.can_copy"
@@ -425,6 +477,8 @@ function discard() {
       :default-cells="defaultCells"
       :deleted-rows="deletedRows"
       class="min-h-0 flex-1"
+      @loading-settings="emit('loadingSettings', $event)"
+      @load-more="emit('loadMore', true)"
       @selection="selected = $event"
       @edit="editCell"
       @change="stageCell"

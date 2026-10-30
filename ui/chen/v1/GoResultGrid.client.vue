@@ -15,6 +15,7 @@ import type {
 } from "ag-grid-community";
 import type { PropType } from "vue";
 import type { GoCopiedSQL, GoCopySelection, GoRows } from "./api";
+import type { GoResultLoadingSettings } from "./workspace";
 import type { ChenGridCell } from "~/chen/utils/dataGridSelection";
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
@@ -52,6 +53,10 @@ const props = defineProps<{
   rows: GoRows;
   canCopy: boolean;
   active?: boolean;
+  loadingSettings?: GoResultLoadingSettings;
+  loadingSettingsDisabled?: boolean;
+  maxBatchSize?: number;
+  canLoadMore?: boolean;
   nullableColumns?: number[];
   copySql?: (operation: "insert" | "update", selection: GoCopySelection) => Promise<GoCopiedSQL>;
   sqlCopyDisabled?: boolean;
@@ -66,6 +71,8 @@ const emit = defineEmits<{
   edit: [row: number, column: number];
   change: [row: number, column: number, value: string | null];
   selection: [rows: number[]];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [];
 }>();
 ModuleRegistry.registerModules([AllCommunityModule]);
 const { t, locale } = useI18n();
@@ -74,6 +81,32 @@ const gridApi = shallowRef<GridApi | null>(null);
 const selection = ref(emptyChenGridSelection());
 const filter = ref("");
 const gridPreferences = useChenGridPreferences();
+const loadingModes = computed(() => [
+  { label: t("Chen.GoBrowsePaging"), value: "page" },
+  { label: t("Chen.GoBrowseContinuous"), value: "continuous" }
+]);
+const batchSizes = computed(() =>
+  [...new Set([50, 100, 200, 500, 1000, props.loadingSettings?.batchSize || 200, props.maxBatchSize || 1000])]
+    .filter((size) => size <= (props.maxBatchSize || 1000))
+    .sort((a, b) => a - b)
+);
+function changeLoading(value: Partial<GoResultLoadingSettings>) {
+  if (!props.loadingSettings || props.loadingSettingsDisabled) return;
+  gridApi.value?.stopEditing();
+  emit("loadingSettings", { ...props.loadingSettings, ...value });
+}
+function loadNearEnd(event: { direction: string }) {
+  if (
+    event.direction !== "vertical" ||
+    props.active === false ||
+    !props.canLoadMore ||
+    filter.value ||
+    gridApi.value?.getEditingCells().length
+  )
+    return;
+  const api = gridApi.value;
+  if (api && api.getLastDisplayedRowIndex() >= api.getDisplayedRowCount() - 6) emit("loadMore");
+}
 const fieldSearch = ref("");
 // ponytail: the session exposes asset/account display names, not stable connection IDs.
 // Keep visibility in this result instance until the API supplies a reliable full table identity.
@@ -315,7 +348,7 @@ const columns = computed<ColDef[]>(() => [
       colId: resultColumnId(ordinal),
       field: resultColumnId(ordinal),
       headerName: columnNames.value[ordinal],
-      headerTooltip: `${column.name} · ${column.data_type} · ${t("Chen.GoV1GridPageOnly")}`,
+      headerTooltip: `${column.name} · ${column.data_type} · ${t(props.loadingSettings?.mode === "continuous" ? "Chen.GoBrowseLoadedOnly" : "Chen.GoV1GridPageOnly")}`,
       headerComponentParams: {
         innerHeaderComponent: ResultColumnHeader,
         innerHeaderComponentParams: { dataType: column.data_type }
@@ -746,8 +779,8 @@ onBeforeUnmount(() => {
         icon="i-lucide-search"
         size="xs"
         class="w-40"
-        :placeholder="t('Chen.GoV1GridFilter')"
-        :aria-label="t('Chen.GoV1GridFilter')"
+        :placeholder="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedSearch' : 'Chen.GoV1GridFilter')"
+        :aria-label="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedSearch' : 'Chen.GoV1GridFilter')"
       >
         <template v-if="filter" #trailing>
           <UButton
@@ -760,8 +793,11 @@ onBeforeUnmount(() => {
           />
         </template>
       </UInput>
-      <span class="text-[11px] text-muted" :title="t('Chen.GoV1GridPageOnlyHint')">
-        {{ t("Chen.GoV1GridPageOnly") }}
+      <span
+        class="text-[11px] text-muted"
+        :title="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedOnlyHint' : 'Chen.GoV1GridPageOnlyHint')"
+      >
+        {{ t(loadingSettings?.mode === "continuous" ? "Chen.GoBrowseLoadedOnly" : "Chen.GoV1GridPageOnly") }}
         <template v-if="filter">· {{ shownRows }}/{{ rows.rows.length }}</template>
       </span>
       <div class="ml-auto flex flex-wrap items-center gap-1">
@@ -771,11 +807,43 @@ onBeforeUnmount(() => {
             size="xs"
             color="neutral"
             variant="ghost"
-            :title="t('Chen.TableDisplaySettings')"
-            :aria-label="t('Chen.TableDisplaySettings')"
+            :title="t('Chen.GoBrowseTableSettings')"
+            :aria-label="t('Chen.GoBrowseTableSettings')"
           />
           <template #content>
-            <div class="max-h-[70vh] w-72 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-3">
+            <div class="max-h-[70vh] w-72 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-3" data-result-settings>
+              <div v-if="loadingSettings" class="space-y-3 border-b border-default pb-3">
+                <p class="text-xs font-medium text-highlighted">{{ t("Chen.GoBrowseDataLoading") }}</p>
+                <label class="flex items-center justify-between gap-3 text-xs">
+                  <span>{{ t("Chen.GoBrowseLoadingMode") }}</span>
+                  <USelect
+                    :model-value="loadingSettings.mode"
+                    :items="loadingModes"
+                    class="w-32"
+                    size="xs"
+                    :aria-label="t('Chen.GoBrowseLoadingMode')"
+                    :disabled="loadingSettingsDisabled"
+                    @update:model-value="changeLoading({ mode: $event as GoResultLoadingSettings['mode'] })"
+                  />
+                </label>
+                <label class="flex items-center justify-between gap-3 text-xs">
+                  <span>
+                    {{ t(loadingSettings.mode === "continuous" ? "Chen.GoBrowseBatchSize" : "Chen.GoBrowseSize") }}
+                  </span>
+                  <USelect
+                    :model-value="loadingSettings.batchSize"
+                    :items="batchSizes"
+                    class="w-32"
+                    size="xs"
+                    :aria-label="
+                      t(loadingSettings.mode === 'continuous' ? 'Chen.GoBrowseBatchSize' : 'Chen.GoBrowseSize')
+                    "
+                    :disabled="loadingSettingsDisabled"
+                    @update:model-value="changeLoading({ batchSize: Number($event) })"
+                  />
+                </label>
+                <p class="text-xs text-muted">{{ t("Chen.GoBrowseLoadingPreferenceHint") }}</p>
+              </div>
               <div>
                 <p class="text-xs font-medium text-highlighted">{{ t("Chen.TableDisplay") }}</p>
                 <p class="mt-0.5 text-xs text-muted">{{ t("Chen.TableDisplayHint") }}</p>
@@ -914,6 +982,7 @@ onBeforeUnmount(() => {
         :suppress-cell-focus="false"
         :suppress-overlays="['noRows', 'noMatchingRows']"
         @grid-ready="ready"
+        @body-scroll-end="loadNearEnd"
         @cell-mouse-down="mouseDown"
         @cell-mouse-over="mouseOver"
         @cell-focused="focused"
