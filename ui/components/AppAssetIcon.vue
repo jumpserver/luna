@@ -16,6 +16,7 @@ const maskColor = computed(() => {
   if (filename.value === "mysql.svg") return "text-info";
   if (filename.value === "mariadb.svg") return "text-warning";
   if (filename.value === "oracle.svg" || filename.value === "sqlserver.svg") return "text-error";
+  if (filename.value === "macos.svg") return "text-(--sidebar-icon-color)";
   return "";
 });
 </script>
