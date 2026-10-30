@@ -153,7 +153,8 @@ export function chenPlanNodeDetail(node: ChenPlanNode): string | null {
   return detail;
 }
 
-export function chenPlanFormatEstimated(value: number | null | undefined): string | null {
+export function chenPlanFormatEstimated(value: number | string | null | undefined): string | null {
+  if (typeof value === "string") return /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value) ? value : null;
   if (value == null || Number.isNaN(value)) return null;
   if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER) return "raw";
   return String(value);

@@ -7,6 +7,7 @@ import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
@@ -20,6 +21,7 @@ import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
+import { loadQueryPlan } from "./workspace";
 
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   reconnect: [];
   rows: [id: string, offset?: number];
   retryRows: [];
+  pane: [value: "results" | "plan"];
   restore: [sql: string];
 }>();
 const { t } = useI18n();
@@ -244,8 +247,12 @@ const editorResize = usePaneResize({
 const canExplain = computed(() =>
   ["mysql", "mariadb", "postgresql", "clickhouse", "oceanbase-mysql"].includes(props.session.dialect)
 );
+const shownPlan = computed(() => props.query.plan || props.query.planAttempt);
 const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const active = computed(() => executionActive(props.query.execution));
+const planLoading = computed(
+  () => props.query.loadingPlan || !!props.query.pending?.plan || (props.query.executionPlan && active.value)
+);
 const displayExecution = computed(() => props.query.resultExecution || props.query.execution);
 const canSubmit = computed(
   () => ready.value && !active.value && !props.query.busy && !props.query.pending && !props.query.edit.busy
@@ -429,7 +436,7 @@ defineExpose({
         title="Ctrl/⌘ Shift Enter"
         @click="editor?.runAll()"
       />
-      <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.NotSupported')">
+      <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
             icon="i-lucide-workflow"
@@ -558,6 +565,9 @@ defineExpose({
             <div class="max-h-80 space-y-2 overflow-auto">
               <p v-if="!history.length" class="py-3 text-xs text-muted">{{ t("Chen.GoV1HistoryEmpty") }}</p>
               <div v-for="item in history" :key="item.execution.id" class="rounded border border-default p-2">
+                <span v-if="item.execution.plan" class="text-xs text-muted">
+                  {{ t("ExecutionPlan.modeEstimated") }}
+                </span>
                 <div class="flex items-center gap-2 text-xs text-muted">
                   <span>{{ t(`Chen.GoV1Status_${item.execution.status}`) }}</span>
                   <span>{{ duration(item.execution) }}</span>
@@ -760,7 +770,11 @@ defineExpose({
         }}</pre>
       </details>
     </div>
-    <p v-if="query.executionPlan" role="status" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
+    <p
+      v-if="query.resultPane === 'plan'"
+      role="status"
+      class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted"
+    >
       {{ t("Chen.GoV1EstimatedPlanHint") }}
     </p>
     <UModal
@@ -874,15 +888,22 @@ defineExpose({
             {{ t("Chen.GoV1Audit") }}: {{ t(`Chen.GoV1Audit_${query.execution.audit_status}`) }}
           </span>
           <span v-if="query.execution?.status === 'unknown'" class="text-warning">{{ t("Chen.GoV1DoNotRetry") }}</span>
-          <span v-if="query.resultExecution && query.resultExecution.id !== query.execution?.id" class="text-warning">
+          <span
+            v-if="
+              query.resultPane === 'results' &&
+              query.resultExecution &&
+              query.resultExecution.id !== query.execution?.id
+            "
+            class="text-warning"
+          >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
-          <span v-if="query.rows" class="ml-auto text-muted">
+          <span v-if="query.resultPane === 'results' && query.rows" class="ml-auto text-muted">
             {{ query.rows.rows.length ? query.rows.offset + 1 : 0 }}–{{ query.rows.offset + query.rows.rows.length }} /
             {{ query.rows.total_rows }}{{ query.rows.truncated ? "+" : "" }} {{ t("Chen.GoV1RowsUnit") }}
           </span>
           <UButton
-            v-if="query.rows && query.rows.offset > 0"
+            v-if="query.resultPane === 'results' && query.rows && query.rows.offset > 0"
             icon="i-lucide-chevron-left"
             :aria-label="t('Chen.GoV1Previous')"
             size="xs"
@@ -892,7 +913,7 @@ defineExpose({
             @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - 200))"
           />
           <UButton
-            v-if="query.rows?.next_offset !== undefined"
+            v-if="query.resultPane === 'results' && query.rows?.next_offset !== undefined"
             icon="i-lucide-chevron-right"
             :aria-label="t('Chen.GoV1Next')"
             size="xs"
@@ -913,7 +934,27 @@ defineExpose({
           />
         </div>
         <div
-          v-if="displayExecution?.result_ids.length"
+          class="flex shrink-0 gap-1 border-b border-default px-2 py-1"
+          role="group"
+          :aria-label="t('Chen.GoV1Result')"
+        >
+          <UButton
+            size="xs"
+            color="neutral"
+            :variant="query.resultPane === 'results' ? 'soft' : 'ghost'"
+            :label="t('Chen.GoV1Result')"
+            @click="emit('pane', 'results')"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            :variant="query.resultPane === 'plan' ? 'soft' : 'ghost'"
+            :label="t('ExecutionPlan.title')"
+            @click="emit('pane', 'plan')"
+          />
+        </div>
+        <div
+          v-if="query.resultPane === 'results' && displayExecution?.result_ids.length"
           role="group"
           :aria-label="t('Chen.GoV1Result')"
           class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1"
@@ -979,7 +1020,7 @@ defineExpose({
           {{ chenErrorText(query.execution.error, t) }}
         </div>
         <div
-          v-if="query.resultLoadError"
+          v-if="query.resultPane === 'results' && query.resultLoadError"
           role="alert"
           class="flex max-h-32 shrink-0 items-start gap-2 overflow-auto border-b border-default px-3 py-2 text-xs text-warning"
         >
@@ -998,8 +1039,54 @@ defineExpose({
             @click="emit('retryRows')"
           />
         </div>
+        <div
+          v-if="query.resultPane === 'plan'"
+          class="flex min-h-0 flex-1 flex-col"
+          :class="{ 'select-none': !session.permissions.can_copy }"
+          @copy.capture="preventCopy"
+          @cut.capture="preventCopy"
+        >
+          <p v-if="!canExplain" class="px-3 py-2 text-xs text-warning">{{ t("Chen.GoPlanUnsupported") }}</p>
+          <div v-if="shownPlan" class="shrink-0 border-b border-default px-3 py-2 text-xs">
+            <p class="text-muted">
+              {{ shownPlan.executionId }} · {{ shownPlan.context.database || "—" }} /
+              {{ shownPlan.context.schema || "—" }}
+            </p>
+            <p v-if="shownPlan.executionId !== query.execution?.id" class="text-warning">
+              {{ t("Chen.GoPlanPrevious") }}
+            </p>
+            <details>
+              <summary class="cursor-pointer text-muted">{{ t("Chen.GoV1ResultSource") }}</summary>
+              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.sql }}</pre>
+              <p class="mt-2 text-muted">{{ t("Chen.GoPlanGenerated") }}</p>
+              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.context.generated_sql || "—" }}</pre>
+            </details>
+          </div>
+          <p
+            v-if="
+              query.planAttempt?.error &&
+              query.planAttempt.executionId === query.execution?.id &&
+              shownPlan !== query.planAttempt
+            "
+            role="alert"
+            class="px-3 py-2 text-xs text-error"
+          >
+            {{ query.planAttempt.error.message }}
+          </p>
+          <div v-if="query.planLoadError" role="alert" class="flex gap-2 px-3 py-2 text-xs text-warning">
+            {{ query.planLoadError }}
+            <UButton
+              size="xs"
+              color="neutral"
+              :label="t('Chen.GoV1RetryResult')"
+              :disabled="!ready || query.loadingPlan"
+              @click="loadQueryPlan(query, api)"
+            />
+          </div>
+          <ExecutionPlanTree :plan="shownPlan" :loading="planLoading" preserve-raw />
+        </div>
         <GoWritePanel
-          v-if="query.rows"
+          v-else-if="query.rows"
           :key="query.rows.id"
           :visible="visible"
           :query="query"
