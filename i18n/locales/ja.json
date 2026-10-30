@@ -2138,6 +2138,14 @@
     "factStartupCost": "起動コスト"
   },
   "Chen": {
+    "GoSnippetNoCore": "SQL スニペットには Core へのログインが必要です。ローカルクエリ、ファイル、履歴は引き続き利用できます。",
+    "GoSnippetCoreChanged": "Core のアカウントまたは組織が変更されました。スニペットを使用するにはデータベースセッションを開き直してください。",
+    "GoSnippetUnsupported": "Core の SQL スニペットは {dialect} に対応していません。",
+    "GoSnippetPublic": "保存した SQL は Core で公開され、スニペットへのアクセス権を持つユーザーが閲覧できます。既存の非公開スニペットは非公開のままです。",
+    "GoSnippetCopyDenied": "SQL を Core に保存するにはコピー権限が必要です。",
+    "GoSnippetPasteDenied": "挿入には貼り付け権限と編集可能なクエリが必要です。",
+    "GoSnippetRequired": "名前と空でない SQL を入力してください。",
+    "GoSnippetLimit": "名前は 128 文字以内、SQL は 65,536 文字以内で入力してください。",
     "TerminatedByAdmin": "{name}管理者が接続を終了",
     "DatabaseExplorer": "データベースエクスプローラー",
     "RecentlyTables": "最近使用したテーブル",

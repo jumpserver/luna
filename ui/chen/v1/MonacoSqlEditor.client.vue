@@ -270,6 +270,23 @@ function insertText(text: string) {
   editor.pushUndoStop();
   editor.focus();
 }
+// Snippets append independently of the selection, as one undoable editor edit.
+function appendText(text: string) {
+  if (!editor || !model || props.readOnly || !props.canPaste || !text) return false;
+  const end = model.getPositionAt(model.getValueLength());
+  const prefix = model.getValueLength() && !model.getValue().endsWith("\n") ? model.getEOL() : "";
+  editor.pushUndoStop();
+  const applied = editor.executeEdits("chen.snippet", [
+    {
+      range: new monaco.Range(end.lineNumber, end.column, end.lineNumber, end.column),
+      text: prefix + text,
+      forceMoveMarkers: true
+    }
+  ]);
+  editor.pushUndoStop();
+  editor.focus();
+  return applied;
+}
 function clipboard(event: Event) {
   if (event.type === "copy" || event.type === "cut" ? !props.canCopy : !props.canPaste) {
     event.preventDefault();
@@ -577,6 +594,7 @@ defineExpose({
   explain,
   format,
   insertText,
+  appendText,
   complete,
   snapshot,
   replaceDocument

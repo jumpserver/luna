@@ -2138,6 +2138,14 @@
     "factStartupCost": "Custo inicial"
   },
   "Chen": {
+    "GoSnippetNoCore": "Os trechos SQL exigem login no Core; consultas locais, arquivos e histórico continuam disponíveis.",
+    "GoSnippetCoreChanged": "A conta ou organização do Core foi alterada. Reabra esta sessão de banco de dados para usar trechos.",
+    "GoSnippetUnsupported": "Os trechos SQL do Core não oferecem suporte a {dialect}.",
+    "GoSnippetPublic": "O SQL salvo é público no Core e visível para usuários com acesso aos trechos. Os trechos privados existentes permanecem privados.",
+    "GoSnippetCopyDenied": "Salvar SQL no Core exige permissão de cópia.",
+    "GoSnippetPasteDenied": "A inserção exige permissão para colar e uma consulta editável.",
+    "GoSnippetRequired": "Insira um nome e um SQL não vazio.",
+    "GoSnippetLimit": "O nome pode ter até 128 caracteres e o SQL até 65.536 caracteres.",
     "TerminatedByAdmin": "Conexão terminada pelo administrador {name}",
     "DatabaseExplorer": "Explorador do banco de dados",
     "RecentlyTables": "Tabelas recentes",

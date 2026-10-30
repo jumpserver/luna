@@ -2321,6 +2321,14 @@
     "factStartupCost": "Coût de démarrage"
   },
   "Chen": {
+    "GoSnippetNoCore": "Les extraits SQL nécessitent une connexion à Core ; les requêtes locales, fichiers et historiques restent disponibles.",
+    "GoSnippetCoreChanged": "Le compte ou l’organisation Core a changé. Rouvrez cette session de base de données pour utiliser les extraits.",
+    "GoSnippetUnsupported": "Les extraits SQL de Core ne prennent pas en charge {dialect}.",
+    "GoSnippetPublic": "Le SQL enregistré est public dans Core et visible par les utilisateurs autorisés à consulter les extraits. Les extraits privés existants restent privés.",
+    "GoSnippetCopyDenied": "L’enregistrement de SQL dans Core nécessite le droit de copie.",
+    "GoSnippetPasteDenied": "L’insertion nécessite le droit de coller et une requête modifiable.",
+    "GoSnippetRequired": "Saisissez un nom et du SQL non vide.",
+    "GoSnippetLimit": "Le nom est limité à 128 caractères et le SQL à 65 536 caractères.",
     "TerminatedByAdmin": "Terminé par l’administrateur {name}",
     "DatabaseExplorer": "Explorateur de bases de données",
     "RecentlyTables": "Tables récentes",

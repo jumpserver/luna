@@ -2315,6 +2315,14 @@
     "factStartupCost": "启动成本"
   },
   "Chen": {
+    "GoSnippetNoCore": "SQL 片段需要 Core 登录；本地查询、文件和历史仍可使用。",
+    "GoSnippetCoreChanged": "Core 账号或组织已切换，请重新打开数据库会话后使用片段。",
+    "GoSnippetUnsupported": "Core SQL 片段不支持 {dialect}。",
+    "GoSnippetPublic": "保存的 SQL 在 Core 中为公开范围，具有片段访问权限的用户可见。已有私有片段仍保持私有。",
+    "GoSnippetCopyDenied": "将 SQL 保存到 Core 需要复制权限。",
+    "GoSnippetPasteDenied": "插入需要粘贴权限及可编辑的查询草稿。",
+    "GoSnippetRequired": "请输入名称和非空 SQL。",
+    "GoSnippetLimit": "名称最多 128 个字符，SQL 最多 65,536 个字符。",
     "TerminatedByAdmin": "{name} 管理员终断连接。",
     "DatabaseExplorer": "数据库资源管理",
     "RecentlyTables": "最近使用的表",

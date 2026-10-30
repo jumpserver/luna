@@ -1,6 +1,6 @@
 import type { SqlSnippetListParams, SqlSnippetPayload } from "~/composables/useApiRequest";
 
-import { ref } from "vue";
+import { getCurrentScope, onScopeDispose, ref, watch } from "vue";
 import { createSqlSnippet, deleteSqlSnippet, getSqlSnippets } from "~/composables/useApiRequest";
 
 export interface ChenSqlSnippet {
@@ -66,45 +66,79 @@ export function useChenSqlSnippets(getDbType: () => string, requests: ChenSqlSni
   const saving = ref(false);
   const deletingId = ref("");
 
-  async function load(nextPage = page.value) {
+  let generation = 0;
+  let loadSerial = 0;
+
+  function reset() {
+    generation += 1;
+    loadSerial += 1;
+    snippets.value = [];
+    page.value = 1;
+    total.value = 0;
+    loading.value = false;
+    saving.value = false;
+    deletingId.value = "";
+  }
+  watch(getDbType, reset, { flush: "sync" });
+  if (getCurrentScope()) onScopeDispose(reset);
+
+  async function load(nextPage = page.value): Promise<void> {
+    const serial = ++loadSerial;
+    const dbType = getDbType();
+    const current = () => serial === loadSerial && dbType === getDbType();
     page.value = Math.max(1, Math.trunc(nextPage));
     loading.value = true;
     try {
-      const dbType = getDbType();
       const data = await requests.list({
         module: dbType,
         limit: pageSize,
         offset: (page.value - 1) * pageSize,
         order: "-date_updated"
       });
+      if (!current()) return;
+      const count = snippetCount(data, rawSnippetList(data).length);
+      const lastPage = Math.max(1, Math.ceil(count / pageSize));
+      if (page.value > lastPage) return load(lastPage);
       snippets.value = normalizeChenSqlSnippets(data, dbType);
       total.value = snippetCount(data, snippets.value.length);
+    } catch (cause) {
+      if (current()) {
+        snippets.value = [];
+        total.value = 0;
+        throw cause;
+      }
     } finally {
-      loading.value = false;
+      if (current()) loading.value = false;
     }
   }
 
   async function save(name: string, args: string) {
+    if (saving.value) return;
+    const started = generation;
     saving.value = true;
     try {
       return await requests.create({ name, args, module: getDbType() });
     } finally {
-      saving.value = false;
+      if (started === generation) saving.value = false;
     }
   }
 
   async function remove(id: string) {
+    if (deletingId.value || loading.value) return;
+    const started = generation;
     deletingId.value = id;
     try {
       await requests.remove(id);
+      if (started !== generation) return;
       if (snippets.value.length === 1 && page.value > 1) page.value -= 1;
       await load();
     } finally {
-      deletingId.value = "";
+      if (started === generation) deletingId.value = "";
     }
   }
 
   return {
+    reset,
     deletingId,
     loading,
     page,
