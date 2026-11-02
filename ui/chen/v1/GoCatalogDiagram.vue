@@ -86,7 +86,10 @@ async function load(refresh = false) {
       nextObjects = os;
       nextEdges = es;
       nextPages[section] = page;
-      nextPartial ||= page.state === "unsupported" || page.items.some((i) => i.edge && i.edge.state !== "complete");
+      nextPartial ||=
+        page.state === "unsupported" ||
+        (page.state === "partial" && (!page.has_more || !!page.reason)) ||
+        page.items.some((i) => i.edge && i.edge.state !== "complete");
     }
     objects.value = nextObjects;
     edges.value = nextEdges;
@@ -103,7 +106,9 @@ async function load(refresh = false) {
       ? "OldBackend"
       : cause instanceof ChenGoError && cause.status === 403
         ? "Restricted"
-        : "LoadError";
+        : cause instanceof ChenGoError && cause.code === "diagram_contract_changed"
+          ? "ContractChanged"
+          : "LoadError";
   } finally {
     if (generation === current) busy.value = false;
   }
@@ -175,6 +180,9 @@ function copy(event: ClipboardEvent) {
       </p>
       <p class="text-muted">{{ t("Chen.GoDiagramNonSnapshot") }}</p>
       <p v-if="pages.edges?.state === 'unsupported'">{{ t("Chen.GoDiagramUnsupported") }}</p>
+      <p v-if="pages.edges?.reason || pages.nodes?.reason" class="break-words text-muted">
+        {{ pages.edges?.reason || pages.nodes?.reason }}
+      </p>
       <p v-if="edges.some((edge) => edge.state === 'restricted')" class="text-warning">
         {{ t("Chen.GoDiagramRestricted") }}
       </p>

@@ -2153,6 +2153,7 @@
     "GoDiagramPartial": "일부",
     "GoDiagramUnknown": "알 수 없음",
     "GoDiagramRestricted": "열 권한 제한",
+    "GoDiagramContractChanged": "Catalog product, version or fields changed. Refresh the diagram.",
     "GoDiagramUnsupported": "지원 안 됨",
     "GoDiagramCurrent": "현재 테이블",
     "GoDiagramNotLoaded": "참조 정보만 · 로드 안 됨",

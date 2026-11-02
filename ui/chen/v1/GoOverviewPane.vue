@@ -257,7 +257,7 @@ onBeforeUnmount(stop);
         <UButton
           v-for="item in [
             ...overviewSections,
-            ...(['postgresql', 'mysql'].includes(dialect) ? ['diagram' as const] : [])
+            ...(['postgresql', 'mysql', 'mariadb', 'oceanbase-mysql'].includes(dialect) ? ['diagram' as const] : [])
           ]"
           :key="item"
           :label="item === 'diagram' ? t('Chen.GoDiagramTitle') : label(item)"

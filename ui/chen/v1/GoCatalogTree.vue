@@ -241,7 +241,7 @@ function menu(current: Node) {
           {
             label: t("Chen.GoDiagramTitle"),
             icon: "i-lucide-network",
-            disabled: !props.ready || !["postgresql", "mysql"].includes(props.dialect),
+            disabled: !props.ready || !["postgresql", "mysql", "mariadb", "oceanbase-mysql"].includes(props.dialect),
             onSelect: () => {
               if (props.ready)
                 emit(
