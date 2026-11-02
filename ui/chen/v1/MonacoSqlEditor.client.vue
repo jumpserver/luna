@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoAnalysis } from "./api";
 import type { SqlSourceRange } from "./executionRange";
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
@@ -28,7 +28,7 @@ const emit = defineEmits<{
   editorError: [message: string];
 }>();
 const { t } = useI18n();
-const host = ref<HTMLElement | null>(null);
+const host = shallowRef<HTMLElement | null>(null);
 let editor: monaco.editor.IStandaloneCodeEditor | undefined;
 let model: monaco.editor.ITextModel | undefined;
 const disposables: monaco.IDisposable[] = [];

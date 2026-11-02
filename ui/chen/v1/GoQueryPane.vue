@@ -4,7 +4,7 @@ import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
-import { computed, ref, useId, watch } from "vue";
+import { computed, ref, shallowRef, useId, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { executionActive, executionCanCancel } from "./api";
@@ -77,7 +77,7 @@ watch(
   },
   { deep: true }
 );
-const splitArea = ref<HTMLElement | null>(null);
+const splitArea = shallowRef<HTMLElement | null>(null);
 const { height: splitHeight } = useElementSize(splitArea);
 const editorId = useId();
 const savedEditorPreference = useLocalStorage("jumpserver-client:chen-v1-editor-ratio", 60, { writeDefaults: false });
