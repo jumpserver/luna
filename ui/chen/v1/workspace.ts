@@ -2,6 +2,7 @@ import type {
   ChenGoApi,
   GoBrowseDraft,
   GoBrowseRequest,
+  GoQueryPageRequest,
   GoPlan,
   GoCatalogObject,
   GoConsole,
@@ -52,6 +53,8 @@ export interface QueryWorkspaceTab {
   edit: GoEditDraft;
   executionEditPlan?: string;
   executionBrowse?: GoBrowseRequest;
+  executionQueryPage?: GoQueryPageRequest;
+  queryCount?: GoExecution["query_count"] | null;
   exportJob: GoExport | null;
   exportBusy: boolean;
   pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
@@ -69,6 +72,7 @@ export interface QueryWorkspaceTab {
     exportFormat?: GoExportFormat;
     editPlanId?: string;
     browse?: GoBrowseRequest;
+    queryPage?: GoQueryPageRequest;
   } | null;
   busy: boolean;
   loadingRows: boolean;
@@ -218,6 +222,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     id: newChenRequestId(),
     submitReview: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
+    ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionPlan ? { plan: true } : {}),
@@ -235,6 +240,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     id: newChenRequestId(),
     confirmWarnings: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
+    ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionPlan ? { plan: true } : {}),

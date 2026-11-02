@@ -23,17 +23,29 @@ export async function downloadGoExport(
     frame.dataset.chenExportDownload = "";
     document.body.appendChild(frame);
   }
-  const form = document.createElement("form");
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument) throw new Error("Browser download frame is unavailable; reload the page and retry");
+  // A form POST from a no-referrer document sends Origin: null. Keep the
+  // application's strict policy and isolate an origin-only policy in this
+  // download-only document so the connector's origin check remains effective.
+  let policy = frameDocument.querySelector<HTMLMetaElement>('meta[name="referrer"]');
+  if (!policy) {
+    policy = frameDocument.createElement("meta");
+    policy.name = "referrer";
+    frameDocument.head.appendChild(policy);
+  }
+  policy.content = "strict-origin";
+  const form = frameDocument.createElement("form");
   form.method = "POST";
   form.action = ticket.download_url;
-  form.target = frame.name;
+  form.target = "_self";
   form.hidden = true;
-  const input = document.createElement("input");
+  const input = frameDocument.createElement("input");
   input.type = "hidden";
   input.name = "ticket";
   input.value = ticket.fields.ticket;
   form.appendChild(input);
-  document.body.appendChild(form);
+  frameDocument.body.appendChild(form);
   try {
     form.submit();
   } finally {

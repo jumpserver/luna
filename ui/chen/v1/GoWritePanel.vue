@@ -416,6 +416,13 @@ function discard() {
           {{ dirty ? t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) : t("Chen.GoWriteGridHint") }}
         </span>
       </template>
+      <span
+        v-else-if="query.rows?.query_page?.mode === 'database'"
+        class="text-xs text-muted"
+        :title="query.rows.query_page.read_only_reason"
+      >
+        {{ t("Chen.GoV1GridReadOnly") }}
+      </span>
       <span v-else class="text-xs text-muted">
         {{ metadataBusy ? t("Chen.LoadingTableMetadata") : t("Chen.GoWriteReadonly") }}
         <template v-if="draft.metadata?.reason">
@@ -451,7 +458,13 @@ function discard() {
       :rows="rows"
       :loading-settings="query.loadingSettings"
       :loading-settings-disabled="locked || dirty || metadataBusy"
-      :max-batch-size="query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000"
+      :max-batch-size="
+        query.rows?.query_page?.mode === 'database'
+          ? query.rows.query_page.max_page_size
+          : query.rows?.browse?.supported
+            ? query.rows.browse.max_page_size
+            : 1000
+      "
       :can-load-more="
         session.state === 'ready' &&
         !resultLoadingLocked(query) &&

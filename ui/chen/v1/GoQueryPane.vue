@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoBrowseRequest, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
+import type {
+  ChenGoApi,
+  GoBrowseRequest,
+  GoEditPlan,
+  GoExecution,
+  GoExportFormat,
+  GoQueryPageRequest,
+  GoSession
+} from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
@@ -18,6 +26,7 @@ import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
 import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoExportPanel from "./GoExportPanel.vue";
+import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { reviewTicketUrl } from "./review";
@@ -40,6 +49,7 @@ const emit = defineEmits<{
   uploadSql: [sql: string];
   refreshData: [];
   browse: [request: GoBrowseRequest];
+  queryPage: [request: GoQueryPageRequest];
   loadingSettings: [settings: GoResultLoadingSettings];
   loadMore: [automatic: boolean];
   run: [sql: string, version: number];
@@ -213,7 +223,7 @@ const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
   () => props.query.execution,
   (execution) => {
-    if (!execution) return;
+    if (!execution || props.query.executionQueryPage) return;
     const item = { execution: { ...execution }, sql: props.query.executionSql };
     const index = history.value.findIndex((entry) => entry.execution.id === execution.id);
     if (index < 0) history.value.unshift(item);
@@ -870,6 +880,7 @@ defineExpose({
         )
       }}
     </div>
+    <GoQueryPagePanel :query="query" :session="session" @submit="emit('queryPage', $event)" />
     <GoBrowsePanel v-if="query.browseObject" :query="query" :session="session" @submit="emit('browse', $event)" />
     <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
       <div v-if="!dataOnly" v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
@@ -953,7 +964,8 @@ defineExpose({
             v-if="
               query.resultPane === 'results' &&
               query.resultExecution &&
-              query.resultExecution.id !== query.execution?.id
+              query.resultExecution.id !== query.execution?.id &&
+              !(query.executionQueryPage?.action === 'count' && query.execution?.status === 'succeeded')
             "
             class="text-warning"
           >
@@ -964,7 +976,8 @@ defineExpose({
               query.resultPane === 'results' &&
               query.loadingSettings.mode === 'page' &&
               query.rows &&
-              !query.rows.browse?.supported
+              !query.rows.browse?.supported &&
+              query.rows.query_page?.mode !== 'database'
             "
             class="ml-auto text-muted"
           >
@@ -977,6 +990,7 @@ defineExpose({
               query.loadingSettings.mode === 'page' &&
               query.rows &&
               !query.rows.browse?.supported &&
+              query.rows.query_page?.mode !== 'database' &&
               query.rows.offset > 0
             "
             icon="i-lucide-chevron-left"
@@ -992,6 +1006,7 @@ defineExpose({
               query.resultPane === 'results' &&
               query.loadingSettings.mode === 'page' &&
               !query.rows?.browse?.supported &&
+              query.rows?.query_page?.mode !== 'database' &&
               query.rows?.next_offset !== undefined
             "
             icon="i-lucide-chevron-right"
