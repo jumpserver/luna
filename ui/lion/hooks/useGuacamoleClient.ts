@@ -12,6 +12,7 @@ import { readClipboardText, writeClipboardBlob, writeClipboardText } from "@/lio
 
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ConvertGuacamoleError as convertGuacamoleError } from "@/lion/utils/status";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 
 const testImages: Record<string, string> = {
   /**
@@ -407,15 +408,16 @@ export function useGuacamoleClient(
   }
 
   function sendTextToRemote(text: string) {
-    if (!validateClipboardText("paste", text)) return;
+    if (!validateClipboardText("paste", text)) return false;
     if (!guaClient.value) {
       console.warn("Guacamole client is not initialized yet.");
-      return;
+      return false;
     }
     const stream = guaClient.value.createClipboardStream("text/plain");
     const writer = new Guacamole.StringWriter(stream);
     writer.sendText(text);
     writer.sendEnd();
+    return true;
   }
 
   const debouncedSendClipboardToRemote = useDebounceFn(async () => {
@@ -487,6 +489,16 @@ export function useGuacamoleClient(
       focusInput();
     };
     const stopListeners = [
+      registerWorkspaceClipboardSurface(displayEl, () => ({
+        terminal: false,
+        mode: "remote-clipboard",
+        paste(text) {
+          if (!inputEnabled() || !text) return "unavailable";
+          // The protocol writes the remote clipboard, not the focused remote control.
+          return sendTextToRemote(text) ? "clipboard-sent" : "denied";
+        },
+        focus: () => focusInput(true)
+      })),
       useEventListener(displayEl, "mouseenter", handleMouseEnter),
       useEventListener(displayEl, "mouseleave", releaseInput),
       useEventListener(sinkEl, "blur", releaseInput),

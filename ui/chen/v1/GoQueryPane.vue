@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
+import type { ChenGoApi, GoBrowseRequest, GoEditPlan, GoExecution, GoExportFormat, GoSession } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { QueryWorkspaceTab } from "./workspace";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
+import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
-import { computed, ref, shallowRef, useId, watch } from "vue";
+import { computed, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
+import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
+import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
+import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
+import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
+import { hasMoreResultRows, loadQueryPlan, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -21,6 +30,7 @@ const props = defineProps<{
   api: ChenGoApi;
   single: boolean;
   visible: boolean;
+  dataOnly?: boolean;
   reviewCoreSite?: string;
   aiAvailable?: boolean;
 }>();
@@ -29,6 +39,9 @@ const emit = defineEmits<{
   applyEdits: [plan: GoEditPlan];
   uploadSql: [sql: string];
   refreshData: [];
+  browse: [request: GoBrowseRequest];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [automatic: boolean];
   run: [sql: string, version: number];
   explain: [sql: string, version: number];
   cancel: [];
@@ -37,7 +50,7 @@ const emit = defineEmits<{
   export: [
     mode: "cached" | "query",
     format: GoExportFormat,
-    snapshot: { sql: string; resultId: string; version: number }
+    snapshot: { sql: string; resultId: string; version: number; rows?: number }
   ];
   exportSync: [];
   exportCancel: [];
@@ -47,6 +60,7 @@ const emit = defineEmits<{
   reconnect: [];
   rows: [id: string, offset?: number];
   retryRows: [];
+  pane: [value: "results" | "plan"];
   restore: [sql: string];
 }>();
 const { t } = useI18n();
@@ -57,12 +71,143 @@ const editor = ref<{
   explain: () => void;
   format: () => void;
   insertText: (text: string) => void;
+  appendText: (text: string) => boolean;
   snapshot: () => GoSqlEditorSnapshot;
   replaceDocument: (sql: string) => boolean;
 } | null>(null);
+const maximized = ref<"editor" | "results" | null>(null);
+const coreUser = useUserInfoStore();
+const toast = useToast();
+const coreIdentity = () =>
+  JSON.stringify([coreUser.currentAccountId, coreUser.currentSite, coreUser.currentUser?.userId, coreUser.orgId]);
+// Bind this query to its original Core account/organization; Chen credentials are never used here.
+const originalCoreIdentity = coreIdentity();
+const snippetUnavailable = computed(() => {
+  if (!coreUser.loggedIn) return t("Chen.GoSnippetNoCore");
+  if (
+    coreIdentity() !== originalCoreIdentity ||
+    (props.reviewCoreSite && props.reviewCoreSite !== coreUser.currentSite)
+  )
+    return t("Chen.GoSnippetCoreChanged");
+  // Core AdHocModules has no aliases for other Chen dialects.
+  if (!["mysql", "mariadb", "postgresql", "sqlserver", "oracle"].includes(props.session.dialect))
+    return t("Chen.GoSnippetUnsupported", { dialect: props.session.dialect });
+  return "";
+});
+const snippetsAvailable = computed(() => !snippetUnavailable.value && props.visible && props.session.state === "ready");
+const canSaveSnippet = computed(() => snippetsAvailable.value && props.session.permissions.can_copy);
+const canInsertSnippet = computed(
+  () => snippetsAvailable.value && props.session.permissions.can_paste && props.query.kind !== "preview"
+);
+const sqlSnippets = useChenSqlSnippets(() => props.session.dialect);
+const saveSnippetOpen = ref(false);
+const selectSnippetOpen = ref(false);
+const snippetError = ref("");
+let snippetGeneration = 0;
+function resetSnippets() {
+  snippetGeneration += 1;
+  saveSnippetOpen.value = false;
+  selectSnippetOpen.value = false;
+  snippetError.value = "";
+  sqlSnippets.reset();
+}
+watch(
+  () => [
+    props.query.id,
+    props.query.kind,
+    props.session.id,
+    props.session.dialect,
+    props.session.state,
+    props.visible,
+    coreIdentity(),
+    coreUser.loggedIn,
+    props.session.permissions.can_copy,
+    props.session.permissions.can_paste
+  ],
+  resetSnippets,
+  { flush: "sync" }
+);
+onBeforeUnmount(resetSnippets);
+
+async function loadSnippetPage(page: number) {
+  if (!snippetsAvailable.value || sqlSnippets.deletingId.value) return;
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    await sqlSnippets.load(page);
+  } catch (cause) {
+    if (generation === snippetGeneration) snippetError.value = `${t("Chen.LoadSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
+function openSnippets() {
+  if (!snippetsAvailable.value) return;
+  selectSnippetOpen.value = true;
+  void loadSnippetPage(1);
+}
+function openSaveSnippet() {
+  if (!canSaveSnippet.value || sqlSnippets.saving.value) return;
+  snippetError.value = "";
+  saveSnippetOpen.value = true;
+}
+async function saveSnippet(name: string) {
+  if (!saveSnippetOpen.value || !canSaveSnippet.value || sqlSnippets.saving.value) return;
+  const sql = editor.value?.snapshot().documentSql ?? props.query.sql;
+  if (!name.trim() || !sql.trim()) {
+    snippetError.value = t("Chen.GoSnippetRequired");
+    return;
+  }
+  if ([...name.trim()].length > 128 || [...sql].length > 65536) {
+    snippetError.value = t("Chen.GoSnippetLimit");
+    return;
+  }
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    await sqlSnippets.save(name.trim(), sql);
+    if (generation !== snippetGeneration) return;
+    saveSnippetOpen.value = false;
+    toast.add({ title: t("Chen.SaveSucceeded"), color: "success" });
+  } catch (cause) {
+    if (generation === snippetGeneration) snippetError.value = `${t("Chen.SaveSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
+function insertSnippet(snippet: ChenSqlSnippet) {
+  if (
+    !selectSnippetOpen.value ||
+    !canInsertSnippet.value ||
+    sqlSnippets.loading.value ||
+    sqlSnippets.deletingId.value ||
+    !sqlSnippets.snippets.value.includes(snippet) ||
+    snippet.module !== props.session.dialect
+  )
+    return;
+  if (editor.value?.appendText(snippet.args)) {
+    maximized.value = null;
+    selectSnippetOpen.value = false;
+  }
+}
+async function deleteSnippet(snippet: ChenSqlSnippet) {
+  if (
+    !selectSnippetOpen.value ||
+    !snippetsAvailable.value ||
+    sqlSnippets.loading.value ||
+    sqlSnippets.deletingId.value ||
+    !sqlSnippets.snippets.value.includes(snippet)
+  )
+    return;
+  const generation = snippetGeneration;
+  snippetError.value = "";
+  try {
+    // Core enforces AdHoc RBAC and IsOwnerOrAdminWritable; paste permission does not grant deletion.
+    await sqlSnippets.remove(snippet.id);
+    if (generation === snippetGeneration) toast.add({ title: t("Chen.DeleteSucceeded"), color: "success" });
+  } catch (cause) {
+    if (generation === snippetGeneration)
+      snippetError.value = `${t("Chen.DeleteSqlFailed")}: ${chenErrorText(cause, t)}`;
+  }
+}
 const scope = ref("empty");
 const editorError = ref("");
-const maximized = ref<"editor" | "results" | null>(null);
 const historyOpen = ref(false);
 const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
@@ -77,7 +222,7 @@ watch(
   },
   { deep: true }
 );
-const splitArea = shallowRef<HTMLElement | null>(null);
+const splitArea = useTemplateRef<HTMLElement>("splitArea");
 const { height: splitHeight } = useElementSize(splitArea);
 const editorId = useId();
 const savedEditorPreference = useLocalStorage("jumpserver-client:chen-v1-editor-ratio", 60, { writeDefaults: false });
@@ -107,8 +252,12 @@ const editorResize = usePaneResize({
 const canExplain = computed(() =>
   ["mysql", "mariadb", "postgresql", "clickhouse", "oceanbase-mysql"].includes(props.session.dialect)
 );
+const shownPlan = computed(() => props.query.plan || props.query.planAttempt);
 const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const active = computed(() => executionActive(props.query.execution));
+const planLoading = computed(
+  () => props.query.loadingPlan || !!props.query.pending?.plan || (props.query.executionPlan && active.value)
+);
 const displayExecution = computed(() => props.query.resultExecution || props.query.execution);
 const canSubmit = computed(
   () => ready.value && !active.value && !props.query.busy && !props.query.pending && !props.query.edit.busy
@@ -196,7 +345,7 @@ async function run(sql: string, version: number) {
       writeConfirmation.value = { sql, version, consoleId };
     else emit("run", sql, version);
   } catch (cause) {
-    editorError.value = cause instanceof Error ? cause.message : String(cause);
+    editorError.value = chenErrorText(cause, t);
   } finally {
     analysisBusy.value = false;
   }
@@ -218,11 +367,13 @@ function maximize(pane: "editor" | "results") {
   maximized.value = maximized.value === pane ? null : pane;
 }
 const gridRows = computed(() =>
-  maximized.value === "editor"
+  props.dataOnly
     ? "minmax(0, 1fr)"
-    : maximized.value === "results"
+    : maximized.value === "editor"
       ? "minmax(0, 1fr)"
-      : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
+      : maximized.value === "results"
+        ? "minmax(0, 1fr)"
+        : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
 );
 const sqlFile = ref<HTMLInputElement>();
 async function loadSqlFile(event: Event) {
@@ -239,7 +390,7 @@ async function loadSqlFile(event: Event) {
     if (!sql.trim() || sql.includes("\0")) throw new Error(t("Chen.GoWriteSqlFileInvalid"));
     if (props.session.permissions.can_upload && ready.value) emit("uploadSql", sql);
   } catch (cause) {
-    editorError.value = cause instanceof Error ? cause.message : String(cause);
+    editorError.value = chenErrorText(cause, t);
   }
 }
 function preventCopy(event: ClipboardEvent) {
@@ -248,7 +399,9 @@ function preventCopy(event: ClipboardEvent) {
 defineExpose({
   snapshot: () => editor.value?.snapshot(),
   replaceDocument: (sql: string) => editor.value?.replaceDocument(sql) ?? false,
-  focus: () => editor.value?.focus(),
+  focus: () => {
+    if (props.visible && !props.dataOnly) editor.value?.focus();
+  },
   run: () => editor.value?.run(),
   insertText: (text: string) => {
     if (!props.session.permissions.can_paste || props.query.kind === "preview") return;
@@ -260,11 +413,53 @@ defineExpose({
 
 <template>
   <div
-    class="flex h-full min-h-0 min-w-0 flex-col"
+    class="flex min-h-0 min-w-0 flex-1 flex-col"
     data-chen-query
     :data-chen-execution-state="query.execution?.status || 'idle'"
   >
-    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
+    <div
+      v-if="dataOnly && (!query.rows || !ready || query.pending || active)"
+      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2"
+    >
+      <UButton
+        :label="t('Chen.GoV1Refresh')"
+        icon="i-lucide-refresh-cw"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :disabled="!canRun"
+        @click="emit('refreshData')"
+      />
+      <UButton
+        v-if="session.state === 'ready' && !ready"
+        :label="t('Chen.GoV1NewConnection')"
+        size="xs"
+        color="warning"
+        variant="soft"
+        :disabled="query.busy"
+        @click="emit('reconnect')"
+      />
+      <UButton
+        v-if="query.pending && !query.busy"
+        :label="t('Chen.GoV1RecoverSubmission')"
+        size="xs"
+        color="warning"
+        variant="soft"
+        :disabled="!ready"
+        @click="emit('recover')"
+      />
+      <UButton
+        v-if="executionActive(query.execution)"
+        :label="t('Chen.GoV1Cancel')"
+        icon="i-lucide-square"
+        size="xs"
+        color="neutral"
+        variant="soft"
+        :disabled="!executionCanCancel(query.execution, session.can_cancel)"
+        @click="emit('cancel')"
+      />
+    </div>
+    <div v-if="!dataOnly" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
       <UButton
         v-if="session.state === 'ready' && !ready"
         :label="t('Chen.GoV1NewConnection')"
@@ -292,7 +487,7 @@ defineExpose({
         title="Ctrl/⌘ Shift Enter"
         @click="editor?.runAll()"
       />
-      <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.NotSupported')">
+      <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
             icon="i-lucide-workflow"
@@ -338,6 +533,37 @@ defineExpose({
         title="Alt Shift F"
         @click="editor?.format()"
       />
+      <UTooltip
+        :text="
+          snippetUnavailable ||
+          (!session.permissions.can_copy ? t('Chen.GoSnippetCopyDenied') : t('Chen.GoSnippetPublic'))
+        "
+      >
+        <span class="inline-flex" tabindex="0">
+          <UButton
+            icon="i-lucide-bookmark-plus"
+            :label="t('Chen.SaveSql')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!canSaveSnippet || sqlSnippets.saving.value"
+            @click="openSaveSnippet"
+          />
+        </span>
+      </UTooltip>
+      <UTooltip :text="snippetUnavailable || t('Chen.SelectSql')">
+        <span class="inline-flex" tabindex="0">
+          <UButton
+            icon="i-lucide-book-open"
+            :label="t('Chen.SelectSql')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!snippetsAvailable"
+            @click="openSnippets"
+          />
+        </span>
+      </UTooltip>
       <input ref="sqlFile" type="file" accept=".sql,text/plain,application/sql" class="hidden" @change="loadSqlFile" />
       <UButton
         v-if="session.permissions.can_upload"
@@ -390,6 +616,9 @@ defineExpose({
             <div class="max-h-80 space-y-2 overflow-auto">
               <p v-if="!history.length" class="py-3 text-xs text-muted">{{ t("Chen.GoV1HistoryEmpty") }}</p>
               <div v-for="item in history" :key="item.execution.id" class="rounded border border-default p-2">
+                <span v-if="item.execution.plan" class="text-xs text-muted">
+                  {{ t("ExecutionPlan.modeEstimated") }}
+                </span>
                 <div class="flex items-center gap-2 text-xs text-muted">
                   <span>{{ t(`Chen.GoV1Status_${item.execution.status}`) }}</span>
                   <span>{{ duration(item.execution) }}</span>
@@ -447,6 +676,30 @@ defineExpose({
         @click="maximize('editor')"
       />
     </div>
+    <SqlSnippetSaveDialog
+      v-if="saveSnippetOpen"
+      v-model:open="saveSnippetOpen"
+      :saving="sqlSnippets.saving.value"
+      :hint="t('Chen.GoSnippetPublic')"
+      :error="snippetError"
+      @confirm="saveSnippet"
+    />
+    <SqlSnippetSelectDialog
+      v-if="selectSnippetOpen"
+      v-model:open="selectSnippetOpen"
+      :snippets="sqlSnippets.snippets.value"
+      :loading="sqlSnippets.loading.value"
+      :deleting-id="sqlSnippets.deletingId.value"
+      :page="sqlSnippets.page.value"
+      :page-size="sqlSnippets.pageSize"
+      :total="sqlSnippets.total.value"
+      :insert-disabled="!canInsertSnippet"
+      :insert-hint="!canInsertSnippet ? t('Chen.GoSnippetPasteDenied') : ''"
+      :error="snippetError"
+      @insert="insertSnippet"
+      @delete="deleteSnippet"
+      @page-change="loadSnippetPage"
+    />
     <div
       v-if="editorError"
       role="alert"
@@ -568,7 +821,11 @@ defineExpose({
         }}</pre>
       </details>
     </div>
-    <p v-if="query.executionPlan" role="status" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
+    <p
+      v-if="query.resultPane === 'plan'"
+      role="status"
+      class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted"
+    >
       {{ t("Chen.GoV1EstimatedPlanHint") }}
     </p>
     <UModal
@@ -603,10 +860,19 @@ defineExpose({
       </template>
     </UModal>
     <div v-if="query.kind === 'preview'" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
-      {{ t(query.browseObject ? "Chen.GoWriteBrowseHint" : "Chen.GoV1PreviewHint") }}
+      {{
+        t(
+          query.readOnly
+            ? "Chen.GoTableWorkspaceReadOnly"
+            : query.browseObject
+              ? "Chen.GoWriteBrowseHint"
+              : "Chen.GoV1PreviewHint"
+        )
+      }}
     </div>
+    <GoBrowsePanel v-if="query.browseObject" :query="query" :session="session" @submit="emit('browse', $event)" />
     <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
+      <div v-if="!dataOnly" v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
         <MonacoSqlEditor
           ref="editor"
           :model-value="query.sql"
@@ -626,6 +892,7 @@ defineExpose({
         />
       </div>
       <div
+        v-if="!dataOnly"
         v-show="!maximized"
         role="separator"
         tabindex="0"
@@ -682,25 +949,51 @@ defineExpose({
             {{ t("Chen.GoV1Audit") }}: {{ t(`Chen.GoV1Audit_${query.execution.audit_status}`) }}
           </span>
           <span v-if="query.execution?.status === 'unknown'" class="text-warning">{{ t("Chen.GoV1DoNotRetry") }}</span>
-          <span v-if="query.resultExecution && query.resultExecution.id !== query.execution?.id" class="text-warning">
+          <span
+            v-if="
+              query.resultPane === 'results' &&
+              query.resultExecution &&
+              query.resultExecution.id !== query.execution?.id
+            "
+            class="text-warning"
+          >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
-          <span v-if="query.rows" class="ml-auto text-muted">
+          <span
+            v-if="
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported
+            "
+            class="ml-auto text-muted"
+          >
             {{ query.rows.rows.length ? query.rows.offset + 1 : 0 }}–{{ query.rows.offset + query.rows.rows.length }} /
             {{ query.rows.total_rows }}{{ query.rows.truncated ? "+" : "" }} {{ t("Chen.GoV1RowsUnit") }}
           </span>
           <UButton
-            v-if="query.rows && query.rows.offset > 0"
+            v-if="
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported &&
+              query.rows.offset > 0
+            "
             icon="i-lucide-chevron-left"
             :aria-label="t('Chen.GoV1Previous')"
             size="xs"
             color="neutral"
             variant="ghost"
             :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy"
-            @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - 200))"
+            @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - query.loadingSettings.batchSize))"
           />
           <UButton
-            v-if="query.rows?.next_offset !== undefined"
+            v-if="
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              !query.rows?.browse?.supported &&
+              query.rows?.next_offset !== undefined
+            "
             icon="i-lucide-chevron-right"
             :aria-label="t('Chen.GoV1Next')"
             size="xs"
@@ -710,6 +1003,7 @@ defineExpose({
             @click="emit('rows', query.resultId, query.rows.next_offset)"
           />
           <UButton
+            v-if="!dataOnly"
             :class="{ 'ml-auto': !query.rows }"
             :icon="maximized === 'results' ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
             :aria-label="t(maximized === 'results' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeResults')"
@@ -721,7 +1015,28 @@ defineExpose({
           />
         </div>
         <div
-          v-if="displayExecution?.result_ids.length"
+          v-if="!dataOnly"
+          class="flex shrink-0 gap-1 border-b border-default px-2 py-1"
+          role="group"
+          :aria-label="t('Chen.GoV1Result')"
+        >
+          <UButton
+            size="xs"
+            color="neutral"
+            :variant="query.resultPane === 'results' ? 'soft' : 'ghost'"
+            :label="t('Chen.GoV1Result')"
+            @click="emit('pane', 'results')"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            :variant="query.resultPane === 'plan' ? 'soft' : 'ghost'"
+            :label="t('ExecutionPlan.title')"
+            @click="emit('pane', 'plan')"
+          />
+        </div>
+        <div
+          v-if="query.resultPane === 'results' && displayExecution?.result_ids.length"
           role="group"
           :aria-label="t('Chen.GoV1Result')"
           class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1"
@@ -784,10 +1099,10 @@ defineExpose({
           role="alert"
           class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-xs text-error"
         >
-          {{ query.execution.error.code }} · {{ query.execution.error.message }}
+          {{ chenErrorText(query.execution.error, t) }}
         </div>
         <div
-          v-if="query.resultLoadError"
+          v-if="query.resultPane === 'results' && query.resultLoadError"
           role="alert"
           class="flex max-h-32 shrink-0 items-start gap-2 overflow-auto border-b border-default px-3 py-2 text-xs text-warning"
         >
@@ -806,16 +1121,109 @@ defineExpose({
             @click="emit('retryRows')"
           />
         </div>
-        <GoWritePanel
-          v-if="query.rows"
-          :key="query.rows.id"
-          :query="query"
-          :session="session"
-          :api="api"
-          class="min-h-0 flex-1"
-          @apply="emit('applyEdits', $event)"
-          @refresh="emit('refreshData')"
-        />
+        <div
+          v-if="query.resultPane === 'plan'"
+          class="flex min-h-0 flex-1 flex-col"
+          :class="{ 'select-none': !session.permissions.can_copy }"
+          @copy.capture="preventCopy"
+          @cut.capture="preventCopy"
+        >
+          <p v-if="!canExplain" class="px-3 py-2 text-xs text-warning">{{ t("Chen.GoPlanUnsupported") }}</p>
+          <div v-if="shownPlan" class="shrink-0 border-b border-default px-3 py-2 text-xs">
+            <p class="text-muted">
+              {{ shownPlan.executionId }} · {{ shownPlan.context.database || "—" }} /
+              {{ shownPlan.context.schema || "—" }}
+            </p>
+            <p v-if="shownPlan.executionId !== query.execution?.id" class="text-warning">
+              {{ t("Chen.GoPlanPrevious") }}
+            </p>
+            <details>
+              <summary class="cursor-pointer text-muted">{{ t("Chen.GoV1ResultSource") }}</summary>
+              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.sql }}</pre>
+              <p class="mt-2 text-muted">{{ t("Chen.GoPlanGenerated") }}</p>
+              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.context.generated_sql || "—" }}</pre>
+            </details>
+          </div>
+          <p
+            v-if="
+              query.planAttempt?.error &&
+              query.planAttempt.executionId === query.execution?.id &&
+              shownPlan !== query.planAttempt
+            "
+            role="alert"
+            class="px-3 py-2 text-xs text-error"
+          >
+            {{ query.planAttempt.error.message }}
+          </p>
+          <div v-if="query.planLoadError" role="alert" class="flex gap-2 px-3 py-2 text-xs text-warning">
+            {{ query.planLoadError }}
+            <UButton
+              size="xs"
+              color="neutral"
+              :label="t('Chen.GoV1RetryResult')"
+              :disabled="!ready || query.loadingPlan"
+              @click="loadQueryPlan(query, api)"
+            />
+          </div>
+          <ExecutionPlanTree :plan="shownPlan" :loading="planLoading" preserve-raw />
+        </div>
+        <template v-else-if="query.rows">
+          <GoWritePanel
+            :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
+            :visible="visible"
+            :query="query"
+            :session="session"
+            :api="api"
+            class="min-h-0 flex-1"
+            @apply="emit('applyEdits', $event)"
+            @refresh="emit('refreshData')"
+            @loading-settings="emit('loadingSettings', $event)"
+            @load-more="emit('loadMore', $event)"
+          />
+          <div
+            v-if="query.loadingSettings.mode === 'continuous'"
+            role="status"
+            data-continuous-status
+            class="flex shrink-0 flex-wrap items-center gap-2 border-t border-default px-3 py-1.5 text-xs"
+          >
+            <span class="tabular-nums">{{ t("Chen.GoBrowseLoaded", { rows: query.rows.rows.length }) }}</span>
+            <span
+              v-if="
+                query.loadingRows || (executionActive(query.execution) && query.executionBrowse?.action === 'append')
+              "
+              class="text-muted"
+            >
+              {{ t("Chen.GoBrowseLoadingMore") }}
+            </span>
+            <span v-else-if="editDirty(query.edit) || query.edit.refreshRequired" class="text-warning">
+              {{ t("Chen.GoBrowseScrollDirty") }}
+            </span>
+            <span v-else-if="query.loadMoreFailed || query.resultLoadError" class="text-warning">
+              {{ t("Chen.GoBrowseLoadMoreFailed") }}
+            </span>
+            <span v-else-if="query.rows.browse?.limit_reached === 'rows'" class="text-warning">
+              {{ t("Chen.GoBrowseCacheLimit", { rows: query.rows.browse.max_loaded_rows }) }}
+            </span>
+            <span v-else-if="query.rows.truncated && !hasMoreResultRows(query)" class="text-warning">
+              {{ t("Chen.GoBrowseCacheStopped") }}
+            </span>
+            <span v-else-if="!hasMoreResultRows(query)" class="text-muted">
+              {{ t(query.rows.browse?.supported ? "Chen.GoBrowseEnd" : "Chen.GoBrowseCacheEnd") }}
+            </span>
+            <UButton
+              v-if="hasMoreResultRows(query)"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              class="ml-auto"
+              :label="
+                t(query.loadMoreFailed || query.resultLoadError ? 'Chen.GoBrowseRetryMore' : 'Chen.GoBrowseLoadMore')
+              "
+              :disabled="!ready || resultLoadingLocked(query)"
+              @click="emit('loadMore', false)"
+            />
+          </div>
+        </template>
         <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
           <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
             {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}

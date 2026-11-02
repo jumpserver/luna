@@ -28,7 +28,12 @@ export function useAppWatermark() {
   let loadGeneration = 0;
   let timeTimer: ReturnType<typeof setInterval> | null = null;
 
-  const template = computed(() => resolveWatermarkTemplate(settings.value || {}));
+  const template = computed(() =>
+    resolveWatermarkTemplate(
+      settings.value || {},
+      Boolean(activeTab.value?.assetId) && !["local-shell", "script-editor"].includes(activeTab.value?.protocol || "")
+    )
+  );
   const needsClock = computed(() => template.value.includes("currentTime"));
   const enabled = computed(() =>
     shouldShowAppWatermark({

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogObject, GoCatalogPage } from "./api";
-import type { QueryContext } from "./workspace";
+import type { ObjectWorkspaceSection, QueryContext } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { writeClipboardText } from "~/utils/clipboard";
 import { mergeCatalogNodes, objectKey, qualifiedObjectName, quoteIdentifier } from "./workspace";
@@ -19,7 +20,8 @@ const props = defineProps<{
   canInsert: boolean;
 }>();
 const emit = defineEmits<{
-  object: [object: GoCatalogObject];
+  object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
+  overview: [context: QueryContext, section?: "diagram"];
   query: [context: QueryContext, object?: GoCatalogObject];
   preview: [object: GoCatalogObject];
   insert: [text: string];
@@ -161,8 +163,7 @@ async function load(current: Node, append = false) {
     current.more = page.has_more;
     current.loaded = true;
   } catch (cause) {
-    if (!controller.signal.aborted && generation === current.generation)
-      current.error = cause instanceof Error ? cause.message : String(cause);
+    if (!controller.signal.aborted && generation === current.generation) current.error = chenErrorText(cause, t);
   } finally {
     controllers.delete(controller);
     if (generation === current.generation) current.loading = false;
@@ -235,6 +236,38 @@ async function refresh(current = root.value.children[0]!) {
 function menu(current: Node) {
   const context = { database: props.database, schema: current.schema };
   return [
+    ...(["database", "schema"].includes(current.type)
+      ? [
+          {
+            label: t("Chen.GoDiagramTitle"),
+            icon: "i-lucide-network",
+            disabled: !props.ready || !["postgresql", "mysql"].includes(props.dialect),
+            onSelect: () => {
+              if (props.ready)
+                emit(
+                  "overview",
+                  {
+                    database: props.database,
+                    schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
+                  },
+                  "diagram"
+                );
+            }
+          },
+          {
+            label: t("Chen.GoOverviewOpen"),
+            icon: "i-lucide-list-tree",
+            disabled: !props.ready,
+            onSelect: () => {
+              if (props.ready)
+                emit("overview", {
+                  database: props.database,
+                  schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
+                });
+            }
+          }
+        ]
+      : []),
     ...(["database", "schema", "object", "column"].includes(current.type)
       ? [
           {
@@ -268,10 +301,10 @@ function menu(current: Node) {
           {
             label: t("Chen.GoV1Structure"),
             icon: "i-lucide-panel-top",
-            onSelect: () => emit("object", current.object!)
+            onSelect: () => emit("object", current.object!, "structure")
           },
           {
-            label: t("Chen.GoV1Preview200"),
+            label: t("Chen.GoTableWorkspaceData"),
             icon: "i-lucide-table",
             disabled: !props.ready,
             onSelect: () => emit("preview", current.object!)
@@ -284,14 +317,14 @@ function menu(current: Node) {
           }
         ]
       : []),
-    ...(current.object?.kind === "table"
+    ...(current.object
       ? [
+          { label: "DDL", icon: "i-lucide-file-code-2", onSelect: () => emit("object", current.object!, "ddl") },
           {
-            label: t("Chen.GoWriteBrowse"),
-            icon: "i-lucide-table-properties",
-            disabled: !props.ready || props.dialect === "clickhouse",
-            description: props.dialect === "clickhouse" ? t("Chen.ClickHouseDataViewReadOnly") : undefined,
-            onSelect: () => emit("browse", current.object!)
+            label: t("Chen.GoDiagramTitle"),
+            icon: "i-lucide-git-fork",
+            disabled: current.object.kind !== "table",
+            onSelect: () => emit("object", current.object!, "diagram")
           }
         ]
       : []),
@@ -372,7 +405,7 @@ async function runSearch(append = false) {
     current.more = page.has_more;
     current.loaded = true;
   } catch (cause) {
-    if (!controller.signal.aborted) current.error = cause instanceof Error ? cause.message : String(cause);
+    if (!controller.signal.aborted) current.error = chenErrorText(cause, t);
   } finally {
     if (!controller.signal.aborted) current.loading = false;
   }

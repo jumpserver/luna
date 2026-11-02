@@ -14,6 +14,7 @@ import {
   executableChenSql,
   replaceChenSqlDocument
 } from "~/chen/utils/sqlEditor";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(
@@ -50,6 +51,7 @@ const editableSlot = new Compartment();
 const sqlLanguageSlot = new Compartment();
 let editor: EditorView | null = null;
 let themeObserver: MutationObserver | null = null;
+let unregisterClipboard: (() => void) | undefined;
 let applyingExternalValue = false;
 let gutterDocument: EditorState["doc"] | null = null;
 let gutterStatementLineStarts = new Set<number>();
@@ -205,6 +207,22 @@ onMounted(() => {
       ]
     })
   });
+  const instance = editor;
+  unregisterClipboard = registerWorkspaceClipboardSurface(container.value, () => {
+    const { doc, selection } = instance.state;
+    const available = () => editor === instance && instance.state.doc === doc && instance.state.selection.eq(selection);
+    return {
+      terminal: false,
+      mode: "paste",
+      paste(text) {
+        if (!available()) return "unavailable";
+        if (props.readOnly) return "denied";
+        instance.dispatch(instance.state.replaceSelection(text), { userEvent: "input.paste" });
+        return "pasted";
+      },
+      focus: () => editor?.focus()
+    };
+  });
   themeObserver = new MutationObserver(refreshTheme);
   themeObserver.observe(document.documentElement, {
     attributes: true,
@@ -241,8 +259,10 @@ watch(
 watch(() => colorMode.value, refreshTheme);
 
 onBeforeUnmount(() => {
+  unregisterClipboard?.();
   themeObserver?.disconnect();
   editor?.destroy();
+  editor = null;
 });
 
 defineExpose({

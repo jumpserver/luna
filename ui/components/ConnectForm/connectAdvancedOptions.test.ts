@@ -29,7 +29,12 @@ function mountSetup(source: string, props: () => Record<string, unknown>, servic
     ...Object.keys(globals),
     `const exports = {};\n${outputText}\nreturn exports.default;`
   )((name: string) => (name === "vue" ? Vue : { resolveAdvancedOptionFlags, ...services }), ...Object.values(globals));
-  let state!: { selectedResolution: Ref<string>; advancedOptionOpen: Ref<boolean> };
+  let state!: {
+    selectedResolution: Ref<string>;
+    selectedRdpSecurity: Ref<string>;
+    rdpSecurityItems: Ref<{ label: string; value: string }[]>;
+    advancedOptionOpen: Ref<boolean>;
+  };
   const setup = component.setup;
   component.setup = (props: unknown, context: unknown) => {
     state = setup(props, context);
@@ -71,6 +76,35 @@ it("updates the connection resolution without collapsing or changing other optio
       expect(state.selectedResolution.value).toBe(resolution);
       expect(options.value).toEqual({ resolution, remote_microphone: true, reusable: true });
       expect(state.advancedOptionOpen.value).toBe(true);
+    }
+  } finally {
+    unmount();
+  }
+});
+
+it("follows the platform until security is selected and can restore the platform default", async () => {
+  const options = Vue.ref<Record<string, unknown>>({ resolution: "auto" });
+  const { state, unmount } = mountSetup(
+    advancedSource,
+    () => ({
+      protocol: "rdp",
+      component: "lion",
+      platformRdpSecurity: "tls",
+      connectOptions: options.value,
+      "onUpdate:connectOptions": (value: typeof options.value) => {
+        options.value = value;
+      }
+    }),
+    { useI18n: () => ({ t: (key: string, params?: { value: string }) => params?.value || key }) }
+  );
+  try {
+    expect(state.selectedRdpSecurity.value).toBe("default");
+    expect(state.rdpSecurityItems.value[0]).toEqual({ label: "TLS", value: "default" });
+    expect(options.value).not.toHaveProperty("rdp_security");
+    for (const security of ["any", "rdp", "tls", "nla", "default"]) {
+      state.selectedRdpSecurity.value = security;
+      await Vue.nextTick();
+      expect(options.value).toEqual({ resolution: "auto", rdp_security: security });
     }
   } finally {
     unmount();

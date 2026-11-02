@@ -8,6 +8,7 @@ import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connector
 import { readText, writeText } from "clipboard-polyfill";
 import { isTerminalCopyChord, isTerminalInterruptChord, KeyboardKey } from "#koko/constants/keyboard";
 import { formatMessage, getXTerminalLineContent, preprocessInput } from "#koko/utils/terminalUtils";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 import { TerminalMittEvent } from "./protocol";
 
 export function useKokoTerminalInput(options: {
@@ -140,6 +141,35 @@ export function useKokoTerminalInput(options: {
     };
     terminal.onData(sendInput);
     terminal.onResize(options.onResize);
+    cleanup.push(
+      registerWorkspaceClipboardSurface(container, () => {
+        const socket = options.socket.value;
+        const terminalId = options.terminalId.value;
+        const available = () =>
+          Boolean(socket) &&
+          options.socket.value === socket &&
+          options.terminal.value === terminal &&
+          options.terminalId.value === terminalId &&
+          options.isSocketOpen(socket!) &&
+          !options.inputLocked() &&
+          !options.isZmodemActive();
+        return {
+          terminal: true,
+          mode: "paste",
+          paste(text) {
+            if (!available() || !text) return "unavailable";
+            if (!options.validateClipboardText("paste", text)) return "denied";
+            options.onExternalData?.();
+            // xterm preserves bracketed-paste mode; onData sends only this pane's socket.
+            terminal.paste(text);
+            return "pasted";
+          },
+          focus: () => {
+            if (available()) terminal.focus();
+          }
+        };
+      })
+    );
     let dragging = false;
     let lastCopied = "";
     const copySettledSelection = () => {

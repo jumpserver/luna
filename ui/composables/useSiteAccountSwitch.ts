@@ -20,6 +20,15 @@ const leaveConfirm = ref<LeaveConfirmRequest | null>(null);
 const switchingAccountId = ref("");
 let leaveInFlight = false;
 let fileWorkspaceLeaveHandler: FileWorkspaceLeaveHandler | null = null;
+// User-initiated site changes may need a component-specific draft check after the global prompt.
+// Direct closeCurrentSiteWorkspace calls remain authoritative for forced cleanup.
+const siteLeaveGuards = new Set<() => boolean | Promise<boolean>>();
+export const registerSiteLeaveGuard = (guard: () => boolean | Promise<boolean>) => {
+  siteLeaveGuards.add(guard);
+  return () => {
+    siteLeaveGuards.delete(guard);
+  };
+};
 
 const resolveLeaveConfirm = (confirmed: boolean) => {
   const pending = leaveConfirm.value;
@@ -55,18 +64,19 @@ export const confirmLeaveCurrentSiteSessions = async (
   try {
     if (hasActiveAiTask()) {
       if (!(await confirmAiTaskLeave(kind === "logout" ? "logout" : "account"))) return false;
-      if (closeOnConfirm) await closeCurrentSiteWorkspace();
-      return true;
+    } else if (hasActiveWorkspaceSessions()) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        leaveConfirm.value = { kind, resolve };
+      });
+      if (!confirmed) return false;
     }
-    if (!hasActiveWorkspaceSessions()) {
-      if (closeOnConfirm) await closeCurrentSiteWorkspace();
-      return true;
+    for (const guard of siteLeaveGuards) {
+      try {
+        if (!(await guard())) return false;
+      } catch {
+        return false;
+      }
     }
-
-    const confirmed = await new Promise<boolean>((resolve) => {
-      leaveConfirm.value = { kind, resolve };
-    });
-    if (!confirmed) return false;
     if (closeOnConfirm) await closeCurrentSiteWorkspace();
     return true;
   } finally {

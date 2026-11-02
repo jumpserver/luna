@@ -15,6 +15,7 @@ import {
 const props = defineProps<{
   plan: ChenExecutionPlan | null;
   loading?: boolean;
+  preserveRaw?: boolean;
 }>();
 
 type PlanView = "tree" | "summary" | "raw";
@@ -64,6 +65,9 @@ const databaseNames: Record<PlanDatabase, string> = {
   sqlserver: "SQL Server",
   db2: "DB2",
   dm: "Dameng",
+  dameng: "Dameng",
+  "oceanbase-mysql": "OceanBase MySQL",
+  "oceanbase-oracle": "OceanBase Oracle",
   clickhouse: "ClickHouse"
 };
 
@@ -82,7 +86,11 @@ const statusLabel = computed(() => {
   return status ? t(`ExecutionPlan.status.${status}`, status) : "";
 });
 const rawDisplay = computed(() =>
-  props.plan?.rawText ? chenPlanFormatRaw(props.plan.rawText, props.plan.rawFormat) : ""
+  props.plan?.rawText
+    ? props.preserveRaw
+      ? props.plan.rawText
+      : chenPlanFormatRaw(props.plan.rawText, props.plan.rawFormat)
+    : ""
 );
 const visiblePrerequisites = computed(() =>
   (props.plan?.prerequisites || []).filter((item) => item.status === "UNMET" || item.status === "UNKNOWN")
@@ -94,7 +102,7 @@ watch(
     selectedId.value = plan?.roots[0]?.id || null;
     showDetails.value = false;
     collapsedIds.value = new Set();
-    view.value = plan?.status === "RAW_ONLY" ? "raw" : "tree";
+    view.value = plan?.status === "RAW_ONLY" ? "raw" : plan?.capabilities.hierarchy === false ? "summary" : "tree";
   },
   { immediate: true }
 );
@@ -188,7 +196,7 @@ function keyDetail(node: ChenPlanNode) {
               size="xs"
               color="neutral"
               :variant="view === 'tree' ? 'soft' : 'ghost'"
-              :disabled="!plan.roots.length"
+              :disabled="!plan.roots.length || plan.capabilities.hierarchy === false"
               @click="setView('tree')"
             >
               {{ t("ExecutionPlan.tree") }}

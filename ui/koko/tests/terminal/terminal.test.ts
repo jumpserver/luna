@@ -35,10 +35,15 @@ import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/term
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 import { MAX_TRANSFER_SIZE } from "#koko/utils/config";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 
 vi.mock("clipboard-polyfill", () => ({
   readText: vi.fn(async () => "clipped"),
   writeText: vi.fn(async () => undefined)
+}));
+
+vi.mock("~/composables/useWorkspaceClipboardPaste", () => ({
+  registerWorkspaceClipboardSurface: vi.fn(() => vi.fn())
 }));
 
 it("combines token actions with clipboard policy and text limits", () => {
@@ -239,6 +244,7 @@ function startContextMenuInput(overrides: {
       onData: (handler: (data: string) => void) => {
         onData = handler;
       },
+      paste: (text: string) => onData(text),
       onResize: vi.fn(),
       onSelectionChange: (handler: () => void) => {
         onSelectionChange = handler;
@@ -298,6 +304,26 @@ it("pastes on right-click when quickPaste is enabled", async () => {
   container.dispatchEvent(event);
   await vi.waitFor(() => expect(send).toHaveBeenCalled());
   expect(onContextMenu).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("history paste rechecks clipboard permission and input locks without appending Enter", () => {
+  let allowed = false;
+  let locked = false;
+  const { input, send } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    validateClipboardText: () => allowed,
+    inputLocked: () => locked
+  });
+  const target = vi.mocked(registerWorkspaceClipboardSurface).mock.calls.at(-1)![1]()!;
+  expect(target.paste("command")).toBe("denied");
+  expect(send).not.toHaveBeenCalled();
+  allowed = true;
+  expect(target.paste("command")).toBe("pasted");
+  expect(send).toHaveBeenCalledExactlyOnceWith(buildTerminalInput(1, "command"));
+  locked = true;
+  expect(target.paste("other command")).toBe("unavailable");
+  expect(send).toHaveBeenCalledTimes(1);
   input.stop();
 });
 

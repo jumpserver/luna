@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "#koko/host";
 
+import { focusKokoTerminal } from "#koko/composables/useTerminalSessionRegistry";
 import KokoConnectView from "#koko/views/ConnectView.vue";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
@@ -13,6 +14,8 @@ const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSes
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
+
+defineExpose({ focus: () => focusKokoTerminal(props.tab.id) });
 </script>
 
 <template>

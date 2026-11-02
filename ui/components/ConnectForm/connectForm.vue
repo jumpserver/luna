@@ -71,6 +71,9 @@ const selectedConnectMethodComponent = computed(
   () =>
     availableConnectMethods.value.find((method) => method.value === selectedConnectMethodValue.value)?.component || ""
 );
+const platformRdpSecurity = computed(
+  () => props.protocols.find((protocol) => protocol.name.toLowerCase() === "rdp")?.setting?.security || "any"
+);
 
 const selectedProtocol = computed<string>({
   get: () => props.protocol,
@@ -255,6 +258,7 @@ watch(
           :has-x-pack="props.hasXPack"
           :applet-client-enabled="props.appletClientEnabled"
           :connection-token-reusable="props.connectionTokenReusable"
+          :platform-rdp-security="platformRdpSecurity"
         />
       </div>
       <slot />

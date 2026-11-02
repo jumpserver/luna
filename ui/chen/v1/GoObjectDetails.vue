@@ -2,6 +2,7 @@
 import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
 const props = defineProps<{
   api: ChenGoApi;
@@ -9,48 +10,51 @@ const props = defineProps<{
   object: GoCatalogObject;
   ready: boolean;
   canCopy: boolean;
+  mode?: "structure" | "ddl";
 }>();
 const { t } = useI18n();
 const data = ref<GoCatalogInspect>();
-const active = ref<keyof GoCatalogInspect["sections"]>("primary_key");
+const active = ref<keyof GoCatalogInspect["sections"]>(props.mode === "ddl" ? "ddl" : "primary_key");
 const busy = ref(false);
 const ddlBusy = ref(false);
 const ddl = ref<GoCatalogSection>();
 const ddlError = ref("");
 const error = ref("");
 const viewer = ref<{ find: () => void } | null>(null);
-const sections = computed(() => [
-  {
-    key: "primary_key" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
-    columns: ["name", "column", "ordinal"]
-  },
-  {
-    key: "foreign_keys" as const,
-    label: t("Chen.ForeignKeys"),
-    columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
-  },
-  { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
-  {
-    key: "defaults" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.default_values"),
-    columns: ["column", "expression"]
-  },
-  {
-    key: "ddl" as const,
-    label:
-      (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
-        ? t("Chen.GoV1ViewQueryDefinition")
-        : "DDL",
-    columns: []
-  }
-]);
+const sections = computed(() =>
+  [
+    {
+      key: "primary_key" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
+      columns: ["name", "column", "ordinal"]
+    },
+    {
+      key: "foreign_keys" as const,
+      label: t("Chen.ForeignKeys"),
+      columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
+    },
+    { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
+    {
+      key: "defaults" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.default_values"),
+      columns: ["column", "expression"]
+    },
+    {
+      key: "ddl" as const,
+      label:
+        (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
+          ? t("Chen.GoV1ViewQueryDefinition")
+          : "DDL",
+      columns: []
+    }
+  ].filter((section) => (props.mode === "ddl" ? section.key === "ddl" : section.key !== "ddl"))
+);
 const current = computed(() =>
   active.value === "ddl" ? ddl.value || data.value?.sections.ddl : data.value?.sections[active.value]
 );
 const columns = computed(() => sections.value.find((item) => item.key === active.value)?.columns || []);
 const sectionError = computed(() =>
-  typeof current.value?.error === "string" ? current.value.error : current.value?.error?.message
+  current.value?.error ? chenErrorText(current.value.error, t, "catalog_failed") : ""
 );
 const labels: Record<string, string> = {
   name: "Chen.Name",
@@ -80,7 +84,7 @@ async function load() {
     );
     if (!current.signal.aborted) data.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
@@ -96,7 +100,7 @@ async function loadDdl() {
     const value = await props.api.catalogDdl(props.sessionId, props.object.schema, props.object.name, current.signal);
     if (!current.signal.aborted) ddl.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) ddlError.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) ddlError.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) ddlBusy.value = false;
   }
@@ -110,11 +114,11 @@ watch(
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) event.preventDefault();
 }
-onMounted(() => load());
+onMounted(() => (props.mode === "ddl" ? loadDdl() : load()));
 watch(
   () => props.ready,
   (ready) => {
-    if (ready && !data.value && !error.value) void load();
+    if (ready && props.mode !== "ddl" && !data.value && !error.value) void load();
   }
 );
 onBeforeUnmount(() => {

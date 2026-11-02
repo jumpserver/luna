@@ -1,5 +1,17 @@
-import type { GoCatalogObject, GoConsole, GoExecution, GoExport, GoExportFormat, GoRows } from "./api";
+import type {
+  ChenGoApi,
+  GoBrowseDraft,
+  GoBrowseRequest,
+  GoPlan,
+  GoCatalogObject,
+  GoConsole,
+  GoExecution,
+  GoExport,
+  GoExportFormat,
+  GoRows
+} from "./api";
 import type { GoEditDraft } from "./dataEditing";
+import { useStorage } from "@vueuse/core";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
@@ -21,16 +33,28 @@ export interface QueryWorkspaceTab {
   executionSql: string;
   executionVersion: number;
   executionPlan: boolean;
+  resultPane: "results" | "plan";
+  plan: GoPlan | null;
+  planAttempt: GoPlan | null;
+  planLoadedId: string;
+  loadingPlan: boolean;
+  planLoadError: string;
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
   browseObject?: GoCatalogObject;
+  readOnly?: boolean;
+  loadingSettings: GoResultLoadingSettings;
+  pendingLoading: GoResultLoadingSettings | null;
+  loadMoreFailed: boolean;
+  browseDraft: GoBrowseDraft;
+  browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
-  executionBrowse?: GoCatalogObject;
+  executionBrowse?: GoBrowseRequest;
   exportJob: GoExport | null;
   exportBusy: boolean;
-  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string } | null;
+  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
   resultSql: string;
   rows: GoRows | null;
@@ -44,23 +68,56 @@ export interface QueryWorkspaceTab {
     plan?: boolean;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
-    browse?: GoCatalogObject;
+    browse?: GoBrowseRequest;
   } | null;
   busy: boolean;
   loadingRows: boolean;
-  resultLoadError: { message: string; id: string; offset: number; execution: GoExecution; sql: string } | null;
+  resultLoadError: {
+    append?: boolean;
+    message: string;
+    id: string;
+    offset: number;
+    execution: GoExecution;
+    sql: string;
+  } | null;
   loadGeneration: number;
   error: string;
   closed: boolean;
 }
+export type ObjectWorkspaceSection = "data" | "structure" | "ddl" | "diagram";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
   title: string;
   object: GoCatalogObject;
+  sessionId: string;
+  section: ObjectWorkspaceSection;
+  data: QueryWorkspaceTab | null;
 }
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab;
+export interface OverviewWorkspaceTab {
+  id: string;
+  kind: "overview";
+  section?: "diagram" | "tables" | "views" | "statistics" | "indexes" | "properties";
+  title: string;
+  context: QueryContext;
+}
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
+export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
+  return tab.kind === "query" || tab.kind === "preview";
+}
 
+// An object owns at most one execution context, visible to every query lifecycle consumer.
+export function workspaceQuery(tab: ChenWorkspaceTab): QueryWorkspaceTab | null {
+  return tab.kind === "object" ? tab.data : isQueryWorkspaceTab(tab) ? tab : null;
+}
+export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] {
+  return tabs.flatMap((tab) => workspaceQuery(tab) || []);
+}
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
+  // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
+  // client-side folding would conflate distinct objects on case-sensitive databases.
+  return JSON.stringify([sessionId, object.database, object.schema, object.kind, object.name]);
+}
 export function createQueryTab(
   title: string,
   context: QueryContext,
@@ -79,9 +136,20 @@ export function createQueryTab(
     executionSql: "",
     executionVersion: 0,
     executionPlan: false,
+    resultPane: "results",
+    plan: null,
+    planAttempt: null,
+    planLoadedId: "",
+    loadingPlan: false,
+    planLoadError: "",
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
+    loadingSettings: { mode: "page", batchSize: 200 },
+    pendingLoading: null,
+    loadMoreFailed: false,
+    browseDraft: { where: "", sort: [], page_size: 200 },
+    browseCount: null,
     exportJob: null,
     exportBusy: false,
     pendingCachedExport: null,
@@ -128,7 +196,10 @@ export function objectSelect(object: GoCatalogObject, dialect: string, preview =
       return `SELECT * FROM ${name} LIMIT 200;`;
   }
 }
-export function tabContext(tab: ChenWorkspaceTab | undefined, fallback: QueryContext): QueryContext {
+export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab, "kind" | "object">>(
+  tab: T | undefined,
+  fallback: QueryContext
+): QueryContext {
   if (!tab) return { ...fallback };
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
   return { ...tab.context };
@@ -175,11 +246,13 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   if (executionActive(query.execution)) query.execution = { ...query.execution!, status: "unknown" };
   query.loadGeneration++;
   query.loadingRows = false;
+  query.loadingPlan = false;
 }
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (query.closed || value.console_id !== query.console?.id || query.pending) return false;
   if (query.execution && value.id !== query.execution.id) return false;
   query.execution = reconcileExecution(query.execution, value);
+  query.executionPlan = !!query.execution.plan;
   if (query.resultExecution?.id === value.id) query.resultExecution = reconcileExecution(query.resultExecution, value);
   return true;
 }
@@ -228,4 +301,100 @@ export function reconcileExport(current: GoExport, value: GoExport): GoExport {
   if (exportActive(current) && exportActive(value) && rank[value.status]! < rank[current.status]!) return current;
   if (!exportActive(current) && current.status !== value.status && value.status !== "expired") return current;
   return { ...value, rows: Math.max(current.rows, value.rows), bytes: Math.max(current.bytes, value.bytes) };
+}
+
+// Plan resources belong to an execution and its original console. Late responses
+// must not replace another submission, reconnect, closed tab or previous result.
+export async function loadQueryPlan(query: QueryWorkspaceTab, api: Pick<ChenGoApi, "plan">) {
+  const execution = query.execution;
+  if (!execution?.plan || executionActive(execution) || query.loadingPlan || query.closed || query.pending) return;
+  const generation = query.loadGeneration;
+  const consoleId = query.console?.id;
+  query.loadingPlan = true;
+  query.planLoadError = "";
+  const current = () =>
+    !query.closed &&
+    !query.pending &&
+    query.loadGeneration === generation &&
+    query.execution?.id === execution.id &&
+    query.console?.id === consoleId;
+  try {
+    const plan = await api.plan(execution.id);
+    if (!current()) return;
+    if (
+      plan.executionId !== execution.id ||
+      plan.consoleId !== consoleId ||
+      plan.requestId !== execution.plan.request_id
+    )
+      throw new Error("Plan identity does not match the execution");
+    query.planLoadedId = execution.id;
+    query.planAttempt = plan;
+    if (plan.status === "SUCCESS" || plan.status === "RAW_ONLY") query.plan = plan;
+  } catch (cause) {
+    if (current()) {
+      query.planLoadedId = execution.id;
+      query.planLoadError = cause instanceof Error ? cause.message : String(cause);
+    }
+  } finally {
+    if (current()) query.loadingPlan = false;
+  }
+}
+
+export interface GoResultLoadingSettings {
+  mode: "page" | "continuous";
+  batchSize: number;
+}
+export function normalizeResultLoading(value: unknown): GoResultLoadingSettings {
+  const saved = value && typeof value === "object" ? (value as Partial<GoResultLoadingSettings>) : {};
+  return {
+    mode: saved.mode === "continuous" ? "continuous" : "page",
+    batchSize:
+      Number.isInteger(saved.batchSize) && saved.batchSize! > 0 && saved.batchSize! <= 1000 ? saved.batchSize! : 200
+  };
+}
+export function useResultLoadingPreferences() {
+  return useStorage<GoResultLoadingSettings>(
+    "jumpserver-client:chen-result-loading",
+    normalizeResultLoading(null),
+    undefined,
+    {
+      serializer: {
+        read: (raw) => {
+          try {
+            return normalizeResultLoading(JSON.parse(raw));
+          } catch {
+            return normalizeResultLoading(null);
+          }
+        },
+        write: (value) => JSON.stringify(normalizeResultLoading(value))
+      },
+      onError: () => {}
+    }
+  );
+}
+export function resultLoadingLocked(query: QueryWorkspaceTab) {
+  return (
+    query.closed ||
+    query.console?.state !== "ready" ||
+    query.busy ||
+    query.loadingRows ||
+    !!query.pending ||
+    executionActive(query.execution) ||
+    query.edit.busy ||
+    query.edit.refreshRequired ||
+    editDirty(query.edit)
+  );
+}
+export function hasMoreResultRows(query: QueryWorkspaceTab) {
+  const rows = query.rows;
+  if (!rows || query.loadingSettings.mode !== "continuous") return false;
+  // Cached rows may still be unread after a recoverable HTTP failure.
+  if (rows.next_offset !== undefined) return true;
+  return (
+    rows.browse?.supported === true &&
+    rows.browse.has_more === true &&
+    !rows.browse.limit_reached &&
+    !rows.truncated &&
+    rows.rows.length < (rows.browse.max_loaded_rows || 10000)
+  );
 }

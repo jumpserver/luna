@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CharsetType, RdpGraphics, ResolutionType } from "~/types/index";
+import type { CharsetType, RdpGraphics, RdpSecurity, ResolutionType } from "~/types/index";
 import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 const props = withDefaults(
@@ -10,13 +10,15 @@ const props = withDefaults(
     hasXPack?: boolean;
     appletClientEnabled?: boolean;
     connectionTokenReusable?: boolean;
+    platformRdpSecurity?: string;
   }>(),
   {
     component: "",
     connectMethod: "",
     hasXPack: false,
     appletClientEnabled: false,
-    connectionTokenReusable: false
+    connectionTokenReusable: false,
+    platformRdpSecurity: "any"
   }
 );
 
@@ -58,6 +60,16 @@ const rdpConnectionSpeedItems = computed(() => [
   { label: t("Setting.Auto"), value: "auto" },
   { label: t("Setting.RdpLowSpeedBroadband"), value: "low_speed_broadband" },
   { label: t("Setting.RdpHighSpeedBroadband"), value: "high_speed_broadband" }
+]);
+const rdpSecurityItems = computed(() => [
+  {
+    label: t("Setting.RdpSecurityPlatformDefault", { value: props.platformRdpSecurity.toUpperCase() }),
+    value: "default"
+  },
+  { label: t("Setting.RdpSecurityAny"), value: "any" },
+  { label: "RDP", value: "rdp" },
+  { label: "TLS", value: "tls" },
+  { label: "NLA", value: "nla" }
 ]);
 const virtualappConnectMethodItems = computed(() => [
   { label: t("Menu.Web"), value: "web" },
@@ -110,6 +122,10 @@ const selectedTokenReusable = computed<boolean>({
 const selectedRdpConnectionSpeed = computed<RdpGraphics["rdp_connection_speed"]>({
   get: () => connectOptions.value.rdp_connection_speed || "auto",
   set: (value) => updateConnectOption("rdp_connection_speed", value || "auto")
+});
+const selectedRdpSecurity = computed<RdpSecurity>({
+  get: () => connectOptions.value.rdp_security || "default",
+  set: (value) => updateConnectOption("rdp_security", value || "default")
 });
 const selectedVirtualappConnectMethod = computed<string>({
   get: () => connectOptions.value.virtualappConnectMethod || "web",
@@ -259,6 +275,16 @@ function onAdvancedFoldLeave(el: Element) {
         </div>
 
         <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="space-y-3">
+          <UFormField v-if="flags.rdpSecurity" :label="t('Setting.RdpSecurity')" :ui="formFieldUi" size="sm">
+            <USelect
+              v-model="selectedRdpSecurity"
+              :items="rdpSecurityItems"
+              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+              trailing-icon="i-lucide-chevrons-up-down"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
           <UFormField
             v-if="flags.rdpConnectionSpeed"
             :label="t('Setting.RdpConnectionSpeed')"

@@ -1,19 +1,39 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogColumn, GoCatalogObject } from "./api";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { ObjectWorkspaceSection } from "./workspace";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
+import { diagramObjectId } from "./diagram";
+import GoCatalogDiagram from "./GoCatalogDiagram.vue";
 import GoObjectDetails from "./GoObjectDetails.vue";
+import GoObjectDiagram from "./GoObjectDiagram.vue";
 const props = defineProps<{
   object: GoCatalogObject;
+  section?: ObjectWorkspaceSection;
+  active?: boolean;
   dialect: string;
   api: ChenGoApi;
   sessionId: string;
   ready: boolean;
+  diagramReady?: boolean;
   canCopy: boolean;
   canPaste: boolean;
 }>();
-const emit = defineEmits<{ query: []; preview: []; browse: []; schemaEdit: [mode: "alter" | "index"] }>();
-const details = ref(false);
+const emit = defineEmits<{
+  object: [object: GoCatalogObject];
+  query: [];
+  section: [section: ObjectWorkspaceSection];
+  schemaEdit: [mode: "alter" | "index"];
+}>();
+const section = computed(() => props.section || "structure");
+const view = ref<"columns" | "details">("columns");
+const structureVisited = ref(false);
+const ddlVisited = ref(false);
+const detailsVisited = ref(false);
+const diagramVisited = ref(false);
+const diagramDirection = ref<"outgoing" | "incoming">("outgoing");
+const identity = computed(() => diagramObjectId(props.sessionId, props.object));
 const { t } = useI18n();
 const columns = ref<GoCatalogColumn[]>([]);
 const cursor = ref<string>();
@@ -53,26 +73,81 @@ async function load(more = false) {
     cursor.value = page.next_cursor;
     hasMore.value = page.has_more;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
 }
-onMounted(() => load());
+watch(
+  () => [section.value, props.active, props.ready],
+  () => {
+    if (props.active === false) return;
+    if (section.value === "structure" && !structureVisited.value && props.ready) {
+      structureVisited.value = true;
+      void load();
+    }
+    if (section.value === "ddl") ddlVisited.value = true;
+    if (section.value === "diagram") diagramVisited.value = true;
+  },
+  { immediate: true }
+);
 watch(
   () => props.ready,
   (ready) => {
-    if (ready && !columns.value.length && !busy.value) void load();
+    if (!ready) {
+      controller?.abort();
+      busy.value = false;
+    }
+    if (ready && structureVisited.value && !columns.value.length && !busy.value) void load();
   }
 );
+watch(
+  identity,
+  () => {
+    controller?.abort();
+    busy.value = false;
+    columns.value = [];
+    cursor.value = undefined;
+    hasMore.value = false;
+    error.value = "";
+    search.value = "";
+    structureVisited.value = false;
+    if (section.value === "structure") {
+      structureVisited.value = true;
+      void load();
+    }
+  },
+  { flush: "sync" }
+);
 onBeforeUnmount(() => controller?.abort());
+async function sectionKeydown(event: KeyboardEvent) {
+  const keys: ObjectWorkspaceSection[] =
+    props.object.kind === "table" ? ["data", "structure", "ddl", "diagram"] : ["data", "structure", "ddl"];
+  const index = keys.indexOf(section.value);
+  const key =
+    event.key === "ArrowRight"
+      ? keys[(index + 1) % keys.length]
+      : event.key === "ArrowLeft"
+        ? keys[(index + keys.length - 1) % keys.length]
+        : event.key === "Home"
+          ? keys[0]
+          : event.key === "End"
+            ? keys.at(-1)
+            : undefined;
+  if (!key) return;
+  event.preventDefault();
+  const list = event.currentTarget as HTMLElement;
+  emit("section", key);
+  await nextTick();
+  list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+}
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) event.preventDefault();
 }
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col" data-chen-structure>
+  <div class="flex min-w-0 flex-col" :class="section === 'data' ? 'shrink-0' : 'min-h-0 flex-1'" data-chen-structure>
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
       <UIcon :name="object.kind === 'view' ? 'i-lucide-eye' : 'i-lucide-table-2'" class="size-4" />
       <h2
@@ -83,17 +158,6 @@ function preventCopy(event: ClipboardEvent) {
         <template v-if="object.schema && object.schema !== object.database">/ {{ object.schema }}</template>
         / {{ object.name }}
       </h2>
-      <UButton
-        v-if="object.kind === 'table'"
-        :label="t('Chen.GoWriteBrowse')"
-        icon="i-lucide-table-properties"
-        size="xs"
-        color="neutral"
-        variant="soft"
-        :disabled="!ready || dialect === 'clickhouse'"
-        :title="dialect === 'clickhouse' ? t('Chen.ClickHouseDataViewReadOnly') : undefined"
-        @click="emit('browse')"
-      />
       <UDropdownMenu
         v-if="object.kind === 'table'"
         :items="[
@@ -114,8 +178,8 @@ function preventCopy(event: ClipboardEvent) {
           :disabled="!ready"
         />
       </UDropdownMenu>
-      <UBadge color="neutral" variant="soft" size="xs">{{ t("Chen.GoV1Structure") }}</UBadge>
       <UButton
+        v-if="section === 'structure' && view === 'columns'"
         icon="i-lucide-refresh-cw"
         :label="t('Chen.GoV1Refresh')"
         size="xs"
@@ -133,36 +197,107 @@ function preventCopy(event: ClipboardEvent) {
         :disabled="!canPaste || !ready"
         @click="emit('query')"
       />
+    </div>
+    <div
+      role="tablist"
+      :aria-label="t('Chen.GoTableWorkspaceSections')"
+      class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-3 py-1"
+      @keydown="sectionKeydown"
+    >
       <UButton
-        :label="t('Chen.GoV1Preview200')"
-        icon="i-lucide-table"
+        v-for="item in [
+          { key: 'data', label: t('Chen.GoTableWorkspaceData') },
+          { key: 'structure', label: t('Chen.GoV1Structure') },
+          { key: 'ddl', label: 'DDL' },
+          { key: 'diagram', label: t('Chen.GoDiagramTitle') }
+        ]"
+        :key="item.key"
+        role="tab"
         size="xs"
-        color="neutral"
-        variant="soft"
-        :disabled="!ready"
-        @click="emit('preview')"
+        variant="ghost"
+        :tabindex="section === item.key ? 0 : -1"
+        :label="item.label"
+        :aria-selected="section === item.key"
+        :color="section === item.key ? 'primary' : 'neutral'"
+        :disabled="item.key === 'diagram' && object.kind !== 'table'"
+        :title="item.key === 'diagram' && object.kind !== 'table' ? t('Chen.NotSupported') : undefined"
+        @click="emit('section', item.key as ObjectWorkspaceSection)"
       />
     </div>
-    <div class="flex shrink-0 items-center gap-1 border-b border-default px-3 py-1">
+    <div v-show="section === 'structure'" class="flex shrink-0 items-center gap-1 border-b border-default px-3 py-1">
       <UButton
         :label="t('Chen.Columns')"
         size="xs"
-        :color="details ? 'neutral' : 'primary'"
+        :color="view === 'columns' ? 'primary' : 'neutral'"
         variant="ghost"
-        :aria-pressed="!details"
-        @click="details = false"
+        :aria-pressed="view === 'columns'"
+        @click="view = 'columns'"
       />
       <UButton
         :label="t('Chen.GoV1ObjectDetails')"
         size="xs"
-        :color="details ? 'primary' : 'neutral'"
+        :color="view === 'details' ? 'primary' : 'neutral'"
         variant="ghost"
-        :aria-pressed="details"
-        @click="details = true"
+        :aria-pressed="view === 'details'"
+        @click="
+          view = 'details';
+          detailsVisited = true;
+        "
       />
     </div>
+    <nav
+      v-if="diagramVisited && section === 'diagram' && ['postgresql', 'mysql'].includes(dialect)"
+      class="flex shrink-0 flex-wrap gap-1 border-b border-default px-3 py-1"
+    >
+      <UButton
+        v-for="direction in ['outgoing', 'incoming'] as const"
+        :key="direction"
+        :label="t(direction === 'outgoing' ? 'Chen.GoDiagramOutgoing' : 'Chen.GoDiagramIncoming')"
+        :aria-pressed="diagramDirection === direction"
+        :variant="diagramDirection === direction ? 'soft' : 'ghost'"
+        color="neutral"
+        size="xs"
+        @click="diagramDirection = direction"
+      />
+    </nav>
+    <GoCatalogDiagram
+      v-if="diagramVisited && diagramDirection === 'incoming'"
+      v-show="section === 'diagram'"
+      :api="api"
+      :session-id="sessionId"
+      :scope="{ database: object.database, schema: object.schema }"
+      :target="object"
+      :ready="ready && diagramReady !== false"
+      :active="active !== false && section === 'diagram'"
+      :can-copy="canCopy"
+      @object="emit('object', $event)"
+    />
+    <GoObjectDiagram
+      v-if="diagramVisited && object.kind === 'table' && diagramDirection === 'outgoing'"
+      v-show="section === 'diagram'"
+      :api="api"
+      :session-id="sessionId"
+      :object="object"
+      :dialect="dialect"
+      :ready="ready && diagramReady !== false"
+      :active="active !== false && section === 'diagram'"
+      :can-copy="canCopy"
+    />
     <GoObjectDetails
-      v-if="details"
+      v-if="detailsVisited"
+      v-show="section === 'structure' && view === 'details'"
+      :key="identity"
+      :api="api"
+      :session-id="sessionId"
+      :object="object"
+      :ready="ready"
+      :can-copy="canCopy"
+    />
+    <GoObjectDetails
+      v-if="ddlVisited"
+      v-show="section === 'ddl'"
+      :key="`${identity}:ddl`"
+      mode="ddl"
       :api="api"
       :session-id="sessionId"
       :object="object"
@@ -170,7 +305,7 @@ function preventCopy(event: ClipboardEvent) {
       :can-copy="canCopy"
     />
     <div
-      v-show="!details"
+      v-show="section === 'structure' && view === 'columns'"
       class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-default px-3 py-2"
     >
       <UInput
@@ -205,7 +340,11 @@ function preventCopy(event: ClipboardEvent) {
       <p v-if="object.comment" class="w-full break-words text-xs text-muted">{{ object.comment }}</p>
       <p v-if="!ready" class="w-full text-xs text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
-    <div v-if="error" role="alert" class="flex items-center gap-2 px-4 py-2 text-xs text-error">
+    <div
+      v-if="error && section === 'structure' && view === 'columns'"
+      role="alert"
+      class="flex items-center gap-2 px-4 py-2 text-xs text-error"
+    >
       {{ error }}
       <UButton
         :label="t('Chen.GoV1Retry')"
@@ -217,7 +356,7 @@ function preventCopy(event: ClipboardEvent) {
       />
     </div>
     <div
-      v-show="!details"
+      v-show="section === 'structure' && view === 'columns'"
       ref="columnTable"
       role="region"
       :aria-label="t('Chen.GoV1Structure')"

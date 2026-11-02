@@ -13,6 +13,7 @@ export function resolveAdvancedOptionFlags(input: {
   const backspace = !component || component === "koko";
   const disableAutoHash = protocol === "mysql" || protocol === "mariadb";
   const resolution = protocol === "rdp";
+  const rdpSecurity = resolution && (component === "lion" || component === "razor");
   const remoteMicrophone = resolution && input.hasXPack === true;
   const rdpConnectionSpeed = component === "razor";
   const reusable =
@@ -29,6 +30,7 @@ export function resolveAdvancedOptionFlags(input: {
     backspace,
     disableAutoHash,
     resolution,
+    rdpSecurity,
     remoteMicrophone,
     rdpConnectionSpeed,
     reusable,

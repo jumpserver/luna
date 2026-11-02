@@ -690,7 +690,8 @@ describe("opening assets in local applications", () => {
           rdp_client_option: ["full_screen", "drives_redirect"],
           remote_microphone: true,
           reusable: true,
-          rdp_connection_speed: "low_speed_broadband"
+          rdp_connection_speed: "low_speed_broadband",
+          rdp_security: "tls"
         },
         onSessionReady: ready,
         onSessionError: failed
@@ -798,7 +799,8 @@ describe("opening assets in local applications", () => {
               resolution: "1600x900",
               remote_microphone: true,
               reusable: true,
-              rdp_connection_speed: "low_speed_broadband"
+              rdp_connection_speed: "low_speed_broadband",
+              rdp_security: "tls"
             })
           }),
           expect.objectContaining({ orgId: "asset-org" })

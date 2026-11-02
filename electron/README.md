@@ -7,7 +7,7 @@ Desktop connections first check anonymous
 `base(app.getVersion()) >= base(Core.MIN_CLIENT_VERSION)` and
 `base(Core.VERSION) >= MIN_CORE_VERSION` determine compatibility, except that Core's exact
 `dev` version skips the Core minimum check. The client's minimum lives in
-`src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
+`src/auth/compatibility.ts` and is currently `v5.2.0`. Core represents the whole
 server release, including Koko, Chen and Kael. Developers decide whether a
 contract change breaks old clients; reviewers check that decision. Compatible
 releases leave the minimums unchanged. There is no component version matrix,
@@ -39,6 +39,36 @@ After activation, restoration of the same active site and account reuses its
 compatibility decision while still refreshing credentials and validating the
 profile. A new login, site/account switch, logout or client restart requires
 a new check.
+
+Core owns login validity. It checks the fixed login deadline, idle deadline and
+revocation on API requests, token refreshes and new asset connections. An expired
+login cannot be revived by activity or refresh. Daily token cleanup only reclaims
+records; it does not determine whether a login is valid.
+
+Desktop login monitoring has two inputs, both coordinated by the main process:
+
+- Real input: when idle timeout is enabled, renderer windows notify the main
+  process at most once per second to limit IPC traffic. The main process shares
+  one activity POST per 10 seconds across windows. Core validates the login
+  before recording its own receipt time as the last activity time.
+- Status checks: the main process checks the current account every 30 seconds
+  while it remains logged in, including when unfocused or minimized. A successful
+  activity POST postpones this read-only GET by 30 seconds because it already
+  checked the login. Ordinary business responses do not reschedule the monitor.
+  Concurrent activity reports and checks are coalesced; sleep/resume forces a check.
+
+Input reports are sampled: the idle deadline uses the last accepted activity
+report, not an exact timestamp for every mouse or keyboard event. No background
+check or token refresh updates that activity time. Inactive saved accounts are
+checked on switching/restoration, and their server-side deadlines keep running.
+Network errors do not mean the login expired. Explicit authentication failures
+show a persistent reason dialog; confirmation opens login, while closing dismisses
+only the notice. Background windows also receive a system notification when supported.
+
+Access tokens last at most one hour and are capped by the login deadline. Requests
+refresh them when they have at most 60 seconds left (or 10% of their issued lifetime
+for shorter tokens). Concurrent refreshes are shared. A refresh during a status
+check replaces that check, but never extends either login deadline.
 
 Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
 For desktop review, use local test servers and release-versioned test builds:

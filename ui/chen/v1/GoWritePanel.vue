@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoEditColumn, GoEditPlan, GoSession } from "./api";
-import type { QueryWorkspaceTab } from "./workspace";
+import type { ChenGoApi, GoCopySelection, GoEditColumn, GoEditPlan, GoSession } from "./api";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenDataViewField } from "~/chen/types";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
 import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import { executionActive } from "./api";
 import {
   clearEditDraft,
@@ -21,12 +22,19 @@ import {
 } from "./dataEditing";
 import GoResultGrid from "./GoResultGrid.client.vue";
 import { newChenRequestId } from "./requestId";
+import { hasMoreResultRows, resultLoadingLocked } from "./workspace";
 
-const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi }>();
-const emit = defineEmits<{ apply: [plan: GoEditPlan]; refresh: [] }>();
+const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi; visible?: boolean }>();
+const emit = defineEmits<{
+  apply: [plan: GoEditPlan];
+  refresh: [];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [automatic: boolean];
+}>();
 const { t } = useI18n();
 const error = ref("");
 const selected = ref<number[]>([]);
+const grid = ref<{ stopEditing: (cancel?: boolean) => void } | null>(null);
 const metadataBusy = ref(false);
 const previewOpen = ref(false);
 const csvOpen = ref(false);
@@ -57,8 +65,8 @@ const locked = computed(
     draft.value.refreshRequired ||
     policyPending.value
 );
-const supported = computed(() => draft.value.metadata?.supported === true);
-const canChange = computed(() => supported.value && !locked.value);
+const supported = computed(() => !props.query.readOnly && draft.value.metadata?.supported === true);
+const canChange = computed(() => supported.value && !locked.value && !metadataBusy.value);
 const canInsert = computed(
   () =>
     canChange.value &&
@@ -97,6 +105,10 @@ const insertFields = computed(() => (draft.value.metadata?.columns || []).map(as
 const updateFields = computed(() =>
   (draft.value.metadata?.columns || []).filter((column) => column.editable).map(asField)
 );
+function stageCell(row: number, column: number, value: string | null) {
+  if (!canChange.value) return;
+  if (!stageEditCell(draft.value, props.query.rows!, row, column, value)) error.value = t("Chen.GoWriteLimit");
+}
 let controller: AbortController | undefined;
 async function loadMetadata() {
   if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
@@ -104,29 +116,95 @@ async function loadMetadata() {
   controller = new AbortController();
   const current = controller;
   const rowSet = props.query.rows;
+  const previous = draft.value.metadata;
+  const prefix =
+    previous?.supported &&
+    previous.version === rowSet.id &&
+    previous.offset === rowSet.offset &&
+    previous.row_refs.length < rowSet.rows.length
+      ? [...previous.row_refs]
+      : [];
   metadataBusy.value = true;
-  draft.value.metadata = null;
   try {
     const metadata = await props.api.editMetadata(
       props.query.console.id,
       rowSet.id,
-      rowSet.offset,
-      Math.max(1, rowSet.rows.length),
+      rowSet.offset + prefix.length,
+      Math.min(1000, Math.max(1, rowSet.rows.length - prefix.length)),
       current.signal
     );
+    if (current.signal.aborted || props.query.rows !== rowSet) return;
+    if (metadata.supported && (metadata.version !== rowSet.id || metadata.offset !== rowSet.offset + prefix.length))
+      throw new Error(t("Chen.GoBrowseMetadataChanged"));
+    if (metadata.supported) {
+      metadata.offset = rowSet.offset;
+      metadata.row_refs = [...prefix, ...metadata.row_refs];
+      for (let offset = metadata.row_refs.length; offset < rowSet.rows.length;) {
+        const next = await props.api.editMetadata(
+          props.query.console.id,
+          rowSet.id,
+          rowSet.offset + offset,
+          Math.min(1000, rowSet.rows.length - offset),
+          current.signal
+        );
+        if (current.signal.aborted || props.query.rows !== rowSet) return;
+        if (
+          !next.supported ||
+          next.version !== metadata.version ||
+          next.offset !== rowSet.offset + offset ||
+          !next.row_refs.length
+        )
+          throw new Error(t("Chen.GoBrowseMetadataChanged"));
+        metadata.row_refs.push(...next.row_refs);
+        offset += next.row_refs.length;
+      }
+    }
     if (!current.signal.aborted && props.query.rows === rowSet) draft.value.metadata = metadata;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) {
+      draft.value.metadata = null;
+      error.value = chenErrorText(cause, t);
+    }
   } finally {
     if (!current.signal.aborted) metadataBusy.value = false;
   }
 }
 watch(
-  () => [props.query.rows?.id, props.query.rows?.offset, props.query.console?.id],
+  () => [props.query.rows?.id, props.query.rows?.offset, props.query.rows?.rows.length, props.query.console?.id],
   () => void loadMetadata(),
   { immediate: true }
 );
-onBeforeUnmount(() => controller?.abort());
+let copyController: AbortController | undefined;
+onBeforeUnmount(() => {
+  controller?.abort();
+  copyController?.abort();
+});
+const sqlCopyDisabled = computed(() => metadataBusy.value || locked.value || dirty.value || props.visible === false);
+watch(
+  () => [sqlCopyDisabled.value, props.query.rows, props.query.console?.id],
+  () => copyController?.abort(),
+  { flush: "sync" }
+);
+async function copySQL(operation: "insert" | "update", selection: GoCopySelection) {
+  const source = props.query.rows;
+  const consoleId = props.query.console?.id;
+  if (!source || !consoleId || !props.session.permissions.can_copy || sqlCopyDisabled.value)
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  copyController?.abort();
+  const current = new AbortController();
+  copyController = current;
+  const result = await props.api.copySQL(consoleId, source.id, operation, selection, current.signal);
+  if (
+    current.signal.aborted ||
+    props.query.rows !== source ||
+    props.query.console?.id !== consoleId ||
+    !props.session.permissions.can_copy ||
+    sqlCopyDisabled.value
+  )
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  return result;
+}
+
 function addRow() {
   if (!canInsert.value || count.value >= GO_EDIT_LIMIT) return;
   draft.value.inserts.push({ id: newChenRequestId(), values: {} });
@@ -207,6 +285,7 @@ function importRows(values: Record<string, string | null>[]) {
   draft.value.plan = null;
 }
 async function preview() {
+  grid.value?.stopEditing();
   if (!canChange.value || !dirty.value || !props.query.console || !props.query.rows) return;
   if (editPayloadBytes(editChanges(draft.value), draft.value.source) > GO_EDIT_MAX_BYTES) {
     error.value = t("Chen.GoWritePayloadLimit");
@@ -223,7 +302,7 @@ async function preview() {
     );
     previewOpen.value = true;
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause);
+    error.value = chenErrorText(cause, t);
   } finally {
     draft.value.busy = false;
   }
@@ -339,7 +418,9 @@ function discard() {
       </template>
       <span v-else class="text-xs text-muted">
         {{ metadataBusy ? t("Chen.LoadingTableMetadata") : t("Chen.GoWriteReadonly") }}
-        <template v-if="draft.metadata?.reason">· {{ draft.metadata.reason }}</template>
+        <template v-if="draft.metadata?.reason">
+          · {{ chenErrorText(draft.metadata.reason, t, "edit_unavailable") }}
+        </template>
       </span>
       <UButton
         class="ml-auto"
@@ -366,8 +447,23 @@ function discard() {
     </p>
     <p v-if="draft.refreshRequired" class="px-3 pb-2 text-xs text-warning">{{ t("Chen.GoWriteRefreshRequired") }}</p>
     <GoResultGrid
+      ref="grid"
       :rows="rows"
+      :loading-settings="query.loadingSettings"
+      :loading-settings-disabled="locked || dirty || metadataBusy"
+      :max-batch-size="query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000"
+      :can-load-more="
+        session.state === 'ready' &&
+        !resultLoadingLocked(query) &&
+        !metadataBusy &&
+        !query.loadMoreFailed &&
+        hasMoreResultRows(query)
+      "
+      :active="visible !== false"
+      :nullable-columns="draft.metadata?.columns.filter((column) => column.nullable).map((column) => column.index)"
       :can-copy="session.permissions.can_copy"
+      :copy-sql="copySQL"
+      :sql-copy-disabled="sqlCopyDisabled"
       :editable-columns="
         canChange && draft.source !== 'csv'
           ? draft.metadata?.columns.filter((column) => column.editable).map((column) => column.index)
@@ -381,8 +477,11 @@ function discard() {
       :default-cells="defaultCells"
       :deleted-rows="deletedRows"
       class="min-h-0 flex-1"
+      @loading-settings="emit('loadingSettings', $event)"
+      @load-more="emit('loadMore', true)"
       @selection="selected = $event"
       @edit="editCell"
+      @change="stageCell"
     />
     <DataViewImportDialog
       v-if="csvOpen"
