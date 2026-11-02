@@ -11,11 +11,10 @@ import type {
   PermissionOrgs,
   PermOrgItem,
   RdpGraphics,
-  RoleType,
   UserData,
   UserIntiInfo
 } from "~/types";
-import { getUserPermissions } from "~/composables/useApiRequest";
+import { ApiRequestError, getUserPermissions, getWebSessionProfile } from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
@@ -54,17 +53,6 @@ interface PersistedUserSnapshot {
   currentRdpClientOption?: RdpGraphics;
   currentConnectionInfoMap?: Record<string, ConnectionInfo>;
   currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
-}
-
-interface WebProfile {
-  id?: string;
-  name?: string;
-  username?: string;
-  display_name?: string;
-  org_id?: string;
-  org_name?: string;
-  org?: { id?: string; name?: string };
-  system_roles?: RoleType[];
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -111,6 +99,7 @@ export const useAuthSession = () => {
   const expiredSessionNotice = useState<string | null>("client-expired-session-notice", () => null);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
   const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
+  const authReady = useState("auth-bootstrap-ready", () => false);
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -295,7 +284,8 @@ export const useAuthSession = () => {
       try {
         const response = await fetch(withWebSitePrefix(path), {
           credentials: "include",
-          headers: getWebApiHeaders()
+          headers: getWebApiHeaders(),
+          signal: AbortSignal.timeout(5000)
         });
 
         if (response.status === 401 || response.status === 403) return null;
@@ -318,17 +308,25 @@ export const useAuthSession = () => {
       return false;
     }
 
+    const accountId = userInfoStore.currentAccountId;
+    const previousUserId = userInfoStore.currentUser?.userId;
+    const wasLoggedIn = userInfoStore.loggedIn;
+    const isCurrentSession = () =>
+      userInfoStore.currentAccountId === accountId &&
+      userInfoStore.currentUser?.userId === previousUserId &&
+      userInfoStore.loggedIn === wasLoggedIn;
     const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
-      fetchWebJson<WebProfile>([
-        connectionToken
-          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
-          : "/api/v1/users/profile/?fields_size=mini",
-        "/api/v1/users/profile/",
-        "/api/v1/profile/"
-      ]),
+      getWebSessionProfile(connectionToken || undefined).catch((error) => {
+        // Login in another tab may have replaced the Cookie while bootstrap was in flight.
+        if (!connectionToken && error instanceof ApiRequestError && error.status === 401) {
+          return getWebSessionProfile().catch(() => null);
+        }
+        return null;
+      }),
       fetchWebJson<PublicSettings>(["/api/v1/settings/public/"])
     ]);
+    if (!isCurrentSession()) return false;
 
     webWorkspaceBrand.value = resolveWorkspaceBrand(publicSettings);
     webWorkspaceFavicon.value = resolveWorkspaceFavicon(publicSettings);
@@ -338,6 +336,12 @@ export const useAuthSession = () => {
       if (!connectionToken) {
         redirectToWebLogin();
       }
+      return false;
+    }
+    if (wasLoggedIn && profileData.id !== previousUserId) {
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      pageLocation().reload();
       return false;
     }
 
@@ -363,6 +367,7 @@ export const useAuthSession = () => {
       ),
       withOrganizationBootstrapTimeout(fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"]), null)
     ]);
+    if (!isCurrentSession()) return false;
     const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
     const selectedOrg =
@@ -410,7 +415,7 @@ export const useAuthSession = () => {
       bootstrapRetryTimer = null;
     }
 
-    const restored = restorePersistedSnapshot();
+    const restored = (isDesktopRuntime() || !authReady.value) && restorePersistedSnapshot();
 
     const notifyBootstrapFailure = (failure: "network" | "server") => {
       if (lastBootstrapFailure === failure) return;
@@ -424,7 +429,7 @@ export const useAuthSession = () => {
     };
 
     if (!isDesktopRuntime()) {
-      return (await bootstrapWebCookieSession()) || restored;
+      return await bootstrapWebCookieSession();
     }
 
     const persistedAccount = getPersistedAccount();
@@ -499,8 +504,6 @@ export const useAuthSession = () => {
       return false;
     }
   };
-
-  const authReady = useState("auth-bootstrap-ready", () => false);
 
   function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
     if (!bootstrapPromise) {
