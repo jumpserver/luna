@@ -12,7 +12,7 @@ const { t } = useI18n();
 const expanded = ref(false);
 const applied = computed(() => props.query.rows?.browse);
 const draft = computed(() => props.query.browseDraft);
-const supported = computed(() => applied.value?.supported ?? ["postgresql", "mysql"].includes(props.session.dialect));
+const supported = computed(() => applied.value?.supported === true);
 const locked = computed(
   () =>
     props.session.state !== "ready" ||
@@ -101,8 +101,11 @@ const total = computed(() =>
 
 <template>
   <section data-chen-browse class="shrink-0 border-b border-default px-3 py-2 text-xs">
-    <p v-if="!supported" class="text-warning">{{ t("Chen.GoBrowseUnsupported") }}</p>
-    <template v-else>
+    <p v-if="applied?.supported === false" class="text-warning">
+      {{ t("Chen.GoBrowseUnsupported") }}
+      <span v-if="applied.reason && applied.reason !== 'legacy_cached_browse'">{{ applied.reason }}</span>
+    </p>
+    <template v-else-if="supported">
       <div class="flex flex-wrap items-center gap-2">
         <UButton
           icon="i-lucide-list-filter"
