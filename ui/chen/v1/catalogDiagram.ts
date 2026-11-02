@@ -27,6 +27,7 @@ export interface DiagramPage {
   section: DiagramOptions["section"];
   state: "complete" | "partial" | "unsupported";
   source: string;
+  reason?: string;
   visibility: "authorized_catalog";
   snapshot: false;
   sampled_at: string;
@@ -53,6 +54,7 @@ export function parseDiagram(value: unknown, options: DiagramOptions): DiagramPa
     !["complete", "partial", "unsupported"].includes(p.state) ||
     p.visibility !== "authorized_catalog" ||
     p.snapshot !== false ||
+    (p.reason !== undefined && (typeof p.reason !== "string" || p.reason.length > 512)) ||
     !Array.isArray(p.items) ||
     p.items.length > 100 ||
     typeof p.has_more !== "boolean" ||
@@ -78,7 +80,7 @@ export function parseDiagram(value: unknown, options: DiagramOptions): DiagramPa
         !["complete", "partial", "restricted"].includes(e.state) ||
         !Array.isArray(e.pairs) ||
         e.pairs.length > 64 ||
-        !e.pairs.length ||
+        (e.state === "complete" && !e.pairs.length) ||
         e.pairs.some(
           (pair, i) =>
             !Number.isInteger(pair.ordinal) ||

@@ -2153,6 +2153,7 @@
     "GoDiagramPartial": "一部",
     "GoDiagramUnknown": "不明",
     "GoDiagramRestricted": "列の権限が制限されています",
+    "GoDiagramContractChanged": "Catalog product, version or fields changed. Refresh the diagram.",
     "GoDiagramUnsupported": "未対応",
     "GoDiagramCurrent": "現在のテーブル",
     "GoDiagramNotLoaded": "参照情報のみ · 未読込",

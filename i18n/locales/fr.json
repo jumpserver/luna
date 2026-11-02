@@ -2336,6 +2336,7 @@
     "GoDiagramPartial": "Partiel",
     "GoDiagramUnknown": "Inconnu",
     "GoDiagramRestricted": "Accès aux colonnes restreint",
+    "GoDiagramContractChanged": "Catalog product, version or fields changed. Refresh the diagram.",
     "GoDiagramUnsupported": "Non pris en charge",
     "GoDiagramCurrent": "Table actuelle",
     "GoDiagramNotLoaded": "Référence uniquement · non chargé",

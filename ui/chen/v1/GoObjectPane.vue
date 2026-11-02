@@ -246,7 +246,11 @@ function preventCopy(event: ClipboardEvent) {
       />
     </div>
     <nav
-      v-if="diagramVisited && section === 'diagram' && ['postgresql', 'mysql'].includes(dialect)"
+      v-if="
+        diagramVisited &&
+        section === 'diagram' &&
+        ['postgresql', 'mysql', 'mariadb', 'oceanbase-mysql'].includes(dialect)
+      "
       class="flex shrink-0 flex-wrap gap-1 border-b border-default px-3 py-1"
     >
       <UButton

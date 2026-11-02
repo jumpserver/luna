@@ -2153,6 +2153,7 @@
     "GoDiagramPartial": "Một phần",
     "GoDiagramUnknown": "Không rõ",
     "GoDiagramRestricted": "Quyền xem cột bị hạn chế",
+    "GoDiagramContractChanged": "Catalog product, version or fields changed. Refresh the diagram.",
     "GoDiagramUnsupported": "Không hỗ trợ",
     "GoDiagramCurrent": "Bảng hiện tại",
     "GoDiagramNotLoaded": "Chỉ thông tin tham chiếu · chưa tải",

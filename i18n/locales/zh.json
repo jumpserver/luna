@@ -2330,6 +2330,7 @@
     "GoDiagramPartial": "部分",
     "GoDiagramUnknown": "未知",
     "GoDiagramRestricted": "列权限受限",
+    "GoDiagramContractChanged": "目录产品、版本或字段已变化，请刷新关系图。",
     "GoDiagramUnsupported": "不支持",
     "GoDiagramCurrent": "当前表",
     "GoDiagramNotLoaded": "仅引用信息 · 未加载",

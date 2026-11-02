@@ -2153,6 +2153,7 @@
     "GoDiagramPartial": "部分",
     "GoDiagramUnknown": "未知",
     "GoDiagramRestricted": "欄位權限受限",
+    "GoDiagramContractChanged": "Catalog product, version or fields changed. Refresh the diagram.",
     "GoDiagramUnsupported": "不支援",
     "GoDiagramCurrent": "目前資料表",
     "GoDiagramNotLoaded": "僅參照資訊 · 未載入",
