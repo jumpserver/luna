@@ -21,7 +21,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
-  overview: [context: QueryContext];
+  overview: [context: QueryContext, section?: "diagram"];
   query: [context: QueryContext, object?: GoCatalogObject];
   preview: [object: GoCatalogObject];
   insert: [text: string];
@@ -238,6 +238,22 @@ function menu(current: Node) {
   return [
     ...(["database", "schema"].includes(current.type)
       ? [
+          {
+            label: t("Chen.GoDiagramTitle"),
+            icon: "i-lucide-network",
+            disabled: !props.ready || !["postgresql", "mysql"].includes(props.dialect),
+            onSelect: () => {
+              if (props.ready)
+                emit(
+                  "overview",
+                  {
+                    database: props.database,
+                    schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
+                  },
+                  "diagram"
+                );
+            }
+          },
           {
             label: t("Chen.GoOverviewOpen"),
             icon: "i-lucide-list-tree",

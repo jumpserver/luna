@@ -97,6 +97,7 @@ export interface ObjectWorkspaceTab {
 export interface OverviewWorkspaceTab {
   id: string;
   kind: "overview";
+  section?: "diagram" | "tables" | "views" | "statistics" | "indexes" | "properties";
   title: string;
   context: QueryContext;
 }

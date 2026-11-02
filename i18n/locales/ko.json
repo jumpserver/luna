@@ -2138,6 +2138,14 @@
     "factStartupCost": "시작 비용"
   },
   "Chen": {
+    "GoDiagramIncoming": "References to this table",
+    "GoDiagramIncomingScope": "Search: visible non-system schemas in the authorized database (MySQL: current database only); no cross-database discovery",
+    "GoDiagramSchemaScope": "Graph scope: selected schema, or visible non-system schemas in the authorized database",
+    "GoDiagramLoaded": "Loaded {nodes} nodes and {edges} relationships",
+    "GoDiagramNonSnapshot": "Authorized catalog only; only known FK columns are shown, other columns and primary keys are not loaded. Pages are not one snapshot: refresh after metadata changes. Search locates loaded nodes only.",
+    "GoDiagramBudget": "Graph cache limit reached (500 nodes / 500 relationships / 8192 column pairs / 4 MiB). Choose a smaller schema or incoming scope from the tree.",
+    "GoDiagramOldBackend": "This backend does not support schema/incoming diagrams. Upgrade Chen.",
+    "GoDiagramLoadError": "Unable to load the graph catalog. Refresh to retry; retained data may be stale.",
     "GoDiagramTitle": "관계도",
     "GoDiagramScope": "현재 테이블에서 볼 수 있는 외향 외래 키만 표시합니다. 대상은 참조 정보만 포함하며 내향 관계와 전체 스키마 관계는 로드하지 않습니다.",
     "GoDiagramOutgoing": "현재 테이블의 외향 관계",
