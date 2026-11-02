@@ -604,6 +604,10 @@ export function createWebProxyManager({
       height: Math.max(1, Math.round(Number(args.height) || 1))
     });
     inputShield.setBounds(view.getBounds());
+    // Native asset views share the host's application shortcuts, including client locking.
+    for (const contents of [view.webContents, inputShield.webContents]) {
+      contents.on("before-input-event", (event, input) => win.webContents.emit("before-input-event", event, input));
+    }
     // Keep the shield transparent; progress and actions live in the Nuxt toolbar.
     void inputShield.webContents.loadURL("data:text/html,<html style='background:transparent'></html>").catch(() => {
       if (!view.webContents.isDestroyed()) finishWebProxyAutofill(managed, "error", "WebProxy.SecureLoginShieldFailed");

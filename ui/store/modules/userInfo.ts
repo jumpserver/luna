@@ -14,9 +14,9 @@ import type {
 import { defineStore } from "pinia";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { desktopInvoke } from "~/shared/desktop/bridge";
+import { normalizeClientLoginReason, serializeUserInfo } from "~/utils/clientLoginPolicy";
 import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
-import { normalizeClientLoginReason, serializeUserInfo } from "~/utils/clientLoginPolicy";
 
 export type SiteUserData = UserData & {
   sessionExpired?: boolean;
@@ -194,11 +194,8 @@ export const useUserInfoStore = defineStore(
     };
 
     const setClientLoginPolicy = (accountId: string, policy: ClientLoginPolicy) => {
-      const site = userMap.value[accountId]?.site;
-      for (const [key, user] of Object.entries(userMap.value)) {
-        if (key === accountId || (site && user.site === site)) user.clientLoginPolicy = policy;
-      }
-      if (currentUser.value && (accountId === currentAccountId.value || (site && currentUser.value.site === site))) {
+      if (userMap.value[accountId]) userMap.value[accountId].clientLoginPolicy = policy;
+      if (currentUser.value && accountId === currentAccountId.value) {
         currentUser.value.clientLoginPolicy = policy;
       }
     };

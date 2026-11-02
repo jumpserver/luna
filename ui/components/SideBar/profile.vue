@@ -24,6 +24,8 @@ const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
 const { t, locales, locale } = useI18n();
+const { lock: lockWebSession, state: webLockState } = useWebSessionLock();
+const shortcuts = useAppShortcuts();
 const { loggedIn, currentAccountId, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
 const { openSettings } = useSettingsWindow();
@@ -64,7 +66,7 @@ const expiredLoginReason = computed(() => {
     account.clientLoginSession,
     locale.value
   );
-  return t(message.key, message.params);
+  return message ? t(message.key, message.params) : "";
 });
 const errorMessage = ref("");
 const loginBtn = ref(false);
@@ -544,6 +546,16 @@ async function clearAuthInfo() {
   await userInfoStore.deleteUserData(currentAccountId.value);
   if (loggedIn.value) return;
   await navigateTo(localePath({ path: "/" }));
+}
+
+async function lockCurrentSession() {
+  profileOpen.value = false;
+  try {
+    if (isDesktopRuntime()) await desktopInvoke("client_lock");
+    else await lockWebSession();
+  } catch (error) {
+    addErrorToast({ title: t("ClientLock.LoadFailed"), error });
+  }
 }
 
 function openAddSite() {
@@ -1186,6 +1198,25 @@ onBeforeUnmount(() => {
           <USeparator :ui="menuSeparatorUi" />
         </div>
         <div v-if="loggedIn" class="p-1.5">
+          <UButton
+            v-if="isDesktopRuntime() || webLockState.session"
+            :label="t('ScreenLock.LockNow')"
+            icon="i-lucide-lock-keyhole"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            :ui="menuShortcutButtonUi"
+            @click="lockCurrentSession"
+          >
+            <template v-if="isDesktopRuntime() && shortcuts.kbds('lockClient').length" #trailing>
+              <span class="ms-auto flex items-center gap-px">
+                <UKbd v-for="(key, index) in shortcuts.kbds('lockClient')" :key="index" :value="key" size="sm" />
+              </span>
+            </template>
+          </UButton>
+          <USeparator v-if="isDesktopRuntime() || webLockState.session" class="my-1.5" :ui="menuSeparatorUi" />
           <UButton
             :label="t('Login.Logout')"
             icon="i-lucide-log-out"

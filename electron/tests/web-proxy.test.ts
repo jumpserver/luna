@@ -100,7 +100,7 @@ async function setupNavigation(
     finishWebProxyAutofill: finishAutofill,
     emitWebProxyState: state,
     event: { sender: { id: 1 } },
-    win: { contentView: { addChildView() {} } }
+    win: { webContents: createContents(), contentView: { addChildView() {} } }
   };
   const api = new Function(
     ...Object.keys(scope),

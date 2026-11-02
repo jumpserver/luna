@@ -26,6 +26,8 @@ interface ClientSessionBindingState extends ClientSessionBinding {
   serverClock?: { serverTime: number; observedAt: number };
   verifying?: Promise<unknown>;
   lockRequest?: Promise<void>;
+  expiryCheckAt?: number;
+  logoutAt?: number;
 }
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
@@ -34,7 +36,7 @@ const OAUTH_TOKEN = "/core/auth/oauth2-provider/token/";
 const OAUTH_REVOKE = "/core/auth/oauth2-provider/revoke/";
 const CLIENT_SESSION_REVOKE = "/api/v1/authentication/client-login-session/revoke/";
 const CLIENT_SESSION_STATUS = "/api/v1/authentication/client-login-session/status/";
-const CLIENT_SESSION_CHECK_INTERVAL = 30_000;
+const CLIENT_SESSION_CHECK_INTERVAL = 60_000;
 const CLIENT_SESSION_LOCK = "/api/v1/authentication/client-login-session/lock/";
 const CLIENT_SESSION_UNLOCK = "/api/v1/authentication/client-login-session/unlock/";
 const USER_PROFILE = "/api/v1/users/profile/";
@@ -128,11 +130,36 @@ function validateClientLoginPolicy(policy) {
     policy.max_session_time < 0
   )
     throw new Error("OAuth response contains an invalid client login policy");
-  return {
+  const result = {
     reauth_on_exit: policy.reauth_on_exit,
     idle_lock_time: policy.idle_lock_time,
     max_session_time: policy.max_session_time
   };
+  for (const field of ["idle_lock_time", "max_session_time"]) {
+    const limit = policy[`${field}_limit`];
+    const personal = policy[`${field}_user`];
+    if (limit === undefined) continue;
+    if (
+      !Number.isInteger(limit) ||
+      limit < 0 ||
+      (limit > 0 && (policy[field] === 0 || policy[field] > limit)) ||
+      (personal !== null && (!Number.isInteger(personal) || personal < 0))
+    )
+      throw new Error("OAuth response contains invalid personal security settings");
+    result[`${field}_limit`] = limit;
+    result[`${field}_user`] = personal;
+  }
+  if (policy.reauth_on_exit_required !== undefined) {
+    if (
+      typeof policy.reauth_on_exit_required !== "boolean" ||
+      (policy.reauth_on_exit_required && !policy.reauth_on_exit) ||
+      (policy.reauth_on_exit_user !== null && typeof policy.reauth_on_exit_user !== "boolean")
+    )
+      throw new Error("OAuth response contains invalid reauthentication settings");
+    result["reauth_on_exit_required"] = policy.reauth_on_exit_required;
+    result["reauth_on_exit_user"] = policy.reauth_on_exit_user;
+  }
+  return result;
 }
 
 function requestSite(session, request) {
@@ -210,6 +237,8 @@ export class DesktopAuthService {
     this.pendingCompatibility = null;
     this.sessionMonitor = null;
     this.sessionMonitoringEnabled = false;
+    // Spread clients over the interval while keeping normal synchronization within a minute.
+    this.sessionCheckInterval = CLIENT_SESSION_CHECK_INTERVAL - Math.random() * 5_000;
     this.checkingSessions = false;
     this.lockRevision = 0;
     this.policyNotices = [];
@@ -250,7 +279,7 @@ export class DesktopAuthService {
       this.tokens[session.sessionKey]?.access_token !== bearer
     )
       return;
-    session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
+    session.nextCheckAt = performance.now() + this.sessionCheckInterval;
     this.scheduleSessionCheck();
   }
 
@@ -264,7 +293,7 @@ export class DesktopAuthService {
       const stored = session && this.tokens[session.sessionKey];
       if (!stored || (!force && session.nextCheckAt > performance.now())) return;
       // Network failures also wait for the next interval, without a retry storm.
-      session.nextCheckAt = performance.now() + CLIENT_SESSION_CHECK_INTERVAL;
+      session.nextCheckAt = performance.now() + this.sessionCheckInterval;
       try {
         if (stored.client_lock_pending) await this.syncSessionLock(this.sessionBinding(session.sessionKey));
         const bearer = await this.freshToken(session.origin, session.sessionKey);
@@ -378,11 +407,8 @@ export class DesktopAuthService {
         `OAuth config endpoint returned ${response.status}: ${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
       );
     const config = parseJsonResponse(text);
-    // Missing metadata is the legacy server contract. Malformed policy data must not enable restoration.
-    const policy =
-      config.client_login_policy === undefined
-        ? { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
-        : validateClientLoginPolicy(config.client_login_policy);
+    // Supported servers must provide the current policy before saved credentials can be restored.
+    const policy = validateClientLoginPolicy(config.client_login_policy);
     config.client_login_policy = policy;
     await this.applyClientLoginPolicy(site, sessionId, policy);
     return config;
@@ -390,16 +416,15 @@ export class DesktopAuthService {
 
   async applyClientLoginPolicy(site, sessionId, policy) {
     let changed = false;
-    for (const [key, stored] of Object.entries(this.tokens) as [string, any][]) {
-      if (key !== sessionId && stored.origin !== site) continue;
-      changed ||=
+    const stored = this.tokens[sessionId];
+    if (stored) {
+      changed =
         stored.origin !== site ||
         JSON.stringify(stored.client_login_policy) !== JSON.stringify(policy) ||
-        this.restoredSessionIds.has(key);
+        this.restoredSessionIds.has(sessionId);
       stored.origin = site;
       stored.client_login_policy = policy;
-      if (policy.reauth_on_exit && this.restoredSessionIds.has(key)) delete this.tokens[key];
-      this.restoredSessionIds.delete(key);
+      if (policy.reauth_on_exit && this.restoredSessionIds.has(sessionId)) delete this.tokens[sessionId];
     }
     if (changed) {
       await this.persistTokens();
@@ -433,7 +458,7 @@ export class DesktopAuthService {
         origin,
         bearerToken,
         orgId,
-        nextCheckAt: performance.now() + CLIENT_SESSION_CHECK_INTERVAL
+        nextCheckAt: performance.now() + this.sessionCheckInterval
       });
     } else {
       // Ordinary renderer/org synchronization must preserve shared request limits.
@@ -834,6 +859,7 @@ export class DesktopAuthService {
   }
 
   recordClientLoginSession(sessionId, bearer, payload) {
+    if (this.sessionBindings?.get(this.tokens[sessionId])?.logoutAt) return;
     const token = this.tokens[sessionId];
     if (!token || token.access_token !== bearer || !payload) return;
     if (typeof payload === "object" && !payload.client_login_session) return;
@@ -852,13 +878,17 @@ export class DesktopAuthService {
       }
     }
     const binding = this.sessionBinding(sessionId);
-    if (binding) binding.serverClock = { serverTime: Date.parse(info.server_time), observedAt: performance.now() };
+    if (binding) {
+      binding.serverClock = { serverTime: Date.parse(info.server_time), observedAt: performance.now() };
+      delete binding.expiryCheckAt;
+    }
     // Broadcast the same server snapshot to settings and main windows without another request.
     this.emitEvent("client-login-session", { sessionId, session: info });
   }
 
   async expireSession(sessionId, reason = "unknown", sessionInfo?: ClientLoginSession) {
     const token = this.tokens[sessionId];
+    if ((this.sessionBindings?.get(token)?.logoutAt || 0) > Date.now()) return;
     const existed = Boolean(this.tokens[sessionId] || this.sessions?.has(sessionId));
     this.lockState(this.sessionBindings?.get(token));
     delete this.tokens[sessionId];
@@ -924,7 +954,7 @@ export class DesktopAuthService {
         return {
           status: "auth-required",
           client_login_policy: config.client_login_policy,
-          client_login_reason: "policy_changed"
+          client_login_reason: "app_exit"
         };
       }
       const bearer = await this.freshToken(site, sessionId);
@@ -935,9 +965,25 @@ export class DesktopAuthService {
         client_login_session: this.tokens[sessionId]?.client_login_session
       };
       const status = payload.client_session_status;
-      if (status?.success) this.recordClientLoginSession(sessionId, bearer, status.data);
+      if (status?.success) {
+        await this.applyClientLoginPolicy(
+          site,
+          sessionId,
+          validateClientLoginPolicy(parseJsonResponse(status.data).client_login_policy)
+        );
+        this.recordClientLoginSession(sessionId, bearer, status.data);
+      }
+      payload.client_login_policy = this.tokens[sessionId]?.client_login_policy ?? config.client_login_policy;
       payload.client_login_session = this.tokens[sessionId]?.client_login_session;
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      if (restored && payload.client_login_policy?.reauth_on_exit) {
+        await this.logout({ site, sessionId, reason: "app_exit" });
+        return {
+          status: "auth-required",
+          client_login_policy: payload.client_login_policy,
+          client_login_reason: "app_exit"
+        };
+      }
       if (payload.profile?.status === 401 || payload.profile?.status === 403) {
         const reason = parseClientLoginReason(payload.profile.data);
         const sessionInfo = parseClientLoginSession(payload.profile.data);
@@ -1026,7 +1072,7 @@ export class DesktopAuthService {
     const token = this.boundToken(binding);
     const state = binding as ClientSessionBindingState | null | undefined;
     if (token && state) state.locked = token.client_locked === true;
-    const locked = token ? token.client_locked === true : state?.locked === true;
+    const locked = Boolean(state?.logoutAt) || (token ? token.client_locked === true : state?.locked === true);
     return {
       locked,
       expired: locked && !token,
@@ -1034,6 +1080,7 @@ export class DesktopAuthService {
       sessionId: token || locked ? binding.sessionKey : "",
       origin: token || locked ? binding.origin : "",
       username: token?.username || "",
+      logoutAt: state?.logoutAt || 0,
       idleLockTime: token?.client_login_policy?.idle_lock_time || 0
     };
   }
@@ -1106,9 +1153,12 @@ export class DesktopAuthService {
       if (Number.isFinite(expires)) {
         const reason = info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout";
         if (expires <= now && binding.serverClock) {
-          // A server-confirmed fixed deadline cannot be extended by refresh or activity.
-          void this.expireSession(session.sessionKey, reason, { ...info, server_time: new Date(now).toISOString() });
-          return;
+          // The administrator may have extended this login since the last sync.
+          // Confirm expiry on the server; offline failures retry at the normal rate.
+          if (!this.checkingSessions && performance.now() >= (binding.expiryCheckAt || 0)) {
+            binding.expiryCheckAt = performance.now() + this.sessionCheckInterval;
+            void this.checkSessions(true);
+          }
         }
         if (expires > now && expires - now <= 10 * 60_000) {
           notices.push({ id: `${session.sessionKey}:${reason}:${deadline}`, kind: reason, at: deadline });
@@ -1162,7 +1212,11 @@ export class DesktopAuthService {
     if (url.origin !== new URL(session.origin).origin || url.pathname !== "/ui/") {
       throw new Error("Invalid client credential settings URL");
     }
-    return { hasPassword: result.has_password, settingsUrl: url.toString() };
+    return {
+      hasPassword: result.has_password,
+      settingsUrl: url.toString(),
+      attemptsRemaining: result.attempts_remaining
+    };
   }
 
   async unlockSession(binding: ClientSessionBinding | null | undefined, { password }) {
@@ -1171,18 +1225,49 @@ export class DesktopAuthService {
       throw new Error("Client lock password is required");
     }
     const state = binding as ClientSessionBindingState;
+    if (state.logoutAt) return this.lockState(binding);
     if (state.verifying) return state.verifying;
     const revision = this.lockRevision;
     const verification = (async () => {
       const session = this.requireLockedSession(binding);
       await this.syncSessionLock(binding);
       this.requireLockedSession(binding);
-      const result = await this.sendApiRequest(session, {
-        method: "POST",
-        path: CLIENT_SESSION_UNLOCK,
-        body: { password },
-        timeoutMs: 15_000
-      });
+      let result;
+      try {
+        result = await this.sendApiRequest(session, {
+          method: "POST",
+          path: CLIENT_SESSION_UNLOCK,
+          body: { password },
+          timeoutMs: 15_000
+        });
+      } catch (cause) {
+        const error = cause as Error & { data?: { code?: string; attempts_remaining?: number } };
+        if (error.data?.code === "client_lock_password_unset") {
+          this.lockRevision += 1;
+          this.emitEvent("client-lock-changed");
+          return this.lockState(binding);
+        }
+        if (error.data?.code === "lock_password_attempts_exceeded") {
+          state.logoutAt = Date.now() + 5000;
+          this.emitEvent("client-lock-changed");
+          setTimeout(() => {
+            delete state.logoutAt;
+            if (this.boundToken(binding)) void this.expireSession(binding.sessionKey, "logout");
+          }, 5000);
+          return this.lockState(binding);
+        }
+        const remaining = error.data?.attempts_remaining;
+        if (
+          error.data?.code === "invalid_client_lock_password" &&
+          typeof remaining === "number" &&
+          Number.isInteger(remaining) &&
+          remaining >= 0 &&
+          remaining < 5
+        ) {
+          return { ...this.lockState(binding), attemptsRemaining: remaining };
+        }
+        throw cause;
+      }
       this.requireLockedSession(binding);
       if (revision !== this.lockRevision || result?.verified !== true) {
         throw new Error("Client lock changed during verification. Please try again.");
@@ -1205,6 +1290,11 @@ export class DesktopAuthService {
 
   async logoutLockedSession(binding: ClientSessionBinding | null | undefined) {
     const session = this.requireLockedSession(binding);
+    if ((binding as ClientSessionBindingState).logoutAt) {
+      delete (binding as ClientSessionBindingState).logoutAt;
+      await this.expireSession(session.sessionKey, "logout");
+      return;
+    }
     await this.logout({ site: session.origin, sessionId: session.sessionKey });
     this.emitEvent("auth-session-expired", { sessionId: session.sessionKey, reason: "logout" }, "main");
     this.emitEvent("client-lock-changed");
@@ -1253,13 +1343,34 @@ export class DesktopAuthService {
     if (!responseSucceeded(response.status)) {
       if (request.service !== "kael") await this.handleUnauthorized(session, bearer, response.status, text);
       electronLog.warn(`api ${request.method} ${url.pathname} status=${response.status}`);
-      throw new Error(
+      const error = new Error(
         `api ${request.method} ${url.pathname}: api request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-      );
+      ) as Error & { status: number; data?: unknown };
+      error.status = response.status;
+      try {
+        error.data = JSON.parse(text);
+      } catch {
+        /* Non-JSON failures retain the compact message. */
+      }
+      throw error;
     }
     if (!text.trim()) return null;
     if (request.responseType === "text") return text;
-    return parseJsonResponse(text);
+    const data = parseJsonResponse(text);
+    if (
+      request.service !== "kael" &&
+      request.path === "/api/v1/users/profile/idle-lock/" &&
+      this.tokens[session.sessionKey]?.access_token === bearer &&
+      data?.client_login_policy
+    ) {
+      await this.applyClientLoginPolicy(
+        session.origin,
+        session.sessionKey,
+        validateClientLoginPolicy(data.client_login_policy)
+      );
+      this.recordClientLoginSession(session.sessionKey, bearer, data);
+    }
+    return data;
   }
 
   async apiStreamRequest(

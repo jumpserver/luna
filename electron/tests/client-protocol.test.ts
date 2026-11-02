@@ -516,7 +516,7 @@ test("protocol events arriving while the desktop loads are forwarded after initi
 });
 
 function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter) {
-  const app = { getPath: () => "/unused", getVersion: () => "5.1.0", isPackaged };
+  const app = { getPath: () => "/unused", getVersion: () => "5.2.0", isPackaged };
   const { DesktopAuthService } = loadWithElectronMocks("../src/auth/service.ts", {
     electron: { app, net: {}, safeStorage: {} },
     ...(createServer ? { "node:http": { createServer } } : {})
@@ -534,11 +534,18 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
   service.checkCompatibility = async ({ site }: { site: string }) => ({
     status: "compatible",
     site,
-    clientVersion: "5.1.0",
-    minCoreVersion: "5.1.0",
+    clientVersion: "5.2.0",
+    minCoreVersion: "5.2.0",
     failures: []
   });
-  service.fetchSite = async () => ({ ok: true, text: async () => JSON.stringify({ client_id: "desktop" }) });
+  service.fetchSite = async () => ({
+    ok: true,
+    text: async () =>
+      JSON.stringify({
+        client_id: "desktop",
+        client_login_policy: { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
+      })
+  });
   service.persistTokens = async () => {};
   service.buildLoginPayload = async () => ({
     status: "success",

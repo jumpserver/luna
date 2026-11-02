@@ -25,7 +25,7 @@ const expiredLoginReason = computed(() => {
     account?.clientLoginSession,
     locale.value
   );
-  return t(message.key, message.params);
+  return message ? t(message.key, message.params) : "";
 });
 const shortcuts = useAppShortcuts();
 const shortcutRows = computed(() => [
@@ -90,11 +90,15 @@ const openLogin = () => {
             <div class="shrink-0 font-medium" :style="{ color: 'var(--app-fg)' }">
               {{ t("WorkspaceEmpty.LoginHint") }}
             </div>
-            <p v-if="currentUser?.sessionExpired" class="shrink-0 text-center text-warning" role="status">
+            <p
+              v-if="currentUser?.sessionExpired && expiredLoginReason"
+              class="shrink-0 text-center text-warning"
+              role="status"
+            >
               {{ expiredLoginReason }}
             </p>
             <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
-              {{ t(currentUser?.sessionExpired ? "Login.SignInAgain" : "Common.Login") }}
+              {{ t(currentUser?.sessionExpired && expiredLoginReason ? "Login.SignInAgain" : "Common.Login") }}
             </UButton>
             <div
               v-if="Object.keys(userMap).length"

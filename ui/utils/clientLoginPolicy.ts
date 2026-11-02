@@ -57,7 +57,9 @@ export function clientLoginExpiryMessage(
   _policy?: ClientLoginPolicy,
   session?: ClientLoginSession,
   locale = "en"
-): { key: string; params: Record<string, string> } {
+): { key: string; params: Record<string, string> } | undefined {
+  // Reopening after a policy-controlled exit is a normal login, not an expiry warning.
+  if (normalizeClientLoginReason(reason) === "app_exit") return;
   const fallback = { key: clientLoginReasonMessageKey(reason), params: {} };
   if (!session) return fallback;
   const now = Date.parse(session.server_time);

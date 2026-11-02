@@ -75,6 +75,7 @@ import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
 import { ClipboardHistoryService } from "./clipboard-history";
+import { ClientPolicyNoticeLayers } from "./client-policy-notices";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -132,6 +133,12 @@ const localShellSessions = new Map();
 const clipboardHistory = new ClipboardHistoryService(() => clipboard.readText());
 const apiStreams = new Map();
 const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
+const clientNoticeLayers = new ClientPolicyNoticeLayers({
+  url: () => rendererTarget("/luna/auth/client-notices"),
+  preload: path.join(electronDir, "preload.js"),
+  serveApp: serveAppRequest,
+  dismiss: (host, id) => emitDesktopEvent("client-policy-notice-dismiss", id, labelForWindow(host))
+});
 const allowedChenOrigins = new Set<string>();
 const allowedKokoOrigins = new Set();
 const configuredConnectorSessions = new WeakSet();
@@ -393,6 +400,7 @@ function notifyClientLoginExpired(payload: {
     zh_hant: zhHantMessages.Login
   }[language];
   const message = clientLoginExpiryMessage(payload?.reason, payload?.policy, payload?.session, language);
+  if (!message) return;
   const key = message.key.slice("Login.".length) as keyof typeof messages;
   const body = messages[key].replace(/\{(\w+)\}/g, (placeholder, name) => message.params[name] ?? placeholder);
   const notification = new Notification({ title: messages.SessionExpired, body });
@@ -667,7 +675,9 @@ function createWindow(
     if (
       input.type === "keyDown" &&
       !shortcutRecorders.has(windowWebContents) &&
-      matchesShortcut(key, "Mod+KeyL", shortcutEnvironment.mac)
+      shortcutBindings("lockClient", shortcutOverrides, shortcutEnvironment).some((binding) =>
+        matchesShortcut(key, binding, shortcutEnvironment.mac)
+      )
     ) {
       event.preventDefault();
       authService.lockSessions(true);
@@ -951,7 +961,7 @@ function buildMenu() {
     { type: "separator" },
     {
       label: prefersZh() ? "锁定客户端" : "Lock Client",
-      accelerator: "CmdOrCtrl+L",
+      accelerator: shortcutAccelerator("lockClient", shortcutOverrides, shortcutEnvironment),
       click: () => authService.lockSessions(true)
     },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
@@ -1197,13 +1207,43 @@ async function handleInvoke(event, request) {
   if (command === "client_lock_state") return syncWindowLock(win);
   if (command === "client_policy_notices")
     return binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+  if (command === "client_policy_notice_overlay") {
+    const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+    const nativeWebsite = [...webProxyManager.views.values()].some(
+      (view) => view.hostWebContentsId === win.webContents.id && view.active
+    );
+    if (!nativeWebsite || !Array.isArray(args.ids) || !args.ids.length) {
+      clientNoticeLayers.hide(win);
+      return false;
+    }
+    return clientNoticeLayers.update(
+      win,
+      {
+        notices: notices.filter((notice) => args.ids.includes(notice.id)),
+        locale: normalizeLanguageCode(args.locale),
+        appearance: args.appearance
+      },
+      args.width,
+      args.height,
+      args.bottom
+    );
+  }
   if (command === "client_lock_show_main") return void showMainWindow();
-  if (["client_lock_info", "client_unlock", "client_lock_logout", "client_lock_settings"].includes(command)) {
+  if (
+    [
+      "client_lock_info",
+      "client_unlock",
+      "client_lock_logout",
+      "client_lock_settings",
+      "client_lock_copy_settings"
+    ].includes(command)
+  ) {
     if (labelForWindow(win) !== "main") throw new Error("Unlock on the main page");
     if (command === "client_lock_info") return authService.lockInfo(binding);
     if (command === "client_unlock") return authService.unlockSession(binding, args);
-    if (command === "client_lock_settings") {
+    if (command === "client_lock_settings" || command === "client_lock_copy_settings") {
       const info = await authService.lockInfo(binding);
+      if (command === "client_lock_copy_settings") return clipboard.writeText(info.settingsUrl);
       return shell.openExternal(info.settingsUrl);
     }
     const result = await authService.logoutLockedSession(binding);
@@ -1223,6 +1263,12 @@ async function handleInvoke(event, request) {
     throw new Error("client_locked");
   }
 
+  if (command === "client_lock") {
+    if (!binding || binding !== authService.captureSessionBinding())
+      throw new Error("Client login is no longer active");
+    return authService.lockSessions(true);
+  }
+
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
     const id = nextSubscriptionId++;
@@ -1236,7 +1282,15 @@ async function handleInvoke(event, request) {
   }
   if (command === "plugin:event|unlisten") return subscriptions.delete(args.eventId);
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
-    if (["client-lock-state", "client-lock-changed", "client-policy-notices"].includes(args.event))
+    if (
+      [
+        "client-lock-state",
+        "client-lock-changed",
+        "client-policy-notices",
+        "client-policy-notice-dismiss",
+        "client-policy-notice-layer"
+      ].includes(args.event)
+    )
       throw new Error("Client lock events are owned by the main process");
     emitDesktopEvent(args.event, args.payload);
     return null;
@@ -1513,7 +1567,14 @@ async function handleInvoke(event, request) {
       const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
-    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
+    return withIpcErrorLog(command, async () => {
+      const result = await webProxyManager.invoke(command, event, win, args);
+      if (["create_web_proxy_view", "set_web_proxy_view_active", "close_web_proxy_view"].includes(command)) {
+        clientNoticeLayers.raise(win);
+        emitDesktopEvent("client-policy-notice-layer", null, labelForWindow(win));
+      }
+      return result;
+    });
   }
   if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
   if (command === "open_settings_window") {
@@ -1578,26 +1639,28 @@ async function handleInvoke(event, request) {
   throw new Error(`Electron bridge has not migrated command: ${command}`);
 }
 
-async function registerProtocols() {
-  protocol.handle("jms-app", async (request) => {
-    const url = parseUrl(request.url);
-    const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
-    const root = path.join(projectRoot, "dist");
-    let candidate = path.resolve(root, relative || "index.html");
-    if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== root)
-      return new Response("Forbidden", { status: 403 });
-    try {
-      const info = await stat(candidate);
-      if (info.isDirectory()) candidate = path.join(candidate, "index.html");
-    } catch {
-      if (/^(?:api|chen|core|koko|lion|media|static|ws)(?:\/|$)/.test(relative)) {
-        return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
-      }
-      candidate = path.join(root, "index.html");
+async function serveAppRequest(request) {
+  const url = parseUrl(request.url);
+  const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+  if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
+  const root = path.join(projectRoot, "dist");
+  let candidate = path.resolve(root, relative || "index.html");
+  if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== root)
+    return new Response("Forbidden", { status: 403 });
+  try {
+    const info = await stat(candidate);
+    if (info.isDirectory()) candidate = path.join(candidate, "index.html");
+  } catch {
+    if (/^(?:api|chen|core|koko|lion|media|static|ws)(?:\/|$)/.test(relative)) {
+      return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
     }
-    return net.fetch(pathToFileURL(candidate).toString());
-  });
+    candidate = path.join(root, "index.html");
+  }
+  return net.fetch(pathToFileURL(candidate).toString());
+}
+
+async function registerProtocols() {
+  protocol.handle("jms-app", serveAppRequest);
   protocol.handle("jms-asset", async (request) => {
     if (request.method === "OPTIONS") {
       return new Response(null, {

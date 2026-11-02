@@ -2,7 +2,7 @@ export default defineAppConfig({
   app: {
     name: "JumpServer",
     author: "JumpServer",
-    version: "v5.1.0",
+    version: "5.2.0",
     repo: "https://github.com/jumpserver/clients"
   },
   componentsConfig: {
@@ -48,16 +48,26 @@ export default defineAppConfig({
         base: "!rounded-[length:var(--app-radius)]"
       }
     },
+    switch: {
+      slots: {
+        base: "cursor-pointer disabled:cursor-not-allowed"
+      }
+    },
     kbd: {
       base: "!rounded-[length:min(var(--app-radius),3px)]"
     },
     toast: {
       slots: {
-        root: "rounded-[length:var(--app-radius)]",
+        root: "app-notification-card rounded-[length:var(--app-radius)] ring-0",
         wrapper: "w-0 min-w-0 flex-1 flex flex-col",
-        description: "text-sm text-muted whitespace-pre-wrap break-all",
+        description: "text-sm text-muted whitespace-pre-wrap break-words",
+        icon: "mt-0.5 size-5 shrink-0",
+        close: "size-6 shrink-0 justify-center cursor-pointer p-0 text-muted hover:text-highlighted",
         actions: "flex gap-1.5 shrink-0 flex-wrap"
       }
+    },
+    toaster: {
+      slots: { viewport: "app-notification-viewport" }
     },
     formField: {
       slots: {

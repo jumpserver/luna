@@ -209,8 +209,8 @@ export const useAuthSession = () => {
     if (options.showToast !== false) {
       toast.add({
         title: t("Login.LoginSuccess"),
-        color: "primary",
-        icon: "line-md:check-all",
+        color: "success",
+        icon: "i-lucide-circle-check",
         progress: true
       });
     }
@@ -527,7 +527,7 @@ export const useAuthSession = () => {
     if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
     if (sessionId !== currentAccountId.value) return false;
 
-    if (!alreadyExpired && reason !== "logout") expiredSessionNotice.value = sessionId;
+    if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
     userInfoStore.setUserLoggedIn(false);
     useEventBus().emit("clearAssets", undefined);
     return true;
@@ -542,7 +542,7 @@ export const useAuthSession = () => {
       account.clientLoginSession,
       String(unref(nuxtApp.$i18n.locale) || "en")
     );
-    return t(message.key, message.params);
+    return message ? t(message.key, message.params) : "";
   });
   const dismissExpiredSessionNotice = async (login = false) => {
     const accountId = expiredSessionNotice.value;

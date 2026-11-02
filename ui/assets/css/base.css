@@ -27,6 +27,17 @@ body.runtime-windows-mica {
   --app-sidebar-bg: color-mix(in srgb, var(--app-surface-sidebar) 84%, transparent);
 }
 
+.app-notification-card {
+  background: var(--app-surface-notification);
+  border: 1px solid var(--app-border-notification);
+  border-radius: var(--app-radius);
+  box-shadow: var(--theme-shadow-soft);
+}
+
+.app-notification-viewport {
+  bottom: var(--app-notification-offset);
+}
+
 body.runtime-windows-mica .workspace-shell {
   background-color: transparent !important;
 }

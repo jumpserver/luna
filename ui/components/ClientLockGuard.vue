@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import type { ClientPolicyNotice } from "~/components/ClientPolicyNotices.vue";
+import type { ClientPolicyNotice } from "~/types";
+import { deferAuthFailureUntil } from "~/composables/useApiRequest";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isElectronRuntime } from "~/utils/runtime";
 
 interface LockState {
   locked: boolean;
+  logoutAt?: number;
   sessionId: string;
   origin: string;
   username: string;
@@ -17,11 +20,15 @@ const { t } = useI18n();
 const desktop = isElectronRuntime();
 const ready = useState("auth-bootstrap-ready", () => false);
 const state = shallowRef<LockState | null>(null);
+const userInfo = useUserInfoStore();
+const userName = computed(() => userInfo.userMap[state.value?.sessionId || ""]?.name || state.value?.username || "");
 const shield = useTemplateRef<HTMLDialogElement>("shield");
 const password = ref("");
 const hasPassword = ref<boolean | null>(null);
 const settingsUrl = ref("");
-const busy = ref(false);
+const linkCopied = ref(false);
+const pendingAction = ref<"unlock" | "logout" | null>(null);
+const busy = computed(() => pendingAction.value !== null);
 const confirmLogout = ref(false);
 const error = ref("");
 const blocked = computed(
@@ -41,9 +48,19 @@ async function loadInfo() {
   error.value = "";
   hasPassword.value = null;
   try {
-    const info = await desktopInvoke<{ hasPassword: boolean; settingsUrl: string }>("client_lock_info");
+    const info = await desktopInvoke<{ hasPassword: boolean; settingsUrl: string; attemptsRemaining?: number }>(
+      "client_lock_info"
+    );
     if (state.value?.sessionId !== snapshot.sessionId || state.value.revision !== snapshot.revision) return;
     hasPassword.value = info.hasPassword;
+    if (
+      info.hasPassword &&
+      typeof info.attemptsRemaining === "number" &&
+      info.attemptsRemaining > 0 &&
+      info.attemptsRemaining < 5
+    ) {
+      error.value = t("ScreenLock.AttemptsRemaining", { count: info.attemptsRemaining });
+    }
     settingsUrl.value = info.settingsUrl;
     if (info.hasPassword) {
       await nextTick();
@@ -56,6 +73,7 @@ async function loadInfo() {
 
 function applyState(next: LockState) {
   if (state.value && next.revision < state.value.revision) return;
+  if (next.logoutAt) deferAuthFailureUntil(next.logoutAt);
   const changed =
     state.value?.sessionId !== next.sessionId ||
     state.value?.locked !== next.locked ||
@@ -65,6 +83,7 @@ function applyState(next: LockState) {
     password.value = "";
     hasPassword.value = null;
     settingsUrl.value = "";
+    linkCopied.value = false;
     error.value = "";
     confirmLogout.value = false;
     if (next.locked && next.canUnlock) void loadInfo();
@@ -83,16 +102,22 @@ async function refreshState() {
 
 async function unlock() {
   if (busy.value || !password.value) return;
-  busy.value = true;
+  pendingAction.value = "unlock";
   error.value = "";
   try {
-    await desktopInvoke("client_unlock", { password: password.value });
+    const result = await desktopInvoke<LockState & { attemptsRemaining?: number }>("client_unlock", {
+      password: password.value
+    });
+    if (Number.isInteger(result?.attemptsRemaining))
+      error.value = t("ScreenLock.AttemptsRemaining", { count: result.attemptsRemaining! });
     await refreshState();
   } catch (cause) {
     error.value = t(String(cause).includes("429") ? "ClientLock.TooManyAttempts" : "ClientLock.UnlockFailed");
   } finally {
     password.value = "";
-    busy.value = false;
+    pendingAction.value = null;
+    await nextTick();
+    if (shield.value?.open) shield.value.querySelector<HTMLInputElement>("input")?.focus();
   }
 }
 
@@ -104,15 +129,25 @@ async function openSettings() {
   }
 }
 
+async function copySettingsUrl() {
+  if (!settingsUrl.value || busy.value) return;
+  try {
+    await desktopInvoke("client_lock_copy_settings");
+    linkCopied.value = true;
+  } catch {
+    error.value = t("Common.CopyFailed");
+  }
+}
+
 async function logout() {
-  busy.value = true;
+  pendingAction.value = "logout";
   try {
     await desktopInvoke("client_lock_logout");
     await refreshState();
   } catch {
     error.value = t("ClientLock.LoadFailed");
   } finally {
-    busy.value = false;
+    pendingAction.value = null;
   }
 }
 
@@ -120,8 +155,13 @@ watch(
   [blocked, shield],
   async () => {
     await nextTick();
-    if (blocked.value && shield.value && !shield.value.open) shield.value.showModal();
-    else if (!blocked.value && shield.value?.open) shield.value.close();
+    if (blocked.value && shield.value && !shield.value.open) {
+      shield.value.showModal();
+      (
+        shield.value.querySelector<HTMLInputElement>("input") ||
+        shield.value.querySelector<HTMLElement>(".screen-lock-heading")
+      )?.focus({ preventScroll: true });
+    } else if (!blocked.value && shield.value?.open) shield.value.close();
   },
   { flush: "post" }
 );
@@ -135,8 +175,8 @@ onMounted(async () => {
   unlistenNotices = await desktopListen<ClientPolicyNotice[]>("client-policy-notices", ({ payload }) => {
     notices.value = payload;
   });
-  notices.value = await desktopInvoke<ClientPolicyNotice[]>("client_policy_notices");
   await refreshState();
+  notices.value = await desktopInvoke<ClientPolicyNotice[]>("client_policy_notices");
 });
 onBeforeUnmount(() => {
   unlisten?.();
@@ -153,82 +193,165 @@ onBeforeUnmount(() => {
     v-if="desktop"
     ref="shield"
     class="client-lock-shield"
-    aria-labelledby="client-lock-title"
-    aria-describedby="client-lock-description"
+    :aria-labelledby="state?.locked ? 'client-lock-title' : undefined"
+    :aria-label="state?.locked ? undefined : t('ScreenLock.Checking')"
+    :aria-describedby="
+      state?.locked && !state.logoutAt && (!state.canUnlock || hasPassword !== false)
+        ? 'client-lock-description'
+        : undefined
+    "
     @cancel.prevent
     @keydown.stop
     @keyup.stop
     @click.stop
     @pointerdown.stop
   >
-    <div class="flex min-h-full items-center justify-center p-8">
-      <UCard class="w-full max-w-md">
-        <div class="flex flex-col gap-5">
-          <UIcon name="i-lucide-lock-keyhole" class="size-9 text-primary" />
-          <div>
-            <h1 id="client-lock-title" class="text-lg font-semibold">{{ t("ClientLock.Title") }}</h1>
-            <p id="client-lock-description" class="mt-2 text-sm text-muted">
-              {{ t(state?.canUnlock ? "ClientLock.Description" : "ClientLock.MainOnly") }}
-            </p>
-          </div>
-          <div v-if="state?.sessionId" class="break-all text-sm">
-            <div class="font-medium">{{ state.username }}</div>
-            <div class="mt-1 text-muted">{{ state.origin }}</div>
-          </div>
-          <UAlert v-if="error" color="error" variant="soft" :description="error" />
-          <template v-if="state?.locked && state.canUnlock">
-            <UAlert v-if="hasPassword === false" color="warning" variant="soft" :description="t('ClientLock.Unset')" />
-            <form v-if="hasPassword === true" class="flex flex-col gap-4" @submit.prevent="unlock">
-              <UFormField :label="t('ClientLock.Password')" required>
-                <UInput
-                  v-model="password"
-                  type="password"
-                  autocomplete="current-password"
-                  :maxlength="128"
-                  class="w-full"
-                  autofocus
-                  :disabled="busy"
-                />
-              </UFormField>
-              <UButton type="submit" block :loading="busy" :disabled="!password">{{ t("ClientLock.Unlock") }}</UButton>
-            </form>
-            <UButton
-              v-if="hasPassword !== null"
-              color="neutral"
-              variant="outline"
-              :disabled="busy"
-              @click="openSettings"
-            >
-              {{ t(hasPassword ? "ClientLock.Reset" : "ClientLock.SetPassword") }}
-            </UButton>
-            <p v-if="hasPassword === false && settingsUrl" class="break-all text-xs text-muted">{{ settingsUrl }}</p>
-            <div class="flex justify-between gap-3">
-              <UButton color="neutral" variant="ghost" :disabled="busy" @click="loadInfo">
-                {{ t("ClientLock.Refresh") }}
-              </UButton>
-              <UButton color="neutral" variant="ghost" :disabled="busy" @click="confirmLogout = true">
-                {{ t("ClientLock.Logout") }}
-              </UButton>
-            </div>
-            <template v-if="confirmLogout">
-              <UAlert color="warning" variant="soft" :description="t('Login.LogoutSessionsDescription')" />
-              <div class="flex justify-end gap-3">
-                <UButton color="neutral" variant="ghost" :disabled="busy" @click="confirmLogout = false">
-                  {{ t("Common.Cancel") }}
-                </UButton>
-                <UButton color="warning" :loading="busy" @click="logout">{{ t("Common.Confirm") }}</UButton>
+    <div v-if="state?.locked" class="screen-lock-surface">
+      <div class="screen-lock-brand">
+        <BrandLogo class="screen-lock-brand-mark" />
+        <span>JumpServer</span>
+      </div>
+      <div class="screen-lock-security-indicator">{{ t("ScreenLock.SecureLabel") }}</div>
+      <div class="screen-lock-content">
+        <UCard :ui="{ root: 'screen-lock-form-card ring-0', body: 'p-7 sm:p-7' }">
+          <div class="screen-lock-stack">
+            <header class="screen-lock-header">
+              <div class="screen-lock-heading" tabindex="-1">
+                <UIcon name="i-lucide-lock-keyhole" class="screen-lock-status-icon" />
+                <h1 id="client-lock-title" class="text-lg font-semibold">
+                  {{ t(state?.logoutAt ? "ScreenLock.SignedOut" : "ScreenLock.Title") }}
+                </h1>
               </div>
+              <p
+                v-if="!state?.logoutAt && (!state?.canUnlock || hasPassword !== false)"
+                id="client-lock-description"
+                class="screen-lock-description"
+              >
+                {{ t(state?.canUnlock ? "ScreenLock.Description" : "ClientLock.MainOnly") }}
+              </p>
+            </header>
+            <dl v-if="state?.sessionId" class="screen-lock-user">
+              <dt class="screen-lock-label">{{ t("Common.User") }}</dt>
+              <dd class="screen-lock-user-value">{{ userName }}</dd>
+            </dl>
+            <p v-if="state?.logoutAt" class="screen-lock-description screen-lock-logout-reason" role="status">
+              {{ t("ScreenLock.TooManyFailures") }}
+            </p>
+            <ScreenLockCountdown
+              v-if="state?.logoutAt"
+              :at="state.logoutAt"
+              :can-return="state.canUnlock"
+              :loading="pendingAction === 'logout'"
+              @return-to-login="logout"
+            />
+            <UAlert
+              v-if="error && !state?.logoutAt && hasPassword !== true"
+              color="error"
+              variant="soft"
+              :description="error"
+            >
+              <template v-if="hasPassword === null && state?.canUnlock" #actions>
+                <UButton color="neutral" variant="outline" :disabled="busy" @click="loadInfo">
+                  {{ t("ClientLock.Refresh") }}
+                </UButton>
+              </template>
+            </UAlert>
+            <template v-if="state?.locked && state.canUnlock && !state.logoutAt">
+              <p v-if="hasPassword === false" class="screen-lock-unset-message" role="status">
+                {{ t("ClientLock.Unset") }}
+              </p>
+              <form v-if="hasPassword === true" class="screen-lock-form" @submit.prevent="unlock">
+                <UFormField :label="t('ClientLock.Password')" :error="error" :ui="{ label: 'screen-lock-label' }">
+                  <UInput
+                    v-model="password"
+                    type="password"
+                    size="md"
+                    :ui="{ base: 'screen-lock-input' }"
+                    autocomplete="current-password"
+                    :maxlength="128"
+                    class="w-full"
+                    autofocus
+                    :disabled="busy"
+                  />
+                </UFormField>
+                <UButton
+                  type="submit"
+                  block
+                  size="md"
+                  class="screen-lock-unlock-button"
+                  :loading="pendingAction === 'unlock'"
+                  :disabled="!password || busy"
+                >
+                  {{ t("ClientLock.Unlock") }}
+                </UButton>
+              </form>
+              <div v-if="hasPassword === false" class="flex flex-wrap items-center gap-3">
+                <UButton color="neutral" variant="outline" :disabled="busy" @click="openSettings">
+                  {{ t("ClientLock.SetPassword") }}
+                </UButton>
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-copy'"
+                  :disabled="busy || !settingsUrl"
+                  @click="copySettingsUrl"
+                >
+                  {{ t(linkCopied ? "Common.CopySuccess" : "RightPanel.CopyLink") }}
+                </UButton>
+                <UButton color="neutral" variant="ghost" :disabled="busy" @click="loadInfo">
+                  {{ t("ClientLock.Refresh") }}
+                </UButton>
+              </div>
+              <div class="screen-lock-actions">
+                <UButton
+                  :color="hasPassword === true ? 'neutral' : 'primary'"
+                  :variant="hasPassword === true ? 'link' : 'solid'"
+                  :block="hasPassword !== true"
+                  :class="
+                    hasPassword === true
+                      ? 'screen-lock-logout-button cursor-pointer text-muted hover:text-primary'
+                      : 'screen-lock-unlock-button'
+                  "
+                  :disabled="busy"
+                  @click="confirmLogout = true"
+                >
+                  {{ t("ClientLock.Logout") }}
+                </UButton>
+              </div>
+              <template v-if="confirmLogout">
+                <UAlert color="warning" variant="soft" :description="t('Login.LogoutSessionsDescription')" />
+                <div class="flex justify-end gap-3">
+                  <UButton color="neutral" variant="ghost" :disabled="busy" @click="confirmLogout = false">
+                    {{ t("Common.Cancel") }}
+                  </UButton>
+                  <UButton color="warning" :loading="pendingAction === 'logout'" @click="logout">
+                    {{ t("Common.Confirm") }}
+                  </UButton>
+                </div>
+              </template>
             </template>
-          </template>
-          <UButton v-else-if="state?.locked" block @click="desktopInvoke('client_lock_show_main')">
-            {{ t("ClientLock.GoToMain") }}
-          </UButton>
-          <UButton v-else-if="error" color="neutral" @click="refreshState">{{ t("ClientLock.Refresh") }}</UButton>
-          <UIcon v-else name="i-lucide-loader-circle" class="size-5 animate-spin text-muted" />
-        </div>
-      </UCard>
+            <UButton v-else-if="state?.locked && !state.logoutAt" block @click="desktopInvoke('client_lock_show_main')">
+              {{ t("ClientLock.GoToMain") }}
+            </UButton>
+            <UButton v-else-if="error" color="neutral" @click="refreshState">{{ t("ClientLock.Refresh") }}</UButton>
+            <UIcon v-else-if="!state?.logoutAt" name="i-lucide-loader-circle" class="size-5 animate-spin text-muted" />
+          </div>
+        </UCard>
+      </div>
     </div>
-    <ClientPolicyNotices v-if="blocked" :notices="visibleNotices" @dismiss="dismissed.add($event)" />
+    <div v-else class="grid min-h-screen place-items-center" role="status">
+      <div class="flex max-w-sm flex-col items-center gap-3 px-6 text-center text-sm text-muted">
+        <template v-if="error">
+          <p>{{ error }}</p>
+          <UButton color="neutral" variant="outline" @click="refreshState">{{ t("ClientLock.Refresh") }}</UButton>
+        </template>
+        <template v-else>
+          <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+          <p>{{ t("ScreenLock.Checking") }}</p>
+        </template>
+      </div>
+    </div>
+    <ClientPolicyNotices v-if="state?.locked" :notices="visibleNotices" @dismiss="dismissed.add($event)" />
   </dialog>
 </template>
 
@@ -250,3 +373,5 @@ onBeforeUnmount(() => {
   background: var(--app-surface-canvas);
 }
 </style>
+
+<style src="~/assets/css/screen-lock.css" />

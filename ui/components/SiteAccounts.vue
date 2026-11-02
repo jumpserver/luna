@@ -88,9 +88,15 @@ onMounted(async () => {
             <span
               v-if="account.sessionExpired || (accountId === currentAccountId && !loggedIn)"
               class="shrink-0"
-              :class="{ 'text-warning': account.sessionExpired }"
+              :class="{ 'text-warning': account.sessionExpired && account.sessionExpiredReason !== 'app_exit' }"
             >
-              {{ t(account.sessionExpired ? "Login.SessionExpired" : "Common.LoginFirst") }}
+              {{
+                t(
+                  account.sessionExpired && account.sessionExpiredReason !== "app_exit"
+                    ? "Login.SessionExpired"
+                    : "Common.LoginFirst"
+                )
+              }}
             </span>
             <span class="truncate">{{ account.name || account.site }}</span>
           </span>
