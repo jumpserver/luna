@@ -4,6 +4,7 @@ import type { GoOverview, OverviewSection, OverviewValue } from "./overview";
 import type { QueryContext } from "./workspace";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { writeClipboardText } from "~/utils/clipboard";
 import { ChenGoError } from "./api";
 import GoCatalogDiagram from "./GoCatalogDiagram.vue";
 import { overviewNumber, overviewPageTotal, overviewSections } from "./overview";
@@ -80,6 +81,7 @@ const labels: Record<string, string> = {
   character_classification: "CharacterClassification",
   comment: "Comment",
   schema_ddl: "SchemaDDL",
+  server_version: "ServerVersion",
   unique: "Unique",
   method: "Method",
   definition: "Definition",
@@ -101,9 +103,32 @@ function display(field: OverviewValue | undefined, key: string) {
   if (field.state !== "supported") text += ` · ${t(`Chen.GoOverview${field.state}`)}`;
   return text;
 }
-const summary = computed(() => Object.entries(data.value?.fields || {}).filter(([key]) => !key.endsWith("_unknown")));
+const summary = computed(() =>
+  Object.entries(data.value?.fields || {}).filter(([key]) => !key.endsWith("_unknown") && key !== "schema_ddl")
+);
+const ddl = computed(() => (data.value?.section === "properties" ? data.value.fields.schema_ddl : undefined));
+const copyFailed = ref(false);
+async function copyDDL() {
+  if (
+    !props.canCopy ||
+    !props.ready ||
+    !props.visible ||
+    stale.value ||
+    ddl.value?.state !== "supported" ||
+    !ddl.value.value
+  )
+    return;
+  const current = generation;
+  copyFailed.value = false;
+  try {
+    await writeClipboardText(ddl.value.value);
+  } catch {
+    if (current === generation) copyFailed.value = true;
+  }
+}
 function stop() {
   generation++;
+  copyFailed.value = false;
   controller?.abort();
   loading.value = false;
   if (data.value) stale.value = true;
@@ -147,9 +172,11 @@ async function load() {
       errorKey.value =
         cause instanceof ChenGoError && cause.status === 403
           ? "restricted"
-          : cause instanceof ChenGoError && cause.code === "catalog_timeout"
-            ? "Timeout"
-            : "query_error";
+          : cause instanceof ChenGoError && cause.code === "overview_contract_changed"
+            ? "ContractChanged"
+            : cause instanceof ChenGoError && cause.code === "catalog_timeout"
+              ? "Timeout"
+              : "query_error";
   } finally {
     if (generation === current) loading.value = false;
   }
@@ -198,6 +225,11 @@ onBeforeUnmount(stop);
     data-chen-overview
     :class="{ 'select-none': !canCopy }"
     @copy="
+      (event) => {
+        if (!canCopy) event.preventDefault();
+      }
+    "
+    @cut="
       (event) => {
         if (!canCopy) event.preventDefault();
       }
@@ -349,6 +381,35 @@ onBeforeUnmount(stop);
               <dd class="break-all text-right tabular-nums">{{ display(value, key) }}</dd>
             </div>
           </dl>
+          <section
+            v-if="section === 'properties' && ddl"
+            class="space-y-2 border-t border-default pt-3 text-xs"
+            data-overview-ddl
+          >
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-medium">{{ label("schema_ddl") }}</h3>
+              <UButton
+                :label="t('Common.Copy')"
+                icon="i-lucide-copy"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="!canCopy || !ready || stale || ddl.state !== 'supported' || !ddl.value"
+                @click="copyDDL"
+              />
+            </div>
+            <p class="text-muted">{{ t("Chen.GoOverviewDDLNote") }}</p>
+            <p v-if="ddl.state !== 'supported'" class="text-warning">
+              {{ display({ ...ddl, value: null }, "schema_ddl") }}
+            </p>
+            <p v-if="ddl.state === 'truncated'" class="text-warning">{{ t("Chen.GoOverviewDDLTruncated") }}</p>
+            <pre
+              v-if="ddl.value !== null"
+              class="max-h-96 overflow-auto rounded border border-default p-3 font-mono whitespace-pre-wrap break-all"
+              >{{ ddl.value }}</pre>
+            <p class="break-words text-muted">{{ ddl.source }}</p>
+            <p v-if="copyFailed" role="alert" class="text-error">{{ t("Common.CopyFailed") }}</p>
+          </section>
         </template>
       </div>
       <footer class="shrink-0 space-y-2 border-t border-default p-3 text-xs text-muted">
@@ -388,7 +449,11 @@ onBeforeUnmount(stop);
                 ? "Chen.GoOverviewPGSource"
                 : dialect === "mysql"
                   ? "Chen.GoOverviewMySource"
-                  : "Chen.GoOverviewOtherSource"
+                  : dialect === "mariadb"
+                    ? "Chen.GoOverviewMariaSource"
+                    : dialect === "oceanbase-mysql"
+                      ? "Chen.GoOverviewOBSource"
+                      : "Chen.GoOverviewOtherSource"
             )
           }}
         </p>
