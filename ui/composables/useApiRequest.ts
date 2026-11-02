@@ -13,6 +13,7 @@ import type {
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { compactApiErrorBody } from "~/utils/apiError";
+import { pageLocation } from "~/utils/runtime";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
@@ -147,6 +148,18 @@ export interface PublicSettings {
 }
 
 let lastAuthFailureAt = 0;
+let webAuthFailurePromise: Promise<void> | null = null;
+
+interface WebSessionProfile {
+  id: string;
+  name?: string;
+  username?: string;
+  display_name?: string;
+  org_id?: string;
+  org_name?: string;
+  org?: { id?: string; name?: string };
+  system_roles?: UserProfile["system_roles"];
+}
 
 const PERSONAL_CREDENTIAL_CACHE_TTL_MS = 15_000;
 const PERSONAL_CREDENTIAL_CACHE_MAX_ENTRIES = 128;
@@ -264,6 +277,39 @@ const handleApiAuthFailure = () => {
   }
 };
 
+const handleWebApiAuthFailure = () => {
+  if (import.meta.server) return;
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
+  if (webAuthFailurePromise) return webAuthFailurePromise;
+
+  const accountId = userInfoStore.currentAccountId;
+  const userId = userInfoStore.currentUser?.userId;
+  webAuthFailurePromise = (async () => {
+    const profile = await getWebSessionProfile().catch(() => null);
+    if (
+      !userInfoStore.loggedIn ||
+      userInfoStore.currentAccountId !== accountId ||
+      userInfoStore.currentUser?.userId !== userId
+    )
+      return;
+
+    // A late 401 can belong to the session replaced by login in another tab.
+    if (profile && profile.id === userId) return;
+    if (profile) {
+      // Reinitialize the workspace if the shared Cookie now belongs to another user.
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      pageLocation().reload();
+      return;
+    }
+    handleApiAuthFailure();
+  })().finally(() => {
+    webAuthFailurePromise = null;
+  });
+  return webAuthFailurePromise;
+};
+
 const buildWebQuery = (request: ApiRequest) => {
   const query = new URLSearchParams();
 
@@ -276,16 +322,20 @@ const buildWebQuery = (request: ApiRequest) => {
   return query.toString();
 };
 
-async function webApiRequest<T>(request: ApiRequest): Promise<T> {
+async function webApiRequest<T>(
+  request: ApiRequest,
+  options: Pick<RequestInit, "cache" | "headers" | "signal"> = {}
+): Promise<T> {
   const query = buildWebQuery(request);
   const url = [withWebSitePrefix(request.path), query].filter(Boolean).join("?");
   const hasBody = request.body !== undefined;
   const mutating = !["GET", "OPTIONS"].includes(request.method);
   const response = await fetch(url, {
+    ...options,
     method: request.method,
     credentials: "include",
-    ...(request.timeoutMs !== undefined ? { signal: AbortSignal.timeout(request.timeoutMs) } : {}),
-    headers: {
+    ...(request.timeoutMs !== undefined && !options.signal ? { signal: AbortSignal.timeout(request.timeoutMs) } : {}),
+    headers: options.headers ?? {
       Accept: "application/json",
       ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),
       ...request.headers,
@@ -314,6 +364,33 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   }
 
   return data as T;
+}
+
+export async function getWebSessionProfile(connectionToken?: string): Promise<WebSessionProfile> {
+  const signal = AbortSignal.timeout(5000);
+  const paths = [
+    connectionToken
+      ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
+      : "/api/v1/users/profile/?fields_size=mini",
+    "/api/v1/users/profile/",
+    "/api/v1/profile/"
+  ];
+  let failure: unknown;
+  for (const path of paths) {
+    try {
+      // Bypass apiRequest's 401 handler and organization scoping when checking identity.
+      const profile = await webApiRequest<WebSessionProfile>(
+        { method: "GET", path },
+        { cache: "no-store", headers: { Accept: "application/json" }, signal }
+      );
+      if (typeof profile?.id !== "string" || !profile.id.trim()) throw new Error("Invalid web session profile");
+      return { ...profile, id: profile.id.trim() };
+    } catch (error) {
+      if (signal.aborted || (error instanceof ApiRequestError && [401, 403].includes(error.status))) throw error;
+      failure = error;
+    }
+  }
+  throw failure;
 }
 
 async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
@@ -376,7 +453,8 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
     return await webApiRequest<T>(request);
   } catch (error) {
     if (isAuthFailure(error)) {
-      handleApiAuthFailure();
+      if (isDesktopRuntime()) handleApiAuthFailure();
+      else await handleWebApiAuthFailure();
     }
     throw error;
   }
