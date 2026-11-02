@@ -2865,7 +2865,7 @@
     "GoBrowseSize": "Page size",
     "GoBrowseClear": "Clear and apply",
     "GoBrowseApplied": "Currently applied scope",
-    "GoBrowseUnsupported": "This dialect retains cached browsing. Database filtering, paging, counting and full filtered export currently support PostgreSQL/MySQL only.",
+    "GoBrowseUnsupported": "This connection retains cached browsing. Database filtering, paging, counting and full filtered export are unavailable for this result.",
     "GoBrowseExportPage": "Export this database page",
     "GoBrowseExportFull": "All rows matching the applied filter",
     "GoBrowseExportConfirm": "The server reruns this result’s applied filter and sort without the page window. Unapplied drafts are excluded. Export row, byte and time limits still apply.",

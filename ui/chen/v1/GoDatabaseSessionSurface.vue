@@ -723,9 +723,7 @@ async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) 
         : {
             schema: query.browseObject.schema,
             table: query.browseObject.name,
-            ...(["postgresql", "mysql"].includes(session.value!.dialect)
-              ? { page_size: query.loadingSettings.batchSize }
-              : {})
+            page_size: query.loadingSettings.batchSize
           })
   };
   await recoverSubmission(query);
