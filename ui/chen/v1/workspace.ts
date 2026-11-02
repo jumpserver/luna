@@ -1,5 +1,8 @@
 import type {
   ChenGoApi,
+  GoBrowseDraft,
+  GoBrowseRequest,
+  GoQueryPageRequest,
   GoPlan,
   GoCatalogObject,
   GoConsole,
@@ -9,6 +12,7 @@ import type {
   GoRows
 } from "./api";
 import type { GoEditDraft } from "./dataEditing";
+import { useStorage } from "@vueuse/core";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
@@ -40,12 +44,20 @@ export interface QueryWorkspaceTab {
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
   browseObject?: GoCatalogObject;
+  readOnly?: boolean;
+  loadingSettings: GoResultLoadingSettings;
+  pendingLoading: GoResultLoadingSettings | null;
+  loadMoreFailed: boolean;
+  browseDraft: GoBrowseDraft;
+  browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
-  executionBrowse?: GoCatalogObject;
+  executionBrowse?: GoBrowseRequest;
+  executionQueryPage?: GoQueryPageRequest;
+  queryCount?: GoExecution["query_count"] | null;
   exportJob: GoExport | null;
   exportBusy: boolean;
-  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string } | null;
+  pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
   resultSql: string;
   rows: GoRows | null;
@@ -59,23 +71,57 @@ export interface QueryWorkspaceTab {
     plan?: boolean;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
-    browse?: GoCatalogObject;
+    browse?: GoBrowseRequest;
+    queryPage?: GoQueryPageRequest;
   } | null;
   busy: boolean;
   loadingRows: boolean;
-  resultLoadError: { message: string; id: string; offset: number; execution: GoExecution; sql: string } | null;
+  resultLoadError: {
+    append?: boolean;
+    message: string;
+    id: string;
+    offset: number;
+    execution: GoExecution;
+    sql: string;
+  } | null;
   loadGeneration: number;
   error: string;
   closed: boolean;
 }
+export type ObjectWorkspaceSection = "data" | "structure" | "ddl" | "diagram";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
   title: string;
   object: GoCatalogObject;
+  sessionId: string;
+  section: ObjectWorkspaceSection;
+  data: QueryWorkspaceTab | null;
 }
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab;
+export interface OverviewWorkspaceTab {
+  id: string;
+  kind: "overview";
+  section?: "diagram" | "tables" | "views" | "statistics" | "indexes" | "properties";
+  title: string;
+  context: QueryContext;
+}
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
+export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
+  return tab.kind === "query" || tab.kind === "preview";
+}
 
+// An object owns at most one execution context, visible to every query lifecycle consumer.
+export function workspaceQuery(tab: ChenWorkspaceTab): QueryWorkspaceTab | null {
+  return tab.kind === "object" ? tab.data : isQueryWorkspaceTab(tab) ? tab : null;
+}
+export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] {
+  return tabs.flatMap((tab) => workspaceQuery(tab) || []);
+}
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
+  // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
+  // client-side folding would conflate distinct objects on case-sensitive databases.
+  return JSON.stringify([sessionId, object.database, object.schema, object.kind, object.name]);
+}
 export function createQueryTab(
   title: string,
   context: QueryContext,
@@ -103,6 +149,11 @@ export function createQueryTab(
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
+    loadingSettings: { mode: "page", batchSize: 200 },
+    pendingLoading: null,
+    loadMoreFailed: false,
+    browseDraft: { where: "", sort: [], page_size: 200 },
+    browseCount: null,
     exportJob: null,
     exportBusy: false,
     pendingCachedExport: null,
@@ -149,7 +200,10 @@ export function objectSelect(object: GoCatalogObject, dialect: string, preview =
       return `SELECT * FROM ${name} LIMIT 200;`;
   }
 }
-export function tabContext(tab: ChenWorkspaceTab | undefined, fallback: QueryContext): QueryContext {
+export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab, "kind" | "object">>(
+  tab: T | undefined,
+  fallback: QueryContext
+): QueryContext {
   if (!tab) return { ...fallback };
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
   return { ...tab.context };
@@ -168,6 +222,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     id: newChenRequestId(),
     submitReview: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
+    ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionPlan ? { plan: true } : {}),
@@ -185,6 +240,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     id: newChenRequestId(),
     confirmWarnings: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
+    ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionPlan ? { plan: true } : {}),
@@ -288,4 +344,63 @@ export async function loadQueryPlan(query: QueryWorkspaceTab, api: Pick<ChenGoAp
   } finally {
     if (current()) query.loadingPlan = false;
   }
+}
+
+export interface GoResultLoadingSettings {
+  mode: "page" | "continuous";
+  batchSize: number;
+}
+export function normalizeResultLoading(value: unknown): GoResultLoadingSettings {
+  const saved = value && typeof value === "object" ? (value as Partial<GoResultLoadingSettings>) : {};
+  return {
+    mode: saved.mode === "continuous" ? "continuous" : "page",
+    batchSize:
+      Number.isInteger(saved.batchSize) && saved.batchSize! > 0 && saved.batchSize! <= 1000 ? saved.batchSize! : 200
+  };
+}
+export function useResultLoadingPreferences() {
+  return useStorage<GoResultLoadingSettings>(
+    "jumpserver-client:chen-result-loading",
+    normalizeResultLoading(null),
+    undefined,
+    {
+      serializer: {
+        read: (raw) => {
+          try {
+            return normalizeResultLoading(JSON.parse(raw));
+          } catch {
+            return normalizeResultLoading(null);
+          }
+        },
+        write: (value) => JSON.stringify(normalizeResultLoading(value))
+      },
+      onError: () => {}
+    }
+  );
+}
+export function resultLoadingLocked(query: QueryWorkspaceTab) {
+  return (
+    query.closed ||
+    query.console?.state !== "ready" ||
+    query.busy ||
+    query.loadingRows ||
+    !!query.pending ||
+    executionActive(query.execution) ||
+    query.edit.busy ||
+    query.edit.refreshRequired ||
+    editDirty(query.edit)
+  );
+}
+export function hasMoreResultRows(query: QueryWorkspaceTab) {
+  const rows = query.rows;
+  if (!rows || query.loadingSettings.mode !== "continuous") return false;
+  // Cached rows may still be unread after a recoverable HTTP failure.
+  if (rows.next_offset !== undefined) return true;
+  return (
+    rows.browse?.supported === true &&
+    rows.browse.has_more === true &&
+    !rows.browse.limit_reached &&
+    !rows.truncated &&
+    rows.rows.length < (rows.browse.max_loaded_rows || 10000)
+  );
 }

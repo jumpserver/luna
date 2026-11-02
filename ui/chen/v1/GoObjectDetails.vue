@@ -10,42 +10,45 @@ const props = defineProps<{
   object: GoCatalogObject;
   ready: boolean;
   canCopy: boolean;
+  mode?: "structure" | "ddl";
 }>();
 const { t } = useI18n();
 const data = ref<GoCatalogInspect>();
-const active = ref<keyof GoCatalogInspect["sections"]>("primary_key");
+const active = ref<keyof GoCatalogInspect["sections"]>(props.mode === "ddl" ? "ddl" : "primary_key");
 const busy = ref(false);
 const ddlBusy = ref(false);
 const ddl = ref<GoCatalogSection>();
 const ddlError = ref("");
 const error = ref("");
 const viewer = ref<{ find: () => void } | null>(null);
-const sections = computed(() => [
-  {
-    key: "primary_key" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
-    columns: ["name", "column", "ordinal"]
-  },
-  {
-    key: "foreign_keys" as const,
-    label: t("Chen.ForeignKeys"),
-    columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
-  },
-  { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
-  {
-    key: "defaults" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.default_values"),
-    columns: ["column", "expression"]
-  },
-  {
-    key: "ddl" as const,
-    label:
-      (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
-        ? t("Chen.GoV1ViewQueryDefinition")
-        : "DDL",
-    columns: []
-  }
-]);
+const sections = computed(() =>
+  [
+    {
+      key: "primary_key" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
+      columns: ["name", "column", "ordinal"]
+    },
+    {
+      key: "foreign_keys" as const,
+      label: t("Chen.ForeignKeys"),
+      columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
+    },
+    { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
+    {
+      key: "defaults" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.default_values"),
+      columns: ["column", "expression"]
+    },
+    {
+      key: "ddl" as const,
+      label:
+        (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
+          ? t("Chen.GoV1ViewQueryDefinition")
+          : "DDL",
+      columns: []
+    }
+  ].filter((section) => (props.mode === "ddl" ? section.key === "ddl" : section.key !== "ddl"))
+);
 const current = computed(() =>
   active.value === "ddl" ? ddl.value || data.value?.sections.ddl : data.value?.sections[active.value]
 );
@@ -111,11 +114,11 @@ watch(
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) event.preventDefault();
 }
-onMounted(() => load());
+onMounted(() => (props.mode === "ddl" ? loadDdl() : load()));
 watch(
   () => props.ready,
   (ready) => {
-    if (ready && !data.value && !error.value) void load();
+    if (ready && props.mode !== "ddl" && !data.value && !error.value) void load();
   }
 );
 onBeforeUnmount(() => {

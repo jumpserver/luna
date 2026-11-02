@@ -1,3 +1,7 @@
+import type { DiagramOptions } from "./catalogDiagram";
+import { parseDiagram } from "./catalogDiagram";
+import { parseOverview } from "./overview";
+import type { OverviewOptions } from "./overview";
 import type { ChenExecutionPlan } from "~/chen/types/plan";
 import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 import { buildHeaders, chenPath } from "~/chen/api/client";
@@ -35,6 +39,8 @@ export interface GoPlan extends ChenExecutionPlan {
   limits: { maxBytes: number; maxNodes: number; maxDepth: number };
 }
 export interface GoExecution {
+  query_count?: { source_result_id: string; scope_id: string; total: string };
+  browse_count?: { source_result_id: string; total: string };
   plan?: GoPlanIdentity;
   id: string;
   export_id?: string;
@@ -94,7 +100,76 @@ export interface GoDownloadTicket {
   fields: { ticket: string };
   expires_at: string;
 }
+export interface GoBrowseOrder {
+  column: string;
+  desc: boolean;
+}
+export interface GoBrowseFilter {
+  op: string;
+  column?: string;
+  values?: string[];
+  children?: GoBrowseFilter[];
+}
+export interface GoBrowseRequest {
+  schema?: string;
+  table?: string;
+  source_result_id?: string;
+  action?: "page" | "append" | "count" | "export";
+  where?: string;
+  filter?: GoBrowseFilter;
+  sort?: GoBrowseOrder[];
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoBrowsePage {
+  max_loaded_rows?: number;
+  limit_reached?: "rows" | "bytes";
+  supported: boolean;
+  reason?: string;
+  database: string;
+  schema: string;
+  table: string;
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  stable: boolean;
+  has_more: boolean | null;
+  full_sql: string;
+}
+export interface GoBrowseDraft {
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  page_size: number;
+}
+export interface GoQueryPageRequest {
+  source_result_id: string;
+  action: "page" | "count" | "export";
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoQueryPage {
+  supported: boolean;
+  reason?: string;
+  mode: "cache" | "database";
+  scope_id?: string;
+  ordered: boolean;
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  has_more: boolean | null;
+  read_only_reason?: string;
+}
 export interface GoRows {
+  query_page?: GoQueryPage;
+  browse?: GoBrowsePage;
   id: string;
   columns: { name: string; data_type: string }[];
   rows: unknown[][];
@@ -174,6 +249,7 @@ export interface GoRelation {
   kind: string;
 }
 export interface GoCatalogObject {
+  object_type?: string;
   database: string;
   schema: string;
   name: string;
@@ -338,17 +414,30 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
+    queryPage: (
+      consoleId: string,
+      scope: GoQueryPageRequest,
+      requestId: string,
+      submitReview = false,
+      confirmWarnings = false
+    ) =>
+      request<GoExecution>(`/consoles/${id(consoleId)}/query-page`, "POST", {
+        ...scope,
+        request_id: requestId,
+        ...(submitReview ? { submit_review: true } : {}),
+        ...(confirmWarnings ? { confirm_warnings: true } : {})
+      }),
     browse: (
       consoleId: string,
       schema: string,
       table: string,
       requestId: string,
       submitReview = false,
-      confirmWarnings = false
+      confirmWarnings = false,
+      scope?: GoBrowseRequest
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/browse`, "POST", {
-        schema,
-        table,
+        ...(scope || { schema, table }),
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
@@ -404,8 +493,12 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
-    exportCached: (resultId: string, format: GoExportFormat, requestId: string) =>
-      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", { format, request_id: requestId }),
+    exportCached: (resultId: string, format: GoExportFormat, requestId: string, rows?: number) =>
+      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", {
+        format,
+        request_id: requestId,
+        ...(rows !== undefined ? { rows } : {})
+      }),
     getExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}`),
     cancelExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}/cancel`, "POST"),
     deleteExport: (exportId: string) => request<void>(`/exports/${id(exportId)}`, "DELETE"),
@@ -422,6 +515,25 @@ export function createChenGoApi(
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
+    catalogDiagram: async (sessionId: string, options: DiagramOptions, signal?: AbortSignal) =>
+      parseDiagram(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/diagram?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        ),
+        options
+      ),
+    catalogOverview: async (sessionId: string, options: OverviewOptions, signal?: AbortSignal) =>
+      parseOverview(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/overview?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        )
+      ),
     catalogDdl: (sessionId: string, schema: string, table: string, signal?: AbortSignal) =>
       request<GoCatalogSection>(
         `/sessions/${id(sessionId)}/catalog/ddl?${catalogQuery({ schema, table })}`,

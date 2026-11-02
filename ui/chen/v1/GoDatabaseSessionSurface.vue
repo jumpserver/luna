@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  GoBrowseRequest,
   GoCatalogObject,
   GoConsole,
   GoEditPlan,
@@ -7,10 +8,18 @@ import type {
   GoExecution,
   GoExport,
   GoExportFormat,
+  GoQueryPageRequest,
   GoSession
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { ChenWorkspaceTab, QueryContext, QueryWorkspaceTab } from "./workspace";
+import type {
+  ChenWorkspaceTab,
+  GoResultLoadingSettings,
+  ObjectWorkspaceSection,
+  ObjectWorkspaceTab,
+  QueryContext,
+  QueryWorkspaceTab
+} from "./workspace";
 import type {
   ChenSqlAiFrameSender,
   ChenSqlAiOperation,
@@ -19,7 +28,18 @@ import type {
 } from "~/chen/composables/useChenSqlAiSessions";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { useElementSize, useLocalStorage } from "@vueuse/core";
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, useTemplateRef, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  toRaw,
+  useId,
+  useTemplateRef,
+  watch
+} from "vue";
 import { useI18n } from "vue-i18n";
 import { parseKokoMcpFrame } from "#koko/composables/agent/types";
 import {
@@ -39,6 +59,7 @@ import { acceptEditExecution, createEditDraft, editDirty } from "./dataEditing";
 import { readChenEvents } from "./events";
 import GoCatalogTree from "./GoCatalogTree.vue";
 import GoObjectPane from "./GoObjectPane.vue";
+import GoOverviewPane from "./GoOverviewPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
@@ -50,19 +71,33 @@ import {
   closeWarnings,
   createQueryTab,
   exportActive,
+  hasMoreResultRows,
+  isQueryWorkspaceTab,
   loadQueryPlan,
-  objectKey,
+  normalizeResultLoading,
   objectSelect,
+  objectWorkspaceKey,
   queryDirty,
   reconcileExport,
+  resultLoadingLocked,
   reviewSubmission,
   tabContext,
-  warningSubmission
+  useResultLoadingPreferences,
+  warningSubmission,
+  workspaceQueries,
+  workspaceQuery
 } from "./workspace";
 
 const props = defineProps<{ tab?: WorkspaceSessionTab; selector?: string }>();
 const { t } = useI18n();
 const toast = useToast();
+const loadingPreferences = useResultLoadingPreferences();
+function newQueryTab(...args: Parameters<typeof createQueryTab>) {
+  const query = createQueryTab(...args);
+  query.loadingSettings = normalizeResultLoading(loadingPreferences.value);
+  query.browseDraft.page_size = query.loadingSettings.batchSize;
+  return query;
+}
 const aiPanel = props.tab ? useAiPanel() : null;
 const workspace = props.tab ? useWorkspaceTabs() : null;
 const userInfo = props.tab ? useUserInfoStore() : null;
@@ -144,7 +179,7 @@ interface QueryPaneHandle {
 }
 const queryPanes = new Map<string, QueryPaneHandle>();
 const tabStrip = ref<HTMLElement>();
-const queries = computed(() => tabs.value.filter((tab): tab is QueryWorkspaceTab => tab.kind !== "object"));
+const queries = computed(() => workspaceQueries(tabs.value));
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeId.value));
 const sessionReady = computed(() => session.value?.state === "ready");
 const insertTarget = computed(() => (activeTab.value?.kind === "query" ? activeTab.value : undefined));
@@ -289,6 +324,7 @@ function setQueryPane(id: string, value: unknown) {
 }
 function selectTab(tab: ChenWorkspaceTab) {
   activeId.value = tab.id;
+  if (tab.kind === "object" && tab.section === "data") void enterObjectData(tab);
 }
 function insertName(text: string) {
   if (!session.value?.permissions.can_paste || !insertTarget.value) return;
@@ -334,11 +370,10 @@ function tabMenu(tab: ChenWorkspaceTab) {
   const index = tabs.value.indexOf(tab);
   const others = tabs.value.filter((item) => item.id !== tab.id);
   const right = tabs.value.slice(index + 1);
-  const cannotClose = (list: ChenWorkspaceTab[]) =>
-    !list.length || list.some((item) => item.kind !== "object" && item.busy);
+  const cannotClose = (list: ChenWorkspaceTab[]) => !list.length || list.some((item) => workspaceQuery(item)?.busy);
   return [
     { label: t("Chen.GoV1RenameTab"), icon: "i-lucide-pencil", onSelect: () => renameTab(tab) },
-    ...(tab.kind !== "object"
+    ...(isQueryWorkspaceTab(tab)
       ? [
           {
             label: t("Chen.GoV1DuplicateQuery"),
@@ -351,7 +386,7 @@ function tabMenu(tab: ChenWorkspaceTab) {
     {
       label: t("Chen.GoV1CloseTab"),
       icon: "i-lucide-x",
-      disabled: tab.kind !== "object" && tab.busy,
+      disabled: !!workspaceQuery(tab)?.busy,
       onSelect: () => closeTab(tab)
     },
     {
@@ -384,17 +419,51 @@ async function loadRows(
   id: string,
   offset = 0,
   execution = query.resultExecution || query.execution,
-  sql = execution?.id === query.execution?.id ? query.executionSql : query.resultSql
+  sql = execution?.id === query.execution?.id ? query.executionSql : query.resultSql,
+  append = false
 ) {
   if (!execution || editDirty(query.edit) || query.edit.busy) return;
   const generation = ++query.loadGeneration;
   query.loadingRows = true;
   query.resultLoadError = null;
   try {
-    const page = await api.rows(id, offset);
+    const settings = query.pendingLoading || query.loadingSettings;
+    const limit = settings.batchSize;
+    const page = await api.rows(id, offset, limit);
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
-      query.rows = page;
+      if (page.browse?.supported && !query.rows?.browse?.supported) {
+        query.browseDraft = {
+          where: page.browse.where,
+          filter: page.browse.filter ? structuredClone(toRaw(page.browse.filter)) : undefined,
+          sort: page.browse.sort.map((item) => ({ ...item })),
+          page_size: page.browse.page_size
+        };
+      }
+      if (append) {
+        const previous = query.rows;
+        if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset)
+          return;
+        query.rows = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+      } else query.rows = page;
+      if (query.pendingLoading) {
+        query.loadingSettings = { ...query.pendingLoading };
+        loadingPreferences.value = { ...query.pendingLoading };
+        query.browseDraft.page_size = query.pendingLoading.batchSize;
+        query.pendingLoading = null;
+      }
+      if (page.browse?.supported) {
+        query.browseDraft.page_size = page.browse.page_size;
+        query.loadingSettings.batchSize = page.browse.page_size;
+      }
+      query.loadMoreFailed = false;
+      if (changedResult) {
+        query.browseCount = null;
+        query.queryCount = null;
+      }
+      if (page.query_page?.mode === "database") {
+        query.loadingSettings = { mode: "page", batchSize: page.query_page.page_size };
+      }
       if (changedResult) query.edit = createEditDraft();
       query.resultId = id;
       // Row loading may finish after more statements or audit updates arrive.
@@ -409,28 +478,54 @@ async function loadRows(
       query.resultSql = sql;
     }
   } catch (cause) {
-    if (isCurrent(query) && generation === query.loadGeneration)
-      query.resultLoadError = { message: failureText(cause), id, offset, execution, sql };
+    if (isCurrent(query) && generation === query.loadGeneration) {
+      query.resultLoadError = { message: failureText(cause), id, offset, execution, sql, append };
+      if (append) query.loadMoreFailed = true;
+    }
   } finally {
     if (generation === query.loadGeneration) query.loadingRows = false;
   }
 }
 function retryRows(query: QueryWorkspaceTab) {
   const failed = query.resultLoadError;
-  if (failed) void loadRows(query, failed.id, failed.offset, failed.execution, failed.sql);
+  if (failed) void loadRows(query, failed.id, failed.offset, failed.execution, failed.sql, failed.append);
 }
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
+  if (!["queued", "running", "waiting_review", "cancel_requested", "succeeded"].includes(value.status)) {
+    if (query.executionBrowse?.action === "append") query.loadMoreFailed = true;
+    if (!["command_review_required", "command_warning_confirmation_required"].includes(value.error?.code || ""))
+      query.pendingLoading = null;
+  }
+  if (value.status === "succeeded" && value.browse_count && value.browse_count.source_result_id === query.rows?.id)
+    query.browseCount = value.browse_count;
+  if (
+    value.status === "succeeded" &&
+    value.query_count &&
+    value.query_count.source_result_id === query.rows?.id &&
+    value.query_count.scope_id === query.rows.query_page?.scope_id
+  )
+    query.queryCount = value.query_count;
   if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
     void loadQueryPlan(query, api);
   if (
     !query.execution?.plan &&
+    (!query.executionBrowse || value.status === "succeeded") &&
+    (!query.executionQueryPage || value.status === "succeeded") &&
     value.result_ids?.length &&
     query.resultExecution?.id !== value.id &&
-    !query.loadingRows
+    !query.loadingRows &&
+    !query.resultLoadError
   )
-    void loadRows(query, value.result_ids[0]!, 0, query.execution, query.executionSql);
+    void loadRows(
+      query,
+      value.result_ids[0]!,
+      query.executionBrowse?.action === "append" ? query.executionBrowse.offset || 0 : 0,
+      query.execution,
+      query.executionSql,
+      query.executionBrowse?.action === "append"
+    );
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
   if (!isCurrent(query) || query.exportJob?.id !== value.id) return;
@@ -597,7 +692,7 @@ async function newQuery(
   if (object && !preview && !browse && !session.value?.permissions.can_paste) return;
   const sql = object ? objectSelect(object, session.value!.dialect, preview) : chenSampleSql(session.value!.dialect);
   const query = reactive(
-    createQueryTab(
+    newQueryTab(
       `${t(preview ? "Chen.GoV1Preview" : "Chen.Query")} ${++queryNumber}`,
       context,
       sql,
@@ -617,7 +712,7 @@ async function newQuery(
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
 }
-async function browseTable(query: QueryWorkspaceTab) {
+async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) {
   if (
     !query.browseObject ||
     !sessionReady.value ||
@@ -625,19 +720,96 @@ async function browseTable(query: QueryWorkspaceTab) {
     query.busy ||
     query.pending ||
     executionActive(query.execution) ||
+    query.loadingRows ||
+    query.edit.busy ||
     editDirty(query.edit)
   )
     return;
+  query.loadGeneration++;
+  query.resultLoadError = null;
   query.pending = {
     sql: objectSelect(query.browseObject, session.value!.dialect, true),
     version: 1,
     id: newChenRequestId(),
-    browse: query.browseObject
+    browse:
+      request ||
+      (query.rows?.browse?.supported
+        ? { source_result_id: query.rows.id, offset: query.rows.browse.offset }
+        : {
+            schema: query.browseObject.schema,
+            table: query.browseObject.name,
+            page_size: query.loadingSettings.batchSize
+          })
   };
   await recoverSubmission(query);
 }
+async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest) {
+  if (
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    resultLoadingLocked(query) ||
+    request.source_result_id !== query.rows?.id
+  )
+    return;
+  query.loadGeneration++;
+  query.resultLoadError = null;
+  query.queryCount = null;
+  query.pending = { sql: query.resultSql, version: query.executionVersion, id: newChenRequestId(), queryPage: request };
+  await recoverSubmission(query);
+}
+async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSettings) {
+  if (!sessionReady.value || resultLoadingLocked(query)) return;
+  const settings = normalizeResultLoading(input);
+  settings.batchSize = Math.min(
+    settings.batchSize,
+    query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000
+  );
+  if (query.rows?.query_page?.mode === "database") settings.mode = "page";
+  if (settings.mode === query.loadingSettings.mode && settings.batchSize === query.loadingSettings.batchSize) return;
+  query.pendingLoading = settings;
+  query.loadMoreFailed = false;
+  if (query.rows?.query_page?.mode === "database") {
+    settings.batchSize = Math.min(settings.batchSize, query.rows.query_page.max_page_size);
+    await pageQuery(query, {
+      source_result_id: query.rows.id,
+      action: "page",
+      page_size: settings.batchSize,
+      offset: 0
+    });
+  } else if (query.rows?.browse?.supported) {
+    await browseTable(query, { source_result_id: query.rows.id, page_size: settings.batchSize, offset: 0 });
+  } else if (query.rows) await loadRows(query, query.rows.id, 0);
+  else {
+    query.loadingSettings = settings;
+    query.browseDraft.page_size = settings.batchSize;
+    loadingPreferences.value = { ...settings };
+    query.pendingLoading = null;
+  }
+}
+async function loadMore(query: QueryWorkspaceTab, automatic = false) {
+  if (
+    !sessionReady.value ||
+    resultLoadingLocked(query) ||
+    !hasMoreResultRows(query) ||
+    (automatic && (query.loadMoreFailed || !queryVisible(query)))
+  )
+    return;
+  query.loadMoreFailed = false;
+  const rows = query.rows!;
+  if (query.resultLoadError) {
+    retryRows(query);
+    return;
+  }
+  if (rows.next_offset !== undefined) {
+    await loadRows(query, rows.id, rows.next_offset, undefined, undefined, true);
+  } else if (rows.browse?.supported) {
+    await browseTable(query, { action: "append", source_result_id: rows.id, offset: rows.rows.length });
+    if (query.error) query.loadMoreFailed = true;
+  }
+}
 async function applyEdits(query: QueryWorkspaceTab, plan: GoEditPlan) {
   if (
+    query.readOnly ||
     !sessionReady.value ||
     query.console?.state !== "ready" ||
     query.busy ||
@@ -710,7 +882,7 @@ function applySchemaSql(id: string, sql: string, execute: boolean): boolean {
   )
     return false;
   const scope = connection;
-  const query = reactive(createQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
+  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
@@ -734,15 +906,77 @@ watch(
 async function restoreQuery(context: QueryContext, sql: string, uploaded = false) {
   if (!sessionReady.value || !(uploaded ? session.value?.permissions.can_upload : session.value?.permissions.can_paste))
     return;
-  const query = reactive(createQueryTab(`${t("Chen.Query")} ${++queryNumber}`, context, sql, true));
+  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
   await connectQuery(query);
 }
-function openObject(object: GoCatalogObject) {
-  const id = `object:${objectKey(object)}`;
-  if (!tabs.value.some((tab) => tab.id === id)) tabs.value.push({ id, kind: "object", title: object.name, object });
+function queryVisible(query: QueryWorkspaceTab) {
+  const tab = activeTab.value;
+  return !!tab && workspaceQuery(tab) === query && (tab.kind !== "object" || tab.section === "data");
+}
+async function enterObjectData(tab: ObjectWorkspaceTab) {
+  if (!sessionReady.value || tab.section !== "data") return;
+  if (!tab.data) {
+    const query = newQueryTab(
+      tab.title,
+      { database: tab.object.database, schema: tab.object.schema },
+      objectSelect(tab.object, session.value!.dialect, true)
+    );
+    query.kind = "preview";
+    query.readOnly = tab.object.kind === "view" || session.value!.dialect === "clickhouse";
+    if (tab.object.kind === "table" && session.value!.dialect !== "clickhouse") query.browseObject = tab.object;
+    tab.data = query;
+  }
+  const query = tab.data;
+  if (query.console || query.busy) return;
+  await connectQuery(query);
+  if (!isCurrent(query) || (query.console as GoConsole | null)?.state !== "ready") return;
+  if (query.browseObject) await browseTable(query);
+  else await submit(query, query.sql, 1);
+}
+function objectSection(tab: ObjectWorkspaceTab, section: ObjectWorkspaceSection) {
+  if (section === "diagram" && tab.object.kind !== "table") return;
+  tab.section = section;
+  if (section === "data") void enterObjectData(tab);
+}
+function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "data") {
+  if (!session.value) return;
+  const key = objectWorkspaceKey(session.value.id, object);
+  let tab = tabs.value.find(
+    (item): item is ObjectWorkspaceTab =>
+      item.kind === "object" && objectWorkspaceKey(item.sessionId, item.object) === key
+  );
+  if (!tab) {
+    tab = reactive<ObjectWorkspaceTab>({
+      id: newChenRequestId(),
+      kind: "object",
+      title: object.name,
+      object: { ...object },
+      sessionId: session.value.id,
+      section,
+      data: null
+    });
+    tabs.value.push(tab);
+  }
+  activeId.value = tab.id;
+  drawer.value = false;
+  objectSection(tab, section);
+}
+function openOverview(context: QueryContext, section: "diagram" | "tables" = "tables") {
+  if (!sessionReady.value || context.database !== defaultContext.value.database) return;
+  const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
+  if (!tabs.value.some((tab) => tab.id === id))
+    tabs.value.push({
+      id,
+      kind: "overview",
+      section,
+      title: `${t("Chen.GoOverviewTitle")} · ${context.schema || context.database}`,
+      context: { ...context }
+    });
+  const tab = tabs.value.find((tab) => tab.id === id);
+  if (tab?.kind === "overview") tab.section = section;
   activeId.value = id;
   drawer.value = false;
 }
@@ -777,42 +1011,51 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
   query.busy = true;
   query.error = "";
   try {
-    const value = pending.editPlanId
-      ? await api.applyEdits(
+    const value = pending.queryPage
+      ? await api.queryPage(
           query.console.id,
-          pending.editPlanId,
+          pending.queryPage,
           pending.id,
           pending.submitReview,
           pending.confirmWarnings
         )
-      : pending.browse
-        ? await api.browse(
+      : pending.editPlanId
+        ? await api.applyEdits(
             query.console.id,
-            pending.browse.schema,
-            pending.browse.name,
+            pending.editPlanId,
             pending.id,
             pending.submitReview,
             pending.confirmWarnings
           )
-        : pending.exportFormat
-          ? await api.exportQuery(
+        : pending.browse
+          ? await api.browse(
               query.console.id,
-              pending.sql,
-              pending.version,
-              pending.id,
-              pending.exportFormat,
-              pending.submitReview,
-              pending.confirmWarnings
-            )
-          : await api.execute(
-              query.console.id,
-              pending.sql,
-              pending.version,
+              pending.browse.schema || "",
+              pending.browse.table || "",
               pending.id,
               pending.submitReview,
               pending.confirmWarnings,
-              !!pending.plan
-            );
+              pending.browse
+            )
+          : pending.exportFormat
+            ? await api.exportQuery(
+                query.console.id,
+                pending.sql,
+                pending.version,
+                pending.id,
+                pending.exportFormat,
+                pending.submitReview,
+                pending.confirmWarnings
+              )
+            : await api.execute(
+                query.console.id,
+                pending.sql,
+                pending.version,
+                pending.id,
+                pending.submitReview,
+                pending.confirmWarnings,
+                !!pending.plan
+              );
     if (!isCurrent(query)) return;
     query.pending = null;
     query.execution = value;
@@ -829,6 +1072,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     query.executionExportFormat = pending.exportFormat;
     query.executionEditPlan = pending.editPlanId;
     query.executionBrowse = pending.browse;
+    query.executionQueryPage = pending.queryPage;
     if (value.export_id) query.exportJob = null;
     // A close event may precede the HTTP response. Do not revive a running spinner after SSE has ended.
     if (session.value?.state === "closed" || (query.console as GoConsole).state === "closed") {
@@ -843,7 +1087,10 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     await syncExecution(query);
   } catch (cause) {
     if (!isCurrent(query)) return;
-    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) query.pending = null;
+    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) {
+      query.pending = null;
+      query.pendingLoading = null;
+    }
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
   } finally {
     if (isCurrent(query)) query.busy = false;
@@ -853,7 +1100,7 @@ async function startExport(
   query: QueryWorkspaceTab,
   mode: "query" | "cached",
   format: GoExportFormat,
-  snapshot: { sql: string; resultId: string; version: number }
+  snapshot: { sql: string; resultId: string; version: number; rows?: number }
 ) {
   if (
     !isCurrent(query) ||
@@ -870,18 +1117,29 @@ async function startExport(
   if (mode === "query") {
     if (query.pendingCachedExport) return;
     if (query.console?.state !== "ready" || executionActive(query.execution) || !snapshot.sql.trim()) return;
-    query.pending = { sql: snapshot.sql, version: snapshot.version, id: newChenRequestId(), exportFormat: format };
+    if (query.browseObject && !query.rows?.browse?.supported) return;
+    query.pending = {
+      sql: snapshot.sql,
+      version: snapshot.version,
+      id: newChenRequestId(),
+      exportFormat: format,
+      ...(query.rows?.query_page?.mode === "database"
+        ? { queryPage: { source_result_id: snapshot.resultId, action: "export", format } as GoQueryPageRequest }
+        : query.browseObject
+          ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }
+          : {})
+    };
     await recoverSubmission(query);
     return;
   }
   if (!snapshot.resultId) return;
   // On an unknown HTTP outcome, recover exactly the same request before offering another export.
-  query.pendingCachedExport ||= { resultId: snapshot.resultId, format, id: newChenRequestId() };
+  query.pendingCachedExport ||= { resultId: snapshot.resultId, format, id: newChenRequestId(), rows: snapshot.rows };
   const pending = query.pendingCachedExport;
   query.exportBusy = true;
   query.error = "";
   try {
-    const value = await api.exportCached(pending.resultId, pending.format, pending.id);
+    const value = await api.exportCached(pending.resultId, pending.format, pending.id, pending.rows);
     if (!isCurrent(query) || session.value?.state === "closed") return;
     query.pendingCachedExport = null;
     query.exportJob = value;
@@ -981,36 +1239,37 @@ function finishClose(value: boolean) {
   closeResolver = undefined;
 }
 async function closeTabs(list: ChenWorkspaceTab[]) {
-  const queries = list.filter((tab): tab is QueryWorkspaceTab => tab.kind !== "object");
+  const queries = workspaceQueries(list);
   if (queries.some((query) => query.busy) || !(await confirmClose(queries))) return;
   for (const tab of list) await closeTab(tab, true);
 }
 async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
-  if (tab.kind !== "object") {
-    if (tab.busy || tab.exportBusy || (!confirmed && !(await confirmClose([tab]))) || !isCurrent(tab)) return;
+  const query = workspaceQuery(tab);
+  if (query) {
+    if (query.busy || query.exportBusy || (!confirmed && !(await confirmClose([query]))) || !isCurrent(query)) return;
     if (
       session.value?.can_cancel === false &&
-      executionActive(tab.execution) &&
-      tab.execution?.status !== "waiting_review"
+      executionActive(query.execution) &&
+      query.execution?.status !== "waiting_review"
     ) {
-      tab.error = t("Chen.GoV1CloseCancelUnsupported");
+      query.error = t("Chen.GoV1CloseCancelUnsupported");
       return;
     }
-    tab.busy = true;
+    query.busy = true;
     const queryApi = api;
     try {
-      if (tab.execution && executionActive(tab.execution)) await queryApi.cancel(tab.execution.id);
-      if (exportActive(tab.exportJob)) await queryApi.cancelExport(tab.exportJob!.id);
-      if (tab.console && tab.console.state !== "closed" && session.value?.state !== "closed")
-        await queryApi.closeConsole(tab.console.id);
+      if (query.execution && executionActive(query.execution)) await queryApi.cancel(query.execution.id);
+      if (exportActive(query.exportJob)) await queryApi.cancelExport(query.exportJob!.id);
+      if (query.console && query.console.state !== "closed" && session.value?.state !== "closed")
+        await queryApi.closeConsole(query.console.id);
     } catch (cause) {
-      tab.error = failureText(cause);
-      tab.busy = false;
+      query.error = failureText(cause);
+      query.busy = false;
       return;
     }
-    if (!isCurrent(tab)) return;
-    tab.closed = true;
-    tab.loadGeneration++;
+    if (!isCurrent(query)) return;
+    query.closed = true;
+    query.loadGeneration++;
   }
   const index = tabs.value.indexOf(tab);
   if (index < 0) return;
@@ -1044,6 +1303,10 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.executionPlan = false;
   query.resultPane = "results";
   await connectQuery(query);
+  if (tabs.value.some((tab) => tab.kind === "object" && tab.data === query) && isCurrent(query)) {
+    if (query.browseObject) await browseTable(query);
+    else await submit(query, query.sql, 1);
+  }
 }
 async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   const identity = JSON.stringify([nextEndpoint, nextCredential]);
@@ -1063,18 +1326,26 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   if (disposed || request !== replacement) return;
   retireConnection(connection);
   closeSqlAi();
-  tabs.value = tabs.value.map((tab) => {
-    if (tab.kind === "object") return { ...tab };
-    tab.closed = true;
-    tab.loadGeneration++;
-    return {
-      ...createQueryTab(tab.title, tab.context, tab.sql),
-      id: tab.id,
-      kind: tab.kind,
-      baselineSql: tab.baselineSql,
-      browseObject: tab.browseObject
-    };
-  });
+  tabs.value = tabs.value
+    .filter((tab) => tab.kind !== "overview")
+    .map((tab) => {
+      const query = workspaceQuery(tab);
+      if (!query) return { ...tab };
+      query.closed = true;
+      query.loadGeneration++;
+      const restored = {
+        ...newQueryTab(query.title, query.context, query.sql),
+        id: query.id,
+        kind: query.kind,
+        baselineSql: query.baselineSql,
+        browseObject: query.browseObject,
+        readOnly: query.readOnly,
+        loadingSettings: { ...query.loadingSettings },
+        browseDraft: structuredClone(toRaw(query.browseDraft))
+      };
+      return tab.kind === "object" ? { ...tab, data: restored } : restored;
+    });
+  if (!tabs.value.some((tab) => tab.id === activeId.value)) activeId.value = tabs.value[0]?.id || "";
   session.value = null;
   defaultContext.value = { database: "", schema: "" };
   schemaEdit.value = null;
@@ -1105,8 +1376,13 @@ function startSession(): Promise<void> {
         return;
       }
       session.value = authenticated;
-      if (queries.value.length) await Promise.all(queries.value.map(connectQuery));
-      else await newQuery();
+      for (const tab of tabs.value) if (tab.kind === "object") tab.sessionId = authenticated.id;
+      // Only SQL pages reconnect eagerly. Object data connects on its next explicit visit.
+      const sqlQueries = tabs.value.filter(isQueryWorkspaceTab);
+      if (sqlQueries.length) await Promise.all(sqlQueries.map(connectQuery));
+      else if (!tabs.value.length) await newQuery();
+      const active = activeTab.value;
+      if (active?.kind === "object" && active.section === "data") await enterObjectData(active);
       if (!isConnectionCurrent(scope)) return;
       if (props.tab) workspace?.markSessionConnected(props.tab.id);
       void watchEvents(scope);
@@ -1307,11 +1583,12 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :can-copy="session.permissions.can_copy"
           :can-insert="!!insertTarget"
           @insert="insertName"
-          @object="openObject"
-          @browse="(object) => newQuery({ database: object.database, schema: object.schema }, object, false, true)"
+          @object="(object, section) => openObject(object, section)"
+          @browse="(object) => openObject(object)"
+          @overview="openOverview"
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
-          @preview="(object) => newQuery({ database: object.database, schema: object.schema }, object, true)"
+          @preview="(object) => openObject(object)"
         />
         <div v-else class="p-3 text-xs text-muted">{{ t("Chen.GoV1Connecting") }}</div>
       </aside>
@@ -1371,18 +1648,20 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               >
                 <UIcon
                   :name="
-                    item.kind === 'object'
-                      ? 'i-lucide-table-properties'
-                      : executionActive(item.execution)
-                        ? 'i-lucide-loader-circle'
-                        : 'i-lucide-file-code-2'
+                    item.kind === 'overview'
+                      ? 'i-lucide-list-tree'
+                      : item.kind === 'object'
+                        ? 'i-lucide-table-properties'
+                        : executionActive(workspaceQuery(item)?.execution || null)
+                          ? 'i-lucide-loader-circle'
+                          : 'i-lucide-file-code-2'
                   "
                   class="size-3.5 shrink-0"
-                  :class="{ 'animate-spin': item.kind !== 'object' && executionActive(item.execution) }"
+                  :class="{ 'animate-spin': executionActive(workspaceQuery(item)?.execution || null) }"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ item.title }}</span>
                 <span
-                  v-if="item.kind !== 'object' && queryDirty(item)"
+                  v-if="workspaceQuery(item) && queryDirty(workspaceQuery(item)!)"
                   :title="t('Chen.GoV1MemoryDraft')"
                   class="text-warning"
                 >
@@ -1394,7 +1673,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   size="xs"
                   color="neutral"
                   variant="ghost"
-                  :disabled="item.kind !== 'object' && item.busy"
+                  :disabled="!!workspaceQuery(item)?.busy"
                   @click.stop="closeTab(item)"
                   @dblclick.stop
                 />
@@ -1418,55 +1697,80 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           <UButton :label="t('Chen.NewQuery')" size="sm" :disabled="!sessionReady" @click="newQuery()" />
         </div>
         <div v-for="item in tabs" v-show="activeId === item.id" :key="item.id" class="flex min-h-0 flex-1 flex-col">
+          <GoOverviewPane
+            v-if="item.kind === 'overview'"
+            :api="api"
+            :session-id="session.id"
+            :scope="item.context"
+            :section="item.section"
+            :dialect="session.dialect"
+            :ready="sessionReady && eventConnected && !authenticationUnknown"
+            :visible="activeId === item.id"
+            :can-copy="session.permissions.can_copy"
+            @section="item.section = $event"
+            @object="openObject"
+            @diagram-object="openObject($event, 'diagram')"
+          />
           <GoObjectPane
-            v-if="item.kind === 'object'"
+            v-else-if="item.kind === 'object'"
             :object="item.object"
+            :section="item.section"
+            :diagram-ready="eventConnected && !authenticationUnknown"
+            :active="activeId === item.id"
             :dialect="session.dialect"
             :api="api"
             :session-id="session.id"
             :ready="sessionReady"
             :can-copy="session.permissions.can_copy"
             :can-paste="session.permissions.can_paste"
+            @object="openObject($event, 'diagram')"
+            @section="objectSection(item, $event)"
             @query="newQuery({ database: item.object.database, schema: item.object.schema }, item.object)"
-            @preview="newQuery({ database: item.object.database, schema: item.object.schema }, item.object, true)"
-            @browse="newQuery({ database: item.object.database, schema: item.object.schema }, item.object, false, true)"
             @schema-edit="openSchemaEditor($event, item.object)"
           />
-          <GoQueryPane
-            v-else
-            :ref="(value) => setQueryPane(item.id, value)"
-            :query="item"
-            :session="session"
-            :api="api"
-            :single="single"
-            :visible="activeId === item.id"
-            :review-core-site="reviewCoreSite"
-            :ai-available="aiAvailable"
-            @ai="requestSqlAi"
-            @apply-edits="applyEdits(item, $event)"
-            @upload-sql="restoreQuery(item.context, $event, true)"
-            @refresh-data="refreshData(item)"
-            @sql="updateQuerySql(item, $event)"
-            @restore="(sql: string) => restoreQuery(item.context, sql)"
-            @run="(sql, version) => submit(item, sql, version)"
-            @explain="(sql, version) => explainQuery(item, sql, version)"
-            @cancel="cancel(item)"
-            @review="requestReview(item)"
-            @confirm-warning="(id) => confirmWarning(item, id)"
-            @export="(mode, format, snapshot) => startExport(item, mode, format, snapshot)"
-            @export-sync="
-              syncExport(item).catch((cause) => {
-                item.error = failureText(cause);
-              })
-            "
-            @export-cancel="cancelExport(item)"
-            @export-delete="deleteExport(item)"
-            @recover="recoverSubmission(item)"
-            @reconnect="reconnect(item)"
-            @rows="(id, offset) => loadRows(item, id, offset)"
-            @retry-rows="retryRows(item)"
-            @pane="(pane) => (item.resultPane = pane)"
-          />
+          <template v-for="query in [workspaceQuery(item)]" :key="query?.id">
+            <GoQueryPane
+              v-if="query"
+              v-show="queryVisible(query)"
+              :ref="(value) => setQueryPane(item.id, value)"
+              :data-only="item.kind === 'object'"
+              :query="query"
+              :session="session"
+              :api="api"
+              :single="single"
+              :visible="queryVisible(query)"
+              :review-core-site="reviewCoreSite"
+              :ai-available="aiAvailable"
+              @ai="requestSqlAi"
+              @apply-edits="applyEdits(query, $event)"
+              @upload-sql="restoreQuery(query.context, $event, true)"
+              @refresh-data="refreshData(query)"
+              @browse="(request) => browseTable(query, request)"
+              @query-page="(request) => pageQuery(query, request)"
+              @loading-settings="(settings) => changeLoading(query, settings)"
+              @load-more="(automatic) => loadMore(query, automatic)"
+              @sql="updateQuerySql(query, $event)"
+              @restore="(sql: string) => restoreQuery(query.context, sql)"
+              @run="(sql, version) => submit(query, sql, version)"
+              @explain="(sql, version) => explainQuery(query, sql, version)"
+              @cancel="cancel(query)"
+              @review="requestReview(query)"
+              @confirm-warning="(id) => confirmWarning(query, id)"
+              @export="(mode, format, snapshot) => startExport(query, mode, format, snapshot)"
+              @export-sync="
+                syncExport(query).catch((cause) => {
+                  query.error = failureText(cause);
+                })
+              "
+              @export-cancel="cancelExport(query)"
+              @export-delete="deleteExport(query)"
+              @recover="recoverSubmission(query)"
+              @reconnect="reconnect(query)"
+              @rows="(id, offset) => loadRows(query, id, offset)"
+              @retry-rows="retryRows(query)"
+              @pane="(pane) => (query.resultPane = pane)"
+            />
+          </template>
         </div>
         <div
           class="flex shrink-0 flex-wrap items-center gap-x-3 border-t border-default px-3 py-1 text-[11px] text-muted"
