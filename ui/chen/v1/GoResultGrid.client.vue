@@ -83,7 +83,7 @@ const filter = ref("");
 const gridPreferences = useChenGridPreferences();
 const loadingModes = computed(() => [
   { label: t("Chen.GoBrowsePaging"), value: "page" },
-  { label: t("Chen.GoBrowseContinuous"), value: "continuous" }
+  { label: t("Chen.GoBrowseContinuous"), value: "continuous", disabled: props.rows.query_page?.mode === "database" }
 ]);
 const batchSizes = computed(() =>
   [...new Set([50, 100, 200, 500, 1000, props.loadingSettings?.batchSize || 200, props.maxBatchSize || 1000])]

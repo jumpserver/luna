@@ -8,6 +8,7 @@ import type {
   GoExecution,
   GoExport,
   GoExportFormat,
+  GoQueryPageRequest,
   GoSession
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
@@ -456,7 +457,13 @@ async function loadRows(
         query.loadingSettings.batchSize = page.browse.page_size;
       }
       query.loadMoreFailed = false;
-      if (changedResult) query.browseCount = null;
+      if (changedResult) {
+        query.browseCount = null;
+        query.queryCount = null;
+      }
+      if (page.query_page?.mode === "database") {
+        query.loadingSettings = { mode: "page", batchSize: page.query_page.page_size };
+      }
       if (changedResult) query.edit = createEditDraft();
       query.resultId = id;
       // Row loading may finish after more statements or audit updates arrive.
@@ -493,11 +500,19 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   }
   if (value.status === "succeeded" && value.browse_count && value.browse_count.source_result_id === query.rows?.id)
     query.browseCount = value.browse_count;
+  if (
+    value.status === "succeeded" &&
+    value.query_count &&
+    value.query_count.source_result_id === query.rows?.id &&
+    value.query_count.scope_id === query.rows.query_page?.scope_id
+  )
+    query.queryCount = value.query_count;
   if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
     void loadQueryPlan(query, api);
   if (
     !query.execution?.plan &&
     (!query.executionBrowse || value.status === "succeeded") &&
+    (!query.executionQueryPage || value.status === "succeeded") &&
     value.result_ids?.length &&
     query.resultExecution?.id !== value.id &&
     !query.loadingRows &&
@@ -728,6 +743,20 @@ async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) 
   };
   await recoverSubmission(query);
 }
+async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest) {
+  if (
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    resultLoadingLocked(query) ||
+    request.source_result_id !== query.rows?.id
+  )
+    return;
+  query.loadGeneration++;
+  query.resultLoadError = null;
+  query.queryCount = null;
+  query.pending = { sql: query.resultSql, version: query.executionVersion, id: newChenRequestId(), queryPage: request };
+  await recoverSubmission(query);
+}
 async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSettings) {
   if (!sessionReady.value || resultLoadingLocked(query)) return;
   const settings = normalizeResultLoading(input);
@@ -735,10 +764,19 @@ async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSet
     settings.batchSize,
     query.rows?.browse?.supported ? query.rows.browse.max_page_size : 1000
   );
+  if (query.rows?.query_page?.mode === "database") settings.mode = "page";
   if (settings.mode === query.loadingSettings.mode && settings.batchSize === query.loadingSettings.batchSize) return;
   query.pendingLoading = settings;
   query.loadMoreFailed = false;
-  if (query.rows?.browse?.supported) {
+  if (query.rows?.query_page?.mode === "database") {
+    settings.batchSize = Math.min(settings.batchSize, query.rows.query_page.max_page_size);
+    await pageQuery(query, {
+      source_result_id: query.rows.id,
+      action: "page",
+      page_size: settings.batchSize,
+      offset: 0
+    });
+  } else if (query.rows?.browse?.supported) {
     await browseTable(query, { source_result_id: query.rows.id, page_size: settings.batchSize, offset: 0 });
   } else if (query.rows) await loadRows(query, query.rows.id, 0);
   else {
@@ -973,43 +1011,51 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
   query.busy = true;
   query.error = "";
   try {
-    const value = pending.editPlanId
-      ? await api.applyEdits(
+    const value = pending.queryPage
+      ? await api.queryPage(
           query.console.id,
-          pending.editPlanId,
+          pending.queryPage,
           pending.id,
           pending.submitReview,
           pending.confirmWarnings
         )
-      : pending.browse
-        ? await api.browse(
+      : pending.editPlanId
+        ? await api.applyEdits(
             query.console.id,
-            pending.browse.schema || "",
-            pending.browse.table || "",
+            pending.editPlanId,
             pending.id,
             pending.submitReview,
-            pending.confirmWarnings,
-            pending.browse
+            pending.confirmWarnings
           )
-        : pending.exportFormat
-          ? await api.exportQuery(
+        : pending.browse
+          ? await api.browse(
               query.console.id,
-              pending.sql,
-              pending.version,
-              pending.id,
-              pending.exportFormat,
-              pending.submitReview,
-              pending.confirmWarnings
-            )
-          : await api.execute(
-              query.console.id,
-              pending.sql,
-              pending.version,
+              pending.browse.schema || "",
+              pending.browse.table || "",
               pending.id,
               pending.submitReview,
               pending.confirmWarnings,
-              !!pending.plan
-            );
+              pending.browse
+            )
+          : pending.exportFormat
+            ? await api.exportQuery(
+                query.console.id,
+                pending.sql,
+                pending.version,
+                pending.id,
+                pending.exportFormat,
+                pending.submitReview,
+                pending.confirmWarnings
+              )
+            : await api.execute(
+                query.console.id,
+                pending.sql,
+                pending.version,
+                pending.id,
+                pending.submitReview,
+                pending.confirmWarnings,
+                !!pending.plan
+              );
     if (!isCurrent(query)) return;
     query.pending = null;
     query.execution = value;
@@ -1026,6 +1072,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     query.executionExportFormat = pending.exportFormat;
     query.executionEditPlan = pending.editPlanId;
     query.executionBrowse = pending.browse;
+    query.executionQueryPage = pending.queryPage;
     if (value.export_id) query.exportJob = null;
     // A close event may precede the HTTP response. Do not revive a running spinner after SSE has ended.
     if (session.value?.state === "closed" || (query.console as GoConsole).state === "closed") {
@@ -1076,9 +1123,11 @@ async function startExport(
       version: snapshot.version,
       id: newChenRequestId(),
       exportFormat: format,
-      ...(query.browseObject
-        ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }
-        : {})
+      ...(query.rows?.query_page?.mode === "database"
+        ? { queryPage: { source_result_id: snapshot.resultId, action: "export", format } as GoQueryPageRequest }
+        : query.browseObject
+          ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }
+          : {})
     };
     await recoverSubmission(query);
     return;
@@ -1697,6 +1746,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @upload-sql="restoreQuery(query.context, $event, true)"
               @refresh-data="refreshData(query)"
               @browse="(request) => browseTable(query, request)"
+              @query-page="(request) => pageQuery(query, request)"
               @loading-settings="(settings) => changeLoading(query, settings)"
               @load-more="(automatic) => loadMore(query, automatic)"
               @sql="updateQuerySql(query, $event)"

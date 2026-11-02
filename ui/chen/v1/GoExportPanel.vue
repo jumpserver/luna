@@ -199,7 +199,7 @@ useIntervalFn(() => {
                 t(
                   query.loadingSettings.mode === 'continuous'
                     ? 'Chen.GoBrowseExportLoaded'
-                    : query.rows?.browse?.supported
+                    : query.rows?.browse?.supported || query.rows?.query_page?.mode === 'database'
                       ? 'Chen.GoBrowseExportPage'
                       : 'Chen.GoV1ExportCached'
                 )
@@ -210,7 +210,15 @@ useIntervalFn(() => {
               @click="mode = 'cached'"
             />
             <UButton
-              :label="t(query.browseObject ? 'Chen.GoBrowseExportFull' : 'Chen.GoV1ExportFull')"
+              :label="
+                t(
+                  query.rows?.query_page?.mode === 'database'
+                    ? 'Chen.GoQueryPageExportFull'
+                    : query.browseObject
+                      ? 'Chen.GoBrowseExportFull'
+                      : 'Chen.GoV1ExportFull'
+                )
+              "
               :aria-pressed="mode === 'query'"
               :variant="mode === 'query' ? 'soft' : 'ghost'"
               color="neutral"

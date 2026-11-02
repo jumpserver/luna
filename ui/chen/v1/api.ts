@@ -39,6 +39,7 @@ export interface GoPlan extends ChenExecutionPlan {
   limits: { maxBytes: number; maxNodes: number; maxDepth: number };
 }
 export interface GoExecution {
+  query_count?: { source_result_id: string; scope_id: string; total: string };
   browse_count?: { source_result_id: string; total: string };
   plan?: GoPlanIdentity;
   id: string;
@@ -146,7 +147,28 @@ export interface GoBrowseDraft {
   sort: GoBrowseOrder[];
   page_size: number;
 }
+export interface GoQueryPageRequest {
+  source_result_id: string;
+  action: "page" | "count" | "export";
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoQueryPage {
+  supported: boolean;
+  reason?: string;
+  mode: "cache" | "database";
+  scope_id?: string;
+  ordered: boolean;
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  has_more: boolean | null;
+  read_only_reason?: string;
+}
 export interface GoRows {
+  query_page?: GoQueryPage;
   browse?: GoBrowsePage;
   id: string;
   columns: { name: string; data_type: string }[];
@@ -388,6 +410,19 @@ export function createChenGoApi(
         sql,
         ...(estimatedPlan ? { plan_mode: "ESTIMATED" } : {}),
         document_version: documentVersion,
+        request_id: requestId,
+        ...(submitReview ? { submit_review: true } : {}),
+        ...(confirmWarnings ? { confirm_warnings: true } : {})
+      }),
+    queryPage: (
+      consoleId: string,
+      scope: GoQueryPageRequest,
+      requestId: string,
+      submitReview = false,
+      confirmWarnings = false
+    ) =>
+      request<GoExecution>(`/consoles/${id(consoleId)}/query-page`, "POST", {
+        ...scope,
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
