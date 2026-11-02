@@ -5,6 +5,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { diagramObjectId } from "./diagram";
+import GoCatalogDiagram from "./GoCatalogDiagram.vue";
 import GoObjectDetails from "./GoObjectDetails.vue";
 import GoObjectDiagram from "./GoObjectDiagram.vue";
 const props = defineProps<{
@@ -15,10 +16,12 @@ const props = defineProps<{
   api: ChenGoApi;
   sessionId: string;
   ready: boolean;
+  diagramReady?: boolean;
   canCopy: boolean;
   canPaste: boolean;
 }>();
 const emit = defineEmits<{
+  object: [object: GoCatalogObject];
   query: [];
   section: [section: ObjectWorkspaceSection];
   schemaEdit: [mode: "alter" | "index"];
@@ -29,6 +32,7 @@ const structureVisited = ref(false);
 const ddlVisited = ref(false);
 const detailsVisited = ref(false);
 const diagramVisited = ref(false);
+const diagramDirection = ref<"outgoing" | "incoming">("outgoing");
 const identity = computed(() => diagramObjectId(props.sessionId, props.object));
 const { t } = useI18n();
 const columns = ref<GoCatalogColumn[]>([]);
@@ -241,14 +245,41 @@ function preventCopy(event: ClipboardEvent) {
         "
       />
     </div>
+    <nav
+      v-if="diagramVisited && section === 'diagram' && ['postgresql', 'mysql'].includes(dialect)"
+      class="flex shrink-0 flex-wrap gap-1 border-b border-default px-3 py-1"
+    >
+      <UButton
+        v-for="direction in ['outgoing', 'incoming'] as const"
+        :key="direction"
+        :label="t(direction === 'outgoing' ? 'Chen.GoDiagramOutgoing' : 'Chen.GoDiagramIncoming')"
+        :aria-pressed="diagramDirection === direction"
+        :variant="diagramDirection === direction ? 'soft' : 'ghost'"
+        color="neutral"
+        size="xs"
+        @click="diagramDirection = direction"
+      />
+    </nav>
+    <GoCatalogDiagram
+      v-if="diagramVisited && diagramDirection === 'incoming'"
+      v-show="section === 'diagram'"
+      :api="api"
+      :session-id="sessionId"
+      :scope="{ database: object.database, schema: object.schema }"
+      :target="object"
+      :ready="ready && diagramReady !== false"
+      :active="active !== false && section === 'diagram'"
+      :can-copy="canCopy"
+      @object="emit('object', $event)"
+    />
     <GoObjectDiagram
-      v-if="diagramVisited && object.kind === 'table'"
+      v-if="diagramVisited && object.kind === 'table' && diagramDirection === 'outgoing'"
       v-show="section === 'diagram'"
       :api="api"
       :session-id="sessionId"
       :object="object"
       :dialect="dialect"
-      :ready="ready"
+      :ready="ready && diagramReady !== false"
       :active="active !== false && section === 'diagram'"
       :can-copy="canCopy"
     />

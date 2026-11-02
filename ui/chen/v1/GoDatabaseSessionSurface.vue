@@ -928,16 +928,19 @@ function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "
   drawer.value = false;
   objectSection(tab, section);
 }
-function openOverview(context: QueryContext) {
+function openOverview(context: QueryContext, section: "diagram" | "tables" = "tables") {
   if (!sessionReady.value || context.database !== defaultContext.value.database) return;
   const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
   if (!tabs.value.some((tab) => tab.id === id))
     tabs.value.push({
       id,
       kind: "overview",
+      section,
       title: `${t("Chen.GoOverviewTitle")} · ${context.schema || context.database}`,
       context: { ...context }
     });
+  const tab = tabs.value.find((tab) => tab.id === id);
+  if (tab?.kind === "overview") tab.section = section;
   activeId.value = id;
   drawer.value = false;
 }
@@ -1652,16 +1655,20 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :api="api"
             :session-id="session.id"
             :scope="item.context"
+            :section="item.section"
             :dialect="session.dialect"
             :ready="sessionReady && eventConnected && !authenticationUnknown"
             :visible="activeId === item.id"
             :can-copy="session.permissions.can_copy"
+            @section="item.section = $event"
             @object="openObject"
+            @diagram-object="openObject($event, 'diagram')"
           />
           <GoObjectPane
             v-else-if="item.kind === 'object'"
             :object="item.object"
             :section="item.section"
+            :diagram-ready="eventConnected && !authenticationUnknown"
             :active="activeId === item.id"
             :dialect="session.dialect"
             :api="api"
@@ -1669,6 +1676,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :ready="sessionReady"
             :can-copy="session.permissions.can_copy"
             :can-paste="session.permissions.can_paste"
+            @object="openObject($event, 'diagram')"
             @section="objectSection(item, $event)"
             @query="newQuery({ database: item.object.database, schema: item.object.schema }, item.object)"
             @schema-edit="openSchemaEditor($event, item.object)"

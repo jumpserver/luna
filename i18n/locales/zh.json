@@ -2315,6 +2315,14 @@
     "factStartupCost": "启动成本"
   },
   "Chen": {
+    "GoDiagramIncoming": "引用此表",
+    "GoDiagramIncomingScope": "搜索范围：当前授权数据库中可见的非系统 schema（MySQL 仅当前数据库）；不会探测其他数据库",
+    "GoDiagramSchemaScope": "图范围：所选 schema；未选 schema 时为当前授权数据库的可见非系统 schema",
+    "GoDiagramLoaded": "已加载 {nodes} 个节点，{edges} 条关系",
+    "GoDiagramNonSnapshot": "仅显示授权目录事实；列仅展示已知外键列，其他列与主键未加载。多页不保证同一快照，变更后请刷新；搜索仅定位已加载节点。",
+    "GoDiagramBudget": "已达图缓存上限（500 节点 / 500 关系 / 8192 列对 / 4 MiB），请从树选择更小的 schema 或单表入向范围。",
+    "GoDiagramOldBackend": "当前后端不支持 schema/入向关系图，请升级 Chen。",
+    "GoDiagramLoadError": "图目录加载失败；请刷新重试，已有图可能已陈旧。",
     "GoDiagramTitle": "关系图",
     "GoDiagramScope": "仅显示当前表可见的出向外键；目标节点仅含引用信息，未加载入向关系或整个 schema 的关系。",
     "GoDiagramOutgoing": "当前表出向关系",

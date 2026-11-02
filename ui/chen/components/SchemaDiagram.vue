@@ -22,8 +22,14 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   openTable: [tableName: string];
+  openObject: [object: NonNullable<ChenSchemaDiagramTable["object"]>];
 }>();
 
+function open(table: ChenSchemaDiagramTable) {
+  if (!props.openable || table.openable === false) return;
+  if (table.object) emit("openObject", { ...table.object });
+  else if (table.openable === undefined) emit("openTable", table.name);
+}
 const { t } = useI18n();
 const markerId = `schema-diagram-${useId().replace(/[^\w-]/g, "")}`;
 const displayTitle = computed(() => props.title || t("Chen.SchemaDiagram"));
@@ -536,7 +542,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left hover:bg-accented"
               :title="t('Chen.SelectNamedTable', { name: `${entity.schema}.${entity.name}` })"
               @click="chooseTable(entity.id)"
-              @dblclick="openable && emit('openTable', entity.name)"
+              @dblclick="open(entity)"
             >
               <UIcon name="i-lucide-table-2" class="size-4 shrink-0 text-primary" />
               <div class="min-w-0 flex-1">
@@ -548,13 +554,13 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               </div>
             </button>
             <UButton
-              v-if="openable"
+              v-if="openable && entity.openable !== false"
               icon="i-lucide-external-link"
               size="xs"
               color="neutral"
               variant="ghost"
               :aria-label="t('Chen.OpenNamedTable', { name: entity.name })"
-              @click.stop="emit('openTable', entity.name)"
+              @click.stop="open(entity)"
             />
           </header>
           <div v-if="entity.columns.length">
@@ -575,7 +581,15 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               {{ t("Chen.MoreColumns", { count: entity.columns.length - maxVisibleColumns }) }}
             </div>
           </div>
-          <div v-else class="flex h-7 items-center px-3 text-[11px] text-muted">{{ t("Chen.NoColumns") }}</div>
+          <div v-else class="flex h-7 items-center px-3 text-[11px] text-muted">
+            {{
+              t(
+                entity.metadataStatus && entity.metadataStatus !== "Current"
+                  ? "Chen.GoDiagramNotLoaded"
+                  : "Chen.NoColumns"
+              )
+            }}
+          </div>
         </section>
       </div>
     </div>

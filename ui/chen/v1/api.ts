@@ -1,3 +1,5 @@
+import type { DiagramOptions } from "./catalogDiagram";
+import { parseDiagram } from "./catalogDiagram";
 import { parseOverview } from "./overview";
 import type { OverviewOptions } from "./overview";
 import type { ChenExecutionPlan } from "~/chen/types/plan";
@@ -478,6 +480,16 @@ export function createChenGoApi(
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
+    catalogDiagram: async (sessionId: string, options: DiagramOptions, signal?: AbortSignal) =>
+      parseDiagram(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/diagram?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        ),
+        options
+      ),
     catalogOverview: async (sessionId: string, options: OverviewOptions, signal?: AbortSignal) =>
       parseOverview(
         await request<unknown>(
