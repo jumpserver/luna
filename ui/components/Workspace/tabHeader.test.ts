@@ -1,6 +1,7 @@
 import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import * as Vue from "vue";
+import * as terminalBroadcast from "#koko/composables/terminal/useTerminalBroadcast";
 import { useResizeObserver } from "@vueuse/core";
 import { compileScript, parse } from "vue/compiler-sfc";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
@@ -13,7 +14,13 @@ function compileComponent(source: string, services: Record<string, unknown> = {}
   const { outputText } = ts.transpileModule(script.content, {
     compilerOptions: { module: ts.ModuleKind.CommonJS }
   });
-  const scope = { ...Vue, ...services };
+  const scope = {
+    ...Vue,
+    ...terminalBroadcast,
+    useWorkspacePaneSurfaceRegistry: () => ({ focusPaneSurface: vi.fn() }),
+    useAppShortcuts: () => ({ kbds: () => [], sessionDigitShortcuts: Vue.ref(false) }),
+    ...services
+  };
   return new Function("require", ...Object.keys(scope), `const exports = {};\n${outputText}\nreturn exports.default;`)(
     (name: string) => (name === "vue" ? Vue : scope),
     ...Object.values(scope)
@@ -78,7 +85,8 @@ it.skipIf(typeof document === "undefined").each([false, true])(
       })
     );
     app.component("WorkspaceAddSessionPopover", { render: () => Vue.h("button", "+") });
-    for (const name of ["UDropdownMenu", "UModal", "UInput"]) app.component(name, { render: () => null });
+    for (const name of ["UDropdownMenu", "UModal", "UInput", "WorkspaceTerminalBroadcast"])
+      app.component(name, { render: () => null });
     app.mount(host);
     try {
       await Vue.nextTick();

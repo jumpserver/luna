@@ -34,6 +34,7 @@ export function useKokoTerminalInput(options: {
   onData?: (data: string) => void;
   onExternalData?: () => void;
   onKeyEvent?: (event: KeyboardEvent) => boolean | undefined;
+  routeUserInput?: (data: string, paste: boolean) => boolean;
 }) {
   const cleanup: Array<() => void> = [];
 
@@ -66,6 +67,7 @@ export function useKokoTerminalInput(options: {
       return false;
     }
     if (!options.validateClipboardText("paste", text)) return false;
+    if (options.routeUserInput?.(text, true)) return true;
     options.onExternalData?.();
     socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
     return true;
@@ -91,7 +93,7 @@ export function useKokoTerminalInput(options: {
     };
     const onPaste = (event: ClipboardEvent) => {
       const text = event.clipboardData?.getData("text/plain") ?? "";
-      if (options.validateClipboardText("paste", text)) return;
+      if (options.validateClipboardText("paste", text) && !options.routeUserInput?.(text, true)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     };
@@ -123,7 +125,39 @@ export function useKokoTerminalInput(options: {
       () => container.removeEventListener("mouseleave", onMouseLeave)
     );
 
-    const sendInput = (data: string) => {
+    let keyboardData: string | undefined;
+    let textInputPending = false;
+    if (options.routeUserInput) {
+      // onData also carries device replies and mouse/focus reports. Only keyboard
+      // data and committed text may be broadcast; clipboard input is routed above.
+      const keySubscription = terminal.onKey(({ key }) => {
+        keyboardData = key;
+      });
+      const markTextInput = () => {
+        textInputPending = true;
+      };
+      container.addEventListener("input", markTextInput, true);
+      container.addEventListener("compositionend", markTextInput, true);
+      cleanup.push(() => {
+        keySubscription.dispose();
+        container.removeEventListener("input", markTextInput, true);
+        container.removeEventListener("compositionend", markTextInput, true);
+      });
+    }
+    const sendInput = (data: string, explicitUserInput = false) => {
+      const userInput =
+        explicitUserInput ||
+        keyboardData === data ||
+        (textInputPending &&
+          data.length > 0 &&
+          (data === "\x7f" ||
+            data === "\x08" ||
+            Array.from(data).every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127)));
+      keyboardData = undefined;
+      if (userInput) {
+        textInputPending = false;
+        if (options.routeUserInput?.(data, false)) return;
+      }
       const socket = options.socket.value;
       if (!socket || options.inputLocked(data) || !options.isSocketOpen(socket)) return;
       options.lastSendTime.value = new Date();
@@ -139,7 +173,7 @@ export function useKokoTerminalInput(options: {
       if (isZmodemInterrupt) options.abortZmodem();
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
     };
-    terminal.onData(sendInput);
+    terminal.onData((data) => sendInput(data));
     terminal.onResize(options.onResize);
     cleanup.push(
       registerWorkspaceClipboardSurface(container, () => {
@@ -159,6 +193,7 @@ export function useKokoTerminalInput(options: {
           paste(text) {
             if (!available() || !text) return "unavailable";
             if (!options.validateClipboardText("paste", text)) return "denied";
+            if (options.routeUserInput?.(text, true)) return "pasted";
             options.onExternalData?.();
             // xterm preserves bracketed-paste mode; onData sends only this pane's socket.
             terminal.paste(text);
@@ -231,7 +266,7 @@ export function useKokoTerminalInput(options: {
       if (isTerminalInterruptChord(event)) {
         if (event.type === "keydown") {
           event.preventDefault();
-          sendInput("\x03");
+          sendInput("\x03", true);
         }
         return false;
       }

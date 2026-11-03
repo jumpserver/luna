@@ -25,6 +25,8 @@ const markSessionConnecting = vi.fn();
 const markSessionConnected = vi.fn();
 const markSessionDisconnected = vi.fn();
 const getSessionConnectionAttempt = vi.fn();
+const setActiveSession = vi.fn();
+const splitWorkspace = vi.fn();
 const tabs = ref<WorkspaceSessionTab[]>([]);
 
 function session(webProxy = true) {
@@ -73,8 +75,18 @@ beforeEach(() => {
     markSessionConnected,
     markSessionDisconnected,
     getSessionConnectionAttempt,
-    setActiveSession: vi.fn()
+    setActiveSession,
+    splitWorkspace,
+    canSplitWorkspace: () => true
   }));
+});
+
+it("activates the selected tab before splitting its explicit pane", () => {
+  const tab = session();
+  useWorkspaceTabMenu().splitSession(tab, "horizontal", "selected-pane");
+  expect(setActiveSession).toHaveBeenCalledExactlyOnceWith(tab.id);
+  expect(splitWorkspace).toHaveBeenCalledExactlyOnceWith(tab.id, "horizontal", "selected-pane");
+  expect(setActiveSession.mock.invocationCallOrder[0]).toBeLessThan(splitWorkspace.mock.invocationCallOrder[0]!);
 });
 
 it("opens connection setup when a reconnect cannot exchange its token and the account needs a secret", async () => {

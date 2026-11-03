@@ -3,8 +3,17 @@ import type { SavedSessionGroup } from "~/composables/useSavedSessionGroups";
 import type { WebProxyOpenRequest } from "~/composables/useWebProxyManager";
 import type { WorkspaceConnectionProgressStage } from "~/composables/workspaceConnectionProgress";
 import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
+import type { WorkspaceLayout } from "~/utils/workspaceLayout";
+import {
+  legacyWorkspaceLayout,
+  mapWorkspaceLayout,
+  removeWorkspaceLayoutPane,
+  splitWorkspaceLayout,
+  stackWorkspacePanes
+} from "~/utils/workspaceLayout";
 
 import { createSharedComposable, useFullscreen } from "@vueuse/core";
+import { isKokoBroadcastWorkspace } from "#koko/composables/terminal/useTerminalBroadcast";
 import { closeAclScope } from "~/composables/useAclDialog";
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import {
@@ -88,8 +97,10 @@ export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
   title?: string;
   savedTabId?: string;
   group?: WorkspaceTabGroup;
+  // Retained for older saved groups; paneLayout owns the current geometry.
   layoutMode: WorkspacePaneLayoutMode;
   threePaneSpanAxis?: "columns" | "rows";
+  paneLayout?: WorkspaceLayout;
   panes: WorkspacePane[];
 }
 
@@ -105,6 +116,17 @@ export interface ScriptEditorInput {
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
+interface TemporaryWorkspaceLayout {
+  targetId: string;
+  imports: WorkspaceSessionTab[];
+  order: string[];
+  paneIds: Set<string>;
+  layout: WorkspaceLayout;
+  explicitLayout: boolean;
+  activePaneId: string;
+}
+let temporaryLayout: TemporaryWorkspaceLayout | undefined;
+let restoringTemporaryLayout = false;
 // Groups belong to their tabs, so closing or merging the last member removes the group too.
 const tabGroups = computed(() => [
   ...new Map(tabs.value.flatMap((tab) => (tab.group ? [[tab.group.id, tab.group] as const] : []))).values()
@@ -114,6 +136,7 @@ watch(
   () =>
     tabs.value.flatMap((tab) => tab.panes.map((pane) => [pane.id, JSON.stringify(snapshotSessionPane(pane))] as const)),
   (next, previous) => {
+    if (restoringTemporaryLayout) return;
     const before = new Map(previous);
     const changed = new Set(next.filter(([id, value]) => before.has(id) && before.get(id) !== value).map(([id]) => id));
     for (const group of tabGroups.value) {
@@ -286,69 +309,96 @@ const setLayoutForPaneCount = (
   }
 };
 
-const orderPanesForMerge = (
-  panes: WorkspacePane[],
-  sourcePane: WorkspacePane,
-  targetPaneId: string,
-  placement: WorkspacePaneDropPlacement
-) => {
-  if (placement === "center") return [...panes, sourcePane];
+const paneLayoutFor = (tab: WorkspaceSessionTab) =>
+  tab.paneLayout ||
+  legacyWorkspaceLayout(
+    tab.panes.map((pane) => pane.id),
+    tab.layoutMode,
+    tab.threePaneSpanAxis
+  );
 
-  const targetIndex = panes.findIndex((pane) => pane.id === targetPaneId);
-  if (targetIndex === -1) return [...panes, sourcePane];
-
-  const targetPane = panes[targetIndex]!;
-  const otherPanes = panes.filter((pane) => pane !== targetPane);
-  if (panes.length === 1) {
-    return placement === "left" || placement === "top" ? [sourcePane, targetPane] : [targetPane, sourcePane];
+function projectTemporaryLayout(current: WorkspaceSessionTab[], snapshot: TemporaryWorkspaceLayout) {
+  const target = current.find((tab) => tab.id === snapshot.targetId);
+  if (!target || !snapshot.imports.length) return current;
+  const restoredImports = snapshot.imports.flatMap((tab) => {
+    const pane = target.panes.find((pane) => pane.id === tab.panes[0]?.id);
+    return pane ? [{ ...tab, panes: [pane] }] : [];
+  });
+  const borrowed = new Set(restoredImports.flatMap((tab) => tab.panes.map((pane) => pane.id)));
+  const retained = target.panes.filter((pane) => !borrowed.has(pane.id));
+  const remaining = [
+    ...[...snapshot.paneIds].flatMap((id) => retained.filter((pane) => pane.id === id)),
+    ...retained.filter((pane) => !snapshot.paneIds.has(pane.id))
+  ];
+  const liveIds = new Set(remaining.map((pane) => pane.id));
+  let layout: WorkspaceLayout | undefined = snapshot.layout;
+  for (const id of snapshot.paneIds) {
+    if (!liveIds.has(id) && layout) layout = removeWorkspaceLayoutPane(layout, id);
   }
-
-  if (panes.length === 2) {
-    switch (placement) {
-      case "left":
-        return [sourcePane, targetPane, ...otherPanes];
-      case "right":
-        return [targetPane, sourcePane, ...otherPanes];
-      case "top":
-        return [sourcePane, ...otherPanes, targetPane];
-      case "bottom":
-        return [targetPane, ...otherPanes, sourcePane];
-    }
+  const added = remaining.filter((pane) => !snapshot.paneIds.has(pane.id));
+  if (added.length) {
+    const extraLayout = stackWorkspacePanes(
+      added.map((pane) => pane.id),
+      "horizontal"
+    );
+    // ponytail: new panes stack beside the restored subtree; retaining their edited positions needs a tree merge.
+    layout = layout
+      ? { type: "split", direction: "vertical", ratio: 50, first: layout, second: extraLayout }
+      : extraLayout;
   }
-
-  const orderedPanes: Array<WorkspacePane | undefined> = Array.from({ length: 4 });
-  const targetColumn = targetIndex % 2;
-  const targetRow = targetIndex < 2 ? 0 : 1;
-  let targetPosition = 0;
-  let sourcePosition = 0;
-  switch (placement) {
-    case "left":
-      targetPosition = targetRow * 2 + 1;
-      sourcePosition = targetPosition - 1;
-      break;
-    case "right":
-      targetPosition = targetRow * 2;
-      sourcePosition = targetPosition + 1;
-      break;
-    case "top":
-      targetPosition = targetColumn + 2;
-      sourcePosition = targetPosition - 2;
-      break;
-    case "bottom":
-      targetPosition = targetColumn;
-      sourcePosition = targetPosition + 2;
-      break;
+  const layoutMode: WorkspacePaneLayoutMode =
+    remaining.length === 1
+      ? "single"
+      : remaining.length > 2
+        ? "grid-2x2"
+        : layout?.type === "split" && layout.direction === "horizontal"
+          ? "rows-2"
+          : "columns-2";
+  const threePaneSpanAxis =
+    remaining.length === 3 && layout?.type === "split"
+      ? layout.direction === "horizontal"
+        ? ("columns" as const)
+        : ("rows" as const)
+      : undefined;
+  const projected = current.flatMap((tab) =>
+    tab !== target
+      ? [tab]
+      : remaining.length
+        ? [
+            {
+              ...target,
+              panes: remaining,
+              paneLayout:
+                !snapshot.explicitLayout && !added.length && remaining.length === snapshot.paneIds.size
+                  ? undefined
+                  : layout,
+              layoutMode,
+              threePaneSpanAxis
+            }
+          ]
+        : []
+  );
+  for (const tab of restoredImports) {
+    const index = snapshot.order.indexOf(tab.id);
+    const next = snapshot.order.slice(index + 1).find((id) => projected.some((item) => item.id === id));
+    const previous = snapshot.order
+      .slice(0, index)
+      .reverse()
+      .find((id) => projected.some((item) => item.id === id));
+    const position = next
+      ? projected.findIndex((item) => item.id === next)
+      : previous
+        ? projected.findIndex((item) => item.id === previous) + 1
+        : projected.length;
+    projected.splice(position, 0, tab);
   }
+  return projected;
+}
 
-  orderedPanes[targetPosition] = targetPane;
-  orderedPanes[sourcePosition] = sourcePane;
-  for (const pane of otherPanes) {
-    const emptyIndex = orderedPanes.findIndex((item) => !item);
-    orderedPanes[emptyIndex] = pane;
-  }
-
-  return orderedPanes.filter((pane): pane is WorkspacePane => Boolean(pane));
-};
+// Saved groups describe the durable workspace even while its sessions are temporarily gathered.
+export function getWorkspaceTabsForPersistence(current: WorkspaceSessionTab[]) {
+  return temporaryLayout ? projectTemporaryLayout(current, temporaryLayout) : current;
+}
 
 const createTabFromPane = (pane: WorkspacePane): WorkspaceSessionTab => {
   const tab: WorkspaceSessionTab = {
@@ -411,6 +461,51 @@ const ensureActivePaneForTab = (tabId: string) => {
   const hasActivePane = tab.panes.some((pane) => pane.id === activePaneId.value);
   if (!hasActivePane) activePaneId.value = getFirstPaneId(tab);
 };
+
+function applyProjectedWorkspaceTabs(projected: WorkspaceSessionTab[], imports: WorkspaceSessionTab[]) {
+  const originalTabs = new Map([...tabs.value, ...imports].map((tab) => [tab.id, tab]));
+  const wasRestoring = restoringTemporaryLayout;
+  restoringTemporaryLayout = true;
+  try {
+    tabs.value = projected.map((projectedTab) => {
+      const tab = originalTabs.get(projectedTab.id)!;
+      tab.panes = projectedTab.panes;
+      tab.paneLayout = projectedTab.paneLayout;
+      tab.layoutMode = projectedTab.layoutMode;
+      tab.threePaneSpanAxis = projectedTab.threePaneSpanAxis;
+      setLayoutForPaneCount(tab);
+      syncTabFromPrimaryPane(tab);
+      return tab;
+    });
+  } finally {
+    restoringTemporaryLayout = wasRestoring;
+  }
+}
+
+function restoreTemporaryWorkspaceLayout(snapshot = temporaryLayout) {
+  if (!snapshot || temporaryLayout !== snapshot) return;
+  const projected = projectTemporaryLayout(tabs.value, snapshot);
+  const wasActive = activeTabId.value === snapshot.targetId;
+  restoringTemporaryLayout = true;
+  try {
+    applyProjectedWorkspaceTabs(projected, snapshot.imports);
+    if (wasActive || !tabs.value.some((tab) => tab.id === activeTabId.value)) {
+      const selected = findPane(snapshot.activePaneId) || findPane(activePaneId.value);
+      activeTabId.value = selected?.tab.id || tabs.value[0]?.id || "";
+      activePaneId.value = selected?.pane.id || "";
+    }
+    ensureActivePaneForTab(activeTabId.value);
+    if (pendingPaneTarget.value) {
+      const match = findPane(pendingPaneTarget.value.paneId);
+      pendingPaneTarget.value = match ? { tabId: match.tab.id, paneId: match.pane.id } : null;
+    }
+    if (focusModeTabId.value === snapshot.targetId && !tabs.value.some((tab) => tab.id === snapshot.targetId))
+      focusModeTabId.value = activeTabId.value;
+  } finally {
+    temporaryLayout = undefined;
+    restoringTemporaryLayout = false;
+  }
+}
 
 const findSession = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
   if (match.tabId) return findPane(match.tabId);
@@ -716,6 +811,7 @@ export const useWorkspaceTabs = () => {
     connectionProgress.clearConnectionProgress(pane);
     clearWorkspaceSessionDetails(pane.id);
     closeNativeSession(pane.id);
+    tab.paneLayout = removeWorkspaceLayoutPane(paneLayoutFor(tab), paneId);
     tab.panes.splice(paneIndex, 1);
     setLayoutForPaneCount(tab);
     syncTabFromPrimaryPane(tab);
@@ -911,7 +1007,8 @@ export const useWorkspaceTabs = () => {
         group,
         panes,
         layoutMode: item.layoutMode,
-        threePaneSpanAxis: item.threePaneSpanAxis
+        threePaneSpanAxis: item.threePaneSpanAxis,
+        paneLayout: item.paneLayout ? mapWorkspaceLayout(item.paneLayout, (index) => panes[index]!.id) : undefined
       };
       syncTabFromPrimaryPane(tab);
       return tab;
@@ -931,49 +1028,32 @@ export const useWorkspaceTabs = () => {
     return opened;
   };
 
-  const canSplitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
+  const canSplitWorkspace = (tabId: string, _direction: WorkspaceSplitDirection) => {
     const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab || tab.protocol === "script-editor") return false;
-
-    if (tab.panes.length === 1) return true;
-    if (tab.panes.length === 2) {
-      return (
-        (tab.layoutMode === "columns-2" && direction === "horizontal") ||
-        (tab.layoutMode === "rows-2" && direction === "vertical")
-      );
-    }
-    return tab.layoutMode === "grid-2x2" && tab.panes.length < 4;
+    return Boolean(tab && tab.protocol !== "script-editor" && !isKokoBroadcastWorkspace(tabId));
   };
 
-  const splitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
+  const splitWorkspace = (tabId: string, direction: WorkspaceSplitDirection, paneId = activePaneId.value) => {
     const tab = tabs.value.find((item) => item.id === tabId);
     if (!tab || !canSplitWorkspace(tabId, direction)) return [];
-
-    if (tab.panes.length === 1) {
-      tab.panes.push(createEmptyPane(tab.id));
-      setLayoutForPaneCount(tab, 2, direction);
-      activePaneId.value = tab.panes[1]!.id;
-      if (tab.group) persistSessionGroup(tab.group, tabs.value);
-      return [tab.panes[1]!];
-    }
-
-    if (tab.panes.length === 2) {
-      tab.threePaneSpanAxis = tab.layoutMode === "rows-2" ? "columns" : "rows";
-      const pane = createEmptyPane(tab.id);
-      tab.panes.push(pane);
-      tab.layoutMode = "grid-2x2";
-      activePaneId.value = pane.id;
-      if (tab.group) persistSessionGroup(tab.group, tabs.value);
-      return [pane];
-    }
-
+    const target = tab.panes.find((pane) => pane.id === paneId) || tab.panes[0]!;
     const pane = createEmptyPane(tab.id);
+    tab.paneLayout = splitWorkspaceLayout(paneLayoutFor(tab), target.id, pane.id, direction);
     tab.panes.push(pane);
-    tab.layoutMode = "grid-2x2";
-    tab.threePaneSpanAxis = undefined;
+    setLayoutForPaneCount(tab, tab.panes.length, direction);
     activePaneId.value = pane.id;
     if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return [pane];
+  };
+
+  const persistPaneLayout = (tabId: string) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (tab?.group) persistSessionGroup(tab.group, tabs.value);
+  };
+
+  const setPaneLayout = (tabId: string, layout: WorkspaceLayout) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (tab) tab.paneLayout = layout;
   };
 
   const swapPanes = (tabId: string, sourcePaneId: string, targetPaneId: string) => {
@@ -985,9 +1065,12 @@ export const useWorkspaceTabs = () => {
     const targetIndex = tab.panes.findIndex((pane) => pane.id === targetPaneId);
     if (sourceIndex === -1 || targetIndex === -1) return false;
 
-    const sourcePane = tab.panes[sourceIndex]!;
-    tab.panes[sourceIndex] = tab.panes[targetIndex]!;
-    tab.panes[targetIndex] = sourcePane;
+    tab.paneLayout = mapWorkspaceLayout(paneLayoutFor(tab), (id) =>
+      id === sourcePaneId ? targetPaneId : id === targetPaneId ? sourcePaneId : id
+    );
+    const panes = [...tab.panes];
+    [panes[sourceIndex], panes[targetIndex]] = [panes[targetIndex]!, panes[sourceIndex]!];
+    tab.panes = panes;
     syncTabFromPrimaryPane(tab);
     if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return true;
@@ -1000,38 +1083,133 @@ export const useWorkspaceTabs = () => {
     placement: WorkspacePaneDropPlacement
   ) => {
     const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab || tab.panes.length !== 2 || placement === "center") {
-      return swapPanes(tabId, sourcePaneId, targetPaneId);
-    }
-
-    const sourcePane = tab.panes.find((pane) => pane.id === sourcePaneId);
-    const targetPane = tab.panes.find((pane) => pane.id === targetPaneId);
-    if (!sourcePane || !targetPane || sourcePane === targetPane) return false;
-
-    const sourceFirst = placement === "left" || placement === "top";
-    tab.panes.splice(0, 2, ...(sourceFirst ? [sourcePane, targetPane] : [targetPane, sourcePane]));
-    tab.layoutMode = placement === "left" || placement === "right" ? "columns-2" : "rows-2";
-    syncTabFromPrimaryPane(tab);
+    if (!tab || placement === "center") return swapPanes(tabId, sourcePaneId, targetPaneId);
+    if (
+      sourcePaneId === targetPaneId ||
+      !tab.panes.some((pane) => pane.id === sourcePaneId) ||
+      !tab.panes.some((pane) => pane.id === targetPaneId)
+    )
+      return false;
+    const remaining = removeWorkspaceLayoutPane(paneLayoutFor(tab), sourcePaneId)!;
+    tab.paneLayout = splitWorkspaceLayout(
+      remaining,
+      targetPaneId,
+      sourcePaneId,
+      placement === "left" || placement === "right" ? "vertical" : "horizontal",
+      placement === "left" || placement === "top"
+    );
     if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return true;
   };
 
-  const canMergeTabs = (sourceTabId: string, targetTabId: string) => {
+  const canMergeTabs = (sourceTabId: string, targetTabId: string, forBroadcast = false) => {
     if (sourceTabId === targetTabId) return false;
     const source = tabs.value.find((tab) => tab.id === sourceTabId);
     const target = tabs.value.find((tab) => tab.id === targetTabId);
     if (!source || !target) return false;
 
-    return source.panes.length === 1 && target.panes.length < 4;
+    return (
+      source.panes.length === 1 &&
+      target.protocol !== "script-editor" &&
+      (forBroadcast || !isKokoBroadcastWorkspace(targetTabId))
+    );
+  };
+
+  const beginTemporaryWorkspaceLayout = (tabId: string, sourceTabIds: string[]) => {
+    restoreTemporaryWorkspaceLayout();
+    const target = tabs.value.find((tab) => tab.id === tabId);
+    if (
+      !target ||
+      new Set(sourceTabIds).size !== sourceTabIds.length ||
+      !sourceTabIds.every((id) => canMergeTabs(id, tabId))
+    )
+      return null;
+    const snapshot: TemporaryWorkspaceLayout = {
+      targetId: tabId,
+      imports: tabs.value.filter((tab) => sourceTabIds.includes(tab.id)),
+      order: tabs.value.map((tab) => tab.id),
+      paneIds: new Set(target.panes.map((pane) => pane.id)),
+      layout: mapWorkspaceLayout(paneLayoutFor(target), (id) => id),
+      explicitLayout: Boolean(target.paneLayout),
+      activePaneId: activePaneId.value
+    };
+    temporaryLayout = snapshot;
+    // Close/disconnect callbacks may run before their pane is removed. Restore after that mutation.
+    return () =>
+      new Promise<void>((resolve) =>
+        queueMicrotask(() => {
+          restoreTemporaryWorkspaceLayout(snapshot);
+          resolve();
+        })
+      );
+  };
+
+  const extendTemporaryWorkspaceLayout = (tabId: string, sourceTabIds: string[]) => {
+    const snapshot = temporaryLayout;
+    const target = tabs.value.find((tab) => tab.id === tabId);
+    if (
+      !snapshot ||
+      snapshot.targetId !== tabId ||
+      !target ||
+      !sourceTabIds.every((id) => canMergeTabs(id, tabId, true))
+    )
+      return false;
+    if (!snapshot.imports.length) {
+      snapshot.paneIds = new Set(target.panes.map((pane) => pane.id));
+      snapshot.layout = mapWorkspaceLayout(paneLayoutFor(target), (id) => id);
+      snapshot.explicitLayout = Boolean(target.paneLayout);
+    }
+    const currentOrder = tabs.value.map((tab) => tab.id);
+    for (const [index, id] of currentOrder.entries()) {
+      if (snapshot.order.includes(id)) continue;
+      const next = currentOrder.slice(index + 1).find((item) => snapshot.order.includes(item));
+      snapshot.order.splice(next ? snapshot.order.indexOf(next) : snapshot.order.length, 0, id);
+    }
+    for (const tab of tabs.value) {
+      if (sourceTabIds.includes(tab.id) && !snapshot.imports.some((item) => item.id === tab.id))
+        snapshot.imports.push(tab);
+    }
+    snapshot.imports.sort((a, b) => snapshot.order.indexOf(a.id) - snapshot.order.indexOf(b.id));
+    return true;
+  };
+
+  const releaseTemporaryWorkspaceTabs = (tabId: string, paneIds: string[]) => {
+    const snapshot = temporaryLayout;
+    const target = tabs.value.find((tab) => tab.id === tabId);
+    if (!snapshot || snapshot.targetId !== tabId || !target) return;
+    const released = snapshot.imports.filter((tab) => paneIds.includes(tab.panes[0]!.id));
+    if (!released.length) return;
+    const rest = snapshot.imports.filter((tab) => !released.includes(tab));
+    let projection = snapshot;
+    if (rest.length) {
+      const ids = new Set(released.map((tab) => tab.panes[0]!.id));
+      let layout: WorkspaceLayout | undefined = paneLayoutFor(target);
+      for (const id of ids) if (layout) layout = removeWorkspaceLayoutPane(layout, id);
+      if (!layout) return;
+      projection = {
+        ...snapshot,
+        imports: released,
+        paneIds: new Set(target.panes.filter((pane) => !ids.has(pane.id)).map((pane) => pane.id)),
+        layout,
+        explicitLayout: true
+      };
+    }
+    const projected = projectTemporaryLayout(tabs.value, projection);
+    const active = activePaneId.value;
+    snapshot.imports = rest;
+    applyProjectedWorkspaceTabs(projected, released);
+    if (findPane(active)) activatePane(active);
+    else ensureActivePaneForTab(activeTabId.value);
   };
 
   const mergeTabIntoWorkspace = (
     sourceTabId: string,
     targetTabId: string,
     targetPaneId = "",
-    placement: WorkspacePaneDropPlacement = "center"
+    placement: WorkspacePaneDropPlacement = "center",
+    forBroadcast = false
   ) => {
-    if (!canMergeTabs(sourceTabId, targetTabId)) return false;
+    if (!canMergeTabs(sourceTabId, targetTabId, forBroadcast)) return false;
 
     const sourceIndex = tabs.value.findIndex((tab) => tab.id === sourceTabId);
     const target = tabs.value.find((tab) => tab.id === targetTabId);
@@ -1042,10 +1220,15 @@ export const useWorkspaceTabs = () => {
 
     const sourcePane = source.panes[0]!;
     const targetPane = target.panes.find((pane) => pane.id === targetPaneId) || target.panes[0]!;
-    const orderedPanes = orderPanesForMerge(target.panes, sourcePane, targetPane.id, placement);
-    target.panes.splice(0, target.panes.length, ...orderedPanes);
-    const preferredDirection = placement === "top" || placement === "bottom" ? "horizontal" : "vertical";
-    setLayoutForPaneCount(target, target.panes.length, preferredDirection);
+    target.paneLayout = splitWorkspaceLayout(
+      paneLayoutFor(target),
+      targetPane.id,
+      sourcePane.id,
+      placement === "top" || placement === "bottom" ? "horizontal" : "vertical",
+      placement === "left" || placement === "top"
+    );
+    target.panes.push(sourcePane);
+    setLayoutForPaneCount(target, target.panes.length);
     syncTabFromPrimaryPane(target);
     if (pendingPaneTarget.value?.tabId === source.id) {
       pendingPaneTarget.value = { tabId: target.id, paneId: pendingPaneTarget.value.paneId };
@@ -1188,6 +1371,9 @@ export const useWorkspaceTabs = () => {
     activePaneId,
     activateAdjacentSession,
     beginPaneAssetSelection,
+    beginTemporaryWorkspaceLayout,
+    extendTemporaryWorkspaceLayout,
+    releaseTemporaryWorkspaceTabs,
     canSplitWorkspace,
     canCloseWorkspaceSession,
     canMergeTabs,
@@ -1218,6 +1404,8 @@ export const useWorkspaceTabs = () => {
     openSession,
     openSetupSession,
     placePane,
+    persistPaneLayout,
+    setPaneLayout,
     reorderTabs,
     registerSessionDisposer,
     renameTabTitle,

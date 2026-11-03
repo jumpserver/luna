@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEventListener, useMediaQuery } from "@vueuse/core";
 import { sendKokoTerminalData } from "#koko";
+import { dispatchKokoBroadcastInput } from "#koko/composables/terminal/useTerminalBroadcast";
 import { getKeyboardCharacter, getKeyboardCharacterRows } from "~/lion/utils/keyboard";
 import { getLionWorkspaceSession } from "~/lion/workspaces/useLionWorkspaceSessionRegistry";
 
@@ -361,6 +362,11 @@ function sendWindowsKeys(keys: string[]) {
   return true;
 }
 
+function sendTerminalKey(paneId: string, data: string) {
+  const result = dispatchKokoBroadcastInput(paneId, data);
+  return result === "inactive" ? sendKokoTerminalData(paneId, data) : result === "sent";
+}
+
 function press(value: string): (() => void) | undefined {
   const paneId = activePane.value?.id;
   if (available.value && paneId) {
@@ -372,7 +378,7 @@ function press(value: string): (() => void) | undefined {
         controller.sendKeyEvent(1, keysym);
         return () => controller.sendKeyEvent(0, keysym);
       }
-    } else if (sendKokoTerminalData(paneId, encodedKey(value))) {
+    } else if (sendTerminalKey(paneId, encodedKey(value))) {
       // Terminal protocols carry keypress bytes, not separate key-down/key-up events.
       return () => {};
     }
@@ -413,7 +419,7 @@ function sendShortcut(shortcut: ShortcutKey) {
   const paneId = activePane.value?.id;
   const sent = shortcut.windowsKeys
     ? sendWindowsKeys(shortcut.windowsKeys)
-    : Boolean(paneId && shortcut.terminalData && sendKokoTerminalData(paneId, shortcut.terminalData));
+    : Boolean(paneId && shortcut.terminalData && sendTerminalKey(paneId, shortcut.terminalData));
   if (!sent) toast.add({ title: t("koko.terminal.noActiveTerminal"), color: "warning" });
 }
 

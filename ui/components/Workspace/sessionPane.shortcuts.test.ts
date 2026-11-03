@@ -1,6 +1,8 @@
 import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import * as Vue from "vue";
+import * as broadcast from "#koko/composables/terminal/useTerminalBroadcast";
+import * as layout from "~/utils/workspaceLayout";
 import { compileScript, parse } from "vue/compiler-sfc";
 import source from "./sessionPane.vue?raw";
 
@@ -26,6 +28,8 @@ it.skipIf(typeof document === "undefined")(
     });
     const scope = {
       ...Vue,
+      ...broadcast,
+      ...layout,
       isWorkspaceTourActive: () => tourActive.value,
       shouldShowConnectionProgress: () => false,
       findDeclaredCapability: () => null,
@@ -80,6 +84,16 @@ it.skipIf(typeof document === "undefined")(
       })
     );
     for (const name of ["UBadge", "UIcon", "UKbd"]) app.component(name, { render: () => Vue.h("span") });
+    app.component(
+      "UTooltip",
+      Vue.defineComponent({
+        inheritAttrs: false,
+        setup:
+          (_props, { slots }) =>
+          () =>
+            slots.default?.()
+      })
+    );
     for (const name of [
       "WorkspaceConnectionProgressOverlay",
       "WorkspaceAclPaneHost",

@@ -1,6 +1,7 @@
 import type { AssetItem } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, reactive } from "vue";
+import { mapWorkspaceLayout, measureWorkspaceLayout, stackWorkspacePanes } from "~/utils/workspaceLayout";
 import { useWorkspaceTabs } from "./useWorkspaceTabs";
 import {
   getSessionGroupStorageKey,
@@ -175,6 +176,78 @@ describe("saved session groups", () => {
     });
     expect(mocks.launch).not.toHaveBeenCalled();
     expect(groups.savedGroups.value[0]?.tabs[0]?.panes).toHaveLength(2);
+  });
+
+  it.each([false, true])(
+    "persists the original groups throughout a temporary broadcast merge (split: %s)",
+    async (split) => {
+      const { a, b, group } = makeGroup();
+      if (split) {
+        workspace.splitWorkspace(a.id, "horizontal", a.panes[0]!.id);
+        workspace.persistPaneLayout(a.id);
+      }
+      const c = open("c");
+      const other = workspace.createTabGroup(c.id, "Other")!;
+      const key = getSessionGroupStorageKey();
+      const before = stored.get(key);
+      const restore = workspace.beginTemporaryWorkspaceLayout(a.id, [b.id, c.id])!;
+      workspace.mergeTabIntoWorkspace(b.id, a.id);
+      workspace.mergeTabIntoWorkspace(c.id, a.id);
+      persistSessionGroup(group, workspace.tabs.value);
+      persistSessionGroup(other, workspace.tabs.value);
+      expect(stored.get(key)).toBe(before);
+      restore();
+      await Promise.resolve();
+      expect(workspace.tabs.value.map((tab) => tab.id)).toEqual([a.id, b.id, c.id]);
+      expect(a.layoutMode).toBe(split ? "rows-2" : "single");
+      expect(stored.get(key)).toBe(before);
+    }
+  );
+
+  it("preserves saved groups when targets are added and removed during broadcasting", async () => {
+    const { a, b, group } = makeGroup();
+    const restore = workspace.beginTemporaryWorkspaceLayout(a.id, [b.id])!;
+    workspace.mergeTabIntoWorkspace(b.id, a.id);
+    const c = open("c");
+    const other = workspace.createTabGroup(c.id, "Other")!;
+    const key = getSessionGroupStorageKey();
+    const before = stored.get(key);
+    expect(workspace.extendTemporaryWorkspaceLayout(a.id, [c.id])).toBe(true);
+    workspace.mergeTabIntoWorkspace(c.id, a.id);
+    persistSessionGroup(group, workspace.tabs.value);
+    persistSessionGroup(other, workspace.tabs.value);
+    expect(stored.get(key)).toBe(before);
+    workspace.releaseTemporaryWorkspaceTabs(a.id, [b.panes[0]!.id]);
+    persistSessionGroup(group, workspace.tabs.value);
+    expect(stored.get(key)).toBe(before);
+    workspace.releaseTemporaryWorkspaceTabs(a.id, [c.panes[0]!.id]);
+    await restore();
+    expect(workspace.tabs.value.map((tab) => tab.id)).toEqual([a.id, b.id, c.id]);
+    expect(stored.get(key)).toBe(before);
+  });
+
+  it("restores a ten-pane layout with fresh pane IDs and saved independent ratios", async () => {
+    const tab = open("main");
+    for (let index = 0; index < 9; index++) workspace.splitWorkspace(tab.id, "horizontal");
+    const oldIds = tab.panes.map((pane) => pane.id);
+    workspace.setPaneLayout(tab.id, {
+      type: "split",
+      direction: "vertical",
+      ratio: 35,
+      first: { type: "pane", paneId: oldIds[0]! },
+      second: stackWorkspacePanes(oldIds.slice(1), "horizontal")
+    });
+    const group = workspace.createTabGroup(tab.id, "Ten panes")!;
+    const before = mapWorkspaceLayout(tab.paneLayout!, (id) => oldIds.indexOf(id));
+    const groups = useSavedSessionGroups();
+    await workspace.closeAllSessions({ force: true });
+    expect(await groups.openSavedGroup(group.id)).toEqual([]);
+    const restored = workspace.tabs.value[0]!;
+    const newIds = restored.panes.map((pane) => pane.id);
+    expect(newIds).toHaveLength(10);
+    expect(newIds.every((id) => !oldIds.includes(id))).toBe(true);
+    expect(mapWorkspaceLayout(restored.paneLayout!, (id) => newIds.indexOf(id))).toEqual(before);
+    expect(measureWorkspaceLayout(restored.paneLayout!).panes.size).toBe(10);
   });
 
   it("continues opening other members when one request fails and does not overwrite the saved group", async () => {
