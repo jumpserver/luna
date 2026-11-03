@@ -2138,6 +2138,10 @@
     "factStartupCost": "Coste inicial"
   },
   "Chen": {
+    "GoBrowseLastHint": "Cuente primero las filas. No disponible si se desconoce el total o la última página supera el límite del servidor.",
+    "GoPinnedLimit": "Puede fijar hasta 3 resultados, de un máximo de 2 MiB cada uno.",
+    "GoPinnedHint": "Copia de solo lectura en memoria de las filas cargadas; no vuelve a ejecutar SQL.",
+    "GoPinnedCachePage": "Navega solo por las filas en caché; no vuelve a ejecutar SQL.",
     "GoDiagramIncoming": "Referencias a esta tabla",
     "GoDiagramIncomingScope": "Búsqueda: esquemas visibles no pertenecientes al sistema en la base de datos autorizada (MySQL: solo la base actual); sin descubrir otras bases de datos",
     "GoDiagramSchemaScope": "Alcance del grafo: esquema seleccionado o esquemas visibles no pertenecientes al sistema en la base de datos autorizada",

@@ -6,6 +6,7 @@ import { useI18n } from "vue-i18n";
 import { executionActive } from "./api";
 import { editDirty } from "./dataEditing";
 import GoBrowseCondition from "./GoBrowseCondition.vue";
+import { lastPageOffset } from "./workspace";
 
 const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession }>();
 const emit = defineEmits<{ submit: [request: GoBrowseRequest] }>();
@@ -71,6 +72,11 @@ function submit(clear = false) {
     offset: 0
   });
 }
+function applyWhere(event: KeyboardEvent) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  submit();
+}
 function page(offset: number) {
   if (locked.value || !applied.value?.supported || !props.query.rows) return;
   emit("submit", { source_result_id: props.query.rows.id, offset });
@@ -81,6 +87,9 @@ function count() {
 }
 const total = computed(() =>
   props.query.browseCount?.source_result_id === props.query.rows?.id ? props.query.browseCount?.total : undefined
+);
+const lastOffset = computed(() =>
+  lastPageOffset(total.value, applied.value?.page_size || 0, applied.value?.max_offset ?? 0)
 );
 </script>
 
@@ -97,7 +106,7 @@ const total = computed(() =>
           size="xs"
           color="neutral"
           variant="ghost"
-          :label="t('Chen.GoBrowseFilter')"
+          :label="t('Chen.BuildFilter')"
           :aria-expanded="expanded"
           @click="expanded = !expanded"
         />
@@ -128,6 +137,16 @@ const total = computed(() =>
         <UButton
           v-if="query.loadingSettings.mode === 'page'"
           size="xs"
+          icon="i-lucide-chevrons-left"
+          color="neutral"
+          variant="ghost"
+          :aria-label="t('Chen.FirstPage')"
+          :disabled="locked || !applied || applied.offset === 0"
+          @click="page(0)"
+        />
+        <UButton
+          v-if="query.loadingSettings.mode === 'page'"
+          size="xs"
           icon="i-lucide-chevron-left"
           color="neutral"
           variant="ghost"
@@ -145,10 +164,62 @@ const total = computed(() =>
           :disabled="locked || applied?.has_more !== true || applied.offset + applied.page_size > applied.max_offset"
           @click="page(applied!.offset + applied!.page_size)"
         />
+        <UButton
+          v-if="query.loadingSettings.mode === 'page'"
+          size="xs"
+          icon="i-lucide-chevrons-right"
+          color="neutral"
+          variant="ghost"
+          :aria-label="t('Chen.LastPage')"
+          :title="t('Chen.GoBrowseLastHint')"
+          :disabled="locked || lastOffset === null || lastOffset === applied?.offset"
+          @click="lastOffset !== null && page(lastOffset)"
+        />
+      </div>
+      <div
+        class="mt-1 flex items-center gap-1"
+        @copy.capture="
+          (e) => {
+            if (!session.permissions.can_copy) e.preventDefault();
+          }
+        "
+        @paste.capture="
+          (e) => {
+            if (!session.permissions.can_paste) e.preventDefault();
+          }
+        "
+      >
+        <span class="font-ui-mono text-muted">WHERE</span>
+        <UInput
+          v-model="draft.where"
+          class="min-w-0 flex-1 font-ui-mono"
+          size="xs"
+          :aria-label="t('Chen.GoBrowseWhere')"
+          :placeholder="draft.filter ? t('Chen.GoBrowseBuilder') : t('Chen.GoBrowseWhereHint')"
+          :disabled="locked || !!draft.filter"
+          @keydown.enter="applyWhere"
+        />
+        <UButton
+          size="xs"
+          icon="i-lucide-play"
+          :aria-label="t('Chen.ApplyWhereCondition')"
+          :title="t('Chen.ApplyWhereCondition')"
+          :disabled="locked"
+          @click="submit()"
+        />
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-x"
+          :aria-label="t('Chen.GoBrowseClear')"
+          :disabled="locked"
+          @click="submit(true)"
+        />
       </div>
       <p v-if="applied?.has_more === null" role="status" class="text-warning">{{ t("Chen.GoBrowseIncomplete") }}</p>
       <p v-if="applied && !applied.stable" class="text-warning">{{ t("Chen.GoBrowseUnstable") }}</p>
-      <p v-if="applied" class="text-muted">{{ t("Chen.GoBrowseConsistency") }}</p>
+      <p v-if="expanded && applied" class="text-muted">{{ t("Chen.GoBrowseConsistency") }}</p>
       <p v-if="editDirty(query.edit)" class="text-warning">{{ t("Chen.GoBrowseDirty") }}</p>
       <div
         v-if="expanded"
@@ -193,17 +264,6 @@ const total = computed(() =>
             :can-add="filterSize(draft.filter) < 48"
           />
           <p class="text-muted">{{ t("Chen.GoBrowseValuesHint") }}</p>
-        </template>
-        <template v-else>
-          <UTextarea
-            v-model="draft.where"
-            class="w-full font-ui-mono"
-            :rows="2"
-            :disabled="locked"
-            :aria-label="t('Chen.GoBrowseWhere')"
-            placeholder="id > 10 AND (name LIKE 'A%' OR name IS NULL)"
-          />
-          <p class="text-muted">{{ t("Chen.GoBrowseWhereHint") }}</p>
         </template>
         <div class="flex flex-wrap items-center gap-2">
           <span>{{ t("Chen.GoBrowseSort") }}</span>

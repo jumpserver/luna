@@ -3,6 +3,7 @@ import type { ChenGoApi, GoCatalogObject, GoCatalogPage } from "./api";
 import type { ObjectWorkspaceSection, QueryContext } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { writeClipboardText } from "~/utils/clipboard";
@@ -18,6 +19,7 @@ const props = defineProps<{
   canPaste: boolean;
   canCopy: boolean;
   canInsert: boolean;
+  recentObjects?: GoCatalogObject[];
 }>();
 const emit = defineEmits<{
   object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
@@ -27,14 +29,16 @@ const emit = defineEmits<{
   insert: [text: string];
   browse: [object: GoCatalogObject];
   createTable: [context: QueryContext];
+  clearRecent: [];
 }>();
 const { t } = useI18n();
 const toast = useToast();
+const preferences = useChenWorkspacePreferences();
 const databaseNamespace = computed(() => chenSqlDialect(props.dialect).databaseNamespace);
 interface Node {
   id: string;
   label: string;
-  type: "connection" | "database" | "schema" | "group" | "object" | "column";
+  type: "connection" | "database" | "schema" | "group" | "object" | "column" | "recent";
   schema: string;
   kind?: "table" | "view";
   object?: GoCatalogObject;
@@ -70,6 +74,18 @@ function node(type: Node["type"], label: string, schema = "", extra: Partial<Nod
   };
 }
 const root = ref<Node>(node("connection", props.asset));
+const recent = ref<Node>(node("recent", "recent", "", { loaded: true, expanded: true }));
+watch(
+  () => props.recentObjects,
+  (objects) => {
+    recent.value.children = (objects || []).map((object) => ({
+      ...relation(object),
+      id: `recent:${objectKey(object)}`,
+      loaded: true
+    }));
+  },
+  { immediate: true }
+);
 const selected = ref("");
 const tree = ref<HTMLElement>();
 const search = ref("");
@@ -94,7 +110,10 @@ const rows = computed(() => {
     else if (current.loaded && !current.children.length) result.push({ node: current, depth, type: "empty" });
   }
   if (searching.value) children(searchNode.value, 0);
-  else walk(root.value, 0);
+  else {
+    walk(recent.value, 0);
+    walk(root.value, 0);
+  }
   return result;
 });
 const focusable = computed(() => rows.value.filter((row) => row.type === "node"));
@@ -170,28 +189,36 @@ async function load(current: Node, append = false) {
   }
 }
 function expandable(current: Node) {
-  return current.type !== "column";
+  return current.type !== "column" && !current.id.startsWith("recent:");
 }
 async function toggle(current: Node) {
   if (!expandable(current)) return;
   current.expanded = !current.expanded;
   if (current.expanded && !current.loaded) await load(current);
 }
+function select(current: Node, event: MouseEvent) {
+  selected.value = current.id;
+  // A native double click produces two clicks. Expand once, never run a query here.
+  if (event.detail <= 1 && expandable(current)) void toggle(current);
+}
 function activate(current: Node) {
-  if (current.object) emit("object", current.object);
-  else void toggle(current);
+  if (current.object) emit("object", current.object, current.type === "column" ? "structure" : "data");
+  else if (current.type === "database" || current.type === "schema")
+    emit("overview", { database: props.database, schema: current.schema });
 }
 function icon(current: Node) {
   return {
-    connection: "i-lucide-server",
+    connection: "i-lucide-database-zap",
+    recent: "i-lucide-history",
     database: "i-lucide-database",
-    schema: "i-lucide-folder-tree",
-    group: "i-lucide-folder",
-    object: current.kind === "view" ? "i-lucide-eye" : "i-lucide-table-2",
+    schema: "i-lucide-library-big",
+    group: current.expanded ? "i-lucide-folder-open" : "i-lucide-folder",
+    object: current.kind === "view" ? "i-lucide-eye" : "i-lucide-table-properties",
     column: "i-lucide-columns-3"
   }[current.type];
 }
 function label(current: Node) {
+  if (current.type === "recent") return t("Chen.RecentlyTables");
   return current.type === "group" ? t(current.kind === "view" ? "Chen.GoV1Views" : "Chen.GoV1Tables") : current.label;
 }
 function collapseAll() {
@@ -234,9 +261,18 @@ async function refresh(current = root.value.children[0]!) {
   }
 }
 function menu(current: Node) {
+  if (current.type === "recent")
+    return [
+      {
+        label: t("Chen.ClearRecentTables"),
+        icon: "i-lucide-trash-2",
+        disabled: !current.children.length,
+        onSelect: () => emit("clearRecent")
+      }
+    ];
   const context = { database: props.database, schema: current.schema };
   return [
-    ...(["database", "schema"].includes(current.type)
+    ...(["connection", "database", "schema"].includes(current.type)
       ? [
           {
             label: t("Chen.GoDiagramTitle"),
@@ -376,7 +412,10 @@ async function keydown(event: KeyboardEvent, current: Node) {
   if (event.key === "ArrowUp") void focusNode(Math.max(0, index - 1));
   if (event.key === "Home") void focusNode(0);
   if (event.key === "End") void focusNode(focusable.value.length - 1);
-  if (event.key === "Enter") activate(current);
+  if (event.key === "Enter") {
+    if (current.object || current.type === "database" || current.type === "schema") activate(current);
+    else void toggle(current);
+  }
   if (event.key === " ") selected.value = current.id;
   if (event.key === "ArrowRight") {
     if (!current.expanded) await toggle(current);
@@ -487,7 +526,7 @@ onBeforeUnmount(() => {
       }
     "
   >
-    <div class="flex shrink-0 items-center gap-2 border-b border-default px-3 py-2">
+    <div class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 border-b border-default px-2.5">
       <span class="flex-1 text-xs font-medium">{{ t("Chen.GoV1Objects") }}</span>
       <UButton
         icon="i-lucide-fold-vertical"
@@ -507,6 +546,45 @@ onBeforeUnmount(() => {
         :disabled="!ready"
         @click="searching ? runSearch() : refresh()"
       />
+      <UPopover :content="{ align: 'end' }">
+        <UButton
+          icon="i-lucide-settings-2"
+          :aria-label="t('Chen.WorkspaceSettings')"
+          :title="t('Chen.WorkspaceSettings')"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+        />
+        <template #content>
+          <div class="w-64 space-y-3 p-3 text-xs">
+            <p class="font-medium">{{ t("Chen.WorkspaceSettingsTitle") }}</p>
+            <label class="flex items-center justify-between gap-3">
+              <span>{{ t("Chen.TableTabName") }}</span>
+              <USelect
+                v-model="preferences.tabTitleFormat"
+                size="xs"
+                class="w-28"
+                :items="[
+                  { label: t('Chen.TabTitleOnly'), value: 'table' },
+                  { label: t('Chen.TabTitleTableSchema'), value: 'table-schema' }
+                ]"
+              />
+            </label>
+            <label class="flex items-center justify-between gap-3">
+              <span>{{ t("Chen.SqlKeywordCompletion") }}</span>
+              <USelect
+                v-model="preferences.sqlKeywordCase"
+                size="xs"
+                class="w-28"
+                :items="[
+                  { label: t('Chen.SqlCaseLower'), value: 'lower' },
+                  { label: t('Chen.SqlCaseUpper'), value: 'upper' }
+                ]"
+              />
+            </label>
+          </div>
+        </template>
+      </UPopover>
     </div>
     <div class="shrink-0 space-y-1 border-b border-default p-2">
       <UInput
@@ -535,7 +613,12 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="!ready" class="px-1 text-[11px] text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
-    <div ref="tree" role="tree" :aria-label="t('Chen.GoV1Objects')" class="min-h-0 flex-1 overflow-auto py-1 text-xs">
+    <div
+      ref="tree"
+      role="tree"
+      :aria-label="t('Chen.GoV1Objects')"
+      class="app-tree min-h-0 flex-1 overflow-auto px-2 py-1 text-xs"
+    >
       <template v-for="row in rows" :key="`${row.node.id}-${row.type}`">
         <UContextMenu v-if="row.type === 'node'" :items="menu(row.node)">
           <div
@@ -550,9 +633,11 @@ onBeforeUnmount(() => {
             :aria-level="row.depth + 1"
             :aria-selected="selected === row.node.id"
             :aria-expanded="expandable(row.node) ? row.node.expanded : undefined"
-            class="group flex min-h-8 cursor-default items-center gap-1 pr-1 outline-none hover:bg-[var(--workspace-surface-sub-tab-active)] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
-            :class="{ 'bg-[var(--workspace-surface-sub-tab-active)]': selected === row.node.id }"
-            :style="{ paddingLeft: `${row.depth * 16 + 4}px` }"
+            :aria-busy="row.node.loading"
+            class="app-tree-row sidebar-row group flex cursor-default items-center gap-1 rounded-md pr-1 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+            :class="{ 'bg-[var(--app-hover-soft)]': selected === row.node.id }"
+            :data-active="selected === row.node.id ? '' : undefined"
+            :style="{ paddingLeft: `${row.depth * 12 + 6}px` }"
             :title="
               [
                 row.node.object ? qualifiedObjectName(row.node.object, dialect) : '',
@@ -562,7 +647,7 @@ onBeforeUnmount(() => {
                 .filter(Boolean)
                 .join(' · ')
             "
-            @click="selected = row.node.id"
+            @click="select(row.node, $event)"
             @contextmenu="selected = row.node.id"
             @dblclick="activate(row.node)"
             @keydown="keydown($event, row.node)"
@@ -589,7 +674,11 @@ onBeforeUnmount(() => {
               />
             </button>
             <span v-else class="w-5 shrink-0" />
-            <UIcon :name="icon(row.node)" class="size-3.5 shrink-0 text-muted" />
+            <UIcon
+              :name="icon(row.node)"
+              class="app-tree-icon sidebar-icon shrink-0"
+              :class="{ 'tree-folder-icon': row.node.type === 'group' }"
+            />
             <span class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
               <span class="max-w-full shrink-0 truncate">{{ label(row.node) }}</span>
               <span v-if="searching && row.node.object" class="min-w-0 truncate text-muted">
@@ -597,11 +686,21 @@ onBeforeUnmount(() => {
               </span>
               <span v-if="row.node.type === 'column'" class="min-w-0 truncate text-muted">{{ row.node.detail }}</span>
             </span>
-            <UDropdownMenu :items="menu(row.node)" :content="{ align: 'end' }">
+            <UButton
+              v-if="row.node.type === 'recent' && row.node.children.length"
+              icon="i-lucide-trash-2"
+              :aria-label="t('Chen.ClearRecentTables')"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              @click.stop="emit('clearRecent')"
+              @dblclick.stop
+            />
+            <UDropdownMenu v-else :items="menu(row.node)" :content="{ align: 'end' }">
               <UButton
                 icon="i-lucide-ellipsis"
                 :aria-label="t('Chen.GoV1ObjectActions')"
-                class="shrink-0 opacity-60 group-hover:opacity-100"
+                class="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
                 size="xs"
                 color="neutral"
                 variant="ghost"
@@ -611,7 +710,7 @@ onBeforeUnmount(() => {
             </UDropdownMenu>
           </div>
         </UContextMenu>
-        <div v-else :style="{ paddingLeft: `${row.depth * 16 + 12}px` }" class="pr-2 py-1.5 text-[11px] text-muted">
+        <div v-else :style="{ paddingLeft: `${row.depth * 12 + 14}px` }" class="pr-2 py-1.5 text-[11px] text-muted">
           <span v-if="row.type === 'loading'" role="status">{{ t("Chen.GoV1Loading") }}</span>
           <span v-else-if="row.type === 'empty'">
             {{ t(searching ? "Chen.GoV1NoRelations" : "Chen.GoV1EmptyCatalog") }}

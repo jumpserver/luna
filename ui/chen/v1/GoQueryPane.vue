@@ -6,12 +6,14 @@ import type {
   GoExecution,
   GoExportFormat,
   GoQueryPageRequest,
+  GoRows,
   GoSession
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
+import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -20,6 +22,7 @@ import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { chenErrorText } from "~/chen/utils/errorMessages";
+import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
@@ -27,6 +30,7 @@ import { editDirty } from "./dataEditing";
 import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
+import GoResultGrid from "./GoResultGrid.client.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { reviewTicketUrl } from "./review";
@@ -42,6 +46,7 @@ const props = defineProps<{
   dataOnly?: boolean;
   reviewCoreSite?: string;
   aiAvailable?: boolean;
+  sqlKeywordCase?: ChenSqlKeywordCase;
 }>();
 const emit = defineEmits<{
   sql: [value: string];
@@ -68,6 +73,7 @@ const emit = defineEmits<{
   ai: [operation: ChenSqlAiOperation];
   recover: [];
   reconnect: [];
+  newContext: [context: { database: string; schema: string }];
   rows: [id: string, offset?: number];
   retryRows: [];
   pane: [value: "results" | "plan"];
@@ -216,8 +222,86 @@ async function deleteSnippet(snippet: ChenSqlSnippet) {
       snippetError.value = `${t("Chen.DeleteSqlFailed")}: ${chenErrorText(cause, t)}`;
   }
 }
-const scope = ref("empty");
+const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const editorError = ref("");
+const contextOpen = ref(false);
+const contextSchemas = ref<string[]>([]);
+const contextSchema = ref(props.query.context.schema);
+const contextCursor = ref<string>();
+const contextMore = ref(false);
+const contextBusy = ref(false);
+const contextError = ref("");
+let contextController: AbortController | undefined;
+async function loadContexts(append = false) {
+  if (!ready.value || contextBusy.value || chenSqlDialect(props.session.dialect).databaseNamespace) return;
+  const sessionId = props.session.id;
+  const controller = new AbortController();
+  contextController?.abort();
+  contextController = controller;
+  contextBusy.value = true;
+  contextError.value = "";
+  try {
+    const page = await props.api.catalogSchemas(sessionId, append ? contextCursor.value : undefined, controller.signal);
+    if (controller.signal.aborted || props.session.id !== sessionId) return;
+    contextSchemas.value = [
+      ...new Set(
+        [
+          props.query.context.schema,
+          ...(append ? contextSchemas.value : []),
+          ...page.items.map((schema) => schema.name)
+        ].filter(Boolean)
+      )
+    ];
+    contextCursor.value = page.next_cursor;
+    contextMore.value = page.has_more;
+  } catch (cause) {
+    if (!controller.signal.aborted) contextError.value = chenErrorText(cause, t);
+  } finally {
+    if (!controller.signal.aborted) contextBusy.value = false;
+  }
+}
+watch(contextOpen, (open) => {
+  if (!open) return;
+  contextSchema.value = props.query.context.schema;
+  if (!contextSchemas.value.length) void loadContexts();
+});
+function newContext() {
+  if (!ready.value || !contextSchemas.value.includes(contextSchema.value)) return;
+  contextOpen.value = false;
+  emit("newContext", { database: props.query.context.database, schema: contextSchema.value });
+}
+onBeforeUnmount(() => contextController?.abort());
+const pinned = ref<{ id: number; rows: GoRows; sql: string; source: string }[]>([]);
+const pinnedId = ref<number | null>(null);
+let pinSequence = 0;
+const pinnedResult = computed(() => pinned.value.find((item) => item.id === pinnedId.value));
+function pinResult() {
+  if (!props.query.rows || editDirty(props.query.edit) || props.query.edit.busy || props.query.loadingRows) return;
+  // A pin is a read-only in-memory copy of loaded rows, never an execution or edit context.
+  const json = JSON.stringify(props.query.rows);
+  if (pinned.value.length >= 3 || new TextEncoder().encode(json).byteLength > 2 * 1024 * 1024) {
+    editorError.value = t("Chen.GoPinnedLimit");
+    return;
+  }
+  pinned.value.push({
+    id: ++pinSequence,
+    rows: JSON.parse(json),
+    sql: props.query.resultSql,
+    source: props.query.resultExecution?.id || ""
+  });
+}
+function closePin(id: number) {
+  pinned.value = pinned.value.filter((item) => item.id !== id);
+  if (pinnedId.value === id) pinnedId.value = null;
+}
+watch(
+  () => props.session.id,
+  () => {
+    pinned.value = [];
+    pinnedId.value = null;
+  }
+);
+const scope = ref("empty");
 const historyOpen = ref(false);
 const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
@@ -274,7 +358,6 @@ const canExplain = computed(() =>
   ].includes(props.session.dialect)
 );
 const shownPlan = computed(() => props.query.plan || props.query.planAttempt);
-const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const active = computed(() => executionActive(props.query.execution));
 const planLoading = computed(
   () => props.query.loadingPlan || !!props.query.pending?.plan || (props.query.executionPlan && active.value)
@@ -397,11 +480,45 @@ const gridRows = computed(() =>
         : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
 );
 const sqlFile = ref<HTMLInputElement>();
+let fileGeneration = 0;
+onBeforeUnmount(() => fileGeneration++);
+const sqlItems = computed(() => [
+  {
+    label: t("Chen.SqlFavorites"),
+    icon: "i-lucide-book-open",
+    disabled: !snippetsAvailable.value,
+    onSelect: openSnippets
+  },
+  {
+    label: t("Chen.SaveSql"),
+    icon: "i-lucide-bookmark-plus",
+    disabled: !canSaveSnippet.value || sqlSnippets.saving.value,
+    onSelect: openSaveSnippet
+  },
+  ...(props.session.permissions.can_upload
+    ? [
+        {
+          label: t("Chen.GoWriteOpenSql"),
+          icon: "i-lucide-file-up",
+          disabled: !ready.value,
+          onSelect: () => sqlFile.value?.click()
+        }
+      ]
+    : [])
+]);
 async function loadSqlFile(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
   if (!file || !props.session.permissions.can_upload || !ready.value) return;
+  if (!file.name.toLowerCase().endsWith(".sql")) {
+    editorError.value = t("Chen.ChooseSqlFile");
+    return;
+  }
+  const generation = ++fileGeneration;
+  const sourceSession = props.session.id;
+  const sourceQuery = props.query.id;
+  editorError.value = "";
   if (file.size > 1024 * 1024) {
     editorError.value = t("Chen.GoWriteSqlFileLimit");
     return;
@@ -409,9 +526,17 @@ async function loadSqlFile(event: Event) {
   try {
     const sql = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
     if (!sql.trim() || sql.includes("\0")) throw new Error(t("Chen.GoWriteSqlFileInvalid"));
-    if (props.session.permissions.can_upload && ready.value) emit("uploadSql", sql);
+    if (
+      generation === fileGeneration &&
+      props.session.id === sourceSession &&
+      props.query.id === sourceQuery &&
+      props.session.permissions.can_upload &&
+      ready.value
+    )
+      emit("uploadSql", sql);
   } catch (cause) {
-    editorError.value = chenErrorText(cause, t);
+    if (generation === fileGeneration && props.session.id === sourceSession && props.query.id === sourceQuery)
+      editorError.value = chenErrorText(cause, t);
   }
 }
 function preventCopy(event: ClipboardEvent) {
@@ -480,7 +605,11 @@ defineExpose({
         @click="emit('cancel')"
       />
     </div>
-    <div v-if="!dataOnly" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
+    <div
+      v-if="!dataOnly"
+      data-chen-query-toolbar
+      class="flex min-h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-2 py-1 [&>*]:shrink-0"
+    >
       <UButton
         v-if="session.state === 'ready' && !ready"
         :label="t('Chen.GoV1NewConnection')"
@@ -498,16 +627,26 @@ defineExpose({
         title="Ctrl/⌘ Enter"
         @click="editor?.run()"
       />
-      <UButton
-        icon="i-lucide-list-start"
-        :label="t('Chen.GoV1RunAll')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="!canRun || !query.sql.trim()"
-        title="Ctrl/⌘ Shift Enter"
-        @click="editor?.runAll()"
-      />
+      <UDropdownMenu
+        :items="[
+          {
+            label: t('Chen.GoV1RunAll'),
+            icon: 'i-lucide-list-start',
+            disabled: !canRun || !query.sql.trim(),
+            onSelect: () => editor?.runAll()
+          }
+        ]"
+      >
+        <UButton
+          icon="i-lucide-chevron-down"
+          :aria-label="t('Chen.GoV1RunAll')"
+          title="Ctrl/⌘ Shift Enter"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :disabled="!canRun || !query.sql.trim()"
+        />
+      </UDropdownMenu>
       <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
@@ -522,6 +661,7 @@ defineExpose({
         </span>
       </UTooltip>
       <UTooltip
+        v-if="active"
         :text="
           t(
             cancellationUnsupported
@@ -584,49 +724,17 @@ defineExpose({
         title="Alt Shift F"
         @click="editor?.format()"
       />
-      <UTooltip
-        :text="
-          snippetUnavailable ||
-          (!session.permissions.can_copy ? t('Chen.GoSnippetCopyDenied') : t('Chen.GoSnippetPublic'))
-        "
-      >
-        <span class="inline-flex" tabindex="0">
-          <UButton
-            icon="i-lucide-bookmark-plus"
-            :label="t('Chen.SaveSql')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="!canSaveSnippet || sqlSnippets.saving.value"
-            @click="openSaveSnippet"
-          />
-        </span>
-      </UTooltip>
-      <UTooltip :text="snippetUnavailable || t('Chen.SelectSql')">
-        <span class="inline-flex" tabindex="0">
-          <UButton
-            icon="i-lucide-book-open"
-            :label="t('Chen.SelectSql')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="!snippetsAvailable"
-            @click="openSnippets"
-          />
-        </span>
-      </UTooltip>
+      <UDropdownMenu :items="sqlItems">
+        <UButton
+          label="SQL"
+          trailing-icon="i-lucide-chevron-down"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :title="snippetUnavailable || t('Chen.GoWriteSqlFileLimit')"
+        />
+      </UDropdownMenu>
       <input ref="sqlFile" type="file" accept=".sql,text/plain,application/sql" class="hidden" @change="loadSqlFile" />
-      <UButton
-        v-if="session.permissions.can_upload"
-        icon="i-lucide-file-up"
-        :label="t('Chen.GoWriteOpenSql')"
-        :title="t('Chen.GoWriteSqlFileLimit')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="!ready"
-        @click="sqlFile?.click()"
-      />
       <UDropdownMenu
         v-if="!single && query.kind === 'query'"
         :items="[
@@ -640,7 +748,8 @@ defineExpose({
         ]"
       >
         <UButton
-          label="SQL AI"
+          label="AI"
+          trailing-icon="i-lucide-chevron-down"
           icon="i-lucide-sparkles"
           size="xs"
           color="neutral"
@@ -649,10 +758,63 @@ defineExpose({
           :title="aiAvailable ? undefined : t('RightPanel.SQLAIUnavailableDescription')"
         />
       </UDropdownMenu>
+      <UPopover v-model:open="contextOpen">
+        <UButton
+          class="ml-auto max-w-64 min-w-24"
+          trailing-icon="i-lucide-chevron-down"
+          icon="i-lucide-database"
+          :label="[query.context.database || t('Chen.GoV1Database'), query.context.schema].filter(Boolean).join(' / ')"
+          :aria-label="t('Chen.GoV1ConnectionDetails')"
+          :title="`${query.context.database} / ${query.context.schema}`"
+          :ui="{ label: 'truncate' }"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+        />
+        <template #content>
+          <div class="max-w-sm space-y-2 p-3 text-xs">
+            <p class="font-medium">
+              {{ query.context.database }}
+              <template v-if="query.context.schema">/ {{ query.context.schema }}</template>
+            </p>
+            <p>{{ session.asset }} · {{ session.account }}</p>
+            <p class="text-muted">{{ t("Chen.GoV1DedicatedConnection") }}</p>
+            <div v-if="!chenSqlDialect(session.dialect).databaseNamespace" class="space-y-2">
+              <USelect
+                v-model="contextSchema"
+                :items="contextSchemas"
+                :aria-label="t('Chen.Schema')"
+                size="xs"
+                class="w-full"
+                :disabled="!ready || contextBusy"
+              />
+              <p v-if="contextError" role="alert" class="text-error">{{ contextError }}</p>
+              <UButton
+                v-if="contextMore || contextError"
+                :label="t(contextError ? 'Chen.GoV1Retry' : 'Chen.GoV1LoadMore')"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="!ready || contextBusy"
+                @click="loadContexts(contextMore && !contextError)"
+              />
+              <UButton
+                :label="t('Chen.GoV1NewQueryHere')"
+                size="xs"
+                :disabled="!ready || !contextSchemas.includes(contextSchema)"
+                @click="newContext"
+              />
+            </div>
+            <p>{{ t("Chen.GoV1TransactionUnknown") }}</p>
+            <p class="text-muted">{{ t("Chen.GoV1TransactionHint") }}</p>
+          </div>
+        </template>
+      </UPopover>
       <UPopover v-model:open="historyOpen">
         <UButton
           icon="i-lucide-history"
-          :label="t('Chen.GoV1QueryHistory')"
+          :aria-label="t('Chen.GoV1QueryHistory')"
+          :title="t('Chen.GoV1QueryHistory')"
           size="xs"
           color="neutral"
           variant="ghost"
@@ -689,31 +851,6 @@ defineExpose({
                 />
               </div>
             </div>
-          </div>
-        </template>
-      </UPopover>
-      <UPopover>
-        <UButton
-          class="ml-auto max-w-64"
-          icon="i-lucide-database"
-          :label="[query.context.database || t('Chen.GoV1Database'), query.context.schema].filter(Boolean).join(' / ')"
-          :aria-label="t('Chen.GoV1ConnectionDetails')"
-          :title="`${query.context.database} / ${query.context.schema}`"
-          :ui="{ label: 'truncate' }"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-        />
-        <template #content>
-          <div class="max-w-sm space-y-2 p-3 text-xs">
-            <p class="font-medium">
-              {{ query.context.database }}
-              <template v-if="query.context.schema">/ {{ query.context.schema }}</template>
-            </p>
-            <p>{{ session.asset }} · {{ session.account }}</p>
-            <p class="text-muted">{{ t("Chen.GoV1DedicatedConnection") }}</p>
-            <p>{{ t("Chen.GoV1TransactionUnknown") }}</p>
-            <p class="text-muted">{{ t("Chen.GoV1TransactionHint") }}</p>
           </div>
         </template>
       </UPopover>
@@ -921,14 +1058,20 @@ defineExpose({
         )
       }}
     </div>
-    <GoQueryPagePanel :query="query" :session="session" @submit="emit('queryPage', $event)" />
-    <GoBrowsePanel v-if="query.browseObject" :query="query" :session="session" @submit="emit('browse', $event)" />
+    <GoQueryPagePanel v-if="!pinnedResult" :query="query" :session="session" @submit="emit('queryPage', $event)" />
+    <GoBrowsePanel
+      v-if="query.browseObject && !pinnedResult"
+      :query="query"
+      :session="session"
+      @submit="emit('browse', $event)"
+    />
     <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
       <div v-if="!dataOnly" v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
         <MonacoSqlEditor
           ref="editor"
           :model-value="query.sql"
           :dialect="session.dialect"
+          :sql-keyword-case="sqlKeywordCase"
           :console-id="query.console?.id || ''"
           :api="api"
           :can-copy="session.permissions.can_copy"
@@ -1018,6 +1161,7 @@ defineExpose({
           </span>
           <span
             v-if="
+              !pinnedResult &&
               query.resultPane === 'results' &&
               query.loadingSettings.mode === 'page' &&
               query.rows &&
@@ -1031,6 +1175,24 @@ defineExpose({
           </span>
           <UButton
             v-if="
+              !pinnedResult &&
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported &&
+              query.rows.query_page?.mode !== 'database'
+            "
+            icon="i-lucide-chevrons-left"
+            :aria-label="t('Chen.FirstPage')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy || query.rows!.offset === 0"
+            @click="emit('rows', query.resultId, 0)"
+          />
+          <UButton
+            v-if="
+              !pinnedResult &&
               query.resultPane === 'results' &&
               query.loadingSettings.mode === 'page' &&
               query.rows &&
@@ -1048,6 +1210,7 @@ defineExpose({
           />
           <UButton
             v-if="
+              !pinnedResult &&
               query.resultPane === 'results' &&
               query.loadingSettings.mode === 'page' &&
               !query.rows?.browse?.supported &&
@@ -1061,6 +1224,39 @@ defineExpose({
             variant="ghost"
             :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy"
             @click="emit('rows', query.resultId, query.rows.next_offset)"
+          />
+          <UButton
+            v-if="
+              !pinnedResult &&
+              query.resultPane === 'results' &&
+              query.loadingSettings.mode === 'page' &&
+              query.rows &&
+              !query.rows.browse?.supported &&
+              query.rows.query_page?.mode !== 'database'
+            "
+            icon="i-lucide-chevrons-right"
+            :aria-label="t('Chen.LastPage')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :title="t('Chen.GoPinnedCachePage')"
+            :disabled="
+              query.loadingRows ||
+              editDirty(query.edit) ||
+              query.edit.busy ||
+              !query.rows!.total_rows ||
+              query.rows!.offset >=
+                Math.floor((query.rows!.total_rows - 1) / query.loadingSettings.batchSize) *
+                  query.loadingSettings.batchSize
+            "
+            @click="
+              emit(
+                'rows',
+                query.resultId,
+                Math.floor((query.rows!.total_rows - 1) / query.loadingSettings.batchSize) *
+                  query.loadingSettings.batchSize
+              )
+            "
           />
           <UButton
             v-if="!dataOnly"
@@ -1112,11 +1308,26 @@ defineExpose({
               size="xs"
               color="neutral"
               :disabled="editDirty(query.edit) || query.edit.busy"
-              @click="emit('rows', id)"
+              @click="
+                pinnedId = null;
+                emit('rows', id);
+              "
             />
           </div>
+          <UButton
+            icon="i-lucide-pin"
+            :aria-label="t('Chen.PinResult')"
+            :title="t('Chen.GoPinnedHint')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="
+              !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
+            "
+            @click="pinResult"
+          />
           <GoExportPanel
-            v-if="query.resultId || query.exportJob"
+            v-if="!pinnedResult && (query.resultId || query.exportJob)"
             :query="query"
             :session="session"
             :api="api"
@@ -1149,10 +1360,42 @@ defineExpose({
                   class="max-h-80 overflow-auto whitespace-pre-wrap break-words"
                   :class="{ 'select-none': !session.permissions.can_copy }"
                   @copy="preventCopy"
-                  >{{ query.resultSql }}</pre>
+                  >{{ pinnedResult?.sql || query.resultSql }}</pre>
               </div>
             </template>
           </UPopover>
+        </div>
+        <div
+          v-if="pinned.length && query.resultPane === 'results'"
+          class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-2 py-1"
+        >
+          <UButton
+            size="xs"
+            color="neutral"
+            :variant="pinnedId === null ? 'soft' : 'ghost'"
+            :label="t('Chen.GoV1Result')"
+            @click="pinnedId = null"
+          />
+          <div v-for="item in pinned" :key="item.id" class="flex shrink-0 items-center">
+            <UButton
+              size="xs"
+              color="neutral"
+              :variant="pinnedId === item.id ? 'soft' : 'ghost'"
+              icon="i-lucide-pin"
+              :label="`${t('Chen.PinResult')} ${item.id}`"
+              :title="item.sql"
+              :disabled="editDirty(query.edit) || query.edit.busy"
+              @click="pinnedId = item.id"
+            />
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-x"
+              :aria-label="`${t('Chen.UnpinResult')} ${item.id}`"
+              @click="closePin(item.id)"
+            />
+          </div>
         </div>
         <div
           v-if="query.execution?.error && !reviewRequired"
@@ -1227,6 +1470,15 @@ defineExpose({
           </div>
           <ExecutionPlanTree :plan="shownPlan" :loading="planLoading" preserve-raw />
         </div>
+        <template v-else-if="pinnedResult">
+          <p class="shrink-0 px-3 py-1 text-xs text-muted">{{ t("Chen.GoPinnedHint") }} · {{ pinnedResult.source }}</p>
+          <GoResultGrid
+            :rows="pinnedResult.rows"
+            :can-copy="session.permissions.can_copy"
+            :active="visible"
+            class="min-h-0 flex-1"
+          />
+        </template>
         <template v-else-if="query.rows">
           <GoWritePanel
             :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"

@@ -31,6 +31,7 @@ const view = ref<"columns" | "details">("columns");
 const structureVisited = ref(false);
 const ddlVisited = ref(false);
 const detailsVisited = ref(false);
+const detailSection = ref<"basic" | "primary_key" | "indexes" | "foreign_keys" | "defaults">("basic");
 const diagramVisited = ref(false);
 const diagramDirection = ref<"outgoing" | "incoming">("outgoing");
 const identity = computed(() => diagramObjectId(props.sessionId, props.object));
@@ -224,7 +225,10 @@ function preventCopy(event: ClipboardEvent) {
         @click="emit('section', item.key as ObjectWorkspaceSection)"
       />
     </div>
-    <div v-show="section === 'structure'" class="flex shrink-0 items-center gap-1 border-b border-default px-3 py-1">
+    <div
+      v-show="section === 'structure'"
+      class="flex shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-3 py-1"
+    >
       <UButton
         :label="t('Chen.Columns')"
         size="xs"
@@ -234,13 +238,22 @@ function preventCopy(event: ClipboardEvent) {
         @click="view = 'columns'"
       />
       <UButton
-        :label="t('Chen.GoV1ObjectDetails')"
+        v-for="item in [
+          { key: 'basic', label: t('Chen.BasicInfo') },
+          { key: 'primary_key', label: t('RightPanel.SQLAIMetadataCategory.primary_keys') },
+          { key: 'indexes', label: t('Chen.Indexes') },
+          { key: 'foreign_keys', label: t('Chen.ForeignKeys') },
+          { key: 'defaults', label: t('RightPanel.SQLAIMetadataCategory.default_values') }
+        ] as const"
+        :key="item.key"
+        :label="item.label"
         size="xs"
-        :color="view === 'details' ? 'primary' : 'neutral'"
+        :color="view === 'details' && detailSection === item.key ? 'primary' : 'neutral'"
         variant="ghost"
-        :aria-pressed="view === 'details'"
+        :aria-pressed="view === 'details' && detailSection === item.key"
         @click="
           view = 'details';
+          detailSection = item.key;
           detailsVisited = true;
         "
       />
@@ -307,6 +320,7 @@ function preventCopy(event: ClipboardEvent) {
       :object="object"
       :ready="ready"
       :can-copy="canCopy"
+      :detail-section="detailSection"
     />
     <GoObjectDetails
       v-if="ddlVisited"

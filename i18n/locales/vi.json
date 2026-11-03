@@ -2138,6 +2138,10 @@
     "factStartupCost": "Chi phí khởi động"
   },
   "Chen": {
+    "GoBrowseLastHint": "Hãy đếm số dòng trước. Không khả dụng khi chưa biết tổng số dòng hoặc trang cuối vượt giới hạn máy chủ.",
+    "GoPinnedLimit": "Có thể ghim tối đa 3 kết quả, mỗi bản chụp không quá 2 MiB.",
+    "GoPinnedHint": "Bản chụp chỉ đọc trong bộ nhớ của các dòng đã tải; không chạy lại SQL.",
+    "GoPinnedCachePage": "Chỉ duyệt các dòng trong bộ nhớ đệm; không chạy lại SQL.",
     "GoDiagramIncoming": "Tham chiếu đến bảng này",
     "GoDiagramIncomingScope": "Tìm trong các schema ngoài hệ thống mà tài khoản được phép xem trong cơ sở dữ liệu được cấp quyền (MySQL: chỉ cơ sở dữ liệu hiện tại); không tìm sang cơ sở dữ liệu khác",
     "GoDiagramSchemaScope": "Phạm vi sơ đồ: schema đã chọn hoặc các schema ngoài hệ thống có thể xem trong cơ sở dữ liệu được cấp quyền",

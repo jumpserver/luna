@@ -2138,6 +2138,10 @@
     "factStartupCost": "啟動成本"
   },
   "Chen": {
+    "GoBrowseLastHint": "請先統計總列數；總數未知或末頁超過伺服器範圍時無法使用。",
+    "GoPinnedLimit": "最多固定 3 個結果，每個快照不超過 2 MiB。",
+    "GoPinnedHint": "固定目前已載入資料列的唯讀記憶體快照，不會重新執行 SQL。",
+    "GoPinnedCachePage": "僅在已快取的結果內翻頁，不會重新執行 SQL。",
     "GoDiagramIncoming": "引用此表",
     "GoDiagramIncomingScope": "搜索範圍：當前授權資料庫中可見的非系統 schema（MySQL 僅當前資料庫）；不會探測其他資料庫",
     "GoDiagramSchemaScope": "圖範圍：所選 schema；未選 schema 時為當前授權資料庫的可見非系統 schema",

@@ -2321,6 +2321,10 @@
     "factStartupCost": "Startup cost"
   },
   "Chen": {
+    "GoBrowseLastHint": "Count rows first. Unavailable when the total is unknown or the last page exceeds the server limit.",
+    "GoPinnedLimit": "Keep up to 3 pinned results, each at most 2 MiB.",
+    "GoPinnedHint": "Read-only in-memory snapshot of loaded rows; does not rerun SQL.",
+    "GoPinnedCachePage": "Navigate cached rows only; does not rerun SQL.",
     "GoDiagramIncoming": "References to this table",
     "GoDiagramIncomingScope": "Search: visible non-system schemas in the authorized database (MySQL: current database only); no cross-database discovery",
     "GoDiagramSchemaScope": "Graph scope: selected schema, or visible non-system schemas in the authorized database",

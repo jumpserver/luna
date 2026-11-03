@@ -47,3 +47,9 @@ export function waitForCompletion(signal: AbortSignal, delay = 120): Promise<boo
     signal.addEventListener("abort", abort, { once: true });
   });
 }
+
+// Only SQL keywords follow the display preference; quoted catalog identifiers stay exact.
+export function completionInsertText(item: GoCompletion["items"][number], keywordCase?: "lower" | "upper") {
+  if (item.kind !== "keyword" || !keywordCase) return item.insert_text;
+  return keywordCase === "upper" ? item.insert_text.toUpperCase() : item.insert_text.toLowerCase();
+}
