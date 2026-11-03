@@ -222,6 +222,7 @@ function startContextMenuInput(overrides: {
   getSelection?: () => string;
   validateClipboardText?: () => boolean;
   isZmodemActive?: () => boolean;
+  routeUserInput?: (data: string, paste: boolean) => boolean;
 }) {
   const container = new EventTarget();
   const onContextMenu = vi.fn();
@@ -230,6 +231,7 @@ function startContextMenuInput(overrides: {
   const abortZmodem = vi.fn();
   let onData!: (data: string) => void;
   let onSelectionChange!: () => void;
+  let onKey: (event: { key: string }) => void = () => {};
   let keyHandler: (event: KeyboardEvent) => boolean = () => true;
   const input = useKokoTerminalInput({
     container: shallowRef(container as HTMLElement),
@@ -243,6 +245,10 @@ function startContextMenuInput(overrides: {
       hasSelection: vi.fn(() => Boolean(getSelection())),
       onData: (handler: (data: string) => void) => {
         onData = handler;
+      },
+      onKey: (handler: typeof onKey) => {
+        onKey = handler;
+        return { dispose: vi.fn() };
       },
       paste: (text: string) => onData(text),
       onResize: vi.fn(),
@@ -266,7 +272,8 @@ function startContextMenuInput(overrides: {
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
-    validateClipboardText: vi.fn(overrides.validateClipboardText ?? (() => true))
+    validateClipboardText: vi.fn(overrides.validateClipboardText ?? (() => true)),
+    routeUserInput: overrides.routeUserInput
   });
   input.start();
   return {
@@ -276,10 +283,58 @@ function startContextMenuInput(overrides: {
     send,
     onData,
     onSelectionChange,
+    onKey: (key: string) => onKey({ key }),
     keyHandler: (event: KeyboardEvent) => keyHandler(event),
     abortZmodem
   };
 }
+
+it("routes only keyboard and committed text for broadcast while keeping terminal replies local", () => {
+  const routeUserInput = vi.fn(() => true);
+  const { input, send, onData, onKey, container, keyHandler } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    routeUserInput
+  });
+  onData("\x1b[?1;2c");
+  onData("\x1b[I");
+  onData("\x1b[<0;12;5M");
+  expect(routeUserInput).not.toHaveBeenCalled();
+  expect(send).toHaveBeenCalledTimes(3);
+  for (const key of ["a", "\r", "\x04", "\x1a", "\x1b[A"]) {
+    onKey(key);
+    onData(key);
+    expect(routeUserInput).toHaveBeenLastCalledWith(key, false);
+  }
+  container.dispatchEvent(new Event("compositionend"));
+  onData("\x1b[0n");
+  onData("中文");
+  expect(routeUserInput).toHaveBeenLastCalledWith("中文", false);
+  container.dispatchEvent(new Event("input"));
+  onData("\x7f");
+  expect(routeUserInput).toHaveBeenLastCalledWith("\x7f", false);
+  keyHandler(new KeyboardEvent("keydown", { key: "c", ctrlKey: true, cancelable: true }));
+  expect(routeUserInput).toHaveBeenLastCalledWith("\x03", false);
+  expect(send).toHaveBeenCalledTimes(4);
+  input.stop();
+});
+
+it("routes raw native and quick paste once so each recipient can apply its own paste mode", async () => {
+  const routeUserInput = vi.fn(() => true);
+  const { input, send, container } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    routeUserInput
+  });
+  const data = new DataTransfer();
+  data.setData("text/plain", "line1\nline2");
+  const event = new ClipboardEvent("paste", { clipboardData: data, cancelable: true });
+  container.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(true);
+  expect(routeUserInput).toHaveBeenCalledExactlyOnceWith("line1\nline2", true);
+  await input.pasteClipboard();
+  expect(routeUserInput).toHaveBeenLastCalledWith("clipped", true);
+  expect(send).not.toHaveBeenCalled();
+  input.stop();
+});
 
 it.each([false, true])("preserves the terminal interrupt policy while locked (readOnly=%s)", (readOnly) => {
   const { input, send, onData } = startContextMenuInput({

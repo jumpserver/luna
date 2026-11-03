@@ -214,10 +214,10 @@ export function useWorkspaceTabMenu() {
     }
   };
 
-  const splitSession = (tab: WorkspaceSessionTab, direction: WorkspaceSplitDirection) => {
+  const splitSession = (tab: WorkspaceSessionTab, direction: WorkspaceSplitDirection, paneId?: string) => {
     if (!canSplitWorkspace(tab.id, direction)) return;
-    splitWorkspace(tab.id, direction);
     setActiveSession(tab.id);
+    splitWorkspace(tab.id, direction, paneId);
   };
 
   const connectCurrentPane = async (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane) => {

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
-import type { WorkspaceSessionTab, WorkspaceTabGroup } from "~/composables/useWorkspaceTabs";
+import type { WorkspacePane, WorkspaceSessionTab, WorkspaceTabGroup } from "~/composables/useWorkspaceTabs";
 import { useResizeObserver } from "@vueuse/core";
+import {
+  isKokoBroadcastAvailable,
+  setKokoBroadcastSource,
+  stopKokoTerminalBroadcast,
+  useKokoTerminalBroadcast
+} from "#koko/composables/terminal/useTerminalBroadcast";
 import { sessionGroupSaveError } from "~/composables/useSavedSessionGroups";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -22,6 +28,11 @@ const { loggedIn } = storeToRefs(userInfoStore);
 const showAddSession = computed(() => !props.standalone && (loggedIn.value || isDesktopRuntime()));
 const {
   activeTabId,
+  activePaneId,
+  setActivePane,
+  swapPanes,
+  closePane,
+  toSurfaceTab,
   tabs,
   tabGroups,
   createTabGroup,
@@ -44,6 +55,15 @@ const {
   setActiveSession
 } = useWorkspaceTabs();
 const { cloneSession, reconnectSession, splitSession } = useWorkspaceTabMenu();
+const { broadcast } = useKokoTerminalBroadcast();
+const { focusPaneSurface } = useWorkspacePaneSurfaceRegistry();
+const broadcastDialogOpen = ref(false);
+const broadcastDialogTabId = ref("");
+const broadcastDialogPaneId = ref("");
+const broadcastDialogTab = computed(() => tabs.value.find((tab) => tab.id === broadcastDialogTabId.value));
+const broadcastDialogPane = computed(() =>
+  broadcastDialogTab.value?.panes.find((pane) => pane.id === broadcastDialogPaneId.value)
+);
 
 const tabStripRef = shallowRef<HTMLElement | null>(null);
 const hasOverflow = ref(false);
@@ -52,6 +72,7 @@ const hasRightHidden = ref(false);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuTab = ref<WorkspaceSessionTab | null>(null);
+const contextMenuPaneId = ref("");
 const contextMenuTabIndex = ref(-1);
 const contextMenuGroupId = ref("");
 const dragOverGroupId = ref("");
@@ -131,7 +152,10 @@ function groupDisplayTitle(group: WorkspaceTabGroup) {
 
 function tabTooltip(tab: WorkspaceSessionTab) {
   const title = tabDisplayTitle(tab);
-  return tab.address && tab.address !== "-" ? `${title} · ${tab.address}` : title;
+  const label = tab.address && tab.address !== "-" ? `${title} · ${tab.address}` : title;
+  if (broadcast.value?.tabId !== tab.id) return label;
+  const source = tab.panes.find((pane) => pane.id === broadcast.value?.sourceId);
+  return `${label} · ${source?.assetName || ""} · ${t("TerminalBroadcast.Active", { count: broadcast.value.targetIds.length })}`;
 }
 
 function usesPrimaryTabModifier(event: KeyboardEvent) {
@@ -185,6 +209,7 @@ function tabMenuItem(item: DropdownMenuItem, icon?: string): DropdownMenuItem {
 function hideContextMenu() {
   contextMenuVisible.value = false;
   contextMenuTab.value = null;
+  contextMenuPaneId.value = "";
   contextMenuTabIndex.value = -1;
   contextMenuGroupId.value = "";
 }
@@ -294,9 +319,128 @@ function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEv
 
   contextMenuGroupId.value = "";
   contextMenuTab.value = tab;
+  contextMenuPaneId.value = (activeTabId.value === tab.id ? activePaneId.value : "") || tab.panes[0]?.id || "";
   contextMenuTabIndex.value = index;
   contextMenuPosition.value = { x: event.clientX, y: event.clientY };
   contextMenuVisible.value = true;
+}
+
+function paneLabel(tab: WorkspaceSessionTab, pane: WorkspacePane) {
+  const name = pane.assetName || t(pane.mode === "empty" ? "WorkspacePane.EmptyTitle" : "WorkspacePane.SetupTitle");
+  return `${tab.panes.indexOf(pane) + 1}. ${name}${pane.account ? ` · ${pane.account}` : ""}`;
+}
+
+function focusMenuPane(paneId: string) {
+  setActivePane(paneId);
+  nextTick(() => focusPaneSurface(paneId));
+}
+
+function openBroadcastDialog(tab: WorkspaceSessionTab, pane: WorkspacePane) {
+  hideContextMenu();
+  setActivePane(pane.id);
+  broadcastDialogTabId.value = tab.id;
+  broadcastDialogPaneId.value = pane.id;
+  broadcastDialogOpen.value = true;
+}
+
+function broadcastActions(tab: WorkspaceSessionTab, pane: WorkspacePane): DropdownMenuItem[] {
+  const group = broadcast.value;
+  if (group?.tabId === tab.id)
+    return [
+      tabMenuItem(
+        {
+          label: t("TerminalBroadcast.EditTargets"),
+          onSelect: () => {
+            const source = tab.panes.find((item) => item.id === group.sourceId);
+            if (source) openBroadcastDialog(tab, source);
+          }
+        },
+        "i-lucide-list-checks"
+      ),
+      tabMenuItem(
+        {
+          label: t("TerminalBroadcast.Stop"),
+          onSelect: () => {
+            hideContextMenu();
+            stopKokoTerminalBroadcast();
+          }
+        },
+        "i-lucide-square"
+      ),
+      tabMenuItem(
+        {
+          label: t("TerminalBroadcast.MakeSource"),
+          children: tab.panes
+            .filter((item) => item.id === group.sourceId || group.targetIds.includes(item.id))
+            .map((item) => ({
+              label: paneLabel(tab, item),
+              icon: item.id === group.sourceId ? "i-lucide-check" : "i-lucide-terminal",
+              disabled: item.id === group.sourceId || !isKokoBroadcastAvailable(item.id),
+              onSelect: () => {
+                hideContextMenu();
+                if (setKokoBroadcastSource(item.id)) {
+                  swapPanes(tab.id, group.sourceId, item.id);
+                  focusMenuPane(item.id);
+                }
+              }
+            }))
+        },
+        "i-lucide-radio"
+      )
+    ];
+  if (pane.protocol !== "ssh") return [];
+  return [
+    tabMenuItem(
+      {
+        label: t("TerminalBroadcast.Title"),
+        disabled: !isKokoBroadcastAvailable(pane.id) || pane.status !== "connected" || Boolean(pane.connectionProgress),
+        onSelect: () => {
+          openBroadcastDialog(tab, pane);
+        }
+      },
+      "i-lucide-radio"
+    )
+  ];
+}
+
+function layoutActions(tab: WorkspaceSessionTab, pane: WorkspacePane): DropdownMenuItem[] {
+  if (broadcast.value?.tabId === tab.id) return [{ type: "separator" }, ...broadcastActions(tab, pane)];
+  const items: DropdownMenuItem[] = [];
+  if (tab.panes.length > 1) items.push({ type: "label", label: paneLabel(tab, pane) });
+  for (const [direction, label, icon] of [
+    ["vertical", "TabMenu.SplitVertically", "i-lucide-columns-2"],
+    ["horizontal", "TabMenu.SplitHorizontally", "i-lucide-rows-2"]
+  ] as const) {
+    if (!canSplitWorkspace(tab.id, direction)) continue;
+    items.push(
+      tabMenuItem(
+        {
+          label: t(label),
+          kbds: shortcuts.kbds(direction === "vertical" ? "splitVertical" : "splitHorizontal"),
+          onSelect: () => {
+            hideContextMenu();
+            splitSession(tab, direction, pane.id);
+          }
+        },
+        icon
+      )
+    );
+  }
+  if (tab.panes.length > 1)
+    items.push(
+      tabMenuItem(
+        {
+          label: t("WorkspacePane.ClosePane"),
+          onSelect: () => {
+            hideContextMenu();
+            void closePane(pane.id);
+          }
+        },
+        "i-lucide-panel-top-close"
+      )
+    );
+  items.push(...broadcastActions(tab, pane));
+  return items.length ? [{ type: "separator" }, ...items] : [];
 }
 
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
@@ -335,9 +479,10 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const index = contextMenuTabIndex.value;
   if (!tab || index < 0) return [];
 
-  const hasToken = Boolean(tab.payload?.id || tab.payload?.token?.id);
-  const canSplitVertically = canSplitWorkspace(tab.id, "vertical");
-  const canSplitHorizontally = canSplitWorkspace(tab.id, "horizontal");
+  const pane = tab.panes.find((item) => item.id === contextMenuPaneId.value) || tab.panes[0];
+  if (!pane) return [];
+  const surface = toSurfaceTab(pane);
+  const hasToken = Boolean(pane.payload?.id || pane.payload?.token?.id);
 
   if (props.standalone) {
     return [
@@ -348,7 +493,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
           disabled: !hasToken,
           onSelect: () => {
             hideContextMenu();
-            void cloneSession(tab);
+            void cloneSession(surface);
           }
         },
         "i-lucide-copy"
@@ -359,7 +504,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
           disabled: !hasToken,
           onSelect: () => {
             hideContextMenu();
-            void reconnectSession(tab);
+            void reconnectSession(surface);
           }
         },
         "i-lucide-refresh-cw"
@@ -382,36 +527,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         },
         "i-lucide-fullscreen"
       ),
-      ...(canSplitVertically
-        ? [
-            tabMenuItem(
-              {
-                label: t("TabMenu.SplitVertically"),
-                kbds: shortcuts.kbds("splitVertical"),
-                onSelect: () => {
-                  hideContextMenu();
-                  splitSession(tab, "vertical");
-                }
-              },
-              "i-lucide-columns-2"
-            )
-          ]
-        : []),
-      ...(canSplitHorizontally
-        ? [
-            tabMenuItem(
-              {
-                label: t("TabMenu.SplitHorizontally"),
-                kbds: shortcuts.kbds("splitHorizontal"),
-                onSelect: () => {
-                  hideContextMenu();
-                  splitSession(tab, "horizontal");
-                }
-              },
-              "i-lucide-rows-2"
-            )
-          ]
-        : []),
+      ...layoutActions(tab, pane),
       { type: "separator" as const },
       tabMenuItem(
         {
@@ -458,7 +574,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         disabled: !hasToken,
         onSelect: () => {
           hideContextMenu();
-          void cloneSession(tab);
+          void cloneSession(surface);
         }
       },
       "i-lucide-copy"
@@ -469,7 +585,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         disabled: !hasToken,
         onSelect: () => {
           hideContextMenu();
-          void reconnectSession(tab);
+          void reconnectSession(surface);
         }
       },
       "i-lucide-refresh-cw"
@@ -515,30 +631,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
           )
         ]
       : []),
-    tabMenuItem(
-      {
-        label: t("TabMenu.SplitVertically"),
-        kbds: shortcuts.kbds("splitVertical"),
-        disabled: !canSplitVertically,
-        onSelect: () => {
-          hideContextMenu();
-          splitSession(tab, "vertical");
-        }
-      },
-      "i-lucide-columns-2"
-    ),
-    tabMenuItem(
-      {
-        label: t("TabMenu.SplitHorizontally"),
-        kbds: shortcuts.kbds("splitHorizontal"),
-        disabled: !canSplitHorizontally,
-        onSelect: () => {
-          hideContextMenu();
-          splitSession(tab, "horizontal");
-        }
-      },
-      "i-lucide-rows-2"
-    ),
+    ...layoutActions(tab, pane),
     { type: "separator" as const },
     tabMenuItem(
       {
@@ -885,6 +978,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             >
               {{ tabDisplayTitle(entry.tab) }}
             </span>
+            <UIcon
+              v-if="broadcast?.tabId === entry.tab.id"
+              name="i-lucide-radio"
+              class="size-3 shrink-0 text-warning"
+              :aria-label="t('TerminalBroadcast.Active', { count: broadcast.targetIds.length })"
+            />
             <span
               class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
               @click.stop="void closeTab(entry.tab)"
@@ -961,6 +1060,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         }"
       />
     </UDropdownMenu>
+
+    <WorkspaceTerminalBroadcast
+      v-if="broadcastDialogOpen && broadcastDialogTab && broadcastDialogPane"
+      v-model:open="broadcastDialogOpen"
+      :tab="broadcastDialogTab"
+      :pane="broadcastDialogPane"
+    />
 
     <UModal v-model:open="groupEditorOpen" :title="t(groupEditorId ? 'TabMenu.RenameGroup' : 'TabMenu.NewGroup')">
       <template #body>

@@ -87,7 +87,7 @@ export const workspaceOperationTools: AgentMcpTool[] = [
   ),
   tool(
     "arrange_workspace",
-    "split: add an empty pane using tab_id and direction (vertical=columns, horizontal=rows). merge: move a single-pane tab beside target_pane_id using placement. Maximum four panes; preserves live sessions.",
+    "split: split target_pane_id (or the active pane) using tab_id and direction (vertical=columns, horizontal=rows). merge: move a single-pane tab beside target_pane_id using placement. Splits can be nested; preserves live sessions.",
     {
       action: choice("split", "merge"),
       tab_id: id,
@@ -223,7 +223,7 @@ export function validateWorkspaceToolArguments(tool: AgentMcpTool, args: Record<
         (args.target === "asset" && String(args.id).length > 128))) ||
     (tool.name === "arrange_workspace" &&
       (args.action === "split"
-        ? args.direction === undefined || args.target_pane_id !== undefined || args.placement !== undefined
+        ? args.direction === undefined || args.placement !== undefined
         : args.direction !== undefined || args.target_pane_id === undefined || args.placement === undefined));
   if (invalidCombination) throw new WorkspaceOperationError("invalid_arguments: incompatible target arguments");
 }
@@ -481,7 +481,8 @@ export async function executeWorkspaceOperation(
         visibleTabs().map((tab) => ({
           tab_id: tab.id,
           title: String(tab.title || tab.assetName).slice(0, 128),
-          layout: tab.layoutMode,
+          layout: tab.paneLayout ? "split" : tab.layoutMode,
+          pane_layout: tab.paneLayout,
           panes: tab.panes.map(workspacePaneSummary)
         }))
       )
@@ -567,8 +568,13 @@ export async function executeWorkspaceOperation(
   if (name === "arrange_workspace" && args.action === "split") {
     const tab = requireTab(args.tab_id);
     if (!tabs.canSplitWorkspace(tab.id, args.direction)) return { status: "layout_limit" };
+    if (args.target_pane_id && requirePane(args.target_pane_id).tab !== tab)
+      throw new WorkspaceOperationError("pane_changed: split target is outside this tab");
     tabs.setActiveSession(tab.id);
-    return { status: "split", panes: tabs.splitWorkspace(tab.id, args.direction).map(workspacePaneSummary) };
+    return {
+      status: "split",
+      panes: tabs.splitWorkspace(tab.id, args.direction, args.target_pane_id).map(workspacePaneSummary)
+    };
   }
   if (name === "arrange_workspace" && args.action === "merge") {
     const source = requireTab(args.tab_id);

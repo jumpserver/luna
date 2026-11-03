@@ -205,8 +205,46 @@ describe("workspace semantic operations", () => {
     });
     expect(
       await call(rt, "arrange_workspace", { action: "split", tab_id: firstTab.id, direction: "horizontal" })
-    ).toEqual({
-      status: "layout_limit"
+    ).toMatchObject({
+      status: "split"
+    });
+    expect(firstTab.panes).toHaveLength(5);
+  });
+
+  it("splits an explicit pane and rejects a target from a different workspace", async () => {
+    const first = open();
+    const firstTab = tabs.activeTab.value!;
+    const right = tabs.splitWorkspace(firstTab.id, "vertical", first.id)[0]!;
+    const other = open("Other");
+    const rt = runtime();
+    await expect(
+      call(rt, "arrange_workspace", {
+        action: "split",
+        tab_id: firstTab.id,
+        target_pane_id: other.id,
+        direction: "horizontal"
+      })
+    ).rejects.toThrow("outside this tab");
+    expect(firstTab.panes).toHaveLength(2);
+    expect(
+      await call(rt, "arrange_workspace", {
+        action: "split",
+        tab_id: firstTab.id,
+        target_pane_id: right.id,
+        direction: "horizontal"
+      })
+    ).toMatchObject({ status: "split" });
+    expect(firstTab.paneLayout).toMatchObject({
+      type: "split",
+      direction: "vertical",
+      first: { type: "pane", paneId: first.id },
+      second: { type: "split", direction: "horizontal" }
+    });
+    const snapshot = await call(rt, "get_workspace_state", {});
+    expect(snapshot).toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({ tab_id: firstTab.id, layout: "split", pane_layout: firstTab.paneLayout })
+      ])
     });
   });
 

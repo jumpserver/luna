@@ -4,7 +4,10 @@ import type {
   WorkspaceSessionTab,
   WorkspaceTabGroup
 } from "./useWorkspaceTabs";
+import { getWorkspaceTabsForPersistence } from "./useWorkspaceTabs";
 import type { AssetItem, ConnectionInfo } from "~/types";
+import type { WorkspaceLayout } from "~/utils/workspaceLayout";
+import { mapWorkspaceLayout, normalizeWorkspaceLayout } from "~/utils/workspaceLayout";
 import { trackAclBatchConnection } from "~/composables/useAclDialog";
 import { apiRequest, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isConnectMethodAvailable, isExternalClientConnectMethod } from "~/composables/useConnectMethods";
@@ -22,6 +25,7 @@ export interface SavedSessionTab {
   title?: string;
   layoutMode: WorkspacePaneLayoutMode;
   threePaneSpanAxis?: "columns" | "rows";
+  paneLayout?: WorkspaceLayout<number>;
   panes: SavedSessionPane[];
 }
 export interface SavedSessionGroup {
@@ -137,7 +141,7 @@ export function normalizeSavedSessionGroups(value: unknown): SavedSessionGroup[]
     const tabs: SavedSessionTab[] = [];
     for (const rawTab of group.tabs) {
       const tab = record(rawTab);
-      if (!Array.isArray(tab.panes) || !tab.panes.length || tab.panes.length > 4) break;
+      if (!Array.isArray(tab.panes) || !tab.panes.length) break;
       const panes = tab.panes.map(normalizeSavedSessionPane);
       if (panes.some((pane) => !pane)) break;
       const count = panes.length;
@@ -149,6 +153,10 @@ export function normalizeSavedSessionGroups(value: unknown): SavedSessionGroup[]
         layoutMode,
         threePaneSpanAxis:
           tab.threePaneSpanAxis === "columns" || tab.threePaneSpanAxis === "rows" ? tab.threePaneSpanAxis : undefined,
+        paneLayout: normalizeWorkspaceLayout(
+          tab.paneLayout,
+          panes.map((_, index) => index)
+        ),
         panes: panes as SavedSessionPane[]
       });
     }
@@ -193,7 +201,7 @@ export function persistSessionGroup(group: WorkspaceTabGroup, tabs: WorkspaceSes
     group.savePending = true;
     return;
   }
-  const members = tabs.filter((tab) => tab.group?.id === group.id);
+  const members = getWorkspaceTabsForPersistence(tabs).filter((tab) => tab.group?.id === group.id);
   const groups = readGroups(group.storageKey);
   if (!members.length) {
     writeGroups(
@@ -211,6 +219,9 @@ export function persistSessionGroup(group: WorkspaceTabGroup, tabs: WorkspaceSes
         title: tab.title,
         layoutMode: tab.layoutMode,
         threePaneSpanAxis: tab.threePaneSpanAxis,
+        paneLayout: tab.paneLayout
+          ? mapWorkspaceLayout(tab.paneLayout, (id) => tab.panes.findIndex((pane) => pane.id === id))
+          : undefined,
         panes: tab.panes.map((pane) =>
           snapshotSessionPane(pane, useUserInfoStore().getConnectionInfoForAsset?.(pane.assetId) || undefined)
         )

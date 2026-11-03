@@ -31,6 +31,7 @@ function setup(protocol = "ssh") {
       getKeyboardCharacter,
       getKeyboardCharacterRows,
       sendKokoTerminalData,
+      dispatchKokoBroadcastInput: () => "inactive",
       getLionWorkspaceSession: (id: string) => ({
         sendCombinationKeys,
         isRemoteApp,
