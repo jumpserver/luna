@@ -405,6 +405,15 @@ async function focusNode(index: number) {
   tree.value?.querySelectorAll<HTMLElement>("[data-tree-node]")[index]?.focus();
 }
 async function keydown(event: KeyboardEvent, current: Node) {
+  if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+    event.preventDefault();
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    target.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, clientX: rect.left + 24, clientY: rect.bottom })
+    );
+    return;
+  }
   const index = focusable.value.findIndex((row) => row.node.id === current.id);
   if (["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End", "Enter", " "].includes(event.key))
     event.preventDefault();
@@ -608,9 +617,6 @@ onBeforeUnmount(() => {
           />
         </template>
       </UInput>
-      <p class="truncate px-1 text-[11px] text-muted" :title="t('Chen.GoV1CatalogScope')">
-        {{ database }} · {{ t("Chen.GoV1CatalogScope") }}
-      </p>
       <p v-if="!ready" class="px-1 text-[11px] text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
     <div
@@ -696,18 +702,6 @@ onBeforeUnmount(() => {
               @click.stop="emit('clearRecent')"
               @dblclick.stop
             />
-            <UDropdownMenu v-else :items="menu(row.node)" :content="{ align: 'end' }">
-              <UButton
-                icon="i-lucide-ellipsis"
-                :aria-label="t('Chen.GoV1ObjectActions')"
-                class="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                @click.stop
-                @dblclick.stop
-              />
-            </UDropdownMenu>
           </div>
         </UContextMenu>
         <div v-else :style="{ paddingLeft: `${row.depth * 12 + 14}px` }" class="pr-2 py-1.5 text-[11px] text-muted">

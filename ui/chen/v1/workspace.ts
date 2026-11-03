@@ -27,7 +27,7 @@ export interface QueryContext {
 }
 export interface QueryWorkspaceTab {
   id: string;
-  kind: "query" | "preview";
+  kind: "query" | "preview" | "console";
   title: string;
   sql: string;
   baselineSql: string;
@@ -65,6 +65,13 @@ export interface QueryWorkspaceTab {
   resultSql: string;
   rows: GoRows | null;
   resultId: string;
+  cachedResult?: {
+    id: string;
+    offset: number;
+    execution: GoExecution;
+    sql: string;
+    loadingSettings: GoResultLoadingSettings;
+  };
   pending: {
     sql: string;
     version: number;
@@ -110,7 +117,7 @@ export interface OverviewWorkspaceTab {
 }
 export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
 export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
-  return tab.kind === "query" || tab.kind === "preview";
+  return tab.kind === "query" || tab.kind === "preview" || tab.kind === "console";
 }
 
 // An object owns at most one execution context, visible to every query lifecycle consumer.

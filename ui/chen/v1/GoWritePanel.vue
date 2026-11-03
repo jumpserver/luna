@@ -52,6 +52,28 @@ const policyPending = computed(
 const cannotDiscard = computed(
   () => props.query.busy || !!props.query.pending || draft.value.busy || executionActive(props.query.execution)
 );
+let refreshedExecution = "";
+watch(
+  () => [draft.value.status, cannotDiscard.value, props.query.loadingRows],
+  () => {
+    const execution = props.query.execution;
+    if (
+      props.query.browseObject &&
+      draft.value.status === "committed" &&
+      execution?.status === "succeeded" &&
+      execution.edit?.changes_applied &&
+      !cannotDiscard.value &&
+      !props.query.loadingRows &&
+      !dirty.value &&
+      props.session.state === "ready" &&
+      props.query.console?.state === "ready" &&
+      execution.id !== refreshedExecution
+    ) {
+      refreshedExecution = execution.id;
+      emit("refresh");
+    }
+  }
+);
 const locked = computed(
   () =>
     props.session.state !== "ready" ||
@@ -412,23 +434,10 @@ function discard() {
           :disabled="cannotDiscard"
           @click="discard"
         />
-        <span class="text-xs text-muted">
-          {{ dirty ? t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) : t("Chen.GoWriteGridHint") }}
+        <span v-if="dirty" class="text-xs text-muted">
+          {{ t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) }}
         </span>
       </template>
-      <span
-        v-else-if="query.rows?.query_page?.mode === 'database'"
-        class="text-xs text-muted"
-        :title="query.rows.query_page.read_only_reason"
-      >
-        {{ t("Chen.GoV1GridReadOnly") }}
-      </span>
-      <span v-else class="text-xs text-muted">
-        {{ metadataBusy ? t("Chen.LoadingTableMetadata") : t("Chen.GoWriteReadonly") }}
-        <template v-if="draft.metadata?.reason">
-          · {{ chenErrorText(draft.metadata.reason, t, "edit_unavailable") }}
-        </template>
-      </span>
       <UButton
         class="ml-auto"
         icon="i-lucide-refresh-cw"
@@ -449,14 +458,14 @@ function discard() {
     </div>
     <p v-if="draft.source === 'csv'" class="px-3 py-1 text-xs text-muted">{{ t("Chen.GoWriteCsvBatchHint") }}</p>
     <p v-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
-    <p v-if="draft.status" role="status" class="px-3 py-2 text-xs text-warning">
+    <p v-if="draft.status && draft.status !== 'committed'" role="status" class="px-3 py-2 text-xs text-warning">
       {{ t(`Chen.GoWriteOutcome_${draft.status}`) }}
     </p>
-    <p v-if="draft.refreshRequired" class="px-3 pb-2 text-xs text-warning">{{ t("Chen.GoWriteRefreshRequired") }}</p>
     <GoResultGrid
       ref="grid"
       :rows="rows"
       :loading-settings="query.loadingSettings"
+      :page-size-control="!!query.browseObject"
       :loading-settings-disabled="locked || dirty || metadataBusy"
       :max-batch-size="
         query.rows?.query_page?.mode === 'database'
