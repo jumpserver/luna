@@ -2323,6 +2323,10 @@
     "factStartupCost": "Coût de démarrage"
   },
   "Chen": {
+    "GoBrowseLastHint": "Comptez d’abord les lignes. Indisponible si le total est inconnu ou si la dernière page dépasse la limite du serveur.",
+    "GoPinnedLimit": "Conservez jusqu’à 3 résultats épinglés, de 2 MiB maximum chacun.",
+    "GoPinnedHint": "Copie en mémoire et en lecture seule des lignes chargées ; ne réexécute pas le SQL.",
+    "GoPinnedCachePage": "Parcourt uniquement les lignes en cache ; ne réexécute pas le SQL.",
     "GoDiagramIncoming": "Références vers cette table",
     "GoDiagramIncomingScope": "Recherche : schémas visibles hors système dans la base autorisée (MySQL : base actuelle uniquement) ; aucune découverte interbases",
     "GoDiagramSchemaScope": "Périmètre du graphe : schéma sélectionné ou schémas visibles hors système dans la base autorisée",

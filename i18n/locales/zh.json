@@ -2317,6 +2317,10 @@
     "factStartupCost": "启动成本"
   },
   "Chen": {
+    "GoBrowseLastHint": "先统计总行数；总数未知或末页超过服务端范围时不可用。",
+    "GoPinnedLimit": "最多固定 3 个结果，每个快照不超过 2 MiB。",
+    "GoPinnedHint": "固定当前已加载行的只读内存快照，不会重跑查询。",
+    "GoPinnedCachePage": "仅在已缓存结果内翻页，不会重跑查询。",
     "GoDiagramIncoming": "引用此表",
     "GoDiagramIncomingScope": "搜索范围：当前授权数据库中可见的非系统 schema（MySQL 仅当前数据库）；不会探测其他数据库",
     "GoDiagramSchemaScope": "图范围：所选 schema；未选 schema 时为当前授权数据库的可见非系统 schema",

@@ -26,6 +26,7 @@ import type {
   ChenSqlEditorContext,
   ChenSqlProposal
 } from "~/chen/composables/useChenSqlAiSessions";
+import type { ChenLogConsoleEntry } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { useElementSize, useLocalStorage } from "@vueuse/core";
 import {
@@ -42,6 +43,7 @@ import {
 } from "vue";
 import { useI18n } from "vue-i18n";
 import { parseKokoMcpFrame } from "#koko/composables/agent/types";
+import LogConsolePanel from "~/chen/components/LogConsolePanel.vue";
 import {
   getChenSqlAiSession,
   handleChenSqlAiError,
@@ -82,6 +84,7 @@ import {
   resultLoadingLocked,
   reviewSubmission,
   tabContext,
+  useChenWorkspacePreferences,
   useResultLoadingPreferences,
   warningSubmission,
   workspaceQueries,
@@ -92,6 +95,27 @@ const props = defineProps<{ tab?: WorkspaceSessionTab; selector?: string }>();
 const { t } = useI18n();
 const toast = useToast();
 const loadingPreferences = useResultLoadingPreferences();
+const workspacePreferences = useChenWorkspacePreferences();
+// Session-scoped metadata and logs never persist credentials, SQL, or object names to disk.
+const recentObjects = ref<GoCatalogObject[]>([]);
+const logs = ref<ChenLogConsoleEntry[]>([]);
+const logsOpen = ref(false);
+const unreadLogs = ref(0);
+const loggedExecutions = new Map<string, string>();
+function appendLog(sourceId: string, sourceTitle: string, level: ChenLogConsoleEntry["level"], message: string) {
+  logs.value.push({ id: newChenRequestId(), timestamp: Date.now(), sourceId, sourceTitle, level, message });
+  if (logs.value.length > 200) logs.value.shift();
+  if (!logsOpen.value) unreadLogs.value++;
+}
+watch(logsOpen, (open) => {
+  if (open) unreadLogs.value = 0;
+});
+function objectTitle(tab: ChenWorkspaceTab) {
+  if (tab.kind !== "object" || tab.title !== tab.object.name) return tab.title;
+  return workspacePreferences.value.tabTitleFormat === "table-schema" && tab.object.schema
+    ? `${tab.object.name}.${tab.object.schema}`
+    : tab.title;
+}
 function newQueryTab(...args: Parameters<typeof createQueryTab>) {
   const query = createQueryTab(...args);
   query.loadingSettings = normalizeResultLoading(loadingPreferences.value);
@@ -316,6 +340,7 @@ function requestSqlAi(operation: ChenSqlAiOperation) {
   });
 }
 function markDisconnected(reason: string) {
+  appendLog("session", session.value?.asset || "Chen", "warning", reason);
   if (props.tab) workspace?.markSessionDisconnected(props.tab.id, reason);
 }
 function setQueryPane(id: string, value: unknown) {
@@ -493,6 +518,21 @@ function retryRows(query: QueryWorkspaceTab) {
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
+  const logState = `${value.status}:${value.audit_status}`;
+  if (loggedExecutions.get(value.id) !== logState) {
+    loggedExecutions.set(value.id, logState);
+    if (loggedExecutions.size > 200) loggedExecutions.delete(loggedExecutions.keys().next().value!);
+    appendLog(
+      query.id,
+      query.title,
+      value.status === "failed" || value.audit_status === "failed"
+        ? "error"
+        : value.status === "unknown"
+          ? "warning"
+          : "info",
+      `${t(`Chen.GoV1Status_${value.status}`)} · ${value.id}${value.error ? ` · ${failureText(value.error)}` : ""} · ${t("Chen.GoV1Audit")}: ${t(`Chen.GoV1Audit_${value.audit_status}`)}`
+    );
+  }
   if (!["queued", "running", "waiting_review", "cancel_requested", "succeeded"].includes(value.status)) {
     if (query.executionBrowse?.action === "append") query.loadMoreFailed = true;
     if (!["command_review_required", "command_warning_confirmation_required"].includes(value.error?.code || ""))
@@ -918,6 +958,12 @@ function queryVisible(query: QueryWorkspaceTab) {
 }
 async function enterObjectData(tab: ObjectWorkspaceTab) {
   if (!sessionReady.value || tab.section !== "data") return;
+  recentObjects.value = [
+    { ...tab.object },
+    ...recentObjects.value.filter(
+      (item) => objectWorkspaceKey(session.value!.id, item) !== objectWorkspaceKey(session.value!.id, tab.object)
+    )
+  ].slice(0, 10);
   if (!tab.data) {
     const query = newQueryTab(
       tab.title,
@@ -1347,6 +1393,10 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
     });
   if (!tabs.value.some((tab) => tab.id === activeId.value)) activeId.value = tabs.value[0]?.id || "";
   session.value = null;
+  recentObjects.value = [];
+  logs.value = [];
+  unreadLogs.value = 0;
+  loggedExecutions.clear();
   defaultContext.value = { database: "", schema: "" };
   schemaEdit.value = null;
   renameTarget.value = null;
@@ -1582,6 +1632,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :can-paste="session.permissions.can_paste"
           :can-copy="session.permissions.can_copy"
           :can-insert="!!insertTarget"
+          :recent-objects="recentObjects"
+          @clear-recent="recentObjects = []"
           @insert="insertName"
           @object="(object, section) => openObject(object, section)"
           @browse="(object) => openObject(object)"
@@ -1659,7 +1711,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   class="size-3.5 shrink-0"
                   :class="{ 'animate-spin': executionActive(workspaceQuery(item)?.execution || null) }"
                 />
-                <span class="min-w-0 flex-1 truncate">{{ item.title }}</span>
+                <span class="min-w-0 flex-1 truncate">{{ objectTitle(item) }}</span>
                 <span
                   v-if="workspaceQuery(item) && queryDirty(workspaceQuery(item)!)"
                   :title="t('Chen.GoV1MemoryDraft')"
@@ -1741,6 +1793,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               :visible="queryVisible(query)"
               :review-core-site="reviewCoreSite"
               :ai-available="aiAvailable"
+              :sql-keyword-case="workspacePreferences.sqlKeywordCase"
               @ai="requestSqlAi"
               @apply-edits="applyEdits(query, $event)"
               @upload-sql="restoreQuery(query.context, $event, true)"
@@ -1766,15 +1819,34 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @export-delete="deleteExport(query)"
               @recover="recoverSubmission(query)"
               @reconnect="reconnect(query)"
+              @new-context="newQuery($event)"
               @rows="(id, offset) => loadRows(query, id, offset)"
               @retry-rows="retryRows(query)"
               @pane="(pane) => (query.resultPane = pane)"
             />
           </template>
         </div>
+        <LogConsolePanel
+          v-if="logsOpen"
+          :entries="logs"
+          @clear="
+            logs = [];
+            unreadLogs = 0;
+          "
+          @close="logsOpen = false"
+        />
         <div
           class="flex shrink-0 flex-wrap items-center gap-x-3 border-t border-default px-3 py-1 text-[11px] text-muted"
         >
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-scroll-text"
+            :label="`${t('Chen.LogConsole')}${unreadLogs ? ` (${unreadLogs})` : ''}`"
+            :aria-expanded="logsOpen"
+            @click="logsOpen = !logsOpen"
+          />
           <span :title="t('Chen.GoV1MemoryDraft')">{{ t("Chen.GoV1MemoryDraftShort") }}</span>
           <span class="ml-auto" :title="t('Chen.GoV1Shortcuts')">Ctrl/⌘ Enter · {{ t("Chen.GoV1RunCurrent") }}</span>
         </div>

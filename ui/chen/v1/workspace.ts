@@ -18,6 +18,9 @@ import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
 import { newChenRequestId } from "./requestId";
 
+// Share the established workspace display preferences with both SQL and object pages.
+export { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
+
 export interface QueryContext {
   database: string;
   schema: string;
@@ -403,4 +406,21 @@ export function hasMoreResultRows(query: QueryWorkspaceTab) {
     !rows.truncated &&
     rows.rows.length < (rows.browse.max_loaded_rows || 10000)
   );
+}
+
+// COUNT values are decimal strings: never round a large count through Number.
+export function lastPageOffset(total: string | undefined, pageSize: number, maxOffset: number): number | null {
+  if (
+    !total ||
+    !/^\d+$/.test(total) ||
+    !Number.isSafeInteger(pageSize) ||
+    pageSize <= 0 ||
+    !Number.isSafeInteger(maxOffset) ||
+    maxOffset < 0
+  )
+    return null;
+  const count = BigInt(total);
+  const size = BigInt(pageSize);
+  const offset = count > 0n ? ((count - 1n) / size) * size : 0n;
+  return offset <= BigInt(maxOffset) ? Number(offset) : null;
 }

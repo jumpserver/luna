@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
-import { completionFilterText, completionIsCurrent, waitForCompletion } from "./completion";
+import { completionFilterText, completionInsertText, completionIsCurrent, waitForCompletion } from "./completion";
 import { analysisMatches, statementAt } from "./executionRange";
 import { applyChenMonacoTheme, monaco } from "./monaco";
 
@@ -21,6 +21,7 @@ const props = defineProps<{
   readOnly?: boolean;
   online?: boolean;
   visible?: boolean;
+  sqlKeywordCase?: "lower" | "upper";
 }>();
 const emit = defineEmits<{
   "update:modelValue": [value: string];
@@ -481,7 +482,7 @@ onMounted(() => {
               incomplete: true,
               suggestions: result.items.map((item, index) => ({
                 label: { label: item.label, description: item.detail },
-                insertText: item.insert_text,
+                insertText: completionInsertText(item, props.sqlKeywordCase),
                 kind: kinds[item.kind] || monaco.languages.CompletionItemKind.Text,
                 detail: item.detail,
                 documentation: item.documentation,

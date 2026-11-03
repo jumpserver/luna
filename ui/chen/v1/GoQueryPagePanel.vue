@@ -3,12 +3,15 @@ import type { GoQueryPageRequest, GoSession } from "./api";
 import type { QueryWorkspaceTab } from "./workspace";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { resultLoadingLocked } from "./workspace";
+import { lastPageOffset, resultLoadingLocked } from "./workspace";
 const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession }>();
 const emit = defineEmits<{ submit: [request: GoQueryPageRequest] }>();
 const { t } = useI18n();
 const page = computed(() => props.query.rows?.query_page);
 const database = computed(() => page.value?.mode === "database");
+const lastOffset = computed(() =>
+  lastPageOffset(props.query.queryCount?.total, page.value?.page_size || 0, page.value?.max_offset ?? 0)
+);
 const locked = computed(() => props.session.state !== "ready" || resultLoadingLocked(props.query));
 function request(action: "page" | "count", offset = 0) {
   if (locked.value || !page.value?.supported || !props.query.rows) return;
@@ -43,6 +46,15 @@ function request(action: "page" | "count", offset = 0) {
           size="xs"
           color="neutral"
           variant="ghost"
+          icon="i-lucide-chevrons-left"
+          :aria-label="t('Chen.FirstPage')"
+          :disabled="locked || page.offset === 0"
+          @click="request('page', 0)"
+        />
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
           icon="i-lucide-chevron-left"
           :aria-label="t('Chen.GoV1Previous')"
           :disabled="locked || page.offset === 0"
@@ -56,6 +68,16 @@ function request(action: "page" | "count", offset = 0) {
           :aria-label="t('Chen.GoV1Next')"
           :disabled="locked || page.has_more !== true || page.offset + page.page_size > page.max_offset"
           @click="request('page', page.offset + page.page_size)"
+        />
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-chevrons-right"
+          :aria-label="t('Chen.LastPage')"
+          :title="t('Chen.GoBrowseLastHint')"
+          :disabled="locked || lastOffset === null || lastOffset === page.offset"
+          @click="lastOffset !== null && request('page', lastOffset)"
         />
         <UButton
           size="xs"

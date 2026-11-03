@@ -2140,6 +2140,10 @@
     "factStartupCost": "시작 비용"
   },
   "Chen": {
+    "GoBrowseLastHint": "먼저 행 수를 집계하세요. 총 행 수를 모르거나 마지막 페이지가 서버 제한을 초과하면 사용할 수 없습니다.",
+    "GoPinnedLimit": "결과는 최대 3개까지 고정할 수 있으며 각 스냅샷은 2 MiB 이하여야 합니다.",
+    "GoPinnedHint": "불러온 행의 읽기 전용 메모리 스냅샷입니다. SQL을 다시 실행하지 않습니다.",
+    "GoPinnedCachePage": "캐시된 행만 탐색하며 SQL을 다시 실행하지 않습니다.",
     "GoDiagramIncoming": "이 테이블을 참조하는 관계",
     "GoDiagramIncomingScope": "검색 범위: 허가된 데이터베이스에서 볼 수 있는 비시스템 스키마(MySQL은 현재 데이터베이스만). 데이터베이스 간 검색은 수행하지 않습니다.",
     "GoDiagramSchemaScope": "그래프 범위: 선택한 스키마 또는 허가된 데이터베이스에서 볼 수 있는 비시스템 스키마",

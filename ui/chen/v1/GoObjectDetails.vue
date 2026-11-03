@@ -11,10 +11,19 @@ const props = defineProps<{
   ready: boolean;
   canCopy: boolean;
   mode?: "structure" | "ddl";
+  detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults";
 }>();
 const { t } = useI18n();
 const data = ref<GoCatalogInspect>();
-const active = ref<keyof GoCatalogInspect["sections"]>(props.mode === "ddl" ? "ddl" : "primary_key");
+const active = ref<keyof GoCatalogInspect["sections"] | "basic">(
+  props.mode === "ddl" ? "ddl" : props.detailSection || "basic"
+);
+watch(
+  () => props.detailSection,
+  (value) => {
+    if (value) active.value = value;
+  }
+);
 const busy = ref(false);
 const ddlBusy = ref(false);
 const ddl = ref<GoCatalogSection>();
@@ -23,6 +32,7 @@ const error = ref("");
 const viewer = ref<{ find: () => void } | null>(null);
 const sections = computed(() =>
   [
+    { key: "basic" as const, label: t("Chen.BasicInfo"), columns: [] },
     {
       key: "primary_key" as const,
       label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
@@ -50,7 +60,11 @@ const sections = computed(() =>
   ].filter((section) => (props.mode === "ddl" ? section.key === "ddl" : section.key !== "ddl"))
 );
 const current = computed(() =>
-  active.value === "ddl" ? ddl.value || data.value?.sections.ddl : data.value?.sections[active.value]
+  active.value === "ddl"
+    ? ddl.value || data.value?.sections.ddl
+    : active.value === "basic"
+      ? undefined
+      : data.value?.sections[active.value]
 );
 const columns = computed(() => sections.value.find((item) => item.key === active.value)?.columns || []);
 const sectionError = computed(() =>
@@ -130,7 +144,7 @@ onBeforeUnmount(() => {
   <div class="flex min-h-0 flex-1 flex-col" data-chen-object-details @copy="preventCopy">
     <div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-3 py-2">
       <UButton
-        v-for="item in sections"
+        v-for="item in detailSection ? [] : sections"
         :key="item.key"
         :label="item.label"
         size="xs"
@@ -169,6 +183,21 @@ onBeforeUnmount(() => {
     <p v-if="data?.truncated || current?.truncated" class="px-3 py-2 text-xs text-warning">
       {{ t("Chen.GoV1MetadataPartial") }}
     </p>
+    <dl v-if="active === 'basic'" class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 overflow-auto p-3 text-xs">
+      <template
+        v-for="item in [
+          { label: t('Chen.Name'), value: object.name },
+          { label: t('Chen.GoV1Database'), value: object.database },
+          { label: t('Chen.Schema'), value: object.schema },
+          { label: t('Chen.ObjectType'), value: t(object.kind === 'view' ? 'Chen.Views' : 'Chen.Tables') },
+          { label: t('Chen.Comment'), value: object.comment }
+        ]"
+        :key="item.label"
+      >
+        <dt class="text-muted">{{ item.label }}</dt>
+        <dd class="break-words">{{ item.value || "—" }}</dd>
+      </template>
+    </dl>
     <template v-if="current?.supported">
       <template v-if="active === 'ddl'">
         <p v-if="current.source" class="border-b border-default px-3 py-1 text-xs text-muted">
