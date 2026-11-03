@@ -112,7 +112,7 @@
     "marked": "17.0.6",
     "mitt": "^3.0.1",
     "monaco-editor": "0.57.0",
-    "nuxt": "^4.4.6",
+    "nuxt": "^4.6.2",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pretty-bytes": "^7.1.0",
