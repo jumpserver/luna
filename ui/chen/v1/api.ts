@@ -112,6 +112,7 @@ export interface GoBrowseFilter {
   children?: GoBrowseFilter[];
 }
 export interface GoBrowseRequest {
+  confirm_reexecution?: boolean;
   schema?: string;
   table?: string;
   source_result_id?: string;
@@ -124,6 +125,7 @@ export interface GoBrowseRequest {
   format?: GoExportFormat;
 }
 export interface GoBrowsePage {
+  requires_reexecution_confirmation?: boolean;
   max_loaded_rows?: number;
   limit_reached?: "rows" | "bytes";
   supported: boolean;
@@ -149,6 +151,7 @@ export interface GoBrowseDraft {
   page_size: number;
 }
 export interface GoQueryPageRequest {
+  confirm_reexecution?: boolean;
   source_result_id: string;
   action: "page" | "count" | "export";
   offset?: number;
@@ -156,6 +159,7 @@ export interface GoQueryPageRequest {
   format?: GoExportFormat;
 }
 export interface GoQueryPage {
+  requires_reexecution_confirmation?: boolean;
   supported: boolean;
   reason?: string;
   mode: "cache" | "database";
@@ -280,7 +284,9 @@ export interface GoCatalogInspect {
   schema: string;
   table: string;
   columns: GoCatalogColumn[];
-  sections: Record<"primary_key" | "foreign_keys" | "indexes" | "defaults" | "ddl", GoCatalogSection>;
+  sections: Record<"primary_key" | "foreign_keys" | "indexes" | "defaults" | "ddl", GoCatalogSection> & {
+    constraints?: GoCatalogSection;
+  };
   truncated: boolean;
 }
 export interface GoCatalogPage<T> {

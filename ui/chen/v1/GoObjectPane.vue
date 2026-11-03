@@ -31,7 +31,7 @@ const view = ref<"columns" | "details">("columns");
 const structureVisited = ref(false);
 const ddlVisited = ref(false);
 const detailsVisited = ref(false);
-const detailSection = ref<"basic" | "primary_key" | "indexes" | "foreign_keys" | "defaults">("basic");
+const detailSection = ref<"basic" | "primary_key" | "indexes" | "foreign_keys" | "defaults" | "constraints">("basic");
 const diagramVisited = ref(false);
 const diagramDirection = ref<"outgoing" | "incoming">("outgoing");
 const identity = computed(() => diagramObjectId(props.sessionId, props.object));
@@ -243,6 +243,7 @@ function preventCopy(event: ClipboardEvent) {
           { key: 'primary_key', label: t('RightPanel.SQLAIMetadataCategory.primary_keys') },
           { key: 'indexes', label: t('Chen.Indexes') },
           { key: 'foreign_keys', label: t('Chen.ForeignKeys') },
+          { key: 'constraints', label: t('Chen.Constraints') },
           { key: 'defaults', label: t('RightPanel.SQLAIMetadataCategory.default_values') }
         ] as const"
         :key="item.key"

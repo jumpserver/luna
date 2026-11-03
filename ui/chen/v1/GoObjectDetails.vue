@@ -11,7 +11,7 @@ const props = defineProps<{
   ready: boolean;
   canCopy: boolean;
   mode?: "structure" | "ddl";
-  detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults";
+  detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults" | "constraints";
 }>();
 const { t } = useI18n();
 const data = ref<GoCatalogInspect>();
@@ -44,6 +44,7 @@ const sections = computed(() =>
       columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
     },
     { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
+    { key: "constraints" as const, label: t("Chen.Constraints"), columns: ["name", "type", "definition"] },
     {
       key: "defaults" as const,
       label: t("RightPanel.SQLAIMetadataCategory.default_values"),
@@ -78,7 +79,9 @@ const labels: Record<string, string> = {
   referenced_schema: "Chen.Schema",
   referenced_table: "Chen.References",
   referenced_column: "Chen.GoV1ReferencedColumn",
-  expression: "Chen.Definition"
+  expression: "Chen.Definition",
+  type: "Chen.Type",
+  definition: "Chen.Definition"
 };
 let controller: AbortController | undefined;
 let ddlController: AbortController | undefined;

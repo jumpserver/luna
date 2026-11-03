@@ -1,5 +1,5 @@
 import type { Ref } from "vue";
-import type { GoEvent, GoSession } from "./api";
+import type { GoBrowseRequest, GoEvent, GoQueryPageRequest, GoSession } from "./api";
 import type { QueryWorkspaceTab } from "./workspace";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -182,8 +182,12 @@ function mountSurface(firstToken = "old") {
     closeSession: () => Promise<void>;
     closeTab: (query: QueryWorkspaceTab) => Promise<void>;
     connectQuery: (query: QueryWorkspaceTab) => Promise<void>;
-    loadRows: (query: QueryWorkspaceTab, id: string) => Promise<void>;
+    loadRows: (query: QueryWorkspaceTab, id: string, offset?: number) => Promise<void>;
     finishClose: (approved: boolean) => void;
+    reexecutionDialog: Ref<{ sql: string } | null>;
+    finishReexecution: (approved: boolean) => void;
+    browseTable: (query: QueryWorkspaceTab, request?: GoBrowseRequest) => Promise<void>;
+    pageQuery: (query: QueryWorkspaceTab, request: GoQueryPageRequest) => Promise<void>;
   };
   const setup = component.setup;
   component.setup = (props: unknown, context: unknown) => {
@@ -223,6 +227,171 @@ function exchange(mounted: ReturnType<typeof mountSurface>, token: string) {
 }
 
 describe("Go database connection replacement", () => {
+  it("clears a complex table filter without reusing its previous SQL confirmation", async () => {
+    const mounted = mountSurface();
+    await waitReady(mounted, "old");
+    const query = mounted.state.tabs.value[0]!;
+    query.browseObject = { database: "app", schema: "public", name: "items", kind: "table" };
+    query.rows = {
+      id: "old-result",
+      columns: [],
+      rows: [],
+      offset: 0,
+      total_rows: 0,
+      truncated: false,
+      browse: {
+        supported: true,
+        requires_reexecution_confirmation: true,
+        full_sql: "SELECT * FROM items WHERE custom_function(id)=1"
+      }
+    } as never;
+    await mounted.state.browseTable(query, { schema: "public", table: "items", where: "", offset: 0 });
+    expect(mounted.state.reexecutionDialog.value).toBeNull();
+    expect(mounted.calls.find((call) => call.path.endsWith("/browse"))?.body).toMatchObject({
+      table: "items",
+      where: "",
+      offset: 0
+    });
+  });
+  it.each(["apply", "page", "failure"])("keeps filter drafts separate from applied rows: %s", async (action) => {
+    const mounted = mountSurface();
+    await waitReady(mounted, "old");
+    const query = mounted.state.tabs.value[0]!;
+    const browse = {
+      supported: true,
+      database: "app",
+      schema: "public",
+      table: "items",
+      where: "id = 2",
+      sort: [],
+      offset: 0,
+      page_size: 200,
+      max_page_size: 1000,
+      max_offset: 1000000,
+      stable: true,
+      has_more: false,
+      full_sql: "SELECT * FROM public.items WHERE (id = 2)"
+    };
+    query.rows = {
+      id: "old-result",
+      rows: [["2"]],
+      columns: [],
+      offset: 0,
+      total_rows: 1,
+      truncated: false,
+      browse
+    };
+    query.browseDraft = { where: "id > 10  ", sort: [], page_size: 200 };
+    query.browseCount = { source_result_id: "old-result", total: "1000" };
+    query.execution = { id: "applied", console_id: query.console!.id, status: "succeeded" } as never;
+    query.executionBrowse =
+      action === "page"
+        ? { source_result_id: "old-result", offset: 200 }
+        : { table: "items", where: "id > 10  ", offset: 0 };
+    const rows = deferred<Response>();
+    mounted.blocked.set("GET /results/applied-result/rows", rows);
+    const loading = mounted.state.loadRows(query, "applied-result");
+    const where = action === "apply" ? "id > 10" : "id = 2";
+    rows.resolve(
+      action === "failure"
+        ? new Response(JSON.stringify({ error: { code: "query_failed", message: "failed" } }), { status: 400 })
+        : json({
+            id: "applied-result",
+            rows: [[action === "apply" ? "12" : "2"]],
+            columns: [],
+            offset: 0,
+            total_rows: 1,
+            truncated: false,
+            browse: { ...browse, where }
+          })
+    );
+    await loading;
+    expect(query.browseDraft.where).toBe(action === "apply" ? "id > 10" : "id > 10  ");
+    expect(query.rows?.browse?.where).toBe(where);
+    if (action === "failure") {
+      expect(query.rows?.id).toBe("old-result");
+      expect(query.resultLoadError).not.toBeNull();
+    } else expect(query.browseCount).toBeNull();
+  });
+
+  it("still blocks closing an active uncancellable task before showing the compact confirmation", async () => {
+    const mounted = mountSurface();
+    await waitReady(mounted, "old");
+    const query = mounted.state.tabs.value[0]!;
+    mounted.state.session.value!.can_cancel = false;
+    query.execution = { id: "active", console_id: query.console!.id, status: "running" } as never;
+    await mounted.state.closeSession();
+    expect(mounted.state.closeDialog.value).toBeNull();
+    expect(query.error).toBe("Chen.GoV1CloseCancelUnsupported");
+    expect(mounted.calls.some((call) => call.method === "DELETE")).toBe(false);
+  });
+
+  it("keeps the initial view target when confirming database browsing", async () => {
+    const mounted = mountSurface();
+    await waitReady(mounted, "old");
+    const query = mounted.state.tabs.value[0]!;
+    query.browseObject = { database: "app", schema: "public", name: "parity_view", kind: "view" };
+    const cancelled = mounted.state.browseTable(query);
+    await flush();
+    expect(mounted.state.reexecutionDialog.value?.sql).toContain('"public"."parity_view"');
+    expect(mounted.calls.some((call) => call.path.endsWith("/browse"))).toBe(false);
+    mounted.state.finishReexecution(false);
+    await cancelled;
+    expect(mounted.calls.some((call) => call.path.endsWith("/browse"))).toBe(false);
+    const approved = mounted.state.browseTable(query);
+    await flush();
+    mounted.state.finishReexecution(true);
+    await approved;
+    expect(mounted.calls.find((call) => call.path.endsWith("/browse"))?.body).toMatchObject({
+      schema: "public",
+      table: "parity_view",
+      confirm_reexecution: true
+    });
+    expect(query.loadingSettings.mode).toBe("page");
+  });
+
+  it.each(["cancel", "replace", "approve"])("binds complex query confirmation to its source: %s", async (action) => {
+    const mounted = mountSurface();
+    await waitReady(mounted, "old");
+    const query = mounted.state.tabs.value[0]!;
+    query.rows = {
+      id: "source-result",
+      columns: [],
+      rows: [],
+      offset: 0,
+      total_rows: 0,
+      truncated: false,
+      query_page: {
+        supported: true,
+        requires_reexecution_confirmation: true,
+        mode: "cache",
+        offset: 0,
+        page_size: 200,
+        max_page_size: 1000,
+        max_offset: 1000000,
+        ordered: true,
+        has_more: true
+      }
+    };
+    query.resultSql = "SELECT * FROM public.parity_view";
+    const paging = mounted.state.pageQuery(query, { source_result_id: "source-result", action: "count" });
+    await flush();
+    expect(mounted.state.reexecutionDialog.value?.sql).toBe(query.resultSql);
+    expect(mounted.calls.some((call) => call.path.endsWith("/query-page"))).toBe(false);
+    if (action === "replace") query.loadGeneration++;
+    mounted.state.finishReexecution(action !== "cancel");
+    await paging;
+    const sent = mounted.calls.filter((call) => call.path.endsWith("/query-page"));
+    if (action === "approve") {
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.body).toMatchObject({
+        source_result_id: "source-result",
+        action: "count",
+        confirm_reexecution: true
+      });
+    } else expect(sent).toHaveLength(0);
+  });
+
   it("consumes a renewed token once, preserves SQL drafts and replaces child/session state without running SQL", async () => {
     const mounted = mountSurface();
     await waitReady(mounted, "old");

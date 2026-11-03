@@ -1312,21 +1312,6 @@ defineExpose({
           @cut.capture="preventCopy"
         >
           <p v-if="!canExplain" class="px-3 py-2 text-xs text-warning">{{ t("Chen.GoPlanUnsupported") }}</p>
-          <div v-if="shownPlan" class="shrink-0 border-b border-default px-3 py-2 text-xs">
-            <p class="text-muted">
-              {{ shownPlan.executionId }} · {{ shownPlan.context.database || "—" }} /
-              {{ shownPlan.context.schema || "—" }}
-            </p>
-            <p v-if="shownPlan.executionId !== query.execution?.id" class="text-warning">
-              {{ t("Chen.GoPlanPrevious") }}
-            </p>
-            <details>
-              <summary class="cursor-pointer text-muted">{{ t("Chen.GoV1ResultSource") }}</summary>
-              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.sql }}</pre>
-              <p class="mt-2 text-muted">{{ t("Chen.GoPlanGenerated") }}</p>
-              <pre class="max-h-28 overflow-auto whitespace-pre-wrap">{{ shownPlan.context.generated_sql || "—" }}</pre>
-            </details>
-          </div>
           <p
             v-if="
               query.planAttempt?.error &&
@@ -1348,7 +1333,48 @@ defineExpose({
               @click="loadQueryPlan(query, api)"
             />
           </div>
-          <ExecutionPlanTree :plan="shownPlan" :loading="planLoading" preserve-raw />
+          <ExecutionPlanTree
+            :plan="shownPlan"
+            :loading="planLoading"
+            :can-copy="session.permissions.can_copy"
+            compact
+            preserve-raw
+          >
+            <template #actions>
+              <span v-if="shownPlan && shownPlan.executionId !== query.execution?.id" class="text-xs text-muted">
+                {{ t("Chen.GoPlanPrevious") }}
+              </span>
+              <UPopover v-if="shownPlan" :content="{ align: 'end' }">
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-code"
+                  :label="t('Chen.GoPlanViewSQL')"
+                />
+                <template #content>
+                  <div
+                    class="max-h-[55vh] w-[min(42rem,calc(100vw-2rem))] space-y-3 overflow-auto p-3 text-xs"
+                    :class="{ 'select-none': !session.permissions.can_copy }"
+                    data-plan-sql
+                    @copy.capture="preventCopy"
+                    @cut.capture="preventCopy"
+                  >
+                    <div>
+                      <p class="mb-1 text-muted">{{ t("Chen.GoPlanSourceSQL") }}</p>
+                      <pre class="whitespace-pre-wrap break-words font-ui-mono">{{ shownPlan.sql }}</pre>
+                    </div>
+                    <div>
+                      <p class="mb-1 text-muted">{{ t("Chen.GoPlanGenerated") }}</p>
+                      <pre class="whitespace-pre-wrap break-words font-ui-mono">{{
+                        shownPlan.context.generated_sql || "—"
+                      }}</pre>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+            </template>
+          </ExecutionPlanTree>
         </div>
         <template v-else-if="pinnedResult">
           <p class="shrink-0 px-3 py-1 text-xs text-muted">{{ t("Chen.GoPinnedHint") }} · {{ pinnedResult.source }}</p>
