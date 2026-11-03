@@ -3535,7 +3535,7 @@
     "Checking": "Checking sign-in status…",
     "Retry": "Retry",
     "Logout": "Sign out",
-    "LockNow": "Lock now",
+    "LockNow": "Lock",
     "TooManyAttempts": "Too many attempts. Please try again later.",
     "CheckFailed": "Unable to check sign-in status",
     "CheckFailedDescription": "Retry, or sign out and sign in again.",
