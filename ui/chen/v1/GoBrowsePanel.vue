@@ -195,7 +195,7 @@ const lastOffset = computed(() =>
           class="min-w-0 flex-1 font-ui-mono"
           size="xs"
           :aria-label="t('Chen.GoBrowseWhere')"
-          :placeholder="draft.filter ? t('Chen.GoBrowseBuilder') : t('Chen.GoBrowseWhereHint')"
+          :placeholder="draft.filter ? t('Chen.GoBrowseBuilder') : 'id > 10 AND name LIKE \'A%\''"
           :disabled="locked || !!draft.filter"
           @keydown.enter="applyWhere"
         />

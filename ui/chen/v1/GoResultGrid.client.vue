@@ -55,6 +55,7 @@ const props = defineProps<{
   active?: boolean;
   loadingSettings?: GoResultLoadingSettings;
   loadingSettingsDisabled?: boolean;
+  pageSizeControl?: boolean;
   maxBatchSize?: number;
   canLoadMore?: boolean;
   nullableColumns?: number[];
@@ -205,7 +206,7 @@ const selectionLabel = computed(() =>
         rows: bounds.value.maxRow - bounds.value.minRow + 1,
         columns: bounds.value.maxCol - bounds.value.minCol + 1
       })
-    : t("Chen.GoV1GridSelectionHint")
+    : ""
 );
 const positionLabel = computed(() => {
   const cell = selection.value.current;
@@ -826,7 +827,7 @@ onBeforeUnmount(() => {
                     @update:model-value="changeLoading({ mode: $event as GoResultLoadingSettings['mode'] })"
                   />
                 </label>
-                <label class="flex items-center justify-between gap-3 text-xs">
+                <label v-if="pageSizeControl !== false" class="flex items-center justify-between gap-3 text-xs">
                   <span>
                     {{ t(loadingSettings.mode === "continuous" ? "Chen.GoBrowseBatchSize" : "Chen.GoBrowseSize") }}
                   </span>
@@ -842,7 +843,6 @@ onBeforeUnmount(() => {
                     @update:model-value="changeLoading({ batchSize: Number($event) })"
                   />
                 </label>
-                <p class="text-xs text-muted">{{ t("Chen.GoBrowseLoadingPreferenceHint") }}</p>
               </div>
               <div>
                 <p class="text-xs font-medium text-highlighted">{{ t("Chen.TableDisplay") }}</p>
@@ -1021,19 +1021,14 @@ onBeforeUnmount(() => {
       />
     </UDropdownMenu>
     <div
+      v-if="positionLabel || selectionLabel"
       class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-default px-2 py-1 text-[11px] text-muted"
     >
       <span class="truncate" :title="[positionLabel, selectionLabel].filter(Boolean).join(' · ')">
         <template v-if="positionLabel">{{ positionLabel }} ·</template>
         {{ selectionLabel }}
       </span>
-      <span class="max-w-full">
-        {{ t(editableColumns?.length || insertableColumns?.length ? "Chen.GoWriteGridHint" : "Chen.GoV1GridReadOnly") }}
-      </span>
     </div>
-    <p v-if="copySql" class="shrink-0 border-t border-default px-2 py-1 text-xs text-muted" role="status">
-      {{ t(sqlCopyDisabled ? "Chen.GoCopySqlLocked" : "Chen.GoCopySqlHint") }}
-    </p>
     <GoResultValue v-if="valueOpen && valueCell" v-model:open="valueOpen" :cell="valueCell" :can-copy="canCopy" />
   </div>
 </template>

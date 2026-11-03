@@ -274,6 +274,7 @@ watch(
             :aria-label="`${resolvedCloseLabel} ${tab.label}`"
             :title="`${resolvedCloseLabel} ${tab.label}`"
             @click.stop="$emit('close', tab.id)"
+            @dblclick.stop
           >
             <UIcon name="i-lucide-x" class="size-3" />
           </button>

@@ -53,7 +53,8 @@ import {
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
 import { chenErrorText } from "~/chen/utils/errorMessages";
-import { chenSampleSql, chenSqlDialect } from "~/chen/utils/sqlDialect";
+import { chenSqlDialect } from "~/chen/utils/sqlDialect";
+import WorkspaceSubTabStrip from "~/components/Workspace/subTabStrip.vue";
 import { registerWorkspaceSessionCloseGuard } from "~/composables/useWorkspaceTabs";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { ChenGoError, createChenGoApi, executionActive, executionCanCancel } from "./api";
@@ -206,10 +207,64 @@ const tabStrip = ref<HTMLElement>();
 const queries = computed(() => workspaceQueries(tabs.value));
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeId.value));
 const sessionReady = computed(() => session.value?.state === "ready");
-const insertTarget = computed(() => (activeTab.value?.kind === "query" ? activeTab.value : undefined));
+const insertTarget = computed(() =>
+  activeTab.value && ["query", "console"].includes(activeTab.value.kind) ? workspaceQuery(activeTab.value) : undefined
+);
 let disposed = false;
 let sequence = 0;
-let queryNumber = 0;
+function nextQueryTitle(prefix = t("Chen.Query")) {
+  const titles = new Set(tabs.value.map((tab) => tab.title));
+  if (!titles.has(prefix)) return prefix;
+  let number = 2;
+  while (titles.has(`${prefix} ${number}`)) number++;
+  return `${prefix} ${number}`;
+}
+const tabDefinitions = computed(() =>
+  tabs.value.map((tab) => ({
+    id: tab.id,
+    label: objectTitle(tab),
+    icon:
+      tab.kind === "overview"
+        ? "i-lucide-list-tree"
+        : tab.kind === "object"
+          ? "i-lucide-table-properties"
+          : tab.kind === "console"
+            ? "i-lucide-square-terminal"
+            : "i-lucide-terminal-square",
+    dirty: !!workspaceQuery(tab) && queryDirty(workspaceQuery(tab)!),
+    title: objectTitle(tab)
+  }))
+);
+const createTabItems = computed(() => [
+  {
+    label: t("Chen.NewQuery"),
+    icon: "i-lucide-file-code-2",
+    disabled: !sessionReady.value,
+    onSelect: () => newQuery()
+  },
+  {
+    label: t("Chen.NewConsole"),
+    icon: "i-lucide-square-terminal",
+    disabled: !sessionReady.value,
+    onSelect: () => newQuery(undefined, undefined, false, false, "console")
+  }
+]);
+const contextTab = ref<ChenWorkspaceTab>();
+const tabMenuOpen = ref(false);
+const tabMenuPosition = ref({ x: 0, y: 0 });
+function openTabMenu(id: string, event: MouseEvent) {
+  contextTab.value = tabs.value.find((tab) => tab.id === id);
+  tabMenuPosition.value = { x: event.clientX, y: event.clientY };
+  tabMenuOpen.value = true;
+}
+function selectTabById(id: string) {
+  const tab = tabs.value.find((item) => item.id === id);
+  if (tab) selectTab(tab);
+}
+function closeTabById(id: string) {
+  const tab = tabs.value.find((item) => item.id === id);
+  if (tab) void closeTab(tab);
+}
 const failureText = (cause: unknown) => chenErrorText(cause, t);
 const aiAvailable = computed(() => !!props.tab && !!getChenSqlAiSession(props.tab.id)?.enabled);
 let aiGeneration = 0;
@@ -219,7 +274,9 @@ function sqlAiContext(): ChenSqlEditorContext | null {
     !props.tab ||
     !sessionReady.value ||
     !session.value ||
-    query?.kind !== "query" ||
+    !query ||
+    !["query", "console"].includes(query.kind) ||
+    !isQueryWorkspaceTab(query) ||
     query.console?.state !== "ready"
   )
     return null;
@@ -235,7 +292,7 @@ function sqlAiContext(): ChenSqlEditorContext | null {
     paneId: props.tab.id,
     tabId: query.id,
     workspaceTabId: query.id,
-    workspaceTabKind: "query",
+    workspaceTabKind: query.kind === "console" ? "console" : "query",
     currentContext: JSON.stringify(query.context),
     lastError: goSqlExecutionError(query, snapshot)
   };
@@ -313,7 +370,7 @@ watch(
       props.tab?.id,
       activeId.value,
       query?.kind,
-      query?.kind === "query"
+      query && isQueryWorkspaceTab(query) && ["query", "console"].includes(query.kind)
         ? [query.console?.id, query.console?.state, query.context.database, query.context.schema, query.sql]
         : null
     ];
@@ -360,14 +417,10 @@ function toggleTree() {
   if (desktopTree.value) sidebarHidden.value = !sidebarHidden.value;
   else drawer.value = !drawer.value;
 }
-async function tabKeydown(event: KeyboardEvent, tab: ChenWorkspaceTab) {
-  if (event.target !== event.currentTarget) return;
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    selectTab(tab);
-    return;
-  }
-  const index = tabs.value.indexOf(tab);
+async function tabKeydown(event: KeyboardEvent) {
+  const elements = Array.from(tabStrip.value?.querySelectorAll<HTMLElement>('[role="tab"]') || []);
+  const index = elements.indexOf(event.target as HTMLElement);
+  if (index < 0) return;
   let target: ChenWorkspaceTab | undefined;
   if (event.key === "ArrowRight") target = tabs.value[(index + 1) % tabs.value.length];
   if (event.key === "ArrowLeft") target = tabs.value[(index + tabs.value.length - 1) % tabs.value.length];
@@ -382,6 +435,7 @@ async function tabKeydown(event: KeyboardEvent, tab: ChenWorkspaceTab) {
 const renameTarget = ref<ChenWorkspaceTab | null>(null);
 const renameTitle = ref("");
 function renameTab(tab: ChenWorkspaceTab) {
+  if (tab.kind !== "query") return;
   renameTitle.value = tab.title;
   renameTarget.value = tab;
 }
@@ -397,7 +451,9 @@ function tabMenu(tab: ChenWorkspaceTab) {
   const right = tabs.value.slice(index + 1);
   const cannotClose = (list: ChenWorkspaceTab[]) => !list.length || list.some((item) => workspaceQuery(item)?.busy);
   return [
-    { label: t("Chen.GoV1RenameTab"), icon: "i-lucide-pencil", onSelect: () => renameTab(tab) },
+    ...(tab.kind === "query"
+      ? [{ label: t("Chen.GoV1RenameTab"), icon: "i-lucide-pencil", onSelect: () => renameTab(tab) }]
+      : []),
     ...(isQueryWorkspaceTab(tab)
       ? [
           {
@@ -457,6 +513,7 @@ async function loadRows(
     const page = await api.rows(id, offset, limit);
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
+      if (page.query_page?.mode !== "database" && page.id !== query.cachedResult?.id) query.cachedResult = undefined;
       if (page.browse?.supported && !query.rows?.browse?.supported) {
         query.browseDraft = {
           where: page.browse.where,
@@ -484,7 +541,12 @@ async function loadRows(
       query.loadMoreFailed = false;
       if (changedResult) {
         query.browseCount = null;
-        query.queryCount = null;
+        query.queryCount =
+          page.query_page?.mode === "database" &&
+          page.query_page.scope_id &&
+          query.queryCount?.scope_id === page.query_page.scope_id
+            ? { ...query.queryCount, source_result_id: page.id }
+            : null;
       }
       if (page.query_page?.mode === "database") {
         query.loadingSettings = { mode: "page", batchSize: page.query_page.page_size };
@@ -726,19 +788,21 @@ async function newQuery(
   context = tabContext(activeTab.value, defaultContext.value),
   object?: GoCatalogObject,
   preview = false,
-  browse = false
+  browse = false,
+  kind: "query" | "console" = "query"
 ) {
   if (!sessionReady.value) return;
   if (object && !preview && !browse && !session.value?.permissions.can_paste) return;
-  const sql = object ? objectSelect(object, session.value!.dialect, preview) : chenSampleSql(session.value!.dialect);
+  const sql = object ? objectSelect(object, session.value!.dialect, preview) : "";
   const query = reactive(
     newQueryTab(
-      `${t(preview ? "Chen.GoV1Preview" : "Chen.Query")} ${++queryNumber}`,
+      nextQueryTitle(t(preview ? "Chen.GoV1Preview" : kind === "console" ? "Chen.Console" : "Chen.Query")),
       context,
       sql,
       !!object && !preview
     )
   );
+  query.kind = kind;
   if (preview || browse) query.kind = "preview";
   if (browse && object) {
     query.browseObject = object;
@@ -791,11 +855,32 @@ async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest) 
     request.source_result_id !== query.rows?.id
   )
     return;
+  if (request.action === "page" && query.rows?.query_page?.mode !== "database" && query.resultExecution) {
+    query.cachedResult = {
+      id: query.rows!.id,
+      offset: query.rows!.offset,
+      execution: query.resultExecution,
+      sql: query.resultSql,
+      loadingSettings: { ...query.loadingSettings }
+    };
+  }
   query.loadGeneration++;
   query.resultLoadError = null;
-  query.queryCount = null;
   query.pending = { sql: query.resultSql, version: query.executionVersion, id: newChenRequestId(), queryPage: request };
   await recoverSubmission(query);
+}
+async function restoreCachedResult(query: QueryWorkspaceTab) {
+  const cached = query.cachedResult;
+  if (
+    !cached ||
+    cached.execution.console_id !== query.console?.id ||
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    resultLoadingLocked(query)
+  )
+    return;
+  query.pendingLoading = { ...cached.loadingSettings };
+  await loadRows(query, cached.id, cached.offset, cached.execution, cached.sql);
 }
 async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSettings) {
   if (!sessionReady.value || resultLoadingLocked(query)) return;
@@ -864,6 +949,13 @@ async function applyEdits(query: QueryWorkspaceTab, plan: GoEditPlan) {
 async function refreshData(query: QueryWorkspaceTab) {
   if (editDirty(query.edit) || query.edit.busy) return;
   if (query.browseObject) await browseTable(query);
+  else if (query.rows?.query_page?.mode === "database")
+    await pageQuery(query, {
+      source_result_id: query.rows.id,
+      action: "page",
+      offset: query.rows.query_page.offset,
+      page_size: query.rows.query_page.page_size
+    });
   else if (query.resultSql) await submit(query, query.resultSql, query.executionVersion);
 }
 interface SchemaEdit {
@@ -922,7 +1014,7 @@ function applySchemaSql(id: string, sql: string, execute: boolean): boolean {
   )
     return false;
   const scope = connection;
-  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, target.context, sql, true));
+  const query = reactive(newQueryTab(nextQueryTitle(), target.context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
@@ -946,7 +1038,7 @@ watch(
 async function restoreQuery(context: QueryContext, sql: string, uploaded = false) {
   if (!sessionReady.value || !(uploaded ? session.value?.permissions.can_upload : session.value?.permissions.can_paste))
     return;
-  const query = reactive(newQueryTab(`${t("Chen.Query")} ${++queryNumber}`, context, sql, true));
+  const query = reactive(newQueryTab(nextQueryTitle(), context, sql, true));
   tabs.value.push(query);
   activeId.value = query.id;
   drawer.value = false;
@@ -1337,6 +1429,7 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.pending = null;
   query.edit = createEditDraft();
   query.rows = null;
+  query.cachedResult = undefined;
   query.resultId = "";
   query.resultExecution = null;
   query.resultSql = "";
@@ -1671,78 +1764,50 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         />
       </div>
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div
-          ref="tabStrip"
-          role="tablist"
-          :aria-label="t('Chen.GoV1WorkspaceTabs')"
-          class="flex min-h-10 shrink-0 overflow-x-auto border-b border-default"
-        >
-          <div class="flex max-w-full items-stretch" :style="{ width: `${tabs.length * 176 + 40}px` }">
-            <UContextMenu v-for="item in tabs" :key="item.id" :items="tabMenu(item)">
-              <div
-                role="tab"
-                :aria-selected="activeId === item.id"
-                :tabindex="activeId === item.id ? 0 : -1"
-                class="flex w-44 min-w-28 shrink items-center gap-1.5 border-r border-default px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
-                :class="
-                  activeId === item.id
-                    ? 'border-b-2 border-b-primary bg-[var(--workspace-surface-main)]'
-                    : 'bg-[var(--workspace-surface-sidebar)] text-muted'
-                "
-                :title="
-                  item.kind === 'object'
-                    ? `${item.object.database}.${item.object.schema}.${item.object.name}`
-                    : `${item.context.database} / ${item.context.schema}`
-                "
-                @click="selectTab(item)"
-                @dblclick="renameTab(item)"
-                @keydown="tabKeydown($event, item)"
+        <div ref="tabStrip" class="shrink-0" @keydown="tabKeydown">
+          <WorkspaceSubTabStrip
+            :tabs="tabDefinitions"
+            :active-id="activeId"
+            :close-label="t('Common.Close')"
+            context-menu
+            @select="selectTabById"
+            @close="closeTabById"
+            @contextmenu="openTabMenu"
+            @pin="
+              (id) => {
+                const tab = tabs.find((item) => item.id === id);
+                if (tab) renameTab(tab);
+              }
+            "
+          >
+            <template #after-tabs>
+              <UDropdownMenu
+                :items="createTabItems"
+                :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+                :ui="{ content: 'w-40 p-1' }"
               >
-                <UIcon
-                  :name="
-                    item.kind === 'overview'
-                      ? 'i-lucide-list-tree'
-                      : item.kind === 'object'
-                        ? 'i-lucide-table-properties'
-                        : executionActive(workspaceQuery(item)?.execution || null)
-                          ? 'i-lucide-loader-circle'
-                          : 'i-lucide-file-code-2'
-                  "
-                  class="size-3.5 shrink-0"
-                  :class="{ 'animate-spin': executionActive(workspaceQuery(item)?.execution || null) }"
-                />
-                <span class="min-w-0 flex-1 truncate">{{ objectTitle(item) }}</span>
-                <span
-                  v-if="workspaceQuery(item) && queryDirty(workspaceQuery(item)!)"
-                  :title="t('Chen.GoV1MemoryDraft')"
-                  class="text-warning"
-                >
-                  ●
-                </span>
                 <UButton
-                  icon="i-lucide-x"
-                  :aria-label="`${t('Chen.GoV1CloseTab')} ${item.title}`"
+                  icon="i-lucide-plus"
+                  :aria-label="t('Chen.CreateTab')"
+                  :title="t('Chen.CreateTab')"
                   size="xs"
                   color="neutral"
                   variant="ghost"
-                  :disabled="!!workspaceQuery(item)?.busy"
-                  @click.stop="closeTab(item)"
-                  @dblclick.stop
+                  :disabled="!sessionReady"
                 />
-              </div>
-            </UContextMenu>
-            <UButton
-              icon="i-lucide-plus"
-              :aria-label="t('Chen.NewQuery')"
-              :title="t('Chen.GoV1NewQueryHint')"
-              class="m-1 shrink-0"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :disabled="!sessionReady"
-              @click="newQuery()"
+              </UDropdownMenu>
+            </template>
+          </WorkspaceSubTabStrip>
+          <UDropdownMenu
+            v-model:open="tabMenuOpen"
+            :items="contextTab ? tabMenu(contextTab) : []"
+            :content="{ align: 'start' }"
+          >
+            <div
+              class="pointer-events-none fixed h-px w-px"
+              :style="{ left: `${tabMenuPosition.x}px`, top: `${tabMenuPosition.y}px` }"
             />
-          </div>
+          </UDropdownMenu>
         </div>
         <div v-if="!tabs.length" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-sm text-muted">
           <p>{{ t("Chen.GoV1EmptyWorkspace") }}</p>
@@ -1800,6 +1865,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @refresh-data="refreshData(query)"
               @browse="(request) => browseTable(query, request)"
               @query-page="(request) => pageQuery(query, request)"
+              @cached-result="restoreCachedResult(query)"
               @loading-settings="(settings) => changeLoading(query, settings)"
               @load-more="(automatic) => loadMore(query, automatic)"
               @sql="updateQuerySql(query, $event)"
@@ -1847,7 +1913,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :aria-expanded="logsOpen"
             @click="logsOpen = !logsOpen"
           />
-          <span :title="t('Chen.GoV1MemoryDraft')">{{ t("Chen.GoV1MemoryDraftShort") }}</span>
           <span class="ml-auto" :title="t('Chen.GoV1Shortcuts')">Ctrl/⌘ Enter · {{ t("Chen.GoV1RunCurrent") }}</span>
         </div>
       </div>
@@ -1867,7 +1932,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     <UModal
       :open="!!renameTarget"
       :title="t('Chen.GoV1RenameTab')"
-      :description="t('Chen.GoV1RenameTabHint')"
       @update:open="
         (value) => {
           if (!value) renameTarget = null;

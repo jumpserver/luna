@@ -28,6 +28,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
 import GoBrowsePanel from "./GoBrowsePanel.vue";
+import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoResultGrid from "./GoResultGrid.client.vue";
@@ -55,6 +56,7 @@ const emit = defineEmits<{
   refreshData: [];
   browse: [request: GoBrowseRequest];
   queryPage: [request: GoQueryPageRequest];
+  cachedResult: [];
   loadingSettings: [settings: GoResultLoadingSettings];
   loadMore: [automatic: boolean];
   run: [sql: string, version: number];
@@ -91,7 +93,6 @@ const editor = ref<{
   snapshot: () => GoSqlEditorSnapshot;
   replaceDocument: (sql: string) => boolean;
 } | null>(null);
-const maximized = ref<"editor" | "results" | null>(null);
 const coreUser = useUserInfoStore();
 const toast = useToast();
 const coreIdentity = () =>
@@ -198,7 +199,6 @@ function insertSnippet(snippet: ChenSqlSnippet) {
   )
     return;
   if (editor.value?.appendText(snippet.args)) {
-    maximized.value = null;
     selectSnippetOpen.value = false;
   }
 }
@@ -341,7 +341,7 @@ const editorResize = usePaneResize({
   defaultValue: 60,
   step: 2,
   pixelsPerUnit: () => availableHeight.value / 100,
-  enabled: () => props.visible && !maximized.value
+  enabled: () => props.visible && props.query.kind !== "console"
 });
 const canExplain = computed(() =>
   [
@@ -374,6 +374,14 @@ const canPolicySubmit = computed(
 const analysisBusy = ref(false);
 const writeConfirmation = ref<{ sql: string; version: number; consoleId: string } | null>(null);
 const canRun = computed(() => canSubmit.value && !editDirty(props.query.edit) && !analysisBusy.value);
+const showExecutionStatus = computed(
+  () =>
+    active.value ||
+    props.query.busy ||
+    props.query.loadingRows ||
+    (props.query.execution && props.query.execution.status !== "succeeded") ||
+    props.query.execution?.audit_status === "failed"
+);
 const waitingReview = computed(() => props.query.execution?.status === "waiting_review");
 const reviewRequired = computed(
   () => props.query.execution?.status === "failed" && props.query.execution.error?.code === "command_review_required"
@@ -467,17 +475,10 @@ function restore(sql: string) {
   historyOpen.value = false;
   emit("restore", sql);
 }
-function maximize(pane: "editor" | "results") {
-  maximized.value = maximized.value === pane ? null : pane;
-}
 const gridRows = computed(() =>
   props.dataOnly
     ? "minmax(0, 1fr)"
-    : maximized.value === "editor"
-      ? "minmax(0, 1fr)"
-      : maximized.value === "results"
-        ? "minmax(0, 1fr)"
-        : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
+    : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
 );
 const sqlFile = ref<HTMLInputElement>();
 let fileGeneration = 0;
@@ -551,7 +552,6 @@ defineExpose({
   run: () => editor.value?.run(),
   insertText: (text: string) => {
     if (!props.session.permissions.can_paste || props.query.kind === "preview") return;
-    maximized.value = null;
     editor.value?.insertText(text);
   }
 });
@@ -606,7 +606,7 @@ defineExpose({
       />
     </div>
     <div
-      v-if="!dataOnly"
+      v-if="!dataOnly && query.kind !== 'console'"
       data-chen-query-toolbar
       class="flex min-h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-2 py-1 [&>*]:shrink-0"
     >
@@ -854,21 +854,11 @@ defineExpose({
           </div>
         </template>
       </UPopover>
-      <UButton
-        :icon="maximized === 'editor' ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
-        :aria-label="t(maximized === 'editor' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeEditor')"
-        :title="t(maximized === 'editor' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeEditor')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        @click="maximize('editor')"
-      />
     </div>
     <SqlSnippetSaveDialog
       v-if="saveSnippetOpen"
       v-model:open="saveSnippetOpen"
       :saving="sqlSnippets.saving.value"
-      :hint="t('Chen.GoSnippetPublic')"
       :error="snippetError"
       @confirm="saveSnippet"
     />
@@ -1009,13 +999,6 @@ defineExpose({
         }}</pre>
       </details>
     </div>
-    <p
-      v-if="query.resultPane === 'plan'"
-      role="status"
-      class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted"
-    >
-      {{ t("Chen.GoV1EstimatedPlanHint") }}
-    </p>
     <UModal
       :open="!!writeConfirmation"
       :title="t('Chen.GoWriteSqlConfirm')"
@@ -1047,26 +1030,30 @@ defineExpose({
         </div>
       </template>
     </UModal>
-    <div v-if="query.kind === 'preview'" class="shrink-0 border-b border-default px-3 py-1.5 text-xs text-muted">
-      {{
-        t(
-          query.readOnly
-            ? "Chen.GoTableWorkspaceReadOnly"
-            : query.browseObject
-              ? "Chen.GoWriteBrowseHint"
-              : "Chen.GoV1PreviewHint"
-        )
-      }}
-    </div>
-    <GoQueryPagePanel v-if="!pinnedResult" :query="query" :session="session" @submit="emit('queryPage', $event)" />
     <GoBrowsePanel
       v-if="query.browseObject && !pinnedResult"
       :query="query"
       :session="session"
       @submit="emit('browse', $event)"
     />
-    <div ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-if="!dataOnly" v-show="maximized !== 'results'" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
+    <GoConsolePane
+      v-if="query.kind === 'console'"
+      ref="editor"
+      :query="query"
+      :session="session"
+      :api="api"
+      :disabled="!canRun"
+      :visible="visible"
+      :ai-available="aiAvailable"
+      :can-explain="canExplain"
+      @sql="emit('sql', $event)"
+      @run="run"
+      @explain="explain"
+      @cancel="emit('cancel')"
+      @ai="emit('ai', $event)"
+    />
+    <div v-else ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
+      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
         <MonacoSqlEditor
           ref="editor"
           :model-value="query.sql"
@@ -1079,7 +1066,7 @@ defineExpose({
           :can-cancel="executionCanCancel(query.execution, session.can_cancel)"
           :read-only="query.kind === 'preview'"
           :online="canRun"
-          :visible="visible && maximized !== 'results'"
+          :visible="visible"
           @update:model-value="emit('sql', $event)"
           @run="run"
           @explain="explain"
@@ -1092,7 +1079,6 @@ defineExpose({
       </div>
       <div
         v-if="!dataOnly"
-        v-show="!maximized"
         role="separator"
         tabindex="0"
         aria-orientation="horizontal"
@@ -1117,14 +1103,18 @@ defineExpose({
           class="pointer-events-none absolute inset-x-0 top-1/2 border-t border-default group-hover:border-primary group-focus-visible:border-primary"
         />
       </div>
-      <div v-show="maximized !== 'editor'" class="flex min-h-0 min-w-0 flex-col overflow-hidden">
-        <div class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 text-xs">
+      <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <div
+          v-if="showExecutionStatus"
+          class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 text-xs"
+        >
           <UIcon
             v-if="active || query.busy || query.loadingRows"
             name="i-lucide-loader-circle"
             class="size-3.5 animate-spin"
           />
           <span
+            v-if="showExecutionStatus"
             :class="{
               'text-error': query.execution?.status === 'failed' && !reviewRequired,
               'text-warning': query.execution?.status === 'unknown' || query.execution?.status === 'cancel_requested'
@@ -1138,10 +1128,9 @@ defineExpose({
                   : t("Chen.GoV1Ready")
             }}
           </span>
-          <span v-if="duration(query.execution)" class="tabular-nums text-muted">{{ duration(query.execution) }}</span>
           <span v-if="query.loadingRows" class="text-muted">{{ t("Chen.GoV1FetchingRows") }}</span>
           <span
-            v-if="query.execution"
+            v-if="query.execution?.audit_status === 'failed'"
             :title="t(single ? 'Chen.GoV1SingleAuditExplanation' : 'Chen.GoV1AuditExplanation')"
             :class="query.execution.audit_status === 'failed' ? 'text-error' : 'text-muted'"
           >
@@ -1153,122 +1142,13 @@ defineExpose({
               query.resultPane === 'results' &&
               query.resultExecution &&
               query.resultExecution.id !== query.execution?.id &&
+              query.rows?.id !== query.cachedResult?.id &&
               !(query.executionQueryPage?.action === 'count' && query.execution?.status === 'succeeded')
             "
             class="text-warning"
           >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
-          <span
-            v-if="
-              !pinnedResult &&
-              query.resultPane === 'results' &&
-              query.loadingSettings.mode === 'page' &&
-              query.rows &&
-              !query.rows.browse?.supported &&
-              query.rows.query_page?.mode !== 'database'
-            "
-            class="ml-auto text-muted"
-          >
-            {{ query.rows.rows.length ? query.rows.offset + 1 : 0 }}–{{ query.rows.offset + query.rows.rows.length }} /
-            {{ query.rows.total_rows }}{{ query.rows.truncated ? "+" : "" }} {{ t("Chen.GoV1RowsUnit") }}
-          </span>
-          <UButton
-            v-if="
-              !pinnedResult &&
-              query.resultPane === 'results' &&
-              query.loadingSettings.mode === 'page' &&
-              query.rows &&
-              !query.rows.browse?.supported &&
-              query.rows.query_page?.mode !== 'database'
-            "
-            icon="i-lucide-chevrons-left"
-            :aria-label="t('Chen.FirstPage')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy || query.rows!.offset === 0"
-            @click="emit('rows', query.resultId, 0)"
-          />
-          <UButton
-            v-if="
-              !pinnedResult &&
-              query.resultPane === 'results' &&
-              query.loadingSettings.mode === 'page' &&
-              query.rows &&
-              !query.rows.browse?.supported &&
-              query.rows.query_page?.mode !== 'database' &&
-              query.rows.offset > 0
-            "
-            icon="i-lucide-chevron-left"
-            :aria-label="t('Chen.GoV1Previous')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy"
-            @click="emit('rows', query.resultId, Math.max(0, query.rows.offset - query.loadingSettings.batchSize))"
-          />
-          <UButton
-            v-if="
-              !pinnedResult &&
-              query.resultPane === 'results' &&
-              query.loadingSettings.mode === 'page' &&
-              !query.rows?.browse?.supported &&
-              query.rows?.query_page?.mode !== 'database' &&
-              query.rows?.next_offset !== undefined
-            "
-            icon="i-lucide-chevron-right"
-            :aria-label="t('Chen.GoV1Next')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="query.loadingRows || editDirty(query.edit) || query.edit.busy"
-            @click="emit('rows', query.resultId, query.rows.next_offset)"
-          />
-          <UButton
-            v-if="
-              !pinnedResult &&
-              query.resultPane === 'results' &&
-              query.loadingSettings.mode === 'page' &&
-              query.rows &&
-              !query.rows.browse?.supported &&
-              query.rows.query_page?.mode !== 'database'
-            "
-            icon="i-lucide-chevrons-right"
-            :aria-label="t('Chen.LastPage')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :title="t('Chen.GoPinnedCachePage')"
-            :disabled="
-              query.loadingRows ||
-              editDirty(query.edit) ||
-              query.edit.busy ||
-              !query.rows!.total_rows ||
-              query.rows!.offset >=
-                Math.floor((query.rows!.total_rows - 1) / query.loadingSettings.batchSize) *
-                  query.loadingSettings.batchSize
-            "
-            @click="
-              emit(
-                'rows',
-                query.resultId,
-                Math.floor((query.rows!.total_rows - 1) / query.loadingSettings.batchSize) *
-                  query.loadingSettings.batchSize
-              )
-            "
-          />
-          <UButton
-            v-if="!dataOnly"
-            :class="{ 'ml-auto': !query.rows }"
-            :icon="maximized === 'results' ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
-            :aria-label="t(maximized === 'results' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeResults')"
-            :title="t(maximized === 'results' ? 'Chen.GoV1RestoreLayout' : 'Chen.GoV1MaximizeResults')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            @click="maximize('results')"
-          />
         </div>
         <div
           v-if="!dataOnly"
@@ -1535,13 +1415,21 @@ defineExpose({
               @click="emit('loadMore', false)"
             />
           </div>
+          <GoQueryPagePanel
+            v-if="!query.browseObject"
+            :query="query"
+            :session="session"
+            @submit="emit('queryPage', $event)"
+            @cached="emit('cachedResult')"
+            @rows="(id, offset) => emit('rows', id, offset)"
+            @loading-settings="emit('loadingSettings', $event)"
+          />
         </template>
         <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
           <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
             {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}
           </p>
-          <p v-if="!query.execution">{{ t("Chen.GoV1ReadyHint") }}</p>
-          <p v-else-if="query.execution.status === 'succeeded' && !query.execution.result_ids.length">
+          <p v-if="query.execution?.status === 'succeeded' && !query.execution.result_ids.length">
             {{ t("Chen.GoV1NoResultSet") }}
           </p>
         </div>
