@@ -39,9 +39,10 @@ describe("application shortcuts", () => {
       expect(defaultShortcut("splitHorizontal", environment)).toBe(
         environment.mac ? "Mod+Shift+KeyD" : "Mod+Shift+KeyE"
       );
-      for (const { id } of shortcutDefinitions) {
+      for (const definition of shortcutDefinitions) {
+        const { id } = definition;
         const binding = defaultShortcut(id, environment);
-        if (id === "newSession" && !environment.desktop) continue;
+        if ("desktopOnly" in definition && !environment.desktop) continue;
         expect(isReservedShortcut(binding, id, environment), `${id}: ${binding}`).toBe(false);
         expect(conflictingShortcut(id, binding, {}, environment), `${id}: ${binding}`).toBeUndefined();
       }
@@ -50,6 +51,11 @@ describe("application shortcuts", () => {
     expect(isReservedShortcut("Ctrl+KeyD", "splitVertical", mac)).toBe(true);
     expect(isReservedShortcut("Mod+KeyD", "splitVertical", web)).toBe(true);
     expect(shortcutBindings("splitVertical", { splitVertical: "Mod+KeyD" }, mac)).toEqual(["Mod+KeyD"]);
+  });
+
+  it("binds clipboard history only on desktop", () => {
+    expect(shortcutBindings("clipboardHistory", {}, web)).toEqual([]);
+    expect(shortcutBindings("clipboardHistory", {}, desktop)).toEqual(["Mod+Shift+KeyH"]);
   });
 
   it("replaces every old binding and releases disabled chords", () => {

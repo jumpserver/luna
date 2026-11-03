@@ -12,7 +12,12 @@ type GraphicsFields = Pick<
   | "rdp_smart_size"
   | "rdp_client_option"
   | "printers_redirect"
+  | "rdp_keyboard_hook"
 >;
+
+function normalizeKeyboardHook(value: unknown): NonNullable<RdpGraphics["rdp_keyboard_hook"]> {
+  return value === "0" || value === "1" ? value : "2";
+}
 
 export function useRdpResolutionPreference() {
   const user = useUserInfoStore();
@@ -65,6 +70,7 @@ export function useRdpResolutionPreference() {
           rdp_color_quality: preferences.graphics?.rdp_color_quality || "32",
           rdp_smart_size: preferences.graphics?.rdp_smart_size || "0",
           printers_redirect: preferences.graphics?.printers_redirect ?? false,
+          rdp_keyboard_hook: normalizeKeyboardHook(preferences.graphics?.rdp_keyboard_hook),
           rdp_client_option: Array.isArray(preferences.graphics?.rdp_client_option)
             ? [...preferences.graphics.rdp_client_option]
             : []
@@ -155,6 +161,12 @@ export function useRdpResolutionPreference() {
       void patchGraphics({ printers_redirect: value });
     }
   });
+  const keyboardHook = computed({
+    get: () => normalizeKeyboardHook(serverGraphics.value.rdp_keyboard_hook),
+    set: (value: NonNullable<RdpGraphics["rdp_keyboard_hook"]>) => {
+      void patchGraphics({ rdp_keyboard_hook: normalizeKeyboardHook(value) });
+    }
+  });
 
   return {
     resolution,
@@ -164,6 +176,7 @@ export function useRdpResolutionPreference() {
     colorQuality,
     smartSize,
     printersRedirect,
+    keyboardHook,
     fullScreen: bindFlag("full_screen"),
     multiScreen: bindFlag("multi_screen"),
     drivesRedirect: bindFlag("drives_redirect")

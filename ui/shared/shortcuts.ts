@@ -9,6 +9,8 @@ export const shortcutDefinitions = [
   { id: "focus", default: "Mod+Shift+KeyP", scope: "workspace" },
   { id: "fullscreen", default: "Mod+Shift+KeyF", scope: "workspace" },
   { id: "rightPanel", default: "Mod+Alt+Digit2", scope: "application" },
+  { id: "clipboardHistory", default: "Mod+Shift+KeyH", scope: "application", desktopOnly: true },
+  { id: "lockClient", default: "Mod+KeyL", scope: "client", desktopOnly: true },
   { id: "terminalAi", default: "Mod+KeyK", scope: "terminal" },
   { id: "newSession", default: "Mod+KeyT", scope: "application", desktopOnly: true }
 ] as const;
@@ -142,7 +144,6 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     `${primary}+KeyR`,
     `${primary}+Shift+KeyR`,
     `${primary}+Shift+KeyW`,
-    `${primary}+KeyL`,
     "Ctrl+KeyF",
     "Ctrl+Enter",
     "Ctrl+Shift+Enter",
@@ -160,6 +161,7 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
   ];
   if (reserved.includes(key)) return true;
   if (key === `${primary}+KeyD`) return !environment.mac || id !== "splitVertical";
+  if (key === `${primary}+KeyL`) return !environment.desktop || id !== "lockClient";
   if (key === `${primary}+KeyW`) return !environment.desktop || id !== "closeTab";
   if (key === `${primary}+KeyT`) return !environment.desktop || id !== "newSession";
   // Digits remain a group; 1/2 also belong to the embedded editor's pane selector.

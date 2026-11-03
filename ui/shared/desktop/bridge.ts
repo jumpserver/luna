@@ -1,5 +1,6 @@
 import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
 import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import type { ClientNoticeSnapshot } from "~/types";
 import type {
   FaceEngineConfig,
   FaceEngineStatus,
@@ -87,6 +88,14 @@ interface ElectronDesktopApi {
 
 const electronApi = () => (globalThis as typeof globalThis & { __JMS_DESKTOP__?: ElectronDesktopApi }).__JMS_DESKTOP__;
 
+interface ClientNoticeOverlayBridge {
+  listen(handler: (snapshot: ClientNoticeSnapshot) => void): () => void;
+  dismiss(id: string): void;
+}
+
+export const clientNoticeOverlay = () =>
+  (globalThis as typeof globalThis & { __JMS_CLIENT_NOTICES__?: ClientNoticeOverlayBridge }).__JMS_CLIENT_NOTICES__;
+
 const requireElectron = () => {
   const electron = electronApi();
   if (!electron) throw new Error("Electron bridge is unavailable in the web runtime");
@@ -165,9 +174,21 @@ export const desktopOs = {
   locale: () => requireElectron().invoke<string | null>("plugin:os|locale")
 };
 
+export interface DesktopClipboardHistoryItem {
+  id: string;
+  text: string;
+  copiedAt: number;
+}
+
 export const desktopClipboard = {
   readText: () => requireElectron().invoke<string>("plugin:clipboard-manager|read_text"),
   writeText: (text: string) => requireElectron().invoke<void>("plugin:clipboard-manager|write_text", { text }),
+  history: () => requireElectron().invoke<DesktopClipboardHistoryItem[]>("desktop_clipboard_history"),
+  removeHistory: (id: string) => requireElectron().invoke<void>("desktop_clipboard_history_remove", { id }),
+  clearHistory: () => requireElectron().invoke<void>("desktop_clipboard_history_clear"),
+  historyStatus: () => requireElectron().invoke<{ enabled: boolean }>("desktop_clipboard_history_status"),
+  setHistoryEnabled: (enabled: boolean) =>
+    requireElectron().invoke<void>("desktop_clipboard_history_set_enabled", { enabled }),
   writeImage: (rgba: Uint8Array, width: number, height: number) =>
     requireElectron().invoke<void>("desktop_clipboard_write_image", { rgba, width, height })
 };

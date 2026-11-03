@@ -29,10 +29,10 @@ const payload = (site = "https://b.test") => ({
 const compatible = (site: string): SiteCompatibility => ({
   status: "compatible",
   site,
-  clientVersion: "5.1.0",
-  minCoreVersion: "5.1.0",
-  coreVersion: "5.1.0",
-  minClientVersion: "5.1.0",
+  clientVersion: "5.2.0",
+  minCoreVersion: "5.2.0",
+  coreVersion: "5.2.0",
+  minClientVersion: "5.2.0",
   failures: []
 });
 
@@ -40,7 +40,7 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
   const calls: string[] = [];
   const events: [string, unknown][] = [];
   const auth = runInNewContext(script, {
-    app: { getPath: () => "/tmp/compatibility-test", getVersion: () => "5.1.0" },
+    app: { getPath: () => "/tmp/compatibility-test", getVersion: () => "5.2.0" },
     path,
     parseUrl,
     siteHostname,
@@ -55,6 +55,7 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
     AbortSignal,
     URLSearchParams,
     Buffer,
+    performance,
     electronLog: { info() {}, warn() {} },
     compactApiErrorBody: (body: string) => body,
     emitEvent: (event: string, data: unknown) => {
@@ -78,7 +79,12 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
   };
   auth.fetchSite = async () => {
     calls.push("oauth-config");
-    return new Response('{"client_id":"test-client"}');
+    return new Response(
+      JSON.stringify({
+        client_id: "test-client",
+        client_login_policy: { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
+      })
+    );
   };
   auth.exchangeToken = async () => {
     calls.push("token-exchange");
@@ -266,13 +272,13 @@ test("the probe uses Electron's runtime version and existing site network adapte
       `({ checkCompatibility: DesktopAuthService.prototype.checkCompatibility, fetchSite: DesktopAuthService.prototype.fetchSite })`
   );
   const methods = runInNewContext(actualScript, {
-    app: { getVersion: () => "5.1.2-rc1" },
+    app: { getVersion: () => "5.2.2-rc1" },
     CLIENT_AUTH_CALLBACK: "callback",
     checkSiteCompatibility,
     net: {
       fetch: async (url: string, init: RequestInit) => {
         requests.push([url, init]);
-        return new Response('{"schema_version":1,"core_version":"v5.1.0","min_client_version":"v5.1.0"}');
+        return new Response('{"schema_version":1,"core_version":"v5.2.0","min_client_version":"v5.2.0"}');
       }
     }
   });
@@ -281,7 +287,7 @@ test("the probe uses Electron's runtime version and existing site network adapte
     site: "https://b.test",
     clientVersion: "999.0.0"
   });
-  assert.equal(result.clientVersion, "5.1.2-rc1");
+  assert.equal(result.clientVersion, "5.2.2-rc1");
   assert.equal(result.status, "compatible");
   assert.equal(requests.length, 1);
   const [url, init] = requests[0]!;

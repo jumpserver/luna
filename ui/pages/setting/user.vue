@@ -13,7 +13,6 @@ const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
 const { switchAccount: switchSiteAccount } = useSiteAccountSwitch();
 const { loggedIn, currentAccountId, currentUser, userMap } = storeToRefs(userInfoStore);
-
 const profile = ref<UserProfile | null>(null);
 const loading = ref(false);
 const switchingAccount = ref(false);
@@ -21,7 +20,12 @@ const loadError = ref("");
 const avatarFailed = ref(false);
 let requestSequence = 0;
 
-const accounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
+const accounts = computed(() => {
+  const entries = Object.entries(userMap.value) as [string, UserData][];
+  return entries.sort(
+    ([leftId], [rightId]) => Number(rightId === currentAccountId.value) - Number(leftId === currentAccountId.value)
+  );
+});
 
 const avatarUrl = computed(() => {
   const value = profile.value?.avatar_url;
@@ -177,6 +181,54 @@ watch(
     </div>
 
     <template v-else>
+      <div v-if="loading" class="space-y-6">
+        <div class="flex items-center gap-3">
+          <USkeleton class="size-12 rounded-full" />
+          <div class="flex-1 space-y-2">
+            <USkeleton class="h-4 w-40" />
+            <USkeleton class="h-3 w-56" />
+          </div>
+        </div>
+        <div v-for="index in 6" :key="index" class="flex items-center justify-between gap-6">
+          <USkeleton class="h-3 w-28" />
+          <USkeleton class="h-3 w-48" />
+        </div>
+      </div>
+
+      <UAlert
+        v-else-if="loadError"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-circle-alert"
+        :title="t('UserProfile.LoadFailed')"
+        :description="loadError"
+      >
+        <template #actions>
+          <UButton size="sm" color="error" variant="outline" @click="loadProfile">
+            {{ t("UserProfile.Retry") }}
+          </UButton>
+        </template>
+      </UAlert>
+
+      <SettingsGroup v-else-if="profile" :divided="false">
+        <div class="flex items-center gap-4 px-4 py-3">
+          <UAvatar
+            :src="avatarUrl"
+            :alt="profile.name || profile.username"
+            color="primary"
+            size="xl"
+            class="shrink-0"
+            @error="avatarFailed = true"
+          />
+          <div class="min-w-0">
+            <h2 class="truncate font-sans text-sm font-medium text-highlighted">
+              {{ profile.name || profile.username }}
+            </h2>
+            <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
+          </div>
+        </div>
+      </SettingsGroup>
+
       <SettingsSection
         v-if="isDesktopRuntime()"
         :title="t('UserProfile.SiteAccounts')"
@@ -216,55 +268,7 @@ watch(
         </SettingsGroup>
       </SettingsSection>
 
-      <div v-if="loading" class="space-y-6">
-        <div class="flex items-center gap-3">
-          <USkeleton class="size-12 rounded-full" />
-          <div class="flex-1 space-y-2">
-            <USkeleton class="h-4 w-40" />
-            <USkeleton class="h-3 w-56" />
-          </div>
-        </div>
-        <div v-for="index in 6" :key="index" class="flex items-center justify-between gap-6">
-          <USkeleton class="h-3 w-28" />
-          <USkeleton class="h-3 w-48" />
-        </div>
-      </div>
-
-      <UAlert
-        v-else-if="loadError"
-        color="error"
-        variant="subtle"
-        icon="i-lucide-circle-alert"
-        :title="t('UserProfile.LoadFailed')"
-        :description="loadError"
-      >
-        <template #actions>
-          <UButton size="sm" color="error" variant="outline" @click="loadProfile">
-            {{ t("UserProfile.Retry") }}
-          </UButton>
-        </template>
-      </UAlert>
-
-      <template v-else-if="profile">
-        <SettingsGroup :divided="false">
-          <div class="flex items-center gap-4 px-4 py-3">
-            <UAvatar
-              :src="avatarUrl"
-              :alt="profile.name || profile.username"
-              color="primary"
-              size="xl"
-              class="shrink-0"
-              @error="avatarFailed = true"
-            />
-            <div class="min-w-0">
-              <h2 class="truncate font-sans text-sm font-medium text-highlighted">
-                {{ profile.name || profile.username }}
-              </h2>
-              <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
-            </div>
-          </div>
-        </SettingsGroup>
-
+      <template v-if="!loading && !loadError && profile">
         <SettingsSection :title="t('UserProfile.BasicInfo')">
           <SettingsGroup>
             <div

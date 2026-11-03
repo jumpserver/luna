@@ -75,6 +75,7 @@ jobs:
         run: node --test --test-concurrency=1 packages/guacamole/scripts/build.test.mjs
 
       - name: Install dependencies
+        timeout-minutes: 10
         run: pnpm install --frozen-lockfile
 
       - name: Validate source
@@ -151,7 +152,11 @@ jobs:
         shell: pwsh
         run: Get-Command candle, light
 
+      - name: Sync version
+        run: node scripts/set-version.js
+
       - name: Install dependencies
+        timeout-minutes: 10
         run: pnpm install --frozen-lockfile
 
       - name: Validate packaging configuration
@@ -159,11 +164,6 @@ jobs:
         env:
           WINDOWS_SIGN_MODE: "off"
         run: pnpm --dir electron exec node --import tsx --test tests/forge-artifacts.test.ts
-
-      - name: Sync version
-        env:
-          VERSION: ${{ env.VERSION }}
-        run: pnpm set_version
 
       - name: Set custom product name
         if: >-
@@ -228,6 +228,7 @@ jobs:
           echo "CSC_NAME=$signing_identity" >> "$GITHUB_ENV"
 
       - name: Prepare Electron resources
+        timeout-minutes: 10
         run: pnpm electron:prepare
 
       - name: Build Electron artifacts

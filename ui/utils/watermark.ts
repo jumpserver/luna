@@ -5,10 +5,11 @@ export interface WatermarkTemplateSettings {
   SECURITY_WATERMARK_SESSION_CONTENT?: string;
 }
 
-export function resolveWatermarkTemplate(settings: WatermarkTemplateSettings) {
+export function resolveWatermarkTemplate(settings: WatermarkTemplateSettings, isAssetSession: boolean) {
+  const sessionContent = String(settings.SECURITY_WATERMARK_SESSION_CONTENT || "");
+  if (isAssetSession && sessionContent.trim()) return sessionContent;
   const consoleContent = String(settings.SECURITY_WATERMARK_CONSOLE_CONTENT || "").trim();
-  if (consoleContent) return consoleContent;
-  return String(settings.SECURITY_WATERMARK_SESSION_CONTENT || "");
+  return consoleContent || sessionContent;
 }
 
 export function isWatermarkSettingEnabled(value: unknown) {

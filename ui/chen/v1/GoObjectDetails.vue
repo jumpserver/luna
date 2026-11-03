@@ -2,6 +2,7 @@
 import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
 const props = defineProps<{
   api: ChenGoApi;
@@ -9,48 +10,66 @@ const props = defineProps<{
   object: GoCatalogObject;
   ready: boolean;
   canCopy: boolean;
+  mode?: "structure" | "ddl";
+  detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults" | "constraints";
 }>();
 const { t } = useI18n();
 const data = ref<GoCatalogInspect>();
-const active = ref<keyof GoCatalogInspect["sections"]>("primary_key");
+const active = ref<keyof GoCatalogInspect["sections"] | "basic">(
+  props.mode === "ddl" ? "ddl" : props.detailSection || "basic"
+);
+watch(
+  () => props.detailSection,
+  (value) => {
+    if (value) active.value = value;
+  }
+);
 const busy = ref(false);
 const ddlBusy = ref(false);
 const ddl = ref<GoCatalogSection>();
 const ddlError = ref("");
 const error = ref("");
 const viewer = ref<{ find: () => void } | null>(null);
-const sections = computed(() => [
-  {
-    key: "primary_key" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
-    columns: ["name", "column", "ordinal"]
-  },
-  {
-    key: "foreign_keys" as const,
-    label: t("Chen.ForeignKeys"),
-    columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
-  },
-  { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
-  {
-    key: "defaults" as const,
-    label: t("RightPanel.SQLAIMetadataCategory.default_values"),
-    columns: ["column", "expression"]
-  },
-  {
-    key: "ddl" as const,
-    label:
-      (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
-        ? t("Chen.GoV1ViewQueryDefinition")
-        : "DDL",
-    columns: []
-  }
-]);
+const sections = computed(() =>
+  [
+    { key: "basic" as const, label: t("Chen.BasicInfo"), columns: [] },
+    {
+      key: "primary_key" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
+      columns: ["name", "column", "ordinal"]
+    },
+    {
+      key: "foreign_keys" as const,
+      label: t("Chen.ForeignKeys"),
+      columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
+    },
+    { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
+    { key: "constraints" as const, label: t("Chen.Constraints"), columns: ["name", "type", "definition"] },
+    {
+      key: "defaults" as const,
+      label: t("RightPanel.SQLAIMetadataCategory.default_values"),
+      columns: ["column", "expression"]
+    },
+    {
+      key: "ddl" as const,
+      label:
+        (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
+          ? t("Chen.GoV1ViewQueryDefinition")
+          : "DDL",
+      columns: []
+    }
+  ].filter((section) => (props.mode === "ddl" ? section.key === "ddl" : section.key !== "ddl"))
+);
 const current = computed(() =>
-  active.value === "ddl" ? ddl.value || data.value?.sections.ddl : data.value?.sections[active.value]
+  active.value === "ddl"
+    ? ddl.value || data.value?.sections.ddl
+    : active.value === "basic"
+      ? undefined
+      : data.value?.sections[active.value]
 );
 const columns = computed(() => sections.value.find((item) => item.key === active.value)?.columns || []);
 const sectionError = computed(() =>
-  typeof current.value?.error === "string" ? current.value.error : current.value?.error?.message
+  current.value?.error ? chenErrorText(current.value.error, t, "catalog_failed") : ""
 );
 const labels: Record<string, string> = {
   name: "Chen.Name",
@@ -60,7 +79,9 @@ const labels: Record<string, string> = {
   referenced_schema: "Chen.Schema",
   referenced_table: "Chen.References",
   referenced_column: "Chen.GoV1ReferencedColumn",
-  expression: "Chen.Definition"
+  expression: "Chen.Definition",
+  type: "Chen.Type",
+  definition: "Chen.Definition"
 };
 let controller: AbortController | undefined;
 let ddlController: AbortController | undefined;
@@ -80,7 +101,7 @@ async function load() {
     );
     if (!current.signal.aborted) data.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
@@ -96,7 +117,7 @@ async function loadDdl() {
     const value = await props.api.catalogDdl(props.sessionId, props.object.schema, props.object.name, current.signal);
     if (!current.signal.aborted) ddl.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) ddlError.value = cause instanceof Error ? cause.message : String(cause);
+    if (!current.signal.aborted) ddlError.value = chenErrorText(cause, t);
   } finally {
     if (!current.signal.aborted) ddlBusy.value = false;
   }
@@ -110,11 +131,11 @@ watch(
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) event.preventDefault();
 }
-onMounted(() => load());
+onMounted(() => (props.mode === "ddl" ? loadDdl() : load()));
 watch(
   () => props.ready,
   (ready) => {
-    if (ready && !data.value && !error.value) void load();
+    if (ready && props.mode !== "ddl" && !data.value && !error.value) void load();
   }
 );
 onBeforeUnmount(() => {
@@ -126,7 +147,7 @@ onBeforeUnmount(() => {
   <div class="flex min-h-0 flex-1 flex-col" data-chen-object-details @copy="preventCopy">
     <div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-3 py-2">
       <UButton
-        v-for="item in sections"
+        v-for="item in detailSection ? [] : sections"
         :key="item.key"
         :label="item.label"
         size="xs"
@@ -165,6 +186,21 @@ onBeforeUnmount(() => {
     <p v-if="data?.truncated || current?.truncated" class="px-3 py-2 text-xs text-warning">
       {{ t("Chen.GoV1MetadataPartial") }}
     </p>
+    <dl v-if="active === 'basic'" class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 overflow-auto p-3 text-xs">
+      <template
+        v-for="item in [
+          { label: t('Chen.Name'), value: object.name },
+          { label: t('Chen.GoV1Database'), value: object.database },
+          { label: t('Chen.Schema'), value: object.schema },
+          { label: t('Chen.ObjectType'), value: t(object.kind === 'view' ? 'Chen.Views' : 'Chen.Tables') },
+          { label: t('Chen.Comment'), value: object.comment }
+        ]"
+        :key="item.label"
+      >
+        <dt class="text-muted">{{ item.label }}</dt>
+        <dd class="break-words">{{ item.value || "—" }}</dd>
+      </template>
+    </dl>
     <template v-if="current?.supported">
       <template v-if="active === 'ddl'">
         <p v-if="current.source" class="border-b border-default px-3 py-1 text-xs text-muted">

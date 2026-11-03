@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoAnalysis } from "./api";
 import type { SqlSourceRange } from "./executionRange";
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
-import { completionFilterText, completionIsCurrent, waitForCompletion } from "./completion";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
+import { completionFilterText, completionInsertText, completionIsCurrent, waitForCompletion } from "./completion";
 import { analysisMatches, statementAt } from "./executionRange";
 import { applyChenMonacoTheme, monaco } from "./monaco";
 
@@ -16,9 +17,11 @@ const props = defineProps<{
   api: ChenGoApi;
   canCopy: boolean;
   canPaste: boolean;
+  canCancel?: boolean;
   readOnly?: boolean;
   online?: boolean;
   visible?: boolean;
+  sqlKeywordCase?: "lower" | "upper";
 }>();
 const emit = defineEmits<{
   "update:modelValue": [value: string];
@@ -26,9 +29,12 @@ const emit = defineEmits<{
   explain: [sql: string, version: number];
   scope: [mode: "selection" | "current" | "empty"];
   editorError: [message: string];
+  cancel: [];
+  openSnippets: [];
+  saveSnippet: [];
 }>();
 const { t } = useI18n();
-const host = ref<HTMLElement | null>(null);
+const host = shallowRef<HTMLElement | null>(null);
 let editor: monaco.editor.IStandaloneCodeEditor | undefined;
 let model: monaco.editor.ITextModel | undefined;
 const disposables: monaco.IDisposable[] = [];
@@ -42,6 +48,7 @@ let analysisRequest: { consoleId: string; version: number; promise: Promise<GoAn
 let analysisController: AbortController | undefined;
 let analysisTimer: ReturnType<typeof setTimeout> | undefined;
 let currentDecoration: monaco.editor.IEditorDecorationsCollection | undefined;
+let unregisterClipboard: (() => void) | undefined;
 
 function invalidateCompletion() {
   completion?.abort();
@@ -268,6 +275,23 @@ function insertText(text: string) {
   editor.pushUndoStop();
   editor.focus();
 }
+// Snippets append independently of the selection, as one undoable editor edit.
+function appendText(text: string) {
+  if (!editor || !model || props.readOnly || !props.canPaste || !text) return false;
+  const end = model.getPositionAt(model.getValueLength());
+  const prefix = model.getValueLength() && !model.getValue().endsWith("\n") ? model.getEOL() : "";
+  editor.pushUndoStop();
+  const applied = editor.executeEdits("chen.snippet", [
+    {
+      range: new monaco.Range(end.lineNumber, end.column, end.lineNumber, end.column),
+      text: prefix + text,
+      forceMoveMarkers: true
+    }
+  ]);
+  editor.pushUndoStop();
+  editor.focus();
+  return applied;
+}
 function clipboard(event: Event) {
   if (event.type === "copy" || event.type === "cut" ? !props.canCopy : !props.canPaste) {
     event.preventDefault();
@@ -276,6 +300,25 @@ function clipboard(event: Event) {
 }
 function keydown(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
+  if (!event.isComposing && !event.shiftKey && !event.altKey && props.visible !== false) {
+    if (event.ctrlKey && !event.metaKey && ["r", "s"].includes(key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (props.online !== false && !props.readOnly) {
+        if (key === "r") emit("openSnippets");
+        else emit("saveSnippet");
+      }
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && ["d", "l"].includes(key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (key === "d") {
+        if (props.canCancel) emit("cancel");
+      } else format();
+      return;
+    }
+  }
   const copy = (event.ctrlKey || event.metaKey) && ["c", "x"].includes(key);
   const paste = ((event.ctrlKey || event.metaKey) && key === "v") || (event.shiftKey && key === "insert");
   if ((copy && !props.canCopy) || (paste && !props.canPaste)) {
@@ -439,7 +482,7 @@ onMounted(() => {
               incomplete: true,
               suggestions: result.items.map((item, index) => ({
                 label: { label: item.label, description: item.detail },
-                insertText: item.insert_text,
+                insertText: completionInsertText(item, props.sqlKeywordCase),
                 kind: kinds[item.kind] || monaco.languages.CompletionItemKind.Text,
                 detail: item.detail,
                 documentation: item.documentation,
@@ -466,6 +509,35 @@ onMounted(() => {
   for (const name of ["copy", "cut", "paste", "drop"]) host.value.addEventListener(name, clipboard, true);
   host.value.addEventListener("keydown", keydown, true);
   host.value.addEventListener("beforeinput", beforeinput, true);
+  const instance = editor;
+  const documentModel = model;
+  unregisterClipboard = registerWorkspaceClipboardSurface(host.value, () => {
+    const version = documentModel.getVersionId();
+    const range = instance.getSelection();
+    const consoleId = props.consoleId;
+    if (!range) return null;
+    const available = () =>
+      editor === instance &&
+      model === documentModel &&
+      !documentModel.isDisposed() &&
+      documentModel.getVersionId() === version &&
+      props.consoleId === consoleId &&
+      props.online !== false &&
+      props.visible !== false;
+    return {
+      terminal: false,
+      mode: "paste",
+      paste(text) {
+        if (!available()) return "unavailable";
+        if (props.readOnly || !props.canPaste) return "denied";
+        instance.pushUndoStop();
+        const applied = instance.executeEdits("chen.clipboard-history", [{ range, text, forceMoveMarkers: true }]);
+        instance.pushUndoStop();
+        return applied ? "pasted" : "unavailable";
+      },
+      focus: () => editor?.focus()
+    };
+  });
 });
 watch(
   () => props.modelValue,
@@ -506,6 +578,7 @@ watch(
   { flush: "post" }
 );
 onBeforeUnmount(() => {
+  unregisterClipboard?.();
   cancelAnimationFrame(layoutFrame);
   completion?.abort();
   clearTimeout(analysisTimer);
@@ -545,6 +618,7 @@ defineExpose({
   explain,
   format,
   insertText,
+  appendText,
   complete,
   snapshot,
   replaceDocument

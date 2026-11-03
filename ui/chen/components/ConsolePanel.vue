@@ -17,6 +17,9 @@ const props = defineProps<{
   promptLabel: string;
   canCopy: boolean;
   aiEnabled: boolean;
+  disabled?: boolean;
+  canCancel?: boolean;
+  canExplain?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -105,7 +108,7 @@ const statusDetails = computed<Record<ChenConsoleExecutionStatus, { icon: string
 );
 
 function run() {
-  if (busy.value || !pendingSqlValue.value.trim()) return;
+  if (props.disabled || busy.value || !pendingSqlValue.value.trim()) return;
   historyIndex = null;
   historyDraft = "";
   followLatest = true;
@@ -297,7 +300,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
                 icon="i-lucide-square"
                 size="sm"
                 color="error"
-                :disabled="entry.status === 'cancelling'"
+                :disabled="entry.status === 'cancelling' || canCancel === false"
                 @click="emit('cancel', tab)"
               >
                 {{ t("Chen.Stop") }}
@@ -308,6 +311,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-git-fork"
+                :disabled="disabled || busy || canExplain === false"
                 @click="emit('explainPlan', tab, entry.sql, entry.id)"
               >
                 {{ t("ExecutionPlan.explain") }}
@@ -377,7 +381,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
         ref="inputRef"
         v-model="pendingSqlValue"
         class="h-full min-h-12 flex-1 resize-none rounded-sm border border-default bg-transparent px-2 py-2 text-[var(--app-fg)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--app-muted)] focus:border-primary focus:ring-1 focus:ring-[var(--app-focus-ring)]"
-        :disabled="busy"
+        :disabled="busy || disabled"
         rows="1"
         :placeholder="t('Chen.ConsoleInputPlaceholder')"
         spellcheck="false"

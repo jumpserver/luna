@@ -1,4 +1,5 @@
 import type { ChenSqlEditorContext, ChenSqlProposal } from "~/chen/composables/useChenSqlAiSessions";
+import type { QueryWorkspaceTab } from "./workspace";
 
 export interface GoSqlEditorSnapshot {
   documentSql: string;
@@ -6,6 +7,28 @@ export interface GoSqlEditorSnapshot {
   selectionFrom: number;
   selectionTo: number;
   revision: number;
+}
+
+// Send only a server execution reference. Chen resolves and masks the actual
+// diagnostic; a stale error must not be attached to another document or selection.
+export function goSqlExecutionError(query: QueryWorkspaceTab, snapshot: GoSqlEditorSnapshot) {
+  const execution = query.execution;
+  if (
+    execution?.status !== "failed" ||
+    !execution.error ||
+    execution.console_id !== query.console?.id ||
+    query.executionVersion !== snapshot.revision ||
+    query.executionEditPlan ||
+    query.executionExportFormat ||
+    query.executionPlan ||
+    query.executionBrowse ||
+    !query.executionSql.trim() ||
+    (snapshot.selectedSql
+      ? snapshot.selectedSql !== query.executionSql
+      : !snapshot.documentSql.includes(query.executionSql))
+  )
+    return null;
+  return { executionId: execution.id };
 }
 
 export function prepareGoSqlProposal(proposal: ChenSqlProposal, context: ChenSqlEditorContext | null) {

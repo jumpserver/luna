@@ -197,6 +197,10 @@ test("Windows RDP launch preserves a connection file path containing spaces and 
 
 test("native launcher reports spawn errors without leaking connection arguments", async () => {
   const child = Object.assign(new EventEmitter(), { unref() {} });
+  let resolveSpawned: () => void;
+  const spawned = new Promise<void>((resolve) => {
+    resolveSpawned = resolve;
+  });
   let executable = "";
   const { LocalApplicationLauncher } = loadWithElectronMocks(
     "../src/apps/local-app-launcher.ts",
@@ -204,6 +208,7 @@ test("native launcher reports spawn errors without leaking connection arguments"
       "node:child_process": {
         spawn: (value: string) => {
           executable = value;
+          resolveSpawned();
           return child;
         }
       }
@@ -221,7 +226,7 @@ test("native launcher reports spawn errors without leaking connection arguments"
     assert.doesNotMatch(error.message, /test-secret/);
     return true;
   });
-  await new Promise(setImmediate);
+  await spawned;
   assert.equal(executable, "x-terminal-emulator");
   child.emit("error", Object.assign(new Error("spawn failed with test-secret"), { code: "ENOENT" }));
   await rejected;
@@ -511,7 +516,7 @@ test("protocol events arriving while the desktop loads are forwarded after initi
 });
 
 function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter) {
-  const app = { getPath: () => "/unused", getVersion: () => "5.1.0", isPackaged };
+  const app = { getPath: () => "/unused", getVersion: () => "5.2.0", isPackaged };
   const { DesktopAuthService } = loadWithElectronMocks("../src/auth/service.ts", {
     electron: { app, net: {}, safeStorage: {} },
     ...(createServer ? { "node:http": { createServer } } : {})
@@ -523,15 +528,24 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
     }),
     resolve: (url: string) => resolveAuthorization(url)
   };
-  const service = new DesktopAuthService((_event: string, url: string) => authorized.resolve(url));
+  const service = new DesktopAuthService((event: string, url: string) => {
+    if (event === "auth_url") authorized.resolve(url);
+  });
   service.checkCompatibility = async ({ site }: { site: string }) => ({
     status: "compatible",
     site,
-    clientVersion: "5.1.0",
-    minCoreVersion: "5.1.0",
+    clientVersion: "5.2.0",
+    minCoreVersion: "5.2.0",
     failures: []
   });
-  service.fetchSite = async () => ({ ok: true, text: async () => JSON.stringify({ client_id: "desktop" }) });
+  service.fetchSite = async () => ({
+    ok: true,
+    text: async () =>
+      JSON.stringify({
+        client_id: "desktop",
+        client_login_policy: { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
+      })
+  });
   service.persistTokens = async () => {};
   service.buildLoginPayload = async () => ({
     status: "success",

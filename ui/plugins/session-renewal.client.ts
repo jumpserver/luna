@@ -1,22 +1,25 @@
 import { isChenSingleRoute } from "~/chen/v1/standalone";
 import { apiRequest } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Desktop input is observed in the main process across its managed windows and views.
+  if (isDesktopRuntime()) return;
   const route = useRoute();
   const userInfoStore = useUserInfoStore();
   const controller = new AbortController();
-  let lastRenewalAt = -Infinity;
+  let lastActivitySentAt = -Infinity;
   let inFlight = false;
 
   function onActivity(event: Event) {
     if (isChenSingleRoute(route.path) || !event.isTrusted || !userInfoStore.loggedIn) return;
 
     const now = performance.now();
-    if (inFlight || now - lastRenewalAt < 10_000) return;
+    if (inFlight || now - lastActivitySentAt < 10_000) return;
 
-    // All workspace panes share this limit; idle time never schedules a request.
-    lastRenewalAt = now;
+    // Only real activity triggers renewal; idle time never schedules a request.
+    lastActivitySentAt = now;
     inFlight = true;
     void apiRequest({
       method: "GET",

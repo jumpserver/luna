@@ -2,18 +2,19 @@ import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
 import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { confirmLeaveCurrentSiteSessions, hasActiveWorkspaceSessions } from "~/composables/useSiteAccountSwitch";
 import type {
   ConnectionInfo,
+  ClientLoginSession,
   ConnectionPreferenceInfo,
   CurrentOrg,
   PermissionOrgs,
   PermOrgItem,
   RdpGraphics,
-  RoleType,
   UserData,
   UserIntiInfo
 } from "~/types";
-import { getUserPermissions } from "~/composables/useApiRequest";
+import { ApiRequestError, getUserPermissions, getWebSessionProfile } from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
@@ -29,6 +30,7 @@ import {
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
 import { pageLocation } from "~/utils/runtime";
+import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 
 interface BootstrapResponse {
   data: string;
@@ -51,17 +53,6 @@ interface PersistedUserSnapshot {
   currentRdpClientOption?: RdpGraphics;
   currentConnectionInfoMap?: Record<string, ConnectionInfo>;
   currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
-}
-
-interface WebProfile {
-  id?: string;
-  name?: string;
-  username?: string;
-  display_name?: string;
-  org_id?: string;
-  org_name?: string;
-  org?: { id?: string; name?: string };
-  system_roles?: RoleType[];
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -100,13 +91,15 @@ const parseApiData = <T>(value: { data?: string } | undefined, fallback: T): T =
 export const useAuthSession = () => {
   // vue-i18n's useI18n() requires setup(); this composable also runs from route middleware.
   const nuxtApp = useNuxtApp();
-  const t = (key: string) => String(nuxtApp.$i18n.t(key));
+  const t = (key: string, params: Record<string, string> = {}) => String(nuxtApp.$i18n.t(key, params));
   const toast = useToast();
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
+  const expiredSessionNotice = useState<string | null>("client-expired-session-notice", () => null);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
   const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
+  const authReady = useState("auth-bootstrap-ready", () => false);
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -133,7 +126,19 @@ export const useAuthSession = () => {
 
     if (!profileData || !resolvedSite || !accountId) return false;
 
-    const userId = (typeof profileData.id === "string" && profileData.id.trim()) || existingUser?.userId || "";
+    const authenticatedUserId = typeof profileData.id === "string" ? profileData.id.trim() : "";
+    const userId = authenticatedUserId || existingUser?.userId || "";
+    const currentUser = userInfoStore.currentUser;
+    const keepingWorkspace = isDesktopRuntime() && hasActiveWorkspaceSessions();
+    const sameIdentity = Boolean(
+      currentUser?.userId &&
+      currentUser.userId === authenticatedUserId &&
+      currentAccountId.value === accountId &&
+      currentUser.site === resolvedSite
+    );
+    // A browser may authenticate a different user while reusing a saved site.
+    // Only the same identity can keep the previous user's live transports.
+    if (keepingWorkspace && !sameIdentity && !(await confirmLeaveCurrentSiteSessions("login"))) return false;
 
     const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const selectedOrg = resolveOrganizationSelection(
@@ -151,6 +156,8 @@ export const useAuthSession = () => {
       siteName,
       name: profileData.name,
       bearerToken: bearer,
+      clientLoginPolicy: payload.client_login_policy,
+      clientLoginSession: payload.client_login_session,
       site: resolvedSite,
       org: currentOrg || {
         id: "",
@@ -172,6 +179,7 @@ export const useAuthSession = () => {
 
     const publishSession = () => {
       userInfoStore.setUserData(accountId, userData);
+      if (expiredSessionNotice.value === accountId) expiredSessionNotice.value = null;
 
       userInfoStore.setOrganizations(availableOrgs);
       if (currentOrg?.id) {
@@ -201,13 +209,13 @@ export const useAuthSession = () => {
     if (options.showToast !== false) {
       toast.add({
         title: t("Login.LoginSuccess"),
-        color: "primary",
-        icon: "line-md:check-all",
+        color: "success",
+        icon: "i-lucide-circle-check",
         progress: true
       });
     }
 
-    if (options.navigateHome !== false) {
+    if (options.navigateHome !== false && !(keepingWorkspace && sameIdentity)) {
       await navigateTo({
         path: localePath({ path: "/" })
       });
@@ -276,7 +284,8 @@ export const useAuthSession = () => {
       try {
         const response = await fetch(withWebSitePrefix(path), {
           credentials: "include",
-          headers: getWebApiHeaders()
+          headers: getWebApiHeaders(),
+          signal: AbortSignal.timeout(5000)
         });
 
         if (response.status === 401 || response.status === 403) return null;
@@ -299,17 +308,25 @@ export const useAuthSession = () => {
       return false;
     }
 
+    const accountId = userInfoStore.currentAccountId;
+    const previousUserId = userInfoStore.currentUser?.userId;
+    const wasLoggedIn = userInfoStore.loggedIn;
+    const isCurrentSession = () =>
+      userInfoStore.currentAccountId === accountId &&
+      userInfoStore.currentUser?.userId === previousUserId &&
+      userInfoStore.loggedIn === wasLoggedIn;
     const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
-      fetchWebJson<WebProfile>([
-        connectionToken
-          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
-          : "/api/v1/users/profile/?fields_size=mini",
-        "/api/v1/users/profile/",
-        "/api/v1/profile/"
-      ]),
+      getWebSessionProfile(connectionToken || undefined).catch((error) => {
+        // Login in another tab may have replaced the Cookie while bootstrap was in flight.
+        if (!connectionToken && error instanceof ApiRequestError && error.status === 401) {
+          return getWebSessionProfile().catch(() => null);
+        }
+        return null;
+      }),
       fetchWebJson<PublicSettings>(["/api/v1/settings/public/"])
     ]);
+    if (!isCurrentSession()) return false;
 
     webWorkspaceBrand.value = resolveWorkspaceBrand(publicSettings);
     webWorkspaceFavicon.value = resolveWorkspaceFavicon(publicSettings);
@@ -319,6 +336,12 @@ export const useAuthSession = () => {
       if (!connectionToken) {
         redirectToWebLogin();
       }
+      return false;
+    }
+    if (wasLoggedIn && profileData.id !== previousUserId) {
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      pageLocation().reload();
       return false;
     }
 
@@ -344,6 +367,7 @@ export const useAuthSession = () => {
       ),
       withOrganizationBootstrapTimeout(fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"]), null)
     ]);
+    if (!isCurrentSession()) return false;
     const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
     const selectedOrg =
@@ -380,7 +404,7 @@ export const useAuthSession = () => {
   const promptDesktopLogin = async () => {
     if (import.meta.server || !isDesktopRuntime()) return;
     if (pageLocation().pathname.includes("/auth")) return;
-    await navigateTo(localePath({ path: "/" }));
+    if (!hasActiveWorkspaceSessions()) await navigateTo(localePath({ path: "/" }));
     await nextTick();
     useEventBus().emit("login", undefined);
   };
@@ -391,7 +415,7 @@ export const useAuthSession = () => {
       bootstrapRetryTimer = null;
     }
 
-    const restored = restorePersistedSnapshot();
+    const restored = (isDesktopRuntime() || !authReady.value) && restorePersistedSnapshot();
 
     const notifyBootstrapFailure = (failure: "network" | "server") => {
       if (lastBootstrapFailure === failure) return;
@@ -405,8 +429,12 @@ export const useAuthSession = () => {
     };
 
     if (!isDesktopRuntime()) {
-      return (await bootstrapWebCookieSession()) || restored;
+      return await bootstrapWebCookieSession();
     }
+
+    // A reloaded renderer must keep the main-process lock and its live login.
+    const lock = await desktopInvoke<{ locked: boolean }>("client_lock_state");
+    if (lock?.locked) return restored;
 
     const persistedAccount = getPersistedAccount();
     if (!persistedAccount) {
@@ -437,8 +465,8 @@ export const useAuthSession = () => {
 
         if (failure === "auth") {
           lastBootstrapFailure = null;
-          userInfoStore.markSessionExpired(accountId);
-          if (restored) await promptDesktopLogin();
+          userInfoStore.markSessionExpired(accountId, payload?.client_login_reason, payload?.client_login_session);
+          if (restored && expiredSessionNotice.value !== accountId) await promptDesktopLogin();
           return false;
         }
         if (failure) {
@@ -474,14 +502,13 @@ export const useAuthSession = () => {
       }, 5000);
       return false;
     } catch (error) {
+      if (String(error).includes("client_locked")) return restored;
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);
       if (restored) await promptDesktopLogin();
       return false;
     }
   };
-
-  const authReady = useState("auth-bootstrap-ready", () => false);
 
   function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
     if (!bootstrapPromise) {
@@ -494,15 +521,35 @@ export const useAuthSession = () => {
     return bootstrapPromise;
   }
 
-  const handleDesktopAuthExpired = async (sessionId: string) => {
+  const handleDesktopAuthExpired = async (sessionId: string, reason?: string, session?: ClientLoginSession) => {
     if (!sessionId) return false;
-    userInfoStore.markSessionExpired(sessionId);
+    const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
+    if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
     if (sessionId !== currentAccountId.value) return false;
 
+    if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
     userInfoStore.setUserLoggedIn(false);
     useEventBus().emit("clearAssets", undefined);
-    await promptDesktopLogin();
     return true;
+  };
+
+  const expiredSessionDescription = computed(() => {
+    const account = expiredSessionNotice.value ? userMap.value[expiredSessionNotice.value] : undefined;
+    if (!account) return "";
+    const message = clientLoginExpiryMessage(
+      account.sessionExpiredReason,
+      account.clientLoginPolicy,
+      account.clientLoginSession,
+      String(unref(nuxtApp.$i18n.locale) || "en")
+    );
+    return message ? t(message.key, message.params) : "";
+  });
+  const dismissExpiredSessionNotice = async (login = false) => {
+    const accountId = expiredSessionNotice.value;
+    expiredSessionNotice.value = null;
+    if (login && accountId === currentAccountId.value && userMap.value[accountId]?.sessionExpired) {
+      await promptDesktopLogin();
+    }
   };
 
   const refreshOrganizations = () => {
@@ -539,6 +586,9 @@ export const useAuthSession = () => {
     applyLoginPayload,
     authReady,
     bootstrapPersistedSession,
+    expiredSessionNotice,
+    expiredSessionDescription,
+    dismissExpiredSessionNotice,
     handleDesktopAuthExpired,
     refreshOrganizations
   };

@@ -175,6 +175,58 @@ export interface UserProfile {
   org_roles?: Array<RoleType & { name?: string }>;
 }
 
+export interface ClientLoginPolicy {
+  reauth_on_exit: boolean;
+  reauth_on_exit_required?: boolean;
+  reauth_on_exit_user?: boolean | null;
+  // Minutes; 0 disables the limit.
+  idle_lock_time: number;
+  idle_lock_time_limit?: number;
+  idle_lock_time_user?: number | null;
+  // Minutes; 0 disables the limit.
+  max_session_time: number;
+  max_session_time_limit?: number;
+  max_session_time_user?: number | null;
+}
+
+export interface ClientLoginSession {
+  locked?: boolean;
+  authenticated_at: string;
+  expires_at: string | null;
+  policy_expires_at?: string | null;
+  effective_expires_at?: string | null;
+  expiry_reason?: "absolute_timeout" | "policy_changed" | null;
+  server_time: string;
+}
+
+export interface ClientPolicyNotice {
+  id: string;
+  kind: "absolute_timeout" | "policy_changed" | "idle_lock";
+  at: string;
+  remainingSeconds?: number;
+}
+
+export interface ClientNoticeAppearance {
+  dark: boolean;
+  variables: Record<string, string>;
+  fontFamily: string;
+  fontSize: string;
+}
+
+export interface ClientNoticeSnapshot {
+  notices: ClientPolicyNotice[];
+  locale: string;
+  appearance?: ClientNoticeAppearance;
+}
+
+export type ClientLoginReason =
+  | "policy_changed"
+  | "absolute_timeout"
+  | "security_revoke"
+  | "app_exit"
+  | "logout"
+  | "unknown";
+
 export interface UserData {
   accountId: string;
   userId?: string;
@@ -183,6 +235,8 @@ export interface UserData {
   name: string;
   language?: string;
   bearerToken: string;
+  clientLoginPolicy?: ClientLoginPolicy;
+  clientLoginSession?: ClientLoginSession;
   system_roles: RoleType[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
@@ -197,6 +251,8 @@ export interface UserIntiInfo {
   version?: string;
   xpack_license_valid?: boolean;
   security_command_execution?: boolean;
+  client_login_policy?: ClientLoginPolicy;
+  client_login_session?: ClientLoginSession;
   resolved_site?: string;
   profile: {
     data: string;
@@ -473,6 +529,7 @@ export interface RdpGraphics {
   keyboard_layout?: string;
   rdp_client_option?: string[];
   printers_redirect?: boolean;
+  rdp_keyboard_hook?: "0" | "1" | "2";
   rdp_color_quality?: string;
   rdp_smart_size?: string;
   applet_connection_method?: string;

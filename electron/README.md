@@ -7,7 +7,7 @@ Desktop connections first check anonymous
 `base(app.getVersion()) >= base(Core.MIN_CLIENT_VERSION)` and
 `base(Core.VERSION) >= MIN_CORE_VERSION` determine compatibility, except that Core's exact
 `dev` version skips the Core minimum check. The client's minimum lives in
-`src/auth/compatibility.ts` and starts at `v5.1.0`. Core represents the whole
+`src/auth/compatibility.ts` and is currently `v5.2.0`. Core represents the whole
 server release, including Koko, Chen and Kael. Developers decide whether a
 contract change breaks old clients; reviewers check that decision. Compatible
 releases leave the minimums unchanged. There is no component version matrix,
@@ -39,6 +39,55 @@ After activation, restoration of the same active site and account reuses its
 compatibility decision while still refreshing credentials and validating the
 profile. A new login, site/account switch, logout or client restart requires
 a new check.
+
+Core owns login validity: its fixed deadline and revocation are checked on API
+requests and refreshes. Activity and refresh never extend that deadline. Daily
+token cleanup reclaims records and does not determine login validity. Connection
+tokens follow their own expiry and permissions.
+
+The main process reads `GET /api/v1/authentication/client-login-session/status/`
+for the active account every 30 seconds, including while hidden or unfocused.
+Successful token refresh replaces the pending status read. Inactive saved accounts
+are checked when selected, while their absolute login deadlines continue to run.
+Network errors do not invalidate a login. Confirmed expiry shows a persistent
+reason and a background system notification when supported.
+
+`idle_lock_time` controls screen locking, in minutes (0 disables automatic locking).
+The main process samples system keyboard/mouse idle time every second without
+reporting each action. At timeout or manual lock it shields the windows immediately
+and sends one `POST .../client-login-session/lock/` to record the server lock.
+Offline locks remain shielded and pending requests retry on the status interval;
+unlock waits for server synchronization. Only the active site/account has an idle timer; switching accounts
+starts a fresh interval and never unlocks an already locked account. Input in
+external applications counts as system activity, but those applications are not
+protected by the client lock. Suspending locks the active protected account.
+
+New logins open normally. Restoring an already locked login preserves its lock.
+Idle timeout locks even when no lock password has been configured. The main page
+and its managed asset windows are shielded without disconnecting transports;
+only the main page can unlock. `GET .../client-login-session/unlock/` reports whether the current
+account has a password and its site-specific web settings URL. `POST` to that
+same endpoint verifies `{password}` for the bearer account, with five attempts
+per minute, and clears `ClientLoginSession.is_locked` only after verification.
+Business API requests are denied with `403 client_locked` while locked; status,
+lock/unlock/revoke and read-only identity bootstrap remain available. Refresh
+preserves the lock. The main process releases the shield after server success;
+renderer events cannot clear it.
+Passwords are never persisted by the client. Locked native website views remain
+hidden even when tabs or asynchronous callbacks request visibility.
+
+Lina Personal settings → User authentication has separate Client credentials
+and File encryption tabs for the client lock password and existing file password.
+`GET/PATCH /api/v1/users/profile/client-credentials/` accepts only a web session;
+PATCH follows the existing sensitive-operation confirmation policy. The client
+password is a Django password hash; the file password retains its encrypted
+storage and existing file encryption/decryption behavior. Empty fields preserve
+existing values. Links include the expected user ID so a browser signed into a
+different account cannot silently configure the wrong account.
+
+Access tokens last at most one hour, capped by the login deadline. Requests refresh
+them when at most 60 seconds remain (or 10% for shorter tokens). Concurrent refreshes
+are shared. Refresh never extends the login or unlocks the client.
 
 Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
 For desktop review, use local test servers and release-versioned test builds:

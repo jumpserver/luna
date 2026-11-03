@@ -147,6 +147,12 @@ const smartSizeItems = computed(() => [
   { label: t("Setting.Enable"), id: "1" }
 ]);
 
+const keyboardHookItems = computed(() => [
+  { label: t("Setting.RdpKeyboardHookLocal"), id: "0" },
+  { label: t("Setting.RdpKeyboardHookRemote"), id: "1" },
+  { label: t("Setting.RdpKeyboardHookFullScreen"), id: "2" }
+]);
+
 const keyboardLayoutItems = computed(() => {
   const messages = lionMessages[locale.value as keyof typeof lionMessages] || lionMessages.en;
   return keyboardLayoutOptions.map((option) => ({ value: String(option.value), label: messages[option.label] }));
@@ -174,7 +180,8 @@ const {
   fullScreen: selectedFullScreen,
   multiScreen: selectedMultiScreen,
   drivesRedirect: selectedDrivesRedirect,
-  printersRedirect: selectedPrintersRedirect
+  printersRedirect: selectedPrintersRedirect,
+  keyboardHook: selectedKeyboardHook
 } = useRdpResolutionPreference();
 const hasXPack = computed(() => currentUser.value?.xpackLicenseValid === true);
 
@@ -362,6 +369,19 @@ async function clearCommandHistory() {
           :items="smartSizeItems"
           value-key="id"
           :aria-label="t('Setting.RdpSmartSize')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpKeyboardHook')" :description="t('Setting.RdpKeyboardHookDescription')">
+        <USelect
+          v-model="selectedKeyboardHook"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="keyboardHookItems"
+          value-key="id"
+          :aria-label="t('Setting.RdpKeyboardHook')"
           size="sm"
           class="w-48"
         />

@@ -1,4 +1,4 @@
-export type SettingsSection = "user" | "general" | "appearance" | "shortcuts" | "application" | "about";
+export type SettingsSection = "user" | "general" | "security" | "appearance" | "shortcuts" | "application" | "about";
 
 export const useSettingsWindow = () => {
   const route = useRoute();
@@ -13,7 +13,7 @@ export const useSettingsWindow = () => {
 
   const openSettings = async (path = "/setting/general") => {
     const [, section, protocol] =
-      path.match(/^\/setting\/(user|general|appearance|shortcuts|application|about)(?:\/([^/?#]+))?/) || [];
+      path.match(/^\/setting\/(user|general|security|appearance|shortcuts|application|about)(?:\/([^/?#]+))?/) || [];
 
     if (section) {
       activeSection.value = section as SettingsSection;

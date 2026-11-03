@@ -1,3 +1,8 @@
+import type { DiagramOptions } from "./catalogDiagram";
+import { parseDiagram } from "./catalogDiagram";
+import { parseOverview } from "./overview";
+import type { OverviewOptions } from "./overview";
+import type { ChenExecutionPlan } from "~/chen/types/plan";
 import type { ChenSqlDialect } from "~/chen/utils/sqlDialect";
 import { buildHeaders, chenPath } from "~/chen/api/client";
 import { newChenRequestId } from "./requestId";
@@ -12,6 +17,7 @@ export interface GoSession {
   state: string;
   state_reason?: string;
   can_cancel?: boolean;
+  cancellation_mode?: "connection" | "statement_reconnect";
 }
 export interface GoConsole {
   id: string;
@@ -19,7 +25,24 @@ export interface GoConsole {
   schema: string;
   state: string;
 }
+export interface GoPlanIdentity {
+  request_id: string;
+  mode: "ESTIMATED";
+  dialect: string;
+  database: string;
+  schema: string;
+  generated_sql?: string;
+}
+export interface GoPlan extends ChenExecutionPlan {
+  executionId: string;
+  consoleId: string;
+  context: GoPlanIdentity;
+  limits: { maxBytes: number; maxNodes: number; maxDepth: number };
+}
 export interface GoExecution {
+  query_count?: { source_result_id: string; scope_id: string; total: string };
+  browse_count?: { source_result_id: string; total: string };
+  plan?: GoPlanIdentity;
   id: string;
   export_id?: string;
   sql?: string;
@@ -78,7 +101,81 @@ export interface GoDownloadTicket {
   fields: { ticket: string };
   expires_at: string;
 }
+export interface GoBrowseOrder {
+  column: string;
+  desc: boolean;
+}
+export interface GoBrowseFilter {
+  op: string;
+  column?: string;
+  values?: string[];
+  children?: GoBrowseFilter[];
+}
+export interface GoBrowseRequest {
+  confirm_reexecution?: boolean;
+  schema?: string;
+  table?: string;
+  source_result_id?: string;
+  action?: "page" | "append" | "count" | "export";
+  where?: string;
+  filter?: GoBrowseFilter;
+  sort?: GoBrowseOrder[];
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoBrowsePage {
+  requires_reexecution_confirmation?: boolean;
+  max_loaded_rows?: number;
+  limit_reached?: "rows" | "bytes";
+  supported: boolean;
+  reason?: string;
+  database: string;
+  schema: string;
+  table: string;
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  stable: boolean;
+  has_more: boolean | null;
+  full_sql: string;
+}
+export interface GoBrowseDraft {
+  where: string;
+  filter?: GoBrowseFilter;
+  sort: GoBrowseOrder[];
+  page_size: number;
+}
+export interface GoQueryPageRequest {
+  confirm_reexecution?: boolean;
+  source_result_id: string;
+  action: "page" | "count" | "export";
+  offset?: number;
+  page_size?: number;
+  format?: GoExportFormat;
+}
+export interface GoQueryPage {
+  requires_reexecution_confirmation?: boolean;
+  supported: boolean;
+  reason?: string;
+  mode: "cache" | "database";
+  scope_id?: string;
+  ordered: boolean;
+  offset: number;
+  page_size: number;
+  max_page_size: number;
+  max_offset: number;
+  has_more: boolean | null;
+  read_only_reason?: string;
+}
 export interface GoRows {
+  source_sql?: string;
+  query_page?: GoQueryPage;
+  browse?: GoBrowsePage;
   id: string;
   columns: { name: string; data_type: string }[];
   rows: unknown[][];
@@ -86,6 +183,15 @@ export interface GoRows {
   total_rows: number;
   truncated: boolean;
   next_offset?: number;
+}
+export interface GoCopySelection {
+  rows: number[];
+  columns: number[];
+}
+export interface GoCopiedSQL {
+  sql: string;
+  row_count: number;
+  notes: string[];
 }
 export interface GoEditColumn {
   index: number;
@@ -149,6 +255,7 @@ export interface GoRelation {
   kind: string;
 }
 export interface GoCatalogObject {
+  object_type?: string;
   database: string;
   schema: string;
   name: string;
@@ -171,11 +278,15 @@ export interface GoCatalogSection {
   error?: string | { code?: string; message?: string };
 }
 export interface GoCatalogInspect {
+  column_ordinals?: Record<string, number>;
+  columns_restricted?: boolean;
   database: string;
   schema: string;
   table: string;
   columns: GoCatalogColumn[];
-  sections: Record<"primary_key" | "foreign_keys" | "indexes" | "defaults" | "ddl", GoCatalogSection>;
+  sections: Record<"primary_key" | "foreign_keys" | "indexes" | "defaults" | "ddl", GoCatalogSection> & {
+    constraints?: GoCatalogSection;
+  };
   truncated: boolean;
 }
 export interface GoCatalogPage<T> {
@@ -208,6 +319,7 @@ export function createChenGoApi(
   fetchImpl: typeof fetch = fetch,
   options: { mode?: "single" | "managed" } = {}
 ) {
+  // Chen authenticates with explicit tokens, never ambient Core cookies, including across endpoints.
   // This token stays in the workspace closure: no URL, localStorage or query-string credentials.
   let token = "";
   const authenticationRequestId = newChenRequestId();
@@ -239,7 +351,7 @@ export function createChenGoApi(
   ): Promise<T> {
     const response = await fetchImpl(chenPath(`/api/v1${path}`, endpointUrl), {
       method,
-      credentials: single ? "omit" : "include",
+      credentials: "omit",
       signal,
       headers: {
         ...headers(method !== "GET"),
@@ -299,11 +411,26 @@ export function createChenGoApi(
       documentVersion: number,
       requestId: string,
       submitReview = false,
-      confirmWarnings = false
+      confirmWarnings = false,
+      estimatedPlan = false
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/executions`, "POST", {
         sql,
+        ...(estimatedPlan ? { plan_mode: "ESTIMATED" } : {}),
         document_version: documentVersion,
+        request_id: requestId,
+        ...(submitReview ? { submit_review: true } : {}),
+        ...(confirmWarnings ? { confirm_warnings: true } : {})
+      }),
+    queryPage: (
+      consoleId: string,
+      scope: GoQueryPageRequest,
+      requestId: string,
+      submitReview = false,
+      confirmWarnings = false
+    ) =>
+      request<GoExecution>(`/consoles/${id(consoleId)}/query-page`, "POST", {
+        ...scope,
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
@@ -314,11 +441,11 @@ export function createChenGoApi(
       table: string,
       requestId: string,
       submitReview = false,
-      confirmWarnings = false
+      confirmWarnings = false,
+      scope?: GoBrowseRequest
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/browse`, "POST", {
-        schema,
-        table,
+        ...(scope || { schema, table }),
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
@@ -328,6 +455,19 @@ export function createChenGoApi(
         `/consoles/${id(consoleId)}/results/${id(resultId)}/edit?offset=${offset}&limit=${limit}`,
         "GET",
         undefined,
+        signal
+      ),
+    copySQL: (
+      consoleId: string,
+      resultId: string,
+      operation: "insert" | "update",
+      selection: GoCopySelection,
+      signal?: AbortSignal
+    ) =>
+      request<GoCopiedSQL>(
+        `/consoles/${id(consoleId)}/results/${id(resultId)}/copy-sql`,
+        "POST",
+        { operation, ...selection },
         signal
       ),
     previewEdits: (consoleId: string, resultId: string, changes: GoEditChange[], source: "grid" | "csv" = "grid") =>
@@ -341,6 +481,7 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
+    plan: (executionId: string) => request<GoPlan>(`/executions/${id(executionId)}/plan`),
     explain: (consoleId: string, sql: string) =>
       request<{ sql: string }>(`/consoles/${id(consoleId)}/explain`, "POST", { sql }),
     exportQuery: (
@@ -360,8 +501,12 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
-    exportCached: (resultId: string, format: GoExportFormat, requestId: string) =>
-      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", { format, request_id: requestId }),
+    exportCached: (resultId: string, format: GoExportFormat, requestId: string, rows?: number) =>
+      request<GoExport>(`/results/${id(resultId)}/exports`, "POST", {
+        format,
+        request_id: requestId,
+        ...(rows !== undefined ? { rows } : {})
+      }),
     getExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}`),
     cancelExport: (exportId: string) => request<GoExport>(`/exports/${id(exportId)}/cancel`, "POST"),
     deleteExport: (exportId: string) => request<void>(`/exports/${id(exportId)}`, "DELETE"),
@@ -378,6 +523,25 @@ export function createChenGoApi(
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
+    catalogDiagram: async (sessionId: string, options: DiagramOptions, signal?: AbortSignal) =>
+      parseDiagram(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/diagram?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        ),
+        options
+      ),
+    catalogOverview: async (sessionId: string, options: OverviewOptions, signal?: AbortSignal) =>
+      parseOverview(
+        await request<unknown>(
+          `/sessions/${id(sessionId)}/catalog/overview?${catalogQuery({ ...options })}`,
+          "GET",
+          undefined,
+          signal
+        )
+      ),
     catalogDdl: (sessionId: string, schema: string, table: string, signal?: AbortSignal) =>
       request<GoCatalogSection>(
         `/sessions/${id(sessionId)}/catalog/ddl?${catalogQuery({ schema, table })}`,
@@ -433,7 +597,7 @@ export function createChenGoApi(
       ),
     async events(sessionId: string, after: number, signal: AbortSignal) {
       const response = await fetchImpl(chenPath(`/api/v1/sessions/${id(sessionId)}/events`, endpointUrl), {
-        credentials: single ? "omit" : "include",
+        credentials: "omit",
         signal,
         headers: { ...headers(), Accept: "text/event-stream", ...(after ? { "Last-Event-ID": String(after) } : {}) }
       });
