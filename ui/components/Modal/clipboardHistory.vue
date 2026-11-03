@@ -357,7 +357,7 @@ onBeforeUnmount(() => {
           <div class="clipboard-history-results">
             <div class="clipboard-history-caption">
               {{ t("ClipboardHistory.Recent") }}
-              <span>{{ results.length }}</span>
+              <span v-if="query">{{ t("ClipboardHistory.Matches", { count: results.length }) }}</span>
             </div>
             <div
               :id="listId"
