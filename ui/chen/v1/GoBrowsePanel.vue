@@ -46,6 +46,18 @@ function normalizedFilter(filter: GoBrowseFilter): GoBrowseFilter {
     values: ["is_null", "not_null"].includes(filter.op) ? undefined : filter.values
   };
 }
+const pendingChanges = computed(() => {
+  if (!applied.value) return false;
+  const filter = draft.value.filter ? normalizedFilter(draft.value.filter) : undefined;
+  return (
+    draft.value.where.trim() !== applied.value.where.trim() ||
+    JSON.stringify(filter?.children?.length ? filter : null) !== JSON.stringify(applied.value.filter || null) ||
+    JSON.stringify(draft.value.sort) !== JSON.stringify(applied.value.sort)
+  );
+});
+const appliedCondition = computed(
+  () => applied.value?.where || t(applied.value?.filter ? "Chen.GoBrowseBuilder" : "Chen.GoBrowseNoFilter")
+);
 function mode(structured: boolean) {
   if (locked.value) return;
   if (structured) {
@@ -110,7 +122,11 @@ const lastOffset = computed(() =>
           :aria-expanded="expanded"
           @click="expanded = !expanded"
         />
-        <span v-if="applied && query.loadingSettings.mode === 'page'" data-browse-range>
+        <span
+          v-if="applied && query.loadingSettings.mode === 'page'"
+          :title="applied.stable ? undefined : t('Chen.GoBrowseUnstable')"
+          data-browse-range
+        >
           {{
             t("Chen.GoBrowseRange", {
               first: query.rows?.rows.length ? applied.offset + 1 : 0,
@@ -199,11 +215,14 @@ const lastOffset = computed(() =>
           :disabled="locked || !!draft.filter"
           @keydown.enter="applyWhere"
         />
+        <UBadge v-if="pendingChanges" color="neutral" variant="soft" size="sm" data-browse-pending>
+          {{ t("Chen.GoBrowseUnapplied") }}
+        </UBadge>
         <UButton
           size="xs"
           icon="i-lucide-play"
-          :aria-label="t('Chen.ApplyWhereCondition')"
-          :title="t('Chen.ApplyWhereCondition')"
+          :aria-label="t(draft.filter ? 'Chen.ApplyFilter' : 'Chen.ApplyWhereCondition')"
+          :title="t(draft.filter ? 'Chen.ApplyFilter' : 'Chen.ApplyWhereCondition')"
           :disabled="locked"
           @click="submit()"
         />
@@ -217,8 +236,11 @@ const lastOffset = computed(() =>
           @click="submit(true)"
         />
       </div>
+      <p v-if="pendingChanges" class="mt-1 flex min-w-0 gap-1 text-muted" data-browse-applied>
+        <span class="shrink-0">{{ t("Chen.GoBrowseAppliedCondition") }}:</span>
+        <span class="truncate font-ui-mono" :title="applied?.full_sql">{{ appliedCondition }}</span>
+      </p>
       <p v-if="applied?.has_more === null" role="status" class="text-warning">{{ t("Chen.GoBrowseIncomplete") }}</p>
-      <p v-if="applied && !applied.stable" class="text-warning">{{ t("Chen.GoBrowseUnstable") }}</p>
       <p v-if="expanded && applied" class="text-muted">{{ t("Chen.GoBrowseConsistency") }}</p>
       <p v-if="editDirty(query.edit)" class="text-warning">{{ t("Chen.GoBrowseDirty") }}</p>
       <div
@@ -291,15 +313,6 @@ const lastOffset = computed(() =>
             ]"
             :aria-label="t('Chen.GoBrowseDirection')"
             :disabled="locked"
-          />
-          <UButton size="xs" :label="t('Chen.ApplyFilter')" :disabled="locked" @click="submit()" />
-          <UButton
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :label="t('Chen.GoBrowseClear')"
-            :disabled="locked"
-            @click="submit(true)"
           />
         </div>
         <p v-if="applied" class="break-all text-muted">{{ t("Chen.GoBrowseApplied") }}: {{ applied.full_sql }}</p>

@@ -514,7 +514,14 @@ async function loadRows(
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
       if (page.query_page?.mode !== "database" && page.id !== query.cachedResult?.id) query.cachedResult = undefined;
-      if (page.browse?.supported && !query.rows?.browse?.supported) {
+      if (
+        page.browse?.supported &&
+        (!query.rows?.browse?.supported ||
+          (changedResult &&
+            execution?.id === query.execution?.id &&
+            query.executionBrowse &&
+            !query.executionBrowse.source_result_id))
+      ) {
         query.browseDraft = {
           where: page.browse.where,
           filter: page.browse.filter ? structuredClone(toRaw(page.browse.filter)) : undefined,
@@ -816,7 +823,36 @@ async function newQuery(
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
 }
-async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) {
+const reexecutionDialog = ref<{ sql: string; finish: (confirmed: boolean) => void } | null>(null);
+function finishReexecution(confirmed: boolean) {
+  const dialog = reexecutionDialog.value;
+  reexecutionDialog.value = null;
+  dialog?.finish(confirmed);
+}
+async function confirmReexecution(query: QueryWorkspaceTab, sql: string) {
+  if (reexecutionDialog.value) return false;
+  const sessionId = session.value?.id;
+  const consoleId = query.console?.id;
+  const resultId = query.rows?.id;
+  const generation = query.loadGeneration;
+  const confirmed = await new Promise<boolean>((finish) => {
+    reexecutionDialog.value = { sql, finish };
+  });
+  return (
+    confirmed &&
+    isCurrent(query) &&
+    sessionReady.value &&
+    session.value?.id === sessionId &&
+    query.console?.id === consoleId &&
+    query.rows?.id === resultId &&
+    query.loadGeneration === generation &&
+    !resultLoadingLocked(query)
+  );
+}
+watch([() => session.value?.id, () => session.value?.state, activeId], () => finishReexecution(false));
+onBeforeUnmount(() => finishReexecution(false));
+
+async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest): Promise<void> {
   if (
     !query.browseObject ||
     !sessionReady.value ||
@@ -829,25 +865,38 @@ async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest) 
     editDirty(query.edit)
   )
     return;
+  const appliedRequest: GoBrowseRequest =
+    request ||
+    (query.rows?.browse?.supported
+      ? { source_result_id: query.rows.id, offset: query.rows.browse.offset }
+      : {
+          schema: query.browseObject.schema,
+          table: query.browseObject.name,
+          page_size: query.loadingSettings.batchSize
+        });
+  const needsConfirmation =
+    query.browseObject.kind === "view" ||
+    !!appliedRequest.where?.trim() ||
+    (!!appliedRequest.source_result_id && !!query.rows?.browse?.requires_reexecution_confirmation);
+  if (needsConfirmation && !appliedRequest.confirm_reexecution) {
+    const sql = appliedRequest.where?.trim()
+      ? `${objectSelect(query.browseObject, session.value!.dialect).replace(/;$/, "")} WHERE (\n${appliedRequest.where}\n);`
+      : query.rows?.browse?.full_sql || objectSelect(query.browseObject, session.value!.dialect);
+    if (!(await confirmReexecution(query, sql))) return;
+    return browseTable(query, { ...appliedRequest, confirm_reexecution: true });
+  }
+  if (needsConfirmation) query.loadingSettings.mode = "page";
   query.loadGeneration++;
   query.resultLoadError = null;
   query.pending = {
     sql: objectSelect(query.browseObject, session.value!.dialect, true),
     version: 1,
     id: newChenRequestId(),
-    browse:
-      request ||
-      (query.rows?.browse?.supported
-        ? { source_result_id: query.rows.id, offset: query.rows.browse.offset }
-        : {
-            schema: query.browseObject.schema,
-            table: query.browseObject.name,
-            page_size: query.loadingSettings.batchSize
-          })
+    browse: appliedRequest
   };
   await recoverSubmission(query);
 }
-async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest) {
+async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest): Promise<void> {
   if (
     !isCurrent(query) ||
     !sessionReady.value ||
@@ -855,6 +904,10 @@ async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest) 
     request.source_result_id !== query.rows?.id
   )
     return;
+  if (query.rows?.query_page?.requires_reexecution_confirmation && !request.confirm_reexecution) {
+    if (!(await confirmReexecution(query, query.resultSql))) return;
+    return pageQuery(query, { ...request, confirm_reexecution: true });
+  }
   if (request.action === "page" && query.rows?.query_page?.mode !== "database" && query.resultExecution) {
     query.cachedResult = {
       id: query.rows!.id,
@@ -912,6 +965,7 @@ async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSet
   }
 }
 async function loadMore(query: QueryWorkspaceTab, automatic = false) {
+  if (automatic && query.rows?.browse?.requires_reexecution_confirmation) return;
   if (
     !sessionReady.value ||
     resultLoadingLocked(query) ||
@@ -1064,7 +1118,7 @@ async function enterObjectData(tab: ObjectWorkspaceTab) {
     );
     query.kind = "preview";
     query.readOnly = tab.object.kind === "view" || session.value!.dialect === "clickhouse";
-    if (tab.object.kind === "table" && session.value!.dialect !== "clickhouse") query.browseObject = tab.object;
+    query.browseObject = tab.object;
     tab.data = query;
   }
   const query = tab.data;
@@ -1238,8 +1292,9 @@ async function startExport(
   query: QueryWorkspaceTab,
   mode: "query" | "cached",
   format: GoExportFormat,
-  snapshot: { sql: string; resultId: string; version: number; rows?: number }
-) {
+  snapshot: { sql: string; resultId: string; version: number; rows?: number },
+  confirmedReexecution = false
+): Promise<void> {
   if (
     !isCurrent(query) ||
     !sessionReady.value ||
@@ -1256,15 +1311,36 @@ async function startExport(
     if (query.pendingCachedExport) return;
     if (query.console?.state !== "ready" || executionActive(query.execution) || !snapshot.sql.trim()) return;
     if (query.browseObject && !query.rows?.browse?.supported) return;
+    const needsConfirmation =
+      query.rows?.query_page?.requires_reexecution_confirmation ||
+      query.rows?.browse?.requires_reexecution_confirmation;
+    if (needsConfirmation && !confirmedReexecution) {
+      if (!(await confirmReexecution(query, snapshot.sql))) return;
+      return startExport(query, mode, format, snapshot, true);
+    }
     query.pending = {
       sql: snapshot.sql,
       version: snapshot.version,
       id: newChenRequestId(),
       exportFormat: format,
       ...(query.rows?.query_page?.supported
-        ? { queryPage: { source_result_id: snapshot.resultId, action: "export", format } as GoQueryPageRequest }
+        ? {
+            queryPage: {
+              source_result_id: snapshot.resultId,
+              action: "export",
+              format,
+              confirm_reexecution: confirmedReexecution
+            } as GoQueryPageRequest
+          }
         : query.browseObject
-          ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }
+          ? {
+              browse: {
+                source_result_id: snapshot.resultId,
+                action: "export",
+                format,
+                confirm_reexecution: confirmedReexecution
+              } as GoBrowseRequest
+            }
           : {})
     };
     await recoverSubmission(query);
@@ -1930,6 +2006,30 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
       @close="schemaEdit.close"
     />
     <UModal
+      :open="Boolean(reexecutionDialog)"
+      :title="t('Chen.GoQueryReexecuteTitle')"
+      :description="t('Chen.GoQueryReexecuteHint')"
+      :portal="false"
+      @update:open="
+        (open) => {
+          if (!open) finishReexecution(false);
+        }
+      "
+    >
+      <template #body>
+        <pre
+          class="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded bg-elevated p-3 font-ui-mono text-xs"
+          @copy.capture="preventCopy"
+          >{{ reexecutionDialog?.sql }}</pre>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="finishReexecution(false)" />
+          <UButton :label="t('Chen.GoQueryReexecuteConfirm')" @click="finishReexecution(true)" />
+        </div>
+      </template>
+    </UModal>
+    <UModal
       :open="!!renameTarget"
       :title="t('Chen.GoV1RenameTab')"
       @update:open="
@@ -1953,7 +2053,12 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     <UModal
       :open="!!closeDialog"
       :title="t('Chen.GoV1ConfirmClose')"
-      :description="t('Chen.GoV1CloseDescription')"
+      :ui="{
+        content: 'sm:max-w-sm',
+        header: 'px-4 py-3 sm:px-4',
+        body: 'px-4 py-1 sm:p-4 sm:py-1',
+        footer: 'px-4 py-3 sm:px-4'
+      }"
       @update:open="
         (value) => {
           if (!value) finishClose(false);
@@ -1961,16 +2066,11 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
       "
     >
       <template #body>
-        <div class="space-y-3 text-sm">
-          <p v-if="closeDialog?.dirty" class="text-warning">{{ t("Chen.GoV1CloseDirty") }}</p>
-          <p v-if="closeDialog?.running" class="text-warning">{{ t("Chen.GoV1CloseRunning") }}</p>
-          <p v-if="closeDialog?.unknown" class="text-error">{{ t("Chen.GoV1CloseUnknown") }}</p>
-          <p v-if="closeDialog?.transaction">{{ t("Chen.GoV1CloseTransaction") }}</p>
-        </div>
+        <p class="text-sm">{{ t("Chen.GoV1CloseDescription") }}</p>
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton :label="t('Chen.GoV1KeepEditing')" color="neutral" variant="soft" @click="finishClose(false)" />
+          <UButton :label="t('Common.Cancel')" color="neutral" variant="ghost" @click="finishClose(false)" />
           <UButton :label="t('Chen.GoV1ConfirmDiscardClose')" color="warning" @click="finishClose(true)" />
         </div>
       </template>

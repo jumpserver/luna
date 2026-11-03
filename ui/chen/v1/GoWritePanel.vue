@@ -464,6 +464,7 @@ function discard() {
     <GoResultGrid
       ref="grid"
       :rows="rows"
+      :display-mode="query.browseObject ? 'table' : 'query'"
       :loading-settings="query.loadingSettings"
       :page-size-control="!!query.browseObject"
       :loading-settings-disabled="locked || dirty || metadataBusy"

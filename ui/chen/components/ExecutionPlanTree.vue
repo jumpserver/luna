@@ -16,11 +16,14 @@ const props = defineProps<{
   plan: ChenExecutionPlan | null;
   loading?: boolean;
   preserveRaw?: boolean;
+  compact?: boolean;
+  canCopy?: boolean;
 }>();
 
 type PlanView = "tree" | "summary" | "raw";
 const { t, locale } = useI18n();
 const view = ref<PlanView>("tree");
+const views = computed<PlanView[]>(() => (props.compact ? ["summary", "tree", "raw"] : ["tree", "summary", "raw"]));
 const selectedId = ref<string | null>(null);
 const showDetails = ref(false);
 const collapsedIds = ref<Set<string>>(new Set());
@@ -95,6 +98,12 @@ const rawDisplay = computed(() =>
 const visiblePrerequisites = computed(() =>
   (props.plan?.prerequisites || []).filter((item) => item.status === "UNMET" || item.status === "UNKNOWN")
 );
+const visibleWarnings = computed(() =>
+  (props.plan?.warnings || []).filter(
+    (warning) =>
+      !props.compact || !["plan_flat_summary", "plan_raw_dialect", "plan_version_unverified"].includes(warning.code)
+  )
+);
 
 watch(
   () => props.plan,
@@ -146,10 +155,13 @@ function keyDetail(node: ChenPlanNode) {
     .map((fact) => `${fact.key}: ${fact.value}`)
     .join(" · ");
 }
+function preventCopy(event: ClipboardEvent) {
+  if (props.canCopy === false) event.preventDefault();
+}
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+  <div class="flex min-h-0 flex-1 flex-col overflow-hidden" data-chen-plan>
     <div v-if="loading" class="grid min-h-0 flex-1 place-items-center text-sm text-muted">
       <div class="flex items-center gap-2">
         <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
@@ -163,8 +175,8 @@ function keyDetail(node: ChenPlanNode) {
       </div>
     </div>
     <div v-else class="flex min-h-0 flex-1 flex-col">
-      <div class="shrink-0 space-y-2 border-b border-default px-3 py-2 text-xs">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div class="shrink-0 border-b border-default px-3 text-xs" :class="compact ? 'py-1' : 'space-y-2 py-2'">
+        <div v-if="!compact" class="flex flex-wrap items-center gap-x-3 gap-y-1">
           <UBadge color="neutral" variant="soft" size="sm">{{ t("ExecutionPlan.modeEstimated") }}</UBadge>
           <span class="text-muted">{{ statusLabel }}</span>
           <span class="text-muted">
@@ -185,42 +197,72 @@ function keyDetail(node: ChenPlanNode) {
           </span>
           <span v-if="plan.rawTruncated" class="text-warning">{{ labels.truncated }}</span>
         </div>
-        <div v-if="costMeanings.length" class="flex min-w-0 items-center gap-1 text-muted" :title="costMeaningTitle">
+        <div
+          v-if="!compact && costMeanings.length"
+          class="flex min-w-0 items-center gap-1 text-muted"
+          :title="costMeaningTitle"
+        >
           <UIcon name="i-lucide-info" class="size-3.5 shrink-0" />
           <span class="shrink-0">{{ labels.costMeaning }}:</span>
           <span class="truncate">{{ costMeanings.length === 1 ? costMeanings[0] : labels.mixedCostMeaning }}</span>
         </div>
-        <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2" data-plan-toolbar>
+          <span v-if="compact" class="mr-1 font-medium text-highlighted">{{ t("ExecutionPlan.title") }}</span>
           <div class="flex items-center gap-1" role="group" :aria-label="t('ExecutionPlan.title')">
             <UButton
+              v-for="item in views"
+              :key="item"
               size="xs"
               color="neutral"
-              :variant="view === 'tree' ? 'soft' : 'ghost'"
-              :disabled="!plan.roots.length || plan.capabilities.hierarchy === false"
-              @click="setView('tree')"
+              :variant="view === item ? 'soft' : 'ghost'"
+              :disabled="
+                item !== 'raw' && (!plan.roots.length || (item === 'tree' && plan.capabilities.hierarchy === false))
+              "
+              @click="setView(item)"
             >
-              {{ t("ExecutionPlan.tree") }}
-            </UButton>
-            <UButton
-              size="xs"
-              color="neutral"
-              :variant="view === 'summary' ? 'soft' : 'ghost'"
-              :disabled="!plan.roots.length"
-              @click="setView('summary')"
-            >
-              {{ labels.summary }}
-            </UButton>
-            <UButton size="xs" color="neutral" :variant="view === 'raw' ? 'soft' : 'ghost'" @click="setView('raw')">
-              {{ t("ExecutionPlan.raw") }}
+              {{ item === "summary" ? labels.summary : t(`ExecutionPlan.${item}`) }}
             </UButton>
           </div>
-          <div v-if="view === 'tree' && plan.roots.length" class="flex items-center gap-1">
-            <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-chevrons-down" @click="expandAll">
-              {{ t("Tree.ExpandAll") }}
-            </UButton>
-            <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-chevrons-up" @click="collapseAll">
-              {{ t("Tree.CollapseAll") }}
-            </UButton>
+          <div class="ml-auto flex items-center gap-1">
+            <slot name="actions" />
+            <UPopover v-if="compact" :content="{ align: 'end' }">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-info"
+                :aria-label="t('Chen.GoPlanDetails')"
+              />
+              <template #content>
+                <dl
+                  class="grid max-w-sm grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-3 text-xs"
+                  :class="{ 'select-none': canCopy === false }"
+                  @copy.capture="preventCopy"
+                  @cut.capture="preventCopy"
+                >
+                  <dt class="text-muted">{{ labels.database }}</dt>
+                  <dd>{{ plan.database ? databaseNames[plan.database] : "—" }}</dd>
+                  <dt class="text-muted">{{ labels.version }}</dt>
+                  <dd>{{ plan.serverVersion || "—" }}</dd>
+                  <dt class="text-muted">{{ labels.nodes }}</dt>
+                  <dd>{{ steps.length }}</dd>
+                  <dt class="text-muted">{{ labels.format }}</dt>
+                  <dd>{{ plan.rawFormat || "—" }}</dd>
+                  <template v-if="costMeanings.length">
+                    <dt class="text-muted">{{ labels.costMeaning }}</dt>
+                    <dd class="whitespace-pre-line">{{ costMeaningTitle }}</dd>
+                  </template>
+                </dl>
+              </template>
+            </UPopover>
+            <template v-if="view === 'tree' && plan.roots.length">
+              <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-chevrons-down" @click="expandAll">
+                {{ t("Tree.ExpandAll") }}
+              </UButton>
+              <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-chevrons-up" @click="collapseAll">
+                {{ t("Tree.CollapseAll") }}
+              </UButton>
+            </template>
           </div>
         </div>
       </div>
@@ -235,7 +277,7 @@ function keyDetail(node: ChenPlanNode) {
         {{ item.message }}
       </div>
       <div
-        v-for="warning in plan.warnings"
+        v-for="warning in visibleWarnings"
         :key="warning.code + warning.message"
         class="border-b border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning"
       >
@@ -313,7 +355,9 @@ function keyDetail(node: ChenPlanNode) {
                       <span class="block font-medium text-highlighted">
                         {{ step.node.nativeOperator || step.node.nodeType }}
                       </span>
-                      <span class="text-[10px] text-muted">{{ step.node.nodeType.replaceAll("_", " ") }}</span>
+                      <span v-if="!compact" class="text-[10px] text-muted">
+                        {{ step.node.nodeType.replaceAll("_", " ") }}
+                      </span>
                     </span>
                   </span>
                 </td>

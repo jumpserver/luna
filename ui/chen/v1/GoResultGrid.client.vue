@@ -52,6 +52,7 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 const props = defineProps<{
   rows: GoRows;
   canCopy: boolean;
+  displayMode?: "table" | "query";
   active?: boolean;
   loadingSettings?: GoResultLoadingSettings;
   loadingSettingsDisabled?: boolean;
@@ -81,6 +82,7 @@ const toast = useToast();
 const gridApi = shallowRef<GridApi | null>(null);
 const selection = ref(emptyChenGridSelection());
 const filter = ref("");
+const localSearch = computed(() => props.displayMode !== "table");
 const gridPreferences = useChenGridPreferences();
 const loadingModes = computed(() => [
   { label: t("Chen.GoBrowsePaging"), value: "page" },
@@ -759,6 +761,9 @@ watch(filter, () => {
   resetSelection();
   gridApi.value?.setGridOption("quickFilterText", filter.value);
 });
+watch(localSearch, (enabled) => {
+  if (!enabled) filter.value = "";
+});
 onMounted(() => {
   window.addEventListener("pointerup", finishSelection);
   window.addEventListener("blur", finishSelection);
@@ -775,31 +780,32 @@ onBeforeUnmount(() => {
 <template>
   <div class="flex h-full min-h-0 min-w-0 flex-col" data-chen-result-grid @copy.capture="preventCopy">
     <div class="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-default px-2 py-1.5">
-      <UInput
-        v-model="filter"
-        icon="i-lucide-search"
-        size="xs"
-        class="w-40"
-        :placeholder="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedSearch' : 'Chen.GoV1GridFilter')"
-        :aria-label="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedSearch' : 'Chen.GoV1GridFilter')"
+      <UTooltip
+        v-if="localSearch"
+        :text="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedOnlyHint' : 'Chen.GoV1GridPageOnlyHint')"
       >
-        <template v-if="filter" #trailing>
-          <UButton
-            icon="i-lucide-x"
-            size="xs"
-            color="neutral"
-            variant="link"
-            :aria-label="t('Chen.GoV1GridClearFilter')"
-            @click="filter = ''"
-          />
-        </template>
-      </UInput>
-      <span
-        class="text-[11px] text-muted"
-        :title="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedOnlyHint' : 'Chen.GoV1GridPageOnlyHint')"
-      >
-        {{ t(loadingSettings?.mode === "continuous" ? "Chen.GoBrowseLoadedOnly" : "Chen.GoV1GridPageOnly") }}
-        <template v-if="filter">· {{ shownRows }}/{{ rows.rows.length }}</template>
+        <UInput
+          v-model="filter"
+          icon="i-lucide-search"
+          size="xs"
+          class="w-40"
+          :placeholder="t('Chen.GoResultSearch')"
+          :aria-label="t('Chen.GoResultSearch')"
+        >
+          <template v-if="filter" #trailing>
+            <UButton
+              icon="i-lucide-x"
+              size="xs"
+              color="neutral"
+              variant="link"
+              :aria-label="t('Chen.GoV1GridClearFilter')"
+              @click="filter = ''"
+            />
+          </template>
+        </UInput>
+      </UTooltip>
+      <span v-if="localSearch && filter" class="text-[11px] tabular-nums text-muted">
+        {{ shownRows }}/{{ rows.rows.length }}
       </span>
       <div class="ml-auto flex flex-wrap items-center gap-1">
         <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }">
