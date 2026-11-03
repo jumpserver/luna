@@ -297,6 +297,35 @@ const contextMenuItems = computed<DropdownMenuItem[][]>(() => {
     ]
   ];
 });
+const tableActions = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("Chen.GoWriteEditCell"),
+      icon: "i-lucide-pencil",
+      disabled: !bounds.value || !(props.editableColumns?.length || props.insertableColumns?.length),
+      onSelect: requestEdit
+    },
+    {
+      label: t("Chen.GoV1GridCopy"),
+      icon: "i-lucide-copy",
+      disabled: !props.canCopy || !bounds.value,
+      onSelect: () => copySelection()
+    },
+    {
+      label: t("Chen.GoV1GridCopyHeaders"),
+      icon: "i-lucide-table-2",
+      disabled: !props.canCopy || !bounds.value,
+      onSelect: () => copySelection(true)
+    },
+    {
+      label: t("Chen.GoV1GridViewValue"),
+      icon: "i-lucide-expand",
+      disabled: !bounds.value,
+      onSelect: () => openValue()
+    }
+  ],
+  ...menuItems.value
+]);
 const ResultColumnHeader = defineComponent({
   props: { params: { type: Object as PropType<IHeaderParams & { dataType: string }>, required: true } },
   setup: (header) => () =>
@@ -779,7 +808,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-full min-h-0 min-w-0 flex-col" data-chen-result-grid @copy.capture="preventCopy">
-    <div class="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-default px-2 py-1.5">
+    <div
+      data-chen-data-toolbar
+      class="flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-2 py-1 [&>*]:shrink-0"
+    >
+      <slot name="toolbar-start" />
       <UTooltip
         v-if="localSearch"
         :text="t(loadingSettings?.mode === 'continuous' ? 'Chen.GoBrowseLoadedOnlyHint' : 'Chen.GoV1GridPageOnlyHint')"
@@ -807,14 +840,20 @@ onBeforeUnmount(() => {
       <span v-if="localSearch && filter" class="text-[11px] tabular-nums text-muted">
         {{ shownRows }}/{{ rows.rows.length }}
       </span>
-      <div class="ml-auto flex flex-wrap items-center gap-1">
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <slot name="toolbar-end" />
         <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }">
           <UButton
             icon="i-lucide-settings-2"
             size="xs"
             color="neutral"
             variant="ghost"
-            :title="t('Chen.GoBrowseTableSettings')"
+            :label="localSearch ? undefined : t('Chen.GoBrowseTableSettings')"
+            :title="
+              localSearch
+                ? t('Chen.GoBrowseTableSettings')
+                : `${t('Chen.GoBrowseTableSettings')} · ${t('Chen.GoV1GridColumns')}`
+            "
             :aria-label="t('Chen.GoBrowseTableSettings')"
           />
           <template #content>
@@ -833,7 +872,10 @@ onBeforeUnmount(() => {
                     @update:model-value="changeLoading({ mode: $event as GoResultLoadingSettings['mode'] })"
                   />
                 </label>
-                <label v-if="pageSizeControl !== false" class="flex items-center justify-between gap-3 text-xs">
+                <label
+                  v-if="pageSizeControl !== false && localSearch"
+                  class="flex items-center justify-between gap-3 text-xs"
+                >
                   <span>
                     {{ t(loadingSettings.mode === "continuous" ? "Chen.GoBrowseBatchSize" : "Chen.GoBrowseSize") }}
                   </span>
@@ -873,6 +915,16 @@ onBeforeUnmount(() => {
                 <span>{{ t(setting.label) }}</span>
                 <USwitch v-model="gridPreferences[setting.key]" size="sm" :aria-label="t(setting.label)" />
               </label>
+              <slot name="settings-actions" />
+              <UDropdownMenu v-if="!localSearch" :items="tableActions">
+                <UButton
+                  :label="t('Chen.GoV1GridColumns')"
+                  icon="i-lucide-columns-3"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                />
+              </UDropdownMenu>
               <div v-if="rows.columns.length" class="space-y-2 border-t border-default pt-3">
                 <div class="flex items-center justify-between gap-3">
                   <span class="text-xs font-medium text-highlighted">{{ t("Chen.VisibleFields") }}</span>
@@ -911,57 +963,59 @@ onBeforeUnmount(() => {
             </div>
           </template>
         </UPopover>
-        <UButton
-          v-if="editableColumns?.length || insertableColumns?.length"
-          icon="i-lucide-pencil"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="!bounds"
-          :title="t('Chen.GoWriteEditCell')"
-          :aria-label="t('Chen.GoWriteEditCell')"
-          @click="requestEdit"
-        />
-        <UButton
-          icon="i-lucide-copy"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="!canCopy || !bounds"
-          :title="t('Chen.GoV1GridCopy')"
-          :aria-label="t('Chen.GoV1GridCopy')"
-          @click="copySelection()"
-        />
-        <UButton
-          icon="i-lucide-table-2"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="!canCopy || !bounds"
-          :title="t('Chen.GoV1GridCopyHeaders')"
-          :aria-label="t('Chen.GoV1GridCopyHeaders')"
-          @click="copySelection(true)"
-        />
-        <UButton
-          icon="i-lucide-expand"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="!bounds"
-          :title="t('Chen.GoV1GridViewValue')"
-          :aria-label="t('Chen.GoV1GridViewValue')"
-          @click="openValue()"
-        />
-        <UDropdownMenu :items="menuItems">
+        <template v-if="localSearch">
           <UButton
-            icon="i-lucide-columns-3"
+            v-if="editableColumns?.length || insertableColumns?.length"
+            icon="i-lucide-pencil"
             size="xs"
             color="neutral"
             variant="ghost"
-            :title="t('Chen.GoV1GridColumns')"
-            :aria-label="t('Chen.GoV1GridColumns')"
+            :disabled="!bounds"
+            :title="t('Chen.GoWriteEditCell')"
+            :aria-label="t('Chen.GoWriteEditCell')"
+            @click="requestEdit"
           />
-        </UDropdownMenu>
+          <UButton
+            icon="i-lucide-copy"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!canCopy || !bounds"
+            :title="t('Chen.GoV1GridCopy')"
+            :aria-label="t('Chen.GoV1GridCopy')"
+            @click="copySelection()"
+          />
+          <UButton
+            icon="i-lucide-table-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!canCopy || !bounds"
+            :title="t('Chen.GoV1GridCopyHeaders')"
+            :aria-label="t('Chen.GoV1GridCopyHeaders')"
+            @click="copySelection(true)"
+          />
+          <UButton
+            icon="i-lucide-expand"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!bounds"
+            :title="t('Chen.GoV1GridViewValue')"
+            :aria-label="t('Chen.GoV1GridViewValue')"
+            @click="openValue()"
+          />
+          <UDropdownMenu :items="menuItems">
+            <UButton
+              icon="i-lucide-columns-3"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              :title="t('Chen.GoV1GridColumns')"
+              :aria-label="t('Chen.GoV1GridColumns')"
+            />
+          </UDropdownMenu>
+        </template>
       </div>
     </div>
     <div

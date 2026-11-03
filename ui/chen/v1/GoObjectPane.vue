@@ -26,16 +26,32 @@ const emit = defineEmits<{
   section: [section: ObjectWorkspaceSection];
   schemaEdit: [mode: "alter" | "index"];
 }>();
-const section = computed(() => props.section || "structure");
-const view = ref<"columns" | "details">("columns");
+const { t } = useI18n();
+const section = computed(() => (props.section === "structure" ? "columns" : props.section || "columns"));
 const structureVisited = ref(false);
 const ddlVisited = ref(false);
 const detailsVisited = ref(false);
-const detailSection = ref<"basic" | "primary_key" | "indexes" | "foreign_keys" | "defaults" | "constraints">("basic");
+const detailSection = computed(() =>
+  ["basic", "primary_key", "indexes", "foreign_keys", "defaults", "constraints"].includes(section.value)
+    ? (section.value as "basic" | "primary_key" | "indexes" | "foreign_keys" | "defaults" | "constraints")
+    : "basic"
+);
+const propertySection = computed(() =>
+  ["basic", "primary_key", "indexes", "foreign_keys", "defaults", "constraints"].includes(section.value)
+);
+const tabs = computed(() => [
+  { key: "data", label: t("Chen.GoTableWorkspaceData") },
+  { key: "basic", label: t("Chen.BasicInfo") },
+  { key: "columns", label: t("Chen.Columns") },
+  { key: "indexes", label: t("Chen.Indexes") },
+  { key: "foreign_keys", label: t("Chen.ForeignKeys") },
+  { key: "constraints", label: t("Chen.Constraints") },
+  { key: "ddl", label: "DDL" },
+  ...(props.object.kind === "table" ? [{ key: "diagram", label: t("Chen.GoDiagramTitle") }] : [])
+]);
 const diagramVisited = ref(false);
 const diagramDirection = ref<"outgoing" | "incoming">("outgoing");
 const identity = computed(() => diagramObjectId(props.sessionId, props.object));
-const { t } = useI18n();
 const columns = ref<GoCatalogColumn[]>([]);
 const cursor = ref<string>();
 const hasMore = ref(false);
@@ -83,10 +99,11 @@ watch(
   () => [section.value, props.active, props.ready],
   () => {
     if (props.active === false) return;
-    if (section.value === "structure" && !structureVisited.value && props.ready) {
+    if (section.value === "columns" && !structureVisited.value && props.ready) {
       structureVisited.value = true;
       void load();
     }
+    if (propertySection.value) detailsVisited.value = true;
     if (section.value === "ddl") ddlVisited.value = true;
     if (section.value === "diagram") diagramVisited.value = true;
   },
@@ -99,7 +116,8 @@ watch(
       controller?.abort();
       busy.value = false;
     }
-    if (ready && structureVisited.value && !columns.value.length && !busy.value) void load();
+    if (ready && props.active !== false && section.value === "columns" && !columns.value.length && !busy.value)
+      void load();
   }
 );
 watch(
@@ -113,7 +131,7 @@ watch(
     error.value = "";
     search.value = "";
     structureVisited.value = false;
-    if (section.value === "structure") {
+    if (props.active !== false && props.ready && section.value === "columns") {
       structureVisited.value = true;
       void load();
     }
@@ -122,8 +140,7 @@ watch(
 );
 onBeforeUnmount(() => controller?.abort());
 async function sectionKeydown(event: KeyboardEvent) {
-  const keys: ObjectWorkspaceSection[] =
-    props.object.kind === "table" ? ["data", "structure", "ddl", "diagram"] : ["data", "structure", "ddl"];
+  const keys: ObjectWorkspaceSection[] = tabs.value.map((tab) => tab.key as ObjectWorkspaceSection);
   const index = keys.indexOf(section.value);
   const key =
     event.key === "ArrowRight"
@@ -149,115 +166,65 @@ function preventCopy(event: ClipboardEvent) {
 
 <template>
   <div class="flex min-w-0 flex-col" :class="section === 'data' ? 'shrink-0' : 'min-h-0 flex-1'" data-chen-structure>
-    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2">
-      <UIcon :name="object.kind === 'view' ? 'i-lucide-eye' : 'i-lucide-table-2'" class="size-4" />
-      <h2
-        class="min-w-0 flex-1 truncate text-sm font-medium"
-        :title="`${object.database}.${object.schema}.${object.name}`"
+    <div class="flex min-w-0 shrink-0 items-center border-b border-default px-2 py-1">
+      <div
+        role="tablist"
+        :aria-label="t('Chen.GoTableWorkspaceSections')"
+        class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap"
+        @keydown="sectionKeydown"
       >
-        {{ object.database }}
-        <template v-if="object.schema && object.schema !== object.database">/ {{ object.schema }}</template>
-        / {{ object.name }}
-      </h2>
+        <UButton
+          v-for="item in tabs"
+          :key="item.key"
+          role="tab"
+          size="xs"
+          variant="ghost"
+          class="shrink-0"
+          :tabindex="section === item.key ? 0 : -1"
+          :label="item.label"
+          :aria-selected="section === item.key"
+          :color="section === item.key ? 'primary' : 'neutral'"
+          @click="emit('section', item.key as ObjectWorkspaceSection)"
+        />
+      </div>
       <UDropdownMenu
-        v-if="object.kind === 'table'"
         :items="[
           {
-            label: t('Chen.GoWriteAlter'),
-            icon: 'i-lucide-table-properties',
-            onSelect: () => emit('schemaEdit', 'alter')
+            label: t('Chen.GoV1GenerateSelect'),
+            icon: 'i-lucide-file-code-2',
+            disabled: !canPaste || !ready,
+            onSelect: () => emit('query')
           },
-          { label: t('Chen.Indexes'), icon: 'i-lucide-list-filter', onSelect: () => emit('schemaEdit', 'index') }
+          { label: t('RightPanel.SQLAIMetadataCategory.primary_keys'), onSelect: () => emit('section', 'primary_key') },
+          { label: t('RightPanel.SQLAIMetadataCategory.default_values'), onSelect: () => emit('section', 'defaults') },
+          ...(object.kind === 'table'
+            ? [
+                {
+                  label: t('Chen.GoWriteAlter'),
+                  icon: 'i-lucide-table-properties',
+                  disabled: !ready,
+                  onSelect: () => emit('schemaEdit', 'alter')
+                },
+                {
+                  label: t('Chen.Indexes'),
+                  icon: 'i-lucide-list-filter',
+                  disabled: !ready,
+                  onSelect: () => emit('schemaEdit', 'index')
+                }
+              ]
+            : [])
         ]"
       >
         <UButton
-          :label="t('Chen.GoWriteStructureActions')"
-          icon="i-lucide-settings-2"
+          icon="i-lucide-ellipsis"
           size="xs"
           color="neutral"
           variant="ghost"
-          :disabled="!ready"
+          class="shrink-0"
+          :aria-label="t('Chen.GoTableObjectMenu')"
+          :title="`${object.database}.${object.schema}.${object.name}`"
         />
       </UDropdownMenu>
-      <UButton
-        v-if="section === 'structure' && view === 'columns'"
-        icon="i-lucide-refresh-cw"
-        :label="t('Chen.GoV1Refresh')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="busy || !ready"
-        @click="load()"
-      />
-      <UButton
-        :label="t('Chen.GoV1GenerateSelect')"
-        icon="i-lucide-file-code-2"
-        size="xs"
-        color="neutral"
-        variant="soft"
-        :disabled="!canPaste || !ready"
-        @click="emit('query')"
-      />
-    </div>
-    <div
-      role="tablist"
-      :aria-label="t('Chen.GoTableWorkspaceSections')"
-      class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-3 py-1"
-      @keydown="sectionKeydown"
-    >
-      <UButton
-        v-for="item in [
-          { key: 'data', label: t('Chen.GoTableWorkspaceData') },
-          { key: 'structure', label: t('Chen.GoV1Structure') },
-          { key: 'ddl', label: 'DDL' },
-          { key: 'diagram', label: t('Chen.GoDiagramTitle') }
-        ]"
-        :key="item.key"
-        role="tab"
-        size="xs"
-        variant="ghost"
-        :tabindex="section === item.key ? 0 : -1"
-        :label="item.label"
-        :aria-selected="section === item.key"
-        :color="section === item.key ? 'primary' : 'neutral'"
-        :disabled="item.key === 'diagram' && object.kind !== 'table'"
-        :title="item.key === 'diagram' && object.kind !== 'table' ? t('Chen.NotSupported') : undefined"
-        @click="emit('section', item.key as ObjectWorkspaceSection)"
-      />
-    </div>
-    <div
-      v-show="section === 'structure'"
-      class="flex shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-3 py-1"
-    >
-      <UButton
-        :label="t('Chen.Columns')"
-        size="xs"
-        :color="view === 'columns' ? 'primary' : 'neutral'"
-        variant="ghost"
-        :aria-pressed="view === 'columns'"
-        @click="view = 'columns'"
-      />
-      <UButton
-        v-for="item in [
-          { key: 'basic', label: t('Chen.BasicInfo') },
-          { key: 'primary_key', label: t('RightPanel.SQLAIMetadataCategory.primary_keys') },
-          { key: 'indexes', label: t('Chen.Indexes') },
-          { key: 'foreign_keys', label: t('Chen.ForeignKeys') },
-          { key: 'constraints', label: t('Chen.Constraints') },
-          { key: 'defaults', label: t('RightPanel.SQLAIMetadataCategory.default_values') }
-        ] as const"
-        :key="item.key"
-        :label="item.label"
-        size="xs"
-        :color="view === 'details' && detailSection === item.key ? 'primary' : 'neutral'"
-        variant="ghost"
-        :aria-pressed="view === 'details' && detailSection === item.key"
-        @click="
-          view = 'details';
-          detailSection = item.key;
-          detailsVisited = true;
-        "
-      />
     </div>
     <nav
       v-if="
@@ -314,8 +281,9 @@ function preventCopy(event: ClipboardEvent) {
     />
     <GoObjectDetails
       v-if="detailsVisited"
-      v-show="section === 'structure' && view === 'details'"
+      v-show="propertySection"
       :key="identity"
+      :visible="active !== false && propertySection"
       :api="api"
       :session-id="sessionId"
       :object="object"
@@ -327,6 +295,7 @@ function preventCopy(event: ClipboardEvent) {
       v-if="ddlVisited"
       v-show="section === 'ddl'"
       :key="`${identity}:ddl`"
+      :visible="active !== false && section === 'ddl'"
       mode="ddl"
       :api="api"
       :session-id="sessionId"
@@ -335,9 +304,18 @@ function preventCopy(event: ClipboardEvent) {
       :can-copy="canCopy"
     />
     <div
-      v-show="section === 'structure' && view === 'columns'"
+      v-show="section === 'columns'"
       class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-default px-3 py-2"
     >
+      <UButton
+        icon="i-lucide-refresh-cw"
+        :label="t('Chen.GoV1Refresh')"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :disabled="busy || !ready"
+        @click="load()"
+      />
       <UInput
         v-model="search"
         icon="i-lucide-search"
@@ -371,7 +349,7 @@ function preventCopy(event: ClipboardEvent) {
       <p v-if="!ready" class="w-full text-xs text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
     <div
-      v-if="error && section === 'structure' && view === 'columns'"
+      v-if="error && section === 'columns'"
       role="alert"
       class="flex items-center gap-2 px-4 py-2 text-xs text-error"
     >
@@ -386,7 +364,7 @@ function preventCopy(event: ClipboardEvent) {
       />
     </div>
     <div
-      v-show="section === 'structure' && view === 'columns'"
+      v-show="section === 'columns'"
       ref="columnTable"
       role="region"
       :aria-label="t('Chen.GoV1Structure')"

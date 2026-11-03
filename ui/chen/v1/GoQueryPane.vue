@@ -27,6 +27,7 @@ import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
 import { editDirty } from "./dataEditing";
+import GoBrowseFooter from "./GoBrowseFooter.vue";
 import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
@@ -568,6 +569,7 @@ defineExpose({
       class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2"
     >
       <UButton
+        v-if="!query.rows"
         :label="t('Chen.GoV1Refresh')"
         icon="i-lucide-refresh-cw"
         size="xs"
@@ -1172,7 +1174,7 @@ defineExpose({
           />
         </div>
         <div
-          v-if="query.resultPane === 'results' && displayExecution?.result_ids.length"
+          v-if="!dataOnly && query.resultPane === 'results' && displayExecution?.result_ids.length"
           role="group"
           :aria-label="t('Chen.GoV1Result')"
           class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1"
@@ -1253,7 +1255,7 @@ defineExpose({
             size="xs"
             color="neutral"
             :variant="pinnedId === null ? 'soft' : 'ghost'"
-            :label="t('Chen.GoV1Result')"
+            :label="t(dataOnly ? 'Chen.GoTableWorkspaceData' : 'Chen.GoV1Result')"
             @click="pinnedId = null"
           />
           <div v-for="item in pinned" :key="item.id" class="flex shrink-0 items-center">
@@ -1397,9 +1399,73 @@ defineExpose({
             @refresh="emit('refreshData')"
             @loading-settings="emit('loadingSettings', $event)"
             @load-more="emit('loadMore', $event)"
+          >
+            <template v-if="dataOnly" #settings-actions>
+              <UButton
+                icon="i-lucide-pin"
+                :label="t('Chen.PinResult')"
+                :title="t('Chen.GoPinnedHint')"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="
+                  !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
+                "
+                @click="pinResult"
+              />
+              <UPopover v-if="query.resultExecution">
+                <UButton
+                  icon="i-lucide-code"
+                  label="SQL"
+                  :aria-label="t('Chen.GoV1ResultSource')"
+                  :title="t('Chen.GoV1ResultSource')"
+                  class="shrink-0"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                />
+                <template #content>
+                  <div class="w-[32rem] max-w-[90vw] p-3 text-xs">
+                    <p class="mb-2 text-muted" :title="query.resultExecution.id">
+                      {{ t("Chen.GoV1ResultSource") }}
+                      <time v-if="query.resultExecution.started_at">
+                        · {{ new Date(query.resultExecution.started_at).toLocaleTimeString() }}
+                      </time>
+                    </p>
+                    <pre
+                      class="max-h-80 overflow-auto whitespace-pre-wrap break-words"
+                      :class="{ 'select-none': !session.permissions.can_copy }"
+                      @copy="preventCopy"
+                      >{{ query.resultSql }}</pre>
+                  </div>
+                </template>
+              </UPopover>
+            </template>
+            <template #actions>
+              <GoExportPanel
+                v-if="dataOnly && (query.resultId || query.exportJob)"
+                :query="query"
+                :session="session"
+                :api="api"
+                :ready="ready && !editDirty(query.edit) && !query.edit.busy"
+                @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
+                @sync="emit('exportSync')"
+                @cancel="emit('exportCancel')"
+                @remove="emit('exportDelete')"
+              />
+            </template>
+          </GoWritePanel>
+          <GoBrowseFooter
+            v-if="query.browseObject"
+            :query="query"
+            :session="session"
+            @submit="emit('browse', $event)"
+            @rows="(id, offset) => emit('rows', id, offset)"
+            @loading-settings="emit('loadingSettings', $event)"
+            @load-more="emit('loadMore', false)"
           />
           <div
-            v-if="query.loadingSettings.mode === 'continuous'"
+            v-if="!query.browseObject && query.loadingSettings.mode === 'continuous'"
             role="status"
             data-continuous-status
             class="flex shrink-0 flex-wrap items-center gap-2 border-t border-default px-3 py-1.5 text-xs"

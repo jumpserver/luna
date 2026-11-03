@@ -364,98 +364,6 @@ function discard() {
       }
     "
   >
-    <div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-2 py-1">
-      <template v-if="supported">
-        <UButton
-          v-if="draft.metadata?.mode === 'table'"
-          icon="i-lucide-plus"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :label="t('Chen.AddRow')"
-          :disabled="!canInsert || count >= GO_EDIT_LIMIT"
-          @click="addRow"
-        />
-        <UButton
-          v-if="draft.metadata?.mode === 'table'"
-          icon="i-lucide-trash-2"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :label="t('Chen.DeleteRow')"
-          :disabled="
-            !canChange ||
-            !selected.length ||
-            (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
-          "
-          @click="deleteRows"
-        />
-        <UButton
-          icon="i-lucide-list-restart"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :label="t('Chen.UpdateRows')"
-          :disabled="
-            !canChange ||
-            !selected.length ||
-            !updateFields.length ||
-            (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
-          "
-          @click="batchOpen = true"
-        />
-        <UButton
-          v-if="draft.metadata?.mode === 'table' && session.permissions.can_upload"
-          icon="i-lucide-upload"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :label="t('Chen.ImportCsv')"
-          :disabled="!canInsert || count >= GO_EDIT_LIMIT || Object.keys(draft.changes).length > 0"
-          :title="t('Chen.GoWriteCsvBatchHint')"
-          @click="csvOpen = true"
-        />
-        <UButton
-          v-if="dirty"
-          icon="i-lucide-eye"
-          size="xs"
-          :label="t('Chen.PreviewAndSave')"
-          :loading="draft.busy"
-          :disabled="!canChange"
-          @click="preview"
-        />
-        <UButton
-          v-if="dirty"
-          icon="i-lucide-undo-2"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :label="t('Common.Cancel')"
-          :disabled="cannotDiscard"
-          @click="discard"
-        />
-        <span v-if="dirty" class="text-xs text-muted">
-          {{ t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) }}
-        </span>
-      </template>
-      <UButton
-        class="ml-auto"
-        icon="i-lucide-refresh-cw"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :label="t('Chen.RefreshData')"
-        :disabled="
-          query.loadingRows ||
-          dirty ||
-          query.busy ||
-          !!query.pending ||
-          executionActive(query.execution) ||
-          session.state !== 'ready'
-        "
-        @click="emit('refresh')"
-      />
-    </div>
     <p v-if="draft.source === 'csv'" class="px-3 py-1 text-xs text-muted">{{ t("Chen.GoWriteCsvBatchHint") }}</p>
     <p v-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
     <p v-if="draft.status && draft.status !== 'committed'" role="status" class="px-3 py-2 text-xs text-warning">
@@ -505,7 +413,103 @@ function discard() {
       @selection="selected = $event"
       @edit="editCell"
       @change="stageCell"
-    />
+    >
+      <template #toolbar-start>
+        <template v-if="supported">
+          <UButton
+            v-if="draft.metadata?.mode === 'table'"
+            icon="i-lucide-plus"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="t('Chen.AddRow')"
+            :disabled="!canInsert || count >= GO_EDIT_LIMIT"
+            @click="addRow"
+          />
+          <UButton
+            v-if="draft.metadata?.mode === 'table'"
+            icon="i-lucide-trash-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="t('Chen.DeleteRow')"
+            :disabled="
+              !canChange ||
+              !selected.length ||
+              (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
+            "
+            @click="deleteRows"
+          />
+          <UButton
+            icon="i-lucide-list-restart"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="t('Chen.UpdateRows')"
+            :disabled="
+              !canChange ||
+              !selected.length ||
+              !updateFields.length ||
+              (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
+            "
+            @click="batchOpen = true"
+          />
+          <UButton
+            v-if="dirty"
+            icon="i-lucide-eye"
+            size="xs"
+            :label="t('Chen.PreviewAndSave')"
+            :loading="draft.busy"
+            :disabled="!canChange"
+            @click="preview"
+          />
+          <UButton
+            v-if="dirty"
+            icon="i-lucide-undo-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="t('Common.Cancel')"
+            :disabled="cannotDiscard"
+            @click="discard"
+          />
+          <span v-if="dirty" class="text-xs text-muted">
+            {{ t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) }}
+          </span>
+        </template>
+      </template>
+      <template #settings-actions><slot name="settings-actions" /></template>
+      <template #toolbar-end>
+        <UButton
+          icon="i-lucide-refresh-cw"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :label="t('Chen.RefreshData')"
+          :disabled="
+            query.loadingRows ||
+            dirty ||
+            query.busy ||
+            !!query.pending ||
+            executionActive(query.execution) ||
+            session.state !== 'ready'
+          "
+          @click="emit('refresh')"
+        />
+        <UButton
+          v-if="supported && draft.metadata?.mode === 'table' && session.permissions.can_upload"
+          icon="i-lucide-upload"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :label="t('Chen.ImportCsv')"
+          :disabled="!canInsert || count >= GO_EDIT_LIMIT || Object.keys(draft.changes).length > 0"
+          :title="t('Chen.GoWriteCsvBatchHint')"
+          @click="csvOpen = true"
+        />
+        <slot name="actions" />
+      </template>
+    </GoResultGrid>
     <DataViewImportDialog
       v-if="csvOpen"
       v-model:open="csvOpen"
