@@ -65,6 +65,10 @@ test("the native close-tab shortcut targets the focused workspace without closin
       }
     });
     const items = template.flatMap((menu) => menu.submenu as MenuItemConstructorOptions[]);
+    const newTab = items.find((item) => item.accelerator === "CmdOrCtrl+T")!;
+    assert.equal(newTab.label, "New Connection…");
+    const localShell = items.find((item) => item.label === "New Local Shell")!;
+    assert.equal(localShell.accelerator, undefined);
     const closeTabs = items.filter((item) => item.accelerator === "CmdOrCtrl+W");
     assert.equal(closeTabs.length, 1);
     assert.equal(closeTabs[0].label, "Close Current Tab");
@@ -98,7 +102,7 @@ test("custom and disabled accelerators update native menus without disabling men
     prefersZh: () => false,
     editCopyAccelerator,
     shortcutAccelerator,
-    shortcutOverrides: { closeTab: "Mod+Shift+KeyE", localShell: null, focus: null, fullscreen: "Mod+Alt+KeyF" },
+    shortcutOverrides: { closeTab: "Mod+Shift+KeyE", newSession: null, focus: null, fullscreen: "Mod+Alt+KeyF" },
     shortcutEnvironment: { mac: true, desktop: true },
     openAboutWindow() {},
     openSettingsWindow() {},
@@ -124,6 +128,10 @@ test("custom and disabled accelerators update native menus without disabling men
   const focus = items.find((item) => item.label === "Focus Mode")!;
   assert.equal(focus.accelerator, undefined);
   assert.ok(focus.click);
+  const newTab = items.find((item) => item.label === "New Connection…")!;
+  assert.equal(newTab.accelerator, undefined);
+  newTab.click!(undefined, undefined, undefined);
+  assert.equal(commands.at(-1), "open-new-session");
 });
 
 test("native keyboard routing leaves scope resolution to the renderer and suspends menus while recording", () => {
@@ -140,7 +148,7 @@ test("native keyboard routing leaves scope resolution to the renderer and suspen
       ignoreMenu = value;
     }
   };
-  const overrides = { closeTab: "Mod+Shift+KeyE" as string | null };
+  const overrides = { closeTab: "Mod+Shift+KeyY" as string | null };
   const recorders = new WeakSet();
   runInNewContext(outputText, {
     windowWebContents: webContents,
@@ -153,14 +161,14 @@ test("native keyboard routing leaves scope resolution to the renderer and suspen
   });
   const input = (code: string, properties = {}) =>
     listener!({}, { code, control: true, meta: false, alt: false, shift: false, ...properties });
-  input("KeyE", { shift: true });
+  input("KeyY", { shift: true });
   assert.equal(ignoreMenu, true);
   input("KeyW");
   assert.equal(ignoreMenu, false);
   input("KeyW", { control: false, alt: true, shift: true });
   assert.equal(ignoreMenu, false);
   overrides.closeTab = null;
-  input("KeyE", { shift: true });
+  input("KeyY", { shift: true });
   assert.equal(ignoreMenu, false);
   recorders.add(webContents);
   input("KeyQ");

@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "Thoát chế độ gọn",
     "ExitFocusModeHint": "Thoát chế độ gọn (giữ Esc)",
     "CloseCurrent": "Đóng thẻ hiện tại",
+    "CloseMore": "Tùy chọn đóng khác",
     "CloseAll": "Đóng tất cả thẻ",
     "CloseOther": "Đóng các thẻ khác",
     "CloseLeft": "Đóng thẻ bên trái",
@@ -2993,11 +2994,14 @@
       "previousTab": "Phiên trước",
       "nextTab": "Phiên tiếp theo",
       "closeTab": "Đóng phiên hiện tại",
+      "cloneTab": "Nhân bản kết nối",
+      "splitVertical": "Chia dọc",
+      "splitHorizontal": "Chia ngang",
       "focus": "Chuyển chế độ tập trung",
       "fullscreen": "Chuyển chế độ toàn màn hình",
       "rightPanel": "Hiện hoặc ẩn bảng bên phải",
       "terminalAi": "Mở AI của terminal",
-      "localShell": "Terminal cục bộ mới"
+      "newSession": "Kết nối mới"
     },
     "Scopes": {
       "workspace": "Không gian làm việc · khi có phiên đang hoạt động",

@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "退出纯净模式",
     "ExitFocusModeHint": "退出纯净模式（长按 Esc）",
     "CloseCurrent": "关闭当前标签",
+    "CloseMore": "更多关闭选项",
     "CloseAll": "关闭全部标签",
     "CloseOther": "关闭其他标签",
     "CloseLeft": "关闭左侧标签",
@@ -2993,11 +2994,14 @@
       "previousTab": "上一个会话",
       "nextTab": "下一个会话",
       "closeTab": "关闭当前会话",
+      "cloneTab": "复制窗口",
+      "splitVertical": "垂直分屏",
+      "splitHorizontal": "水平分屏",
       "focus": "切换专注模式",
       "fullscreen": "切换全屏",
       "rightPanel": "显示或隐藏右侧面板",
       "terminalAi": "打开终端 AI",
-      "localShell": "新建本地终端"
+      "newSession": "新建连接"
     },
     "Scopes": {
       "workspace": "工作区 · 有活动会话时",

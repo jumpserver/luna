@@ -1041,6 +1041,7 @@
     "ExitFocusMode": "Exit clean mode",
     "ExitFocusModeHint": "Exit clean mode (hold Esc)",
     "CloseCurrent": "Close Current Tab",
+    "CloseMore": "More Close Actions",
     "CloseAll": "Close All Tabs",
     "CloseOther": "Close Other Tabs",
     "CloseLeft": "Close Left Tabs",
@@ -2993,11 +2994,14 @@
       "previousTab": "Previous session",
       "nextTab": "Next session",
       "closeTab": "Close current session",
+      "cloneTab": "Clone Connect",
+      "splitVertical": "Split vertically",
+      "splitHorizontal": "Split horizontally",
       "focus": "Toggle focus mode",
       "fullscreen": "Toggle fullscreen",
       "rightPanel": "Toggle right panel",
       "terminalAi": "Open terminal AI",
-      "localShell": "New local terminal"
+      "newSession": "New connection"
     },
     "Scopes": {
       "workspace": "Workspace · when a session is active",

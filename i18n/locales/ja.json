@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "集中モードを終了",
     "ExitFocusModeHint": "集中モードを終了（Esc を長押し）",
     "CloseCurrent": "現在のタブを閉じる",
+    "CloseMore": "その他の閉じる操作",
     "CloseAll": "すべてのタブを閉じる",
     "CloseOther": "他のタブを閉じる",
     "CloseLeft": "左側のタブを閉じる",
@@ -2993,11 +2994,14 @@
       "previousTab": "前のセッション",
       "nextTab": "次のセッション",
       "closeTab": "現在のセッションを閉じる",
+      "cloneTab": "接続を複製",
+      "splitVertical": "左右に分割",
+      "splitHorizontal": "上下に分割",
       "focus": "集中モードを切り替える",
       "fullscreen": "全画面表示を切り替える",
       "rightPanel": "右パネルの表示を切り替える",
       "terminalAi": "ターミナル AI を開く",
-      "localShell": "新しいローカルターミナル"
+      "newSession": "新しい接続"
     },
     "Scopes": {
       "workspace": "ワークスペース · セッションがアクティブなとき",

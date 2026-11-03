@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "집중 모드 종료",
     "ExitFocusModeHint": "집중 모드 종료(Esc 길게 누르기)",
     "CloseCurrent": "현재 탭 닫기",
+    "CloseMore": "추가 닫기 작업",
     "CloseAll": "모든 탭 닫기",
     "CloseOther": "다른 탭 닫기",
     "CloseLeft": "왼쪽 탭 닫기",
@@ -2993,11 +2994,14 @@
       "previousTab": "이전 세션",
       "nextTab": "다음 세션",
       "closeTab": "현재 세션 닫기",
+      "cloneTab": "연결 복제",
+      "splitVertical": "세로로 분할",
+      "splitHorizontal": "가로로 분할",
       "focus": "집중 모드 전환",
       "fullscreen": "전체 화면 전환",
       "rightPanel": "오른쪽 패널 표시 전환",
       "terminalAi": "터미널 AI 열기",
-      "localShell": "새 로컬 터미널"
+      "newSession": "새 연결"
     },
     "Scopes": {
       "workspace": "작업 공간 · 활성 세션이 있을 때",

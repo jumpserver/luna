@@ -1,8 +1,15 @@
 import { isWorkspaceTourActive } from "~/composables/useWorkspaceTour";
-import { desktopListen } from "~/shared/desktop/bridge";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import type { WorkspaceSplitDirection } from "~/composables/useWorkspaceTabs";
 
-export function useWorkspaceSessionShortcuts(enabled: () => boolean = () => true) {
+export function useWorkspaceSessionShortcuts(
+  enabled: () => boolean = () => true,
+  openNewSession: () => void = () => {
+    if (isDesktopRuntime()) void desktopInvoke("open_new_session");
+  }
+) {
   const shortcuts = useAppShortcuts();
+  const { cloneSession } = useWorkspaceTabMenu();
   const { isMacOS } = usePlatform();
   const { open: settingsOpen } = useSettingsWindow();
   const {
@@ -13,18 +20,32 @@ export function useWorkspaceSessionShortcuts(enabled: () => boolean = () => true
     enterFocusMode,
     exitFocusMode,
     activateAdjacentSession,
-    setActiveSession
+    setActiveSession,
+    canSplitWorkspace,
+    splitWorkspace
   } = useWorkspaceTabs();
   const toggleFocus = () => {
     if (focusMode.value) void exitFocusMode();
     else if (activeTabId.value) enterFocusMode(activeTabId.value);
+  };
+  const split = (direction: WorkspaceSplitDirection) => {
+    if (!canSplitWorkspace(activeTabId.value, direction)) return;
+    splitWorkspace(activeTabId.value, direction);
+    setActiveSession(activeTabId.value);
   };
 
   useEventListener(
     window,
     "keydown",
     (event: KeyboardEvent) => {
-      if (shortcuts.blocked(event) || !enabled() || !activeTabId.value) return;
+      if (shortcuts.blocked(event)) return;
+      if (shortcuts.matches("newSession", event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) openNewSession();
+        return;
+      }
+      if (!enabled() || !activeTabId.value) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       const editable =
         target &&
@@ -38,6 +59,15 @@ export function useWorkspaceSessionShortcuts(enabled: () => boolean = () => true
         };
       } else if (shortcuts.matches("focus", event)) {
         action = toggleFocus;
+      } else if (!editable && shortcuts.matches("cloneTab", event)) {
+        action = () => {
+          const tab = tabs.value.find((tab) => tab.id === activeTabId.value);
+          if (tab && (tab.payload?.id || tab.payload?.token?.id)) void cloneSession(tab);
+        };
+      } else if (!editable && shortcuts.matches("splitVertical", event)) {
+        action = () => split("vertical");
+      } else if (!editable && shortcuts.matches("splitHorizontal", event)) {
+        action = () => split("horizontal");
       } else if (tabs.value.length >= 2 && !editable) {
         if (shortcuts.matches("previousTab", event)) action = () => activateAdjacentSession("previous");
         else if (shortcuts.matches("nextTab", event)) action = () => activateAdjacentSession("next");

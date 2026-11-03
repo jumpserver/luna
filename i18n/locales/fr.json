@@ -1041,6 +1041,7 @@
     "ExitFocusMode": "Quitter le mode épuré",
     "ExitFocusModeHint": "Quitter le mode épuré (maintenir Échap)",
     "CloseCurrent": "Fermer l’onglet actuel",
+    "CloseMore": "Autres options de fermeture",
     "CloseAll": "Fermer tous les onglets",
     "CloseOther": "Fermer les autres onglets",
     "CloseLeft": "Fermer les onglets à gauche",
@@ -2993,11 +2994,14 @@
       "previousTab": "Session précédente",
       "nextTab": "Session suivante",
       "closeTab": "Fermer la session actuelle",
+      "cloneTab": "Dupliquer la connexion",
+      "splitVertical": "Diviser verticalement",
+      "splitHorizontal": "Diviser horizontalement",
       "focus": "Basculer le mode concentration",
       "fullscreen": "Basculer le plein écran",
       "rightPanel": "Afficher ou masquer le panneau droit",
       "terminalAi": "Ouvrir l’IA du terminal",
-      "localShell": "Nouveau terminal local"
+      "newSession": "Nouvelle connexion"
     },
     "Scopes": {
       "workspace": "Espace de travail · lorsqu’une session est active",

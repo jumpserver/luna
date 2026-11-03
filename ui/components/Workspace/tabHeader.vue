@@ -343,6 +343,18 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     return [
       tabMenuItem(
         {
+          label: t("TabMenu.CloneConnect"),
+          kbds: shortcuts.kbds("cloneTab"),
+          disabled: !hasToken,
+          onSelect: () => {
+            hideContextMenu();
+            void cloneSession(tab);
+          }
+        },
+        "i-lucide-copy"
+      ),
+      tabMenuItem(
+        {
           label: t("TabMenu.Reconnect"),
           disabled: !hasToken,
           onSelect: () => {
@@ -375,6 +387,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
             tabMenuItem(
               {
                 label: t("TabMenu.SplitVertically"),
+                kbds: shortcuts.kbds("splitVertical"),
                 onSelect: () => {
                   hideContextMenu();
                   splitSession(tab, "vertical");
@@ -389,6 +402,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
             tabMenuItem(
               {
                 label: t("TabMenu.SplitHorizontally"),
+                kbds: shortcuts.kbds("splitHorizontal"),
                 onSelect: () => {
                   hideContextMenu();
                   splitSession(tab, "horizontal");
@@ -440,6 +454,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.CloneConnect"),
+        kbds: shortcuts.kbds("cloneTab"),
         disabled: !hasToken,
         onSelect: () => {
           hideContextMenu();
@@ -503,6 +518,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.SplitVertically"),
+        kbds: shortcuts.kbds("splitVertical"),
         disabled: !canSplitVertically,
         onSelect: () => {
           hideContextMenu();
@@ -514,6 +530,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.SplitHorizontally"),
+        kbds: shortcuts.kbds("splitHorizontal"),
         disabled: !canSplitHorizontally,
         onSelect: () => {
           hideContextMenu();
@@ -534,38 +551,47 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       },
       "i-lucide-x"
     ),
-    tabMenuItem({
-      label: t("TabMenu.CloseAll"),
-      disabled: tabs.value.length === 0,
-      onSelect: () => {
-        hideContextMenu();
-        closeAllSessions();
-      }
-    }),
-    tabMenuItem({
-      label: t("TabMenu.CloseOther"),
-      disabled: tabs.value.length <= 1,
-      onSelect: () => {
-        hideContextMenu();
-        closeOtherSessions(tab.id);
-      }
-    }),
-    tabMenuItem({
-      label: t("TabMenu.CloseLeft"),
-      disabled: index === 0,
-      onSelect: () => {
-        hideContextMenu();
-        closeLeftSessions(tab.id);
-      }
-    }),
-    tabMenuItem({
-      label: t("TabMenu.CloseRight"),
-      disabled: index === tabs.value.length - 1,
-      onSelect: () => {
-        hideContextMenu();
-        closeRightSessions(tab.id);
-      }
-    })
+    tabMenuItem(
+      {
+        label: t("TabMenu.CloseMore"),
+        children: [
+          tabMenuItem({
+            label: t("TabMenu.CloseOther"),
+            disabled: tabs.value.length <= 1,
+            onSelect: () => {
+              hideContextMenu();
+              closeOtherSessions(tab.id);
+            }
+          }),
+          tabMenuItem({
+            label: t("TabMenu.CloseLeft"),
+            disabled: index === 0,
+            onSelect: () => {
+              hideContextMenu();
+              closeLeftSessions(tab.id);
+            }
+          }),
+          tabMenuItem({
+            label: t("TabMenu.CloseRight"),
+            disabled: index === tabs.value.length - 1,
+            onSelect: () => {
+              hideContextMenu();
+              closeRightSessions(tab.id);
+            }
+          }),
+          { type: "separator" as const },
+          tabMenuItem({
+            label: t("TabMenu.CloseAll"),
+            disabled: tabs.value.length === 0,
+            onSelect: () => {
+              hideContextMenu();
+              closeAllSessions();
+            }
+          })
+        ]
+      },
+      "i-lucide-copy-x"
+    )
   ];
 });
 

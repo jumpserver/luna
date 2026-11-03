@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "Sair do modo limpo",
     "ExitFocusModeHint": "Sair do modo limpo (mantenha Esc pressionado)",
     "CloseCurrent": "Fechar aba atual",
+    "CloseMore": "Mais opções de fechamento",
     "CloseAll": "Fechar todas as abas",
     "CloseOther": "Fechar outras abas",
     "CloseLeft": "Fechar abas à esquerda",
@@ -2993,11 +2994,14 @@
       "previousTab": "Sessão anterior",
       "nextTab": "Próxima sessão",
       "closeTab": "Fechar sessão atual",
+      "cloneTab": "Clonar conexão",
+      "splitVertical": "Dividir verticalmente",
+      "splitHorizontal": "Dividir horizontalmente",
       "focus": "Alternar modo de foco",
       "fullscreen": "Alternar tela cheia",
       "rightPanel": "Mostrar ou ocultar painel direito",
       "terminalAi": "Abrir IA do terminal",
-      "localShell": "Novo terminal local"
+      "newSession": "Nova conexão"
     },
     "Scopes": {
       "workspace": "Área de trabalho · quando há uma sessão ativa",

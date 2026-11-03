@@ -1037,6 +1037,7 @@
     "ExitFocusMode": "退出純淨模式",
     "ExitFocusModeHint": "退出純淨模式（長按 Esc）",
     "CloseCurrent": "關閉當前標籤",
+    "CloseMore": "更多關閉選項",
     "CloseAll": "關閉全部標籤",
     "CloseOther": "關閉其他標籤",
     "CloseLeft": "關閉左側標籤",
@@ -2993,11 +2994,14 @@
       "previousTab": "上一個工作階段",
       "nextTab": "下一個工作階段",
       "closeTab": "關閉目前工作階段",
+      "cloneTab": "複製視窗",
+      "splitVertical": "垂直分屏",
+      "splitHorizontal": "水平分屏",
       "focus": "切換專注模式",
       "fullscreen": "切換全螢幕",
       "rightPanel": "顯示或隱藏右側面板",
       "terminalAi": "開啟終端機 AI",
-      "localShell": "新增本機終端機"
+      "newSession": "新建連線"
     },
     "Scopes": {
       "workspace": "工作區 · 有作用中工作階段時",

@@ -147,7 +147,7 @@ export function useWorkspaceTabMenu() {
         protocol: tab.protocol,
         account: tab.account,
         payload,
-        newTab: Boolean(assertCurrent)
+        newTab: true
       });
       setActiveSession(newPane.id);
       return { status: "session_started", pane_id: newPane.id };
