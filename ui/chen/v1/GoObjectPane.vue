@@ -249,7 +249,18 @@ function preventCopy(event: ClipboardEvent) {
       v-if="
         diagramVisited &&
         section === 'diagram' &&
-        ['postgresql', 'mysql', 'mariadb', 'oceanbase-mysql'].includes(dialect)
+        [
+          'postgresql',
+          'mysql',
+          'mariadb',
+          'oceanbase-mysql',
+          'sqlserver',
+          'oracle',
+          'dameng',
+          'oceanbase-oracle',
+          'db2',
+          'clickhouse'
+        ].includes(dialect)
       "
       class="flex shrink-0 flex-wrap gap-1 border-b border-default px-3 py-1"
     >

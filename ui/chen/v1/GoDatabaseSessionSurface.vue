@@ -475,7 +475,7 @@ async function loadRows(
             ? query.resultExecution
             : execution)
       };
-      query.resultSql = sql;
+      query.resultSql = page.source_sql || sql;
     }
   } catch (cause) {
     if (isCurrent(query) && generation === query.loadGeneration) {
@@ -1123,7 +1123,7 @@ async function startExport(
       version: snapshot.version,
       id: newChenRequestId(),
       exportFormat: format,
-      ...(query.rows?.query_page?.mode === "database"
+      ...(query.rows?.query_page?.supported
         ? { queryPage: { source_result_id: snapshot.resultId, action: "export", format } as GoQueryPageRequest }
         : query.browseObject
           ? { browse: { source_result_id: snapshot.resultId, action: "export", format } as GoBrowseRequest }

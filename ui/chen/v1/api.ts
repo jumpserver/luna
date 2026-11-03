@@ -17,6 +17,7 @@ export interface GoSession {
   state: string;
   state_reason?: string;
   can_cancel?: boolean;
+  cancellation_mode?: "connection" | "statement_reconnect";
 }
 export interface GoConsole {
   id: string;
@@ -168,6 +169,7 @@ export interface GoQueryPage {
   read_only_reason?: string;
 }
 export interface GoRows {
+  source_sql?: string;
   query_page?: GoQueryPage;
   browse?: GoBrowsePage;
   id: string;

@@ -5,6 +5,7 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { executionActive } from "./api";
 import { editDirty } from "./dataEditing";
+import GoBrowseCondition from "./GoBrowseCondition.vue";
 
 const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession }>();
 const emit = defineEmits<{ submit: [request: GoBrowseRequest] }>();
@@ -27,25 +28,23 @@ const locked = computed(
 const columns = computed(() =>
   (props.query.rows?.columns || []).map((column) => ({ label: column.name, value: column.name }))
 );
-const operators = computed(() =>
-  ["eq", "ne", "lt", "le", "gt", "ge", "like", "not_like", "in", "not_in", "is_null", "not_null"].map((op) => ({
-    value: op,
-    label: {
-      eq: "=",
-      ne: "<>",
-      lt: "<",
-      le: "<=",
-      gt: ">",
-      ge: ">=",
-      like: "LIKE",
-      not_like: "NOT LIKE",
-      in: "IN",
-      not_in: "NOT IN",
-      is_null: "IS NULL",
-      not_null: "IS NOT NULL"
-    }[op]
-  }))
-);
+function filterSize(filter: GoBrowseFilter): number {
+  return 1 + (filter.children || []).reduce((total, child) => total + filterSize(child), 0);
+}
+function normalizedFilter(filter: GoBrowseFilter): GoBrowseFilter {
+  if (["and", "or"].includes(filter.op))
+    return {
+      op: filter.op,
+      children: (filter.children || [])
+        .map(normalizedFilter)
+        .filter((child) => !["and", "or"].includes(child.op) || !!child.children?.length)
+    };
+  return {
+    op: filter.op,
+    column: filter.column,
+    values: ["is_null", "not_null"].includes(filter.op) ? undefined : filter.values
+  };
+}
 function mode(structured: boolean) {
   if (locked.value) return;
   if (structured) {
@@ -53,25 +52,11 @@ function mode(structured: boolean) {
     draft.value.filter = { op: "and", children: [] };
   } else draft.value.filter = undefined;
 }
-function addCondition() {
-  if (locked.value || !draft.value.filter || !columns.value.length) return;
-  draft.value.filter.children!.push({ op: "eq", column: columns.value[0]!.value, values: [""] });
-}
-function values(condition: GoBrowseFilter, value: string) {
-  condition.values = ["in", "not_in"].includes(condition.op) ? value.split("\n") : [value];
-}
 function submit(clear = false) {
   if (locked.value || !supported.value || !props.query.browseObject) return;
   const filter = clear ? undefined : draft.value.filter;
-  const normalized = filter?.children?.length
-    ? {
-        ...filter,
-        children: filter.children.map((child) => ({
-          ...child,
-          values: ["is_null", "not_null"].includes(child.op) ? undefined : child.values
-        }))
-      }
-    : undefined;
+  const normalized = filter?.children?.length ? normalizedFilter(filter) : undefined;
+  const appliedFilter = normalized?.children?.length ? normalized : undefined;
   if (clear) {
     draft.value.where = "";
     draft.value.filter = undefined;
@@ -80,7 +65,7 @@ function submit(clear = false) {
     schema: props.query.browseObject.schema,
     table: props.query.browseObject.name,
     where: clear ? "" : draft.value.where,
-    filter: normalized,
+    filter: appliedFilter,
     sort: draft.value.sort.map((item) => ({ ...item })),
     page_size: draft.value.page_size,
     offset: 0
@@ -200,47 +185,13 @@ const total = computed(() =>
           />
         </div>
         <template v-if="draft.filter">
-          <div class="flex items-center gap-2">
-            <USelect
-              v-model="draft.filter.op"
-              :items="['and', 'or']"
-              :aria-label="t('Chen.GoBrowseJoin')"
-              :disabled="locked"
-            />
-            <UButton
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :label="t('Chen.GoBrowseAdd')"
-              :disabled="locked || !columns.length || (draft.filter.children?.length || 0) >= 50"
-              @click="addCondition"
-            />
-          </div>
-          <div
-            v-for="(condition, index) in draft.filter.children"
-            :key="index"
-            class="flex flex-wrap items-center gap-2"
-          >
-            <USelect v-model="condition.column" :items="columns" :aria-label="t('Chen.Column')" :disabled="locked" />
-            <USelect v-model="condition.op" :items="operators" :aria-label="t('Chen.Operator')" :disabled="locked" />
-            <UTextarea
-              v-if="!['is_null', 'not_null'].includes(condition.op)"
-              :model-value="condition.values?.join('\n') || ''"
-              :rows="1"
-              :aria-label="t('Chen.Value')"
-              :disabled="locked"
-              @update:model-value="values(condition, $event)"
-            />
-            <UButton
-              icon="i-lucide-x"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :aria-label="t('Chen.GoBrowseRemove')"
-              :disabled="locked"
-              @click="draft.filter.children!.splice(index, 1)"
-            />
-          </div>
+          <GoBrowseCondition
+            v-model:condition="draft.filter"
+            :columns="columns"
+            :locked="locked"
+            :depth="0"
+            :can-add="filterSize(draft.filter) < 48"
+          />
           <p class="text-muted">{{ t("Chen.GoBrowseValuesHint") }}</p>
         </template>
         <template v-else>
@@ -257,11 +208,19 @@ const total = computed(() =>
         <div class="flex flex-wrap items-center gap-2">
           <span>{{ t("Chen.GoBrowseSort") }}</span>
           <USelect
-            :model-value="draft.sort[0]?.column || ''"
-            :items="[{ label: t('Chen.GoBrowseDefaultSort'), value: '' }, ...columns]"
+            :model-value="
+              draft.sort.length ? columns.findIndex((column) => column.value === draft.sort[0]?.column) + 1 : 0
+            "
+            :items="[
+              { label: t('Chen.GoBrowseDefaultSort'), value: 0 },
+              ...columns.map((column, index) => ({ label: column.label, value: index + 1 }))
+            ]"
             :aria-label="t('Chen.GoBrowseSort')"
             :disabled="locked"
-            @update:model-value="(value) => (draft.sort = value ? [{ column: value, desc: false }] : [])"
+            @update:model-value="
+              (value) =>
+                (draft.sort = value && columns[value - 1] ? [{ column: columns[value - 1]!.value, desc: false }] : [])
+            "
           />
           <USelect
             v-if="draft.sort.length"
