@@ -194,6 +194,7 @@ describe("desktop compatibility during startup", () => {
 
       await expect(auth.bootstrapPersistedSession()).resolves.toBe(false);
       expect(mocks.desktopInvoke.mock.calls).toEqual([
+        ["client_lock_state"],
         ["bootstrap_auth_session", { site: "https://site.test/prefix", sessionId: "account-1" }]
       ]);
       expect(mocks.store.setUserData).not.toHaveBeenCalled();
@@ -210,7 +211,9 @@ describe("desktop compatibility during startup", () => {
         compatibilityConfirmationId: 1
       });
       expect(mocks.desktopInvoke.mock.calls.map(([command]) => command)).toEqual([
+        "client_lock_state",
         "bootstrap_auth_session",
+        "client_lock_state",
         "bootstrap_auth_session",
         "set_api_session"
       ]);

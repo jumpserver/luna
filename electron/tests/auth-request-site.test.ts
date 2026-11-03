@@ -57,7 +57,11 @@ function setupFreshToken(exchangeToken: () => Promise<Record<string, unknown>>) 
       }
     },
     refreshingTokens: new Map(),
+    sessions: new Map(),
+    recordSessionValidation() {},
     scheduleSessionCheck() {},
+    lockState: () => ({ locked: false }),
+    lockRevision: 0,
     exchangeToken,
     emitEvent: (...args: unknown[]) => events.push(args),
     persistTokens: async () => {
@@ -136,15 +140,16 @@ test("shared invalid refresh emits one account-scoped expiration event", async (
 
   const first = auth.freshToken("https://jumpserver.test", "account");
   const second = auth.freshToken("https://jumpserver.test", "account");
-  rejectExchange(oauthError("invalid_grant", "idle_timeout"));
+  rejectExchange(oauthError("invalid_grant", "absolute_timeout"));
 
   const results = await Promise.allSettled([first, second]);
   assert.ok(results.every((result) => result.status === "rejected"));
   assert.equal(auth.tokens.account, undefined);
   assert.equal(persisted(), 1);
-  assert.equal(events.length, 1);
+  assert.equal(events.length, 2);
+  assert.equal(events[1][0], "client-lock-changed");
   assert.equal(events[0][0], "auth-session-expired");
-  assert.deepEqual(JSON.parse(JSON.stringify(events[0][1])), { sessionId: "account", reason: "idle_timeout" });
+  assert.deepEqual(JSON.parse(JSON.stringify(events[0][1])), { sessionId: "account", reason: "absolute_timeout" });
   assert.equal(events[0][2], "main");
   assert.equal(auth.refreshingTokens.size, 0);
 });

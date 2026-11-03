@@ -149,6 +149,11 @@ export interface PublicSettings {
 
 let lastAuthFailureAt = 0;
 let webAuthFailurePromise: Promise<void> | null = null;
+let lockSignOutUntil = 0;
+
+export function deferAuthFailureUntil(at: number) {
+  if (Number.isFinite(at)) lockSignOutUntil = Math.max(lockSignOutUntil, Math.min(at, Date.now() + 5000));
+}
 
 interface WebSessionProfile {
   id: string;
@@ -260,6 +265,7 @@ const isAuthFailure = (error: unknown) => {
 
 const handleApiAuthFailure = () => {
   if (import.meta.server) return;
+  if (lockSignOutUntil > Date.now()) return;
 
   const userInfoStore = useUserInfoStore();
   if (!userInfoStore.loggedIn) return;
@@ -356,6 +362,9 @@ async function webApiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 423 && data?.code === "web_session_locked") {
+      globalThis.dispatchEvent?.(new Event("jms:web-session-locked"));
+    }
     throw new ApiRequestError(response.status, data, response.headers.get("content-type") || "");
   }
 

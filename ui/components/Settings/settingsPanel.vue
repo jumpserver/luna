@@ -44,6 +44,15 @@ const sectionDefs = computed(() => {
       authenticatedOnly: false
     },
     {
+      key: "security" as const,
+      label: t("Setting.Security"),
+      description: t("Setting.SecurityDescription"),
+      icon: "i-lucide-shield-check",
+      routeName: "setting-security",
+      desktopOnly: true,
+      authenticatedOnly: true
+    },
+    {
       key: "appearance" as const,
       label: t("Common.Appearance"),
       description: t("Setting.AppearanceDescription"),
@@ -126,12 +135,12 @@ watch(
   (value) => {
     if (!import.meta.client || value) return;
 
-    if (props.mode === "inline" && inlineActiveSection.value === "user") {
+    if (props.mode === "inline" && ["user", "security"].includes(inlineActiveSection.value)) {
       inlineActiveSection.value = "general";
       return;
     }
 
-    if (props.mode === "route" && route.path.startsWith("/setting/user")) {
+    if (props.mode === "route" && ["/setting/user", "/setting/security"].some((path) => route.path.startsWith(path))) {
       void navigateTo(localePath({ name: "setting-general" }), { replace: true });
     }
   },

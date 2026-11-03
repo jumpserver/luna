@@ -79,7 +79,12 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
   };
   auth.fetchSite = async () => {
     calls.push("oauth-config");
-    return new Response('{"client_id":"test-client"}');
+    return new Response(
+      JSON.stringify({
+        client_id: "test-client",
+        client_login_policy: { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
+      })
+    );
   };
   auth.exchangeToken = async () => {
     calls.push("token-exchange");

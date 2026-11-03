@@ -209,8 +209,8 @@ export const useAuthSession = () => {
     if (options.showToast !== false) {
       toast.add({
         title: t("Login.LoginSuccess"),
-        color: "primary",
-        icon: "line-md:check-all",
+        color: "success",
+        icon: "i-lucide-circle-check",
         progress: true
       });
     }
@@ -432,6 +432,10 @@ export const useAuthSession = () => {
       return await bootstrapWebCookieSession();
     }
 
+    // A reloaded renderer must keep the main-process lock and its live login.
+    const lock = await desktopInvoke<{ locked: boolean }>("client_lock_state");
+    if (lock?.locked) return restored;
+
     const persistedAccount = getPersistedAccount();
     if (!persistedAccount) {
       console.info("bootstrap auth session skipped: missing persisted account");
@@ -498,6 +502,7 @@ export const useAuthSession = () => {
       }, 5000);
       return false;
     } catch (error) {
+      if (String(error).includes("client_locked")) return restored;
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);
       if (restored) await promptDesktopLogin();
@@ -522,7 +527,7 @@ export const useAuthSession = () => {
     if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
     if (sessionId !== currentAccountId.value) return false;
 
-    if (!alreadyExpired) expiredSessionNotice.value = sessionId;
+    if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
     userInfoStore.setUserLoggedIn(false);
     useEventBus().emit("clearAssets", undefined);
     return true;
@@ -537,7 +542,7 @@ export const useAuthSession = () => {
       account.clientLoginSession,
       String(unref(nuxtApp.$i18n.locale) || "en")
     );
-    return t(message.key, message.params);
+    return message ? t(message.key, message.params) : "";
   });
   const dismissExpiredSessionNotice = async (login = false) => {
     const accountId = expiredSessionNotice.value;

@@ -1,5 +1,6 @@
 import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
 import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import type { ClientNoticeSnapshot } from "~/types";
 import type {
   FaceEngineConfig,
   FaceEngineStatus,
@@ -86,6 +87,14 @@ interface ElectronDesktopApi {
 }
 
 const electronApi = () => (globalThis as typeof globalThis & { __JMS_DESKTOP__?: ElectronDesktopApi }).__JMS_DESKTOP__;
+
+interface ClientNoticeOverlayBridge {
+  listen(handler: (snapshot: ClientNoticeSnapshot) => void): () => void;
+  dismiss(id: string): void;
+}
+
+export const clientNoticeOverlay = () =>
+  (globalThis as typeof globalThis & { __JMS_CLIENT_NOTICES__?: ClientNoticeOverlayBridge }).__JMS_CLIENT_NOTICES__;
 
 const requireElectron = () => {
   const electron = electronApi();

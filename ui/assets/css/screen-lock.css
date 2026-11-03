@@ -1,0 +1,226 @@
+.screen-lock-surface {
+  --screen-lock-bg: var(--app-surface-canvas);
+  --screen-lock-panel: var(--app-surface-card);
+  --screen-lock-input-bg: var(--app-surface-input);
+  --screen-lock-text: var(--app-text-primary);
+  --screen-lock-muted: var(--app-text-muted);
+  --screen-lock-warning: var(--ui-warning);
+  --screen-lock-border: var(--app-border-subtle);
+  --screen-lock-accent: var(--ui-primary);
+  --screen-lock-on-accent: var(--app-accent-foreground);
+  --screen-lock-radius: var(--app-radius);
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 96px 24px calc(96px + 100svh / 3);
+  color: var(--screen-lock-text);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--screen-lock-accent) 14%, var(--screen-lock-bg)),
+    color-mix(in srgb, var(--screen-lock-accent) 5%, var(--screen-lock-bg)) 50%,
+    color-mix(in srgb, var(--screen-lock-accent) 10%, var(--screen-lock-bg))
+  );
+}
+.screen-lock-brand {
+  position: absolute;
+  top: 40px;
+  left: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--screen-lock-text);
+}
+.screen-lock-brand-mark {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  color: var(--screen-lock-accent);
+}
+.screen-lock-security-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  position: absolute;
+  top: 48px;
+  right: 48px;
+  color: var(--screen-lock-muted);
+  font-size: 12px;
+}
+.screen-lock-security-indicator::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--screen-lock-accent);
+}
+.screen-lock-content {
+  width: min(100%, 420px);
+}
+.screen-lock-form-card {
+  color: var(--screen-lock-text);
+  background: color-mix(in srgb, var(--screen-lock-accent) 3%, var(--screen-lock-panel));
+  border: 1px solid color-mix(in srgb, var(--screen-lock-accent) 18%, var(--screen-lock-border));
+  border-radius: calc(var(--screen-lock-radius) + 8px);
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--screen-lock-text) 8%, transparent);
+}
+.screen-lock-form-card h1 {
+  margin: 0;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.screen-lock-description {
+  margin: 0;
+  color: var(--screen-lock-muted);
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.screen-lock-unset-message {
+  margin: 0;
+  color: var(--screen-lock-warning);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.screen-lock-heading {
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.screen-lock-status-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  flex-shrink: 0;
+  color: var(--screen-lock-accent);
+}
+.screen-lock-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.screen-lock-header .screen-lock-description {
+  margin: 8px 0 0;
+  line-height: 20px;
+}
+.screen-lock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0;
+}
+.screen-lock-user {
+  margin: 0;
+  color: var(--screen-lock-text);
+  font-size: 14px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.screen-lock-user-value {
+  margin: 4px 0 0;
+  line-height: 20px;
+  font-weight: 500;
+}
+.screen-lock-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+.screen-lock-label {
+  margin: 0;
+  color: var(--screen-lock-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.screen-lock-form-card .screen-lock-input {
+  height: 32px;
+  padding-block: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  border: 1px solid var(--screen-lock-border);
+  border-radius: 4px;
+  color: var(--screen-lock-text);
+  background: var(--screen-lock-input-bg);
+  box-shadow: 0 0 0 1000px var(--screen-lock-input-bg) inset !important;
+  -webkit-text-fill-color: var(--screen-lock-text);
+  caret-color: var(--screen-lock-text);
+  opacity: 1;
+  outline: none;
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+.screen-lock-form-card .screen-lock-input:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--screen-lock-accent) 45%, var(--screen-lock-border));
+  background: var(--screen-lock-input-bg);
+}
+.screen-lock-form-card .screen-lock-input:not(:disabled):focus {
+  border-color: var(--screen-lock-accent);
+}
+.screen-lock-form-card .screen-lock-unlock-button {
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px 12px;
+  line-height: 18px;
+  justify-content: center;
+  border-color: transparent;
+  border-radius: 4px;
+  background: var(--screen-lock-accent);
+  color: var(--screen-lock-on-accent);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 150ms;
+}
+.screen-lock-form-card .screen-lock-unlock-button:not(:disabled):hover {
+  background: var(--screen-lock-accent);
+}
+.screen-lock-form-card .screen-lock-unlock-button:disabled,
+.screen-lock-form-card .screen-lock-unlock-button:disabled:hover {
+  background: var(--screen-lock-accent);
+  border-color: transparent;
+  color: var(--screen-lock-on-accent);
+  opacity: 0.5;
+}
+.screen-lock-countdown {
+  text-align: left;
+}
+.screen-lock-countdown p {
+  color: var(--screen-lock-muted);
+  margin: 0;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .screen-lock-surface {
+    padding: 88px 20px calc(88px + 100svh / 3);
+  }
+  .screen-lock-brand {
+    top: 28px;
+    left: 24px;
+    font-size: 18px;
+    gap: 10px;
+  }
+  .screen-lock-brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .screen-lock-security-indicator {
+    top: 38px;
+    right: 24px;
+  }
+}
+@media (max-width: 400px) {
+  .screen-lock-security-indicator {
+    display: none;
+  }
+}
