@@ -513,6 +513,19 @@ async function loadRows(
     const page = await api.rows(id, offset, limit);
     if (isCurrent(query) && generation === query.loadGeneration) {
       const changedResult = query.rows?.id !== page.id;
+      const previousBrowse = query.rows?.browse;
+      const browseCount = query.browseCount;
+      const browseRequest = execution?.id === query.execution?.id ? query.executionBrowse : undefined;
+      // Carry a server count only across pages of the same applied query. Refresh and new filters invalidate it.
+      const keepBrowseCount =
+        browseCount &&
+        browseRequest &&
+        browseRequest.source_result_id === query.rows?.id &&
+        browseCount.source_result_id === query.rows?.id &&
+        (browseRequest.offset === undefined || browseRequest.offset === page.browse?.offset) &&
+        (browseRequest.page_size === undefined || browseRequest.page_size === page.browse?.page_size) &&
+        ((browseRequest.offset !== undefined && browseRequest.offset !== previousBrowse?.offset) ||
+          (browseRequest.page_size !== undefined && browseRequest.page_size !== previousBrowse?.page_size));
       if (page.query_page?.mode !== "database" && page.id !== query.cachedResult?.id) query.cachedResult = undefined;
       if (
         page.browse?.supported &&
@@ -547,7 +560,8 @@ async function loadRows(
       }
       query.loadMoreFailed = false;
       if (changedResult) {
-        query.browseCount = null;
+        query.browseCount =
+          page.browse?.supported && keepBrowseCount ? { ...browseCount, source_result_id: page.id } : null;
         query.queryCount =
           page.query_page?.mode === "database" &&
           page.query_page.scope_id &&

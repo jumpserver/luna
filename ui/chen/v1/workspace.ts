@@ -98,7 +98,18 @@ export interface QueryWorkspaceTab {
   error: string;
   closed: boolean;
 }
-export type ObjectWorkspaceSection = "data" | "structure" | "ddl" | "diagram";
+export type ObjectWorkspaceSection =
+  | "data"
+  | "structure"
+  | "basic"
+  | "columns"
+  | "indexes"
+  | "foreign_keys"
+  | "constraints"
+  | "primary_key"
+  | "defaults"
+  | "ddl"
+  | "diagram";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";

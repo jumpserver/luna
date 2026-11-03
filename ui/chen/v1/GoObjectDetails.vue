@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
@@ -9,6 +9,7 @@ const props = defineProps<{
   sessionId: string;
   object: GoCatalogObject;
   ready: boolean;
+  visible?: boolean;
   canCopy: boolean;
   mode?: "structure" | "ddl";
   detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults" | "constraints";
@@ -86,7 +87,7 @@ const labels: Record<string, string> = {
 let controller: AbortController | undefined;
 let ddlController: AbortController | undefined;
 async function load() {
-  if (!props.ready || busy.value) return;
+  if (!props.ready || props.visible === false || active.value === "basic" || busy.value) return;
   controller?.abort();
   controller = new AbortController();
   const current = controller;
@@ -107,7 +108,7 @@ async function load() {
   }
 }
 async function loadDdl() {
-  if (!props.ready || ddlBusy.value) return;
+  if (!props.ready || props.visible === false || ddlBusy.value) return;
   ddlController?.abort();
   ddlController = new AbortController();
   const current = ddlController;
@@ -123,21 +124,17 @@ async function loadDdl() {
   }
 }
 watch(
-  () => [active.value, props.ready],
+  () => [active.value, props.ready, props.visible],
   () => {
-    if (active.value === "ddl" && props.ready && !ddl.value && !ddlError.value) void loadDdl();
-  }
+    if (!props.ready || props.visible === false) return;
+    if (active.value === "ddl" && !ddl.value && !ddlError.value) void loadDdl();
+    else if (active.value !== "ddl" && active.value !== "basic" && !data.value && !error.value) void load();
+  },
+  { immediate: true }
 );
 function preventCopy(event: ClipboardEvent) {
   if (!props.canCopy) event.preventDefault();
 }
-onMounted(() => (props.mode === "ddl" ? loadDdl() : load()));
-watch(
-  () => props.ready,
-  (ready) => {
-    if (ready && props.mode !== "ddl" && !data.value && !error.value) void load();
-  }
-);
 onBeforeUnmount(() => {
   controller?.abort();
   ddlController?.abort();
@@ -145,7 +142,10 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="flex min-h-0 flex-1 flex-col" data-chen-object-details @copy="preventCopy">
-    <div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-default px-3 py-2">
+    <div
+      v-if="active !== 'basic'"
+      class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-3 py-1"
+    >
       <UButton
         v-for="item in detailSection ? [] : sections"
         :key="item.key"
@@ -182,7 +182,12 @@ onBeforeUnmount(() => {
     <p v-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
     <p v-if="active === 'ddl' && ddlError" role="alert" class="px-3 py-2 text-xs text-error">{{ ddlError }}</p>
     <p v-if="sectionError" role="status" class="px-3 py-2 text-xs text-warning">{{ sectionError }}</p>
-    <p v-if="current && !current.supported" class="px-3 py-2 text-xs text-muted">{{ t("Chen.NotSupported") }}</p>
+    <p
+      v-if="(current && !current.supported) || (data && active !== 'basic' && active !== 'ddl' && !current)"
+      class="px-3 py-2 text-xs text-muted"
+    >
+      {{ t("Chen.NotSupported") }}
+    </p>
     <p v-if="data?.truncated || current?.truncated" class="px-3 py-2 text-xs text-warning">
       {{ t("Chen.GoV1MetadataPartial") }}
     </p>
