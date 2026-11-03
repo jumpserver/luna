@@ -36,6 +36,6 @@
     "electron": "44.0.0",
     "electron-builder": "26.15.3",
     "tsx": "^4.23.13",
-    "vite": "8.1.5"
+    "vite": "8.1.6"
   }
 }
