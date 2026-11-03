@@ -260,7 +260,18 @@ const editorResize = usePaneResize({
   enabled: () => props.visible && !maximized.value
 });
 const canExplain = computed(() =>
-  ["mysql", "mariadb", "postgresql", "clickhouse", "oceanbase-mysql"].includes(props.session.dialect)
+  [
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "clickhouse",
+    "oceanbase-mysql",
+    "sqlserver",
+    "oracle",
+    "dameng",
+    "oceanbase-oracle",
+    "db2"
+  ].includes(props.session.dialect)
 );
 const shownPlan = computed(() => props.query.plan || props.query.planAttempt);
 const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
@@ -510,15 +521,45 @@ defineExpose({
           />
         </span>
       </UTooltip>
-      <UTooltip :text="t(cancellationUnsupported ? 'Chen.GoV1CancelUnsupported' : 'Chen.GoV1CancelHint')">
+      <UTooltip
+        :text="
+          t(
+            cancellationUnsupported
+              ? 'Chen.GoV1CancelUnsupported'
+              : session.cancellation_mode === 'connection'
+                ? 'Chen.GoV1InterruptConnectionHint'
+                : session.cancellation_mode === 'statement_reconnect'
+                  ? 'Chen.GoV1CancelReconnectHint'
+                  : 'Chen.GoV1CancelHint'
+          )
+        "
+      >
         <span class="inline-flex" :tabindex="cancellationUnsupported ? 0 : undefined">
           <UButton
             icon="i-lucide-square"
-            :label="t(waitingReview ? 'Chen.GoV1CancelReview' : 'Chen.GoV1Cancel')"
+            :label="
+              t(
+                waitingReview
+                  ? 'Chen.GoV1CancelReview'
+                  : session.cancellation_mode === 'connection'
+                    ? 'Chen.GoV1InterruptConnection'
+                    : 'Chen.GoV1Cancel'
+              )
+            "
             size="xs"
             color="neutral"
             variant="soft"
-            :title="t(cancellationUnsupported ? 'Chen.GoV1CancelUnsupported' : 'Chen.GoV1CancelHint')"
+            :title="
+              t(
+                cancellationUnsupported
+                  ? 'Chen.GoV1CancelUnsupported'
+                  : session.cancellation_mode === 'connection'
+                    ? 'Chen.GoV1InterruptConnectionHint'
+                    : session.cancellation_mode === 'statement_reconnect'
+                      ? 'Chen.GoV1CancelReconnectHint'
+                      : 'Chen.GoV1CancelHint'
+              )
+            "
             :disabled="!executionCanCancel(query.execution, session.can_cancel)"
             @click="emit('cancel')"
           />
@@ -892,6 +933,7 @@ defineExpose({
           :api="api"
           :can-copy="session.permissions.can_copy"
           :can-paste="session.permissions.can_paste"
+          :can-cancel="executionCanCancel(query.execution, session.can_cancel)"
           :read-only="query.kind === 'preview'"
           :online="canRun"
           :visible="visible && maximized !== 'results'"
@@ -900,6 +942,9 @@ defineExpose({
           @explain="explain"
           @scope="scope = $event"
           @editor-error="editorError = $event"
+          @cancel="emit('cancel')"
+          @open-snippets="openSnippets"
+          @save-snippet="openSaveSnippet"
         />
       </div>
       <div

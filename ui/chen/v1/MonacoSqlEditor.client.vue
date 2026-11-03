@@ -17,6 +17,7 @@ const props = defineProps<{
   api: ChenGoApi;
   canCopy: boolean;
   canPaste: boolean;
+  canCancel?: boolean;
   readOnly?: boolean;
   online?: boolean;
   visible?: boolean;
@@ -27,6 +28,9 @@ const emit = defineEmits<{
   explain: [sql: string, version: number];
   scope: [mode: "selection" | "current" | "empty"];
   editorError: [message: string];
+  cancel: [];
+  openSnippets: [];
+  saveSnippet: [];
 }>();
 const { t } = useI18n();
 const host = shallowRef<HTMLElement | null>(null);
@@ -295,6 +299,25 @@ function clipboard(event: Event) {
 }
 function keydown(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
+  if (!event.isComposing && !event.shiftKey && !event.altKey && props.visible !== false) {
+    if (event.ctrlKey && !event.metaKey && ["r", "s"].includes(key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (props.online !== false && !props.readOnly) {
+        if (key === "r") emit("openSnippets");
+        else emit("saveSnippet");
+      }
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && ["d", "l"].includes(key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (key === "d") {
+        if (props.canCancel) emit("cancel");
+      } else format();
+      return;
+    }
+  }
   const copy = (event.ctrlKey || event.metaKey) && ["c", "x"].includes(key);
   const paste = ((event.ctrlKey || event.metaKey) && key === "v") || (event.shiftKey && key === "insert");
   if ((copy && !props.canCopy) || (paste && !props.canPaste)) {

@@ -50,7 +50,17 @@ let generation = 0;
 const paged = computed(() => ["tables", "views", "indexes"].includes(section.value));
 const columns = computed(() =>
   section.value === "indexes"
-    ? ["unique", "method", "definition", "column", "expression", "position", "direction", "prefix_length"]
+    ? [
+        "unique",
+        "method",
+        "definition",
+        "column",
+        "expression",
+        "position",
+        "direction",
+        "prefix_length",
+        ...(data.value?.items.some((row) => row.fields.included) ? ["included"] : [])
+      ]
     : [
         "estimated_rows",
         "data_bytes",
@@ -60,7 +70,10 @@ const columns = computed(() =>
         "engine",
         "character_set",
         "collation",
-        "comment"
+        "comment",
+        ...["tablespace", "status", "average_row_length", "sample_size", "created"].filter((key) =>
+          data.value?.items.some((row) => row.fields[key])
+        )
       ]
 );
 const labels: Record<string, string> = {
@@ -89,7 +102,13 @@ const labels: Record<string, string> = {
   expression: "Expression",
   position: "Position",
   direction: "Direction",
-  prefix_length: "PrefixLength"
+  prefix_length: "PrefixLength",
+  included: "Included",
+  tablespace: "Tablespace",
+  status: "Status",
+  average_row_length: "AverageRowLength",
+  sample_size: "SampleSize",
+  created: "Created"
 };
 function label(key: string) {
   return t(`Chen.GoOverview${labels[key] || key}`);
@@ -257,7 +276,20 @@ onBeforeUnmount(stop);
         <UButton
           v-for="item in [
             ...overviewSections,
-            ...(['postgresql', 'mysql', 'mariadb', 'oceanbase-mysql'].includes(dialect) ? ['diagram' as const] : [])
+            ...([
+              'postgresql',
+              'mysql',
+              'mariadb',
+              'oceanbase-mysql',
+              'sqlserver',
+              'oracle',
+              'dameng',
+              'oceanbase-oracle',
+              'db2',
+              'clickhouse'
+            ].includes(dialect)
+              ? ['diagram' as const]
+              : [])
           ]"
           :key="item"
           :label="item === 'diagram' ? t('Chen.GoDiagramTitle') : label(item)"
