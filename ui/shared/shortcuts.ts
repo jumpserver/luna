@@ -3,13 +3,16 @@ export const shortcutDefinitions = [
   { id: "previousTab", default: "Alt+Shift+ArrowLeft", scope: "workspace" },
   { id: "nextTab", default: "Alt+Shift+ArrowRight", scope: "workspace" },
   { id: "closeTab", default: "Alt+Shift+KeyW", desktopDefault: "Mod+KeyW", scope: "workspace" },
+  { id: "cloneTab", default: "Alt+Shift+KeyD", scope: "workspace" },
+  { id: "splitVertical", default: "Mod+Shift+KeyO", macDefault: "Mod+KeyD", scope: "workspace" },
+  { id: "splitHorizontal", default: "Mod+Shift+KeyE", macDefault: "Mod+Shift+KeyD", scope: "workspace" },
   { id: "focus", default: "Mod+Shift+KeyP", scope: "workspace" },
   { id: "fullscreen", default: "Mod+Shift+KeyF", scope: "workspace" },
   { id: "rightPanel", default: "Mod+Alt+Digit2", scope: "application" },
   { id: "clipboardHistory", default: "Mod+Shift+KeyH", scope: "application", desktopOnly: true },
   { id: "lockClient", default: "Mod+KeyL", scope: "client", desktopOnly: true },
   { id: "terminalAi", default: "Mod+KeyK", scope: "terminal" },
-  { id: "localShell", default: "Mod+KeyT", scope: "application", desktopOnly: true }
+  { id: "newSession", default: "Mod+KeyT", scope: "application", desktopOnly: true }
 ] as const;
 
 export type ShortcutId = (typeof shortcutDefinitions)[number]["id"];
@@ -50,8 +53,9 @@ export function isShortcutBinding(value: unknown): value is string {
 export function normalizeShortcutOverrides(value: unknown): ShortcutOverrides {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const result: ShortcutOverrides = {};
+  const stored = value as Record<string, unknown>;
   for (const { id } of shortcutDefinitions) {
-    const binding = (value as Record<string, unknown>)[id];
+    const binding = id === "newSession" && !Object.hasOwn(stored, id) ? stored.localShell : stored[id];
     if (binding === null) result[id] = null;
     else if (isShortcutBinding(binding)) result[id] = binding;
   }
@@ -85,6 +89,7 @@ export function matchesShortcut(event: ShortcutKeyEvent, binding: string, mac: b
 
 export function defaultShortcut(id: ShortcutId, environment: ShortcutEnvironment): string {
   const definition = shortcutDefinitions.find((item) => item.id === id)!;
+  if (environment.mac && "macDefault" in definition) return definition.macDefault;
   return environment.desktop && "desktopDefault" in definition ? definition.desktopDefault : definition.default;
 }
 
@@ -117,6 +122,7 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     "Ctrl+KeyV",
     "Ctrl+Shift+KeyV",
     "Ctrl+KeyZ",
+    "Ctrl+KeyD",
     `${primary}+KeyC`,
     `${primary}+KeyV`,
     `${primary}+KeyX`,
@@ -151,13 +157,13 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     `${primary}+Shift+KeyJ`,
     `${primary}+Enter`,
     `${primary}+Shift+Enter`,
-    `${primary}+KeyB`,
-    `${primary}+KeyD`
+    `${primary}+KeyB`
   ];
   if (reserved.includes(key)) return true;
+  if (key === `${primary}+KeyD`) return !environment.mac || id !== "splitVertical";
   if (key === `${primary}+KeyL`) return !environment.desktop || id !== "lockClient";
   if (key === `${primary}+KeyW`) return !environment.desktop || id !== "closeTab";
-  if (key === `${primary}+KeyT`) return !environment.desktop || id !== "localShell";
+  if (key === `${primary}+KeyT`) return !environment.desktop || id !== "newSession";
   // Digits remain a group; 1/2 also belong to the embedded editor's pane selector.
   return key.startsWith(`${primary}+`) && /^Digit[1-9]$/.test(key.slice(primary.length + 1));
 }

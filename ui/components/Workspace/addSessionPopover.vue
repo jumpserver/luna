@@ -3,6 +3,9 @@ import type { AssetItem, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const open = ref(false);
+useEventBus().on("workspaceNewSession", () => {
+  open.value = true;
+});
 const search = ref("");
 const loading = ref(false);
 const results = ref<AssetItem[]>([]);
@@ -69,7 +72,7 @@ watch(open, (value) => {
 
 <template>
   <UPopover v-model:open="open" :content="{ align: 'start', side: 'bottom', sideOffset: 8 }" :ui="{ content: 'p-0' }">
-    <UTooltip :text="t('AddSession.NewConnection')" :delay-duration="150">
+    <UTooltip :text="t('AddSession.NewConnection')" :kbds="shortcuts.kbds('newSession')" :delay-duration="150">
       <button
         type="button"
         data-workspace-tour="add-session"
@@ -145,9 +148,6 @@ watch(open, (value) => {
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm text-highlighted">{{ t("AddSession.LocalShell") }}</span>
                 <span class="block truncate text-[11px] text-muted">{{ t("AddSession.LocalShellHint") }}</span>
-              </span>
-              <span class="flex shrink-0 items-center gap-px">
-                <UKbd v-for="(key, index) in shortcuts.kbds('localShell')" :key="index" :value="key" size="sm" />
               </span>
             </button>
           </template>

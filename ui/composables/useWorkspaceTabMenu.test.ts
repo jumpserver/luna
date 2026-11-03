@@ -110,6 +110,7 @@ it.each(["reconnect", "clone", "pane"])("renews the token and bound ticket for %
     orgId: "asset-org"
   });
   const payload = action === "clone" ? openSession.mock.calls[0]![1].payload : updateSessionPayload.mock.calls[0]![1];
+  if (action === "clone") expect(openSession.mock.calls[0]![1]).toMatchObject({ newTab: true });
   expect(payload).toMatchObject({
     id: "new-token",
     value: "new-value",

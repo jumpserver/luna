@@ -23,7 +23,7 @@ const shortcuts = useAppShortcuts();
 const { activeWorkspaceMode, uiWorkspaceMode, isUtilityRoute, isVideoPlayerRoute } = useWorkspaceMode();
 const { exitFocusMode, focusMode, openLocalShell, registerSessionDisposer } = useWorkspaceTabs();
 useWorkspaceFullscreenShortcuts();
-useWorkspaceSessionShortcuts(() => activeWorkspaceMode.value === "assets");
+useWorkspaceSessionShortcuts(() => activeWorkspaceMode.value === "assets", openNewSession);
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
@@ -133,12 +133,10 @@ const stopEscapeHold = (event: KeyboardEvent) => {
   if (event.key === "Escape") clearEscapeHold();
 };
 
-const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
-  if (shortcuts.blocked(event) || !shortcuts.matches("localShell", event)) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  if (!event.repeat) void openAssetWorkspace(openLocalShell);
-};
+async function openNewSession() {
+  if (focusMode.value) await exitFocusMode();
+  await openAssetWorkspace(() => useEventBus().emit("workspaceNewSession", undefined));
+}
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
   if (shortcuts.blocked(event)) return;
@@ -161,6 +159,10 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
 };
 
 const handleDesktopMenuCommand = (command: string) => {
+  if (command === "open-new-session") {
+    void openNewSession();
+    return;
+  }
   if (command === "open-local-shell") {
     void openAssetWorkspace(openLocalShell);
     return;
@@ -227,7 +229,6 @@ const syncTrayRecentConnections = () => {
 };
 
 useEventListener(window, "keydown", startEscapeHold, { capture: true });
-useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
 useEventListener(window, "keydown", handleChromeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold, { capture: true });
 useEventListener(window, "blur", clearEscapeHold);

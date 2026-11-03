@@ -26,6 +26,7 @@ type BusEvents = {
   workspaceConnectAsset: AssetItem;
   workspaceQuickConnectAsset: AssetItem;
   workspaceQuickSearch: undefined;
+  workspaceNewSession: undefined;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

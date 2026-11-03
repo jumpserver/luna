@@ -7,6 +7,7 @@ import {
   normalizeShortcutOverrides,
   shortcutAccelerator,
   shortcutBindings,
+  shortcutDefinitions,
   shortcutFromEvent,
   shortcutKeyLabels
 } from "./shortcuts";
@@ -27,7 +28,29 @@ describe("application shortcuts", () => {
   it("keeps runtime defaults and the desktop close alias", () => {
     expect(defaultShortcut("closeTab", web)).toBe("Alt+Shift+KeyW");
     expect(shortcutBindings("closeTab", {}, desktop)).toEqual(["Mod+KeyW", "Alt+Shift+KeyW"]);
-    expect(shortcutBindings("localShell", {}, web)).toEqual([]);
+    expect(shortcutBindings("newSession", {}, web)).toEqual([]);
+    expect(shortcutBindings("newSession", {}, mac)).toEqual(["Mod+KeyT"]);
+    expect(shortcutBindings("cloneTab", {}, mac)).toEqual(["Alt+Shift+KeyD"]);
+  });
+
+  it("uses iTerm/Ghostty split defaults on macOS and Ghostty defaults on other platforms", () => {
+    for (const environment of [web, desktop, mac, { mac: true, desktop: false }]) {
+      expect(defaultShortcut("splitVertical", environment)).toBe(environment.mac ? "Mod+KeyD" : "Mod+Shift+KeyO");
+      expect(defaultShortcut("splitHorizontal", environment)).toBe(
+        environment.mac ? "Mod+Shift+KeyD" : "Mod+Shift+KeyE"
+      );
+      for (const definition of shortcutDefinitions) {
+        const { id } = definition;
+        const binding = defaultShortcut(id, environment);
+        if ("desktopOnly" in definition && !environment.desktop) continue;
+        expect(isReservedShortcut(binding, id, environment), `${id}: ${binding}`).toBe(false);
+        expect(conflictingShortcut(id, binding, {}, environment), `${id}: ${binding}`).toBeUndefined();
+      }
+    }
+    expect(isReservedShortcut("Mod+KeyD", "focus", mac)).toBe(true);
+    expect(isReservedShortcut("Ctrl+KeyD", "splitVertical", mac)).toBe(true);
+    expect(isReservedShortcut("Mod+KeyD", "splitVertical", web)).toBe(true);
+    expect(shortcutBindings("splitVertical", { splitVertical: "Mod+KeyD" }, mac)).toEqual(["Mod+KeyD"]);
   });
 
   it("binds clipboard history only on desktop", () => {
@@ -112,5 +135,13 @@ describe("application shortcuts", () => {
     expect(shortcutKeyLabels("Mod+Alt+Shift+ArrowRight", true)).toEqual(["meta", "alt", "shift", "arrowright"]);
     expect(shortcutAccelerator("focus", { focus: "Mod+Alt+Shift+ArrowRight" }, mac)).toBe("CmdOrCtrl+Alt+Shift+Right");
     expect(shortcutAccelerator("focus", { focus: "Ctrl+Shift+KeyE" }, mac)).toBe("Ctrl+Shift+E");
+  });
+
+  it("preserves customized or disabled new-tab shortcuts from the local-shell action", () => {
+    expect(normalizeShortcutOverrides({ localShell: "Mod+Alt+KeyT" })).toEqual({ newSession: "Mod+Alt+KeyT" });
+    expect(normalizeShortcutOverrides({ localShell: null })).toEqual({ newSession: null });
+    expect(normalizeShortcutOverrides({ localShell: "Mod+Alt+KeyT", newSession: null })).toEqual({ newSession: null });
+    expect(isReservedShortcut("Mod+KeyT", "newSession", mac)).toBe(false);
+    expect(isReservedShortcut("Mod+KeyT", "newSession", web)).toBe(true);
   });
 });

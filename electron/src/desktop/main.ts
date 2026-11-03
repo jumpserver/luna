@@ -811,6 +811,7 @@ function menuLabels() {
       paste: "粘贴",
       selectAll: "全选",
       newLocalShell: "新建本地终端",
+      newSession: "新建连接…",
       focusMode: "纯净模式",
       leftPanel: "左侧面板",
       rightPanel: "右侧面板",
@@ -848,6 +849,7 @@ function menuLabels() {
     paste: "Paste",
     selectAll: "Select All",
     newLocalShell: "New Local Shell",
+    newSession: "New Connection…",
     focusMode: "Focus Mode",
     leftPanel: "Left Panel",
     rightPanel: "Right Panel",
@@ -985,8 +987,12 @@ function buildMenu() {
       label: labels.file,
       submenu: [
         {
+          label: labels.newSession,
+          accelerator: shortcutAccelerator("newSession", shortcutOverrides, shortcutEnvironment),
+          click: () => sendMenuCommand("open-new-session")
+        },
+        {
           label: labels.newLocalShell,
-          accelerator: shortcutAccelerator("localShell", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("open-local-shell")
         },
         { type: "separator" },
@@ -1300,6 +1306,11 @@ async function handleInvoke(event, request) {
     if (args.enabled === true) shortcutRecorders.add(event.sender);
     else shortcutRecorders.delete(event.sender);
     event.sender.setIgnoreMenuShortcuts(args.enabled === true);
+    return null;
+  }
+
+  if (command === "open_new_session") {
+    sendMenuCommand("open-new-session");
     return null;
   }
 

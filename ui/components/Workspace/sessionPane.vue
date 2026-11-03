@@ -2,6 +2,7 @@
 import type { WorkspacePane, WorkspacePaneDropPlacement, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
+import { isWorkspaceTourActive } from "~/composables/useWorkspaceTour";
 import { shouldShowConnectionProgress } from "~/composables/workspaceConnectionProgress";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -9,6 +10,8 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
 const { t } = useI18n();
+const shortcuts = useAppShortcuts();
+const { open: settingsOpen } = useSettingsWindow();
 const colorMode = useColorMode();
 const toast = useToast();
 const userInfoStore = useUserInfoStore();
@@ -272,6 +275,50 @@ function openConnectOtherModal(pane: WorkspacePane) {
   connectOtherModalOpen.value = true;
 }
 
+function handleEmptyPaneKeydown(event: KeyboardEvent, pane: WorkspacePane) {
+  if (event.key !== "Enter") return;
+  if (
+    event.repeat ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    pane.mode !== "empty" ||
+    !isActivePane(pane.id) ||
+    shortcuts.blocked(event)
+  ) {
+    event.preventDefault();
+    return;
+  }
+  if (!event.shiftKey) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openConnectOtherModal(pane);
+}
+
+watch(
+  () =>
+    activeTabId.value === props.tab.id
+      ? props.tab.panes.find((pane) => pane.id === activePaneId.value && pane.mode === "empty")?.id
+      : undefined,
+  async (paneId) => {
+    if (!paneId || typeof document === "undefined") return;
+    await nextTick();
+    if (
+      !isActivePane(paneId) ||
+      connectOtherModalOpen.value ||
+      settingsOpen.value ||
+      isWorkspaceTourActive() ||
+      document.activeElement?.closest('[role="dialog"], [role="alertdialog"]')
+    )
+      return;
+    const button = [...(paneGrid.value?.querySelectorAll<HTMLButtonElement>("[data-connect-current]") || [])].find(
+      (button) => button.dataset.connectCurrent === paneId
+    );
+    if (button?.getClientRects().length) button.focus({ preventScroll: true });
+  },
+  { flush: "post", immediate: true }
+);
+
 function handleConnectOtherAsset(asset: AssetItem) {
   const pane = props.tab.panes.find((item) => item.id === connectOtherPaneId.value);
   if (!pane) return;
@@ -509,7 +556,11 @@ onBeforeUnmount(() => {
           </header>
 
           <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
-            <div v-if="pane.mode === 'empty'" class="grid h-full place-items-center p-6 text-center">
+            <div
+              v-if="pane.mode === 'empty'"
+              class="grid h-full place-items-center p-6 text-center"
+              @keydown="handleEmptyPaneKeydown($event, pane)"
+            >
               <div class="max-w-xs space-y-4">
                 <div
                   class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]"
@@ -524,12 +575,30 @@ onBeforeUnmount(() => {
                     {{ paneSubtitle(pane) }}
                   </div>
                 </div>
-                <div v-if="showEmptyActions(pane)" class="flex items-center justify-center gap-2">
-                  <UButton size="sm" color="primary" variant="soft" @click="void connectCurrentPane(tab, pane)">
+                <div v-if="showEmptyActions(pane)" class="flex flex-wrap items-center justify-center gap-2">
+                  <UButton
+                    size="sm"
+                    color="primary"
+                    variant="soft"
+                    :data-connect-current="pane.id"
+                    aria-keyshortcuts="Enter"
+                    @click="void connectCurrentPane(tab, pane)"
+                  >
                     {{ t("WorkspacePane.ConnectCurrent") }}
+                    <UKbd value="enter" size="sm" />
                   </UButton>
-                  <UButton size="sm" color="neutral" variant="soft" @click="openConnectOtherModal(pane)">
+                  <UButton
+                    size="sm"
+                    color="neutral"
+                    variant="soft"
+                    aria-keyshortcuts="Shift+Enter"
+                    @click="openConnectOtherModal(pane)"
+                  >
                     {{ t("WorkspacePane.ConnectOther") }}
+                    <span class="flex items-center gap-px">
+                      <UKbd value="shift" size="sm" />
+                      <UKbd value="enter" size="sm" />
+                    </span>
                   </UButton>
                 </div>
               </div>
