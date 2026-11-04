@@ -28,7 +28,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
 
-const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
+const isExpanded = computed(() => !props.node.leaf && props.expandedKeys.includes(props.node.key));
 const children = computed(() => props.node.children || []);
 
 const datasourceIconSrc = computed(() => {
@@ -62,13 +62,12 @@ const iconName = computed(() => {
     case "schema":
       return "i-lucide-library-big";
     case "table":
+    case "recent-table":
       return "i-lucide-table-properties";
     case "view":
       return "i-lucide-eye";
     case "recent-group":
       return "i-lucide-history";
-    case "recent-table":
-      return "i-lucide-table-2";
     case "field":
     case "column":
       return "i-lucide-columns-3";

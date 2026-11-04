@@ -347,6 +347,7 @@ onMounted(() => {
     fontFamily: getComputedStyle(host.value).getPropertyValue("--font-mono"),
     fontSize: 13,
     lineNumbersMinChars: 3,
+    lineDecorationsWidth: 20,
     renderLineHighlight: "all",
     padding: { top: 5, bottom: 5 },
     scrollBeyondLastLine: false,
@@ -628,10 +629,43 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="host" class="h-full min-h-0 w-full" />
+  <div ref="host" class="chen-sql-editor h-full min-h-0 w-full" />
 </template>
 
 <style scoped>
+.chen-sql-editor :deep(.monaco-editor) {
+  --chen-sql-content-inset: 6px;
+  --vscode-editorGutter-background: var(--editor-gutter-background);
+  --vscode-editorLineNumber-foreground: var(--editor-gutter-foreground);
+  --vscode-editorLineNumber-activeForeground: color-mix(
+    in srgb,
+    var(--editor-gutter-foreground) 90%,
+    var(--editor-foreground)
+  );
+}
+
+.chen-sql-editor :deep(.monaco-editor .margin) {
+  /* Keep v5.1.1's text inset inside Monaco's native layout, including hit testing. */
+  background-image: linear-gradient(
+    to left,
+    var(--editor-background) var(--chen-sql-content-inset),
+    transparent var(--chen-sql-content-inset)
+  );
+}
+
+.chen-sql-editor :deep(.monaco-editor .margin::after) {
+  position: absolute;
+  inset: 0 var(--chen-sql-content-inset) 0 auto;
+  border-right: 1px solid var(--workspace-surface-border);
+  content: "";
+  pointer-events: none;
+}
+
+.chen-sql-editor :deep(.monaco-editor .view-overlays .current-line),
+.chen-sql-editor :deep(.monaco-editor .margin-view-overlays .current-line-margin) {
+  background-color: color-mix(in srgb, var(--app-hover-soft) 75%, transparent);
+}
+
 :deep(.chen-current-statement) {
   background-color: var(--editor-selection-inactive);
 }

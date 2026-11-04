@@ -61,8 +61,8 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
 
   function normalizeTreeNodes(items: ChenTreeNode[]): ChenTreeNode[] {
     return items.map((item) => {
-      if (item.type === "table") {
-        return { ...item, leaf: true, children: undefined };
+      if (["table", "view", "recent-table"].includes(item.type)) {
+        return { ...item, leaf: true, hasChildren: false, children: undefined };
       }
 
       return {
@@ -74,6 +74,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
   }
 
   async function loadNodeChildren(node?: ChenTreeNode | null, force = false) {
+    if (node?.leaf || node?.hasChildren === false) return;
     const key = node?.key || "__root__";
     if (loadingChildren[key] && !force) return;
     const generation = (loadGenerations.get(key) || 0) + 1;
@@ -126,10 +127,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     async function visit(nodes: ChenTreeNode[]) {
       for (const node of nodes) {
         if (!wanted.has(node.key)) continue;
-        if (node.leaf || node.hasChildren === false) {
-          restored.push(node.key);
-          continue;
-        }
+        if (node.leaf || node.hasChildren === false) continue;
 
         await loadNodeChildren(node, true);
         if (loadErrors[node.key] || !Array.isArray(node.children)) continue;
@@ -172,6 +170,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
   }
 
   function toggleTreeNode(node: ChenTreeNode) {
+    if (node.leaf || node.hasChildren === false) return;
     expandedKeys.value = expandedKeys.value.includes(node.key)
       ? expandedKeys.value.filter((key) => key !== node.key)
       : [...expandedKeys.value, node.key];
