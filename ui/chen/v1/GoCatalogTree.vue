@@ -609,7 +609,7 @@ onBeforeUnmount(() => {
         @click="emit('close')"
       />
     </div>
-    <div class="shrink-0 space-y-1 border-b border-default p-2">
+    <div class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center border-b border-default px-2">
       <UInput
         v-model="search"
         icon="i-lucide-search"
@@ -631,8 +631,10 @@ onBeforeUnmount(() => {
           />
         </template>
       </UInput>
-      <p v-if="!ready" class="px-1 text-[11px] text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>
+    <p v-if="!ready" class="shrink-0 border-b border-default px-3 py-1 text-[11px] text-warning">
+      {{ t("Chen.GoV1CatalogStale") }}
+    </p>
     <div
       ref="tree"
       role="tree"

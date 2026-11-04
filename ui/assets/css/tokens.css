@@ -120,6 +120,10 @@
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
   --workspace-toolbar-height: 38px;
+  --workspace-action-bar-height: 48px;
+  --workspace-tab-background: color-mix(in srgb, var(--app-text-primary) 6%, var(--app-surface-header));
+  --workspace-tab-active-background: var(--app-surface-canvas);
+  --workspace-tab-radius: 10px;
   --workspace-session-tab-width: 176px;
   --workspace-sub-tab-width: 160px;
   --workspace-tab-group-accent: var(--color-bg-accent);
