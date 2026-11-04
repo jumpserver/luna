@@ -1785,7 +1785,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         :aria-valuemax="Math.round(sidebarMax)"
         :aria-valuetext="`${Math.round(sidebarWidth)} px`"
         :title="`${t('Chen.ResizeDatabaseSidebar')} · ${t('Chen.GoV1ResizeHint')}`"
-        class="relative z-10 w-px shrink-0 cursor-col-resize touch-none bg-[var(--app-border-strong)] outline-none hover:bg-primary focus-visible:bg-primary data-[resizing=true]:bg-primary"
+        class="relative z-10 w-px shrink-0 cursor-col-resize touch-none bg-[var(--workspace-surface-border)] outline-none hover:bg-primary focus-visible:bg-primary data-[resizing=true]:bg-primary"
         :data-resizing="sidebarResize.dragging.value"
         @pointerdown="sidebarResize.begin"
         @pointermove="sidebarResize.move"

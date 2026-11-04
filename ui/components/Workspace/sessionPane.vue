@@ -504,7 +504,7 @@ onBeforeUnmount(() => {
     <div class="relative h-full min-h-0">
       <div
         ref="paneGrid"
-        class="relative h-full min-h-0 bg-[var(--workspace-surface-sub-border)]"
+        class="relative h-full min-h-0 bg-[var(--workspace-surface-border)]"
         :class="[
           isDraggingExternalTab ? 'relative z-20' : '',
           dragOverWorkspace ? 'ring-2 ring-inset ring-primary/40' : ''
@@ -516,7 +516,7 @@ onBeforeUnmount(() => {
           v-for="pane in tab.panes"
           :key="pane.id"
           :data-pane-id="pane.id"
-          class="group absolute flex min-h-0 min-w-0 flex-col overflow-hidden border border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
+          class="group absolute flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
           :style="paneGridItemStyle(pane.id)"
           :class="[
             showPaneDropHint(pane.id)
@@ -717,7 +717,7 @@ onBeforeUnmount(() => {
             divider.node.direction === 'vertical'
               ? 'inset-y-0 left-1/2 w-px -translate-x-1/2'
               : 'inset-x-0 top-1/2 h-px -translate-y-1/2',
-            resizingDivider === divider.path ? 'bg-[var(--app-focus-ring)]' : 'bg-transparent'
+            resizingDivider === divider.path ? 'bg-[var(--app-focus-ring)]' : 'bg-[var(--workspace-surface-border)]'
           ]"
         />
       </div>
