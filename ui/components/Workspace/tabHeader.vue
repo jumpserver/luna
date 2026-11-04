@@ -883,10 +883,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
     <div
       v-if="tabs.length"
-      class="workspace-tab-capsule flex h-full min-w-0 max-w-full shrink items-center"
+      class="workspace-tab-capsule flex min-w-0 max-w-full shrink items-center rounded-lg"
       :style="{ width: tabStripIdealWidth }"
     >
-      <div ref="tabStripRef" class="workspace-tab-strip flex h-full w-full min-w-0 items-end gap-1 overflow-x-auto">
+      <div ref="tabStripRef" class="workspace-tab-strip flex w-full min-w-0 items-center gap-1 overflow-x-auto">
         <template v-for="entry in tabStripEntries" :key="entry.kind === 'group' ? entry.group.id : entry.tab.id">
           <div
             v-if="entry.kind === 'group'"
@@ -926,7 +926,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             :data-group-end="entry.tab.group?.id !== tabs[entry.index + 1]?.group?.id"
             type="button"
             :draggable="!props.standalone"
-            class="workspace-session-tab group relative flex h-full min-w-24 max-w-(--workspace-session-tab-width) basis-(--workspace-session-tab-width) grow shrink items-center gap-1.5 px-2 text-left leading-none transition-colors"
+            class="workspace-session-tab group relative flex h-7 min-w-24 max-w-(--workspace-session-tab-width) basis-(--workspace-session-tab-width) grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
             :class="[
               activeTabId === entry.tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
               draggedTabId === entry.tab.id ? 'opacity-60' : '',
@@ -1112,7 +1112,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <style scoped>
 .workspace-tab-header {
-  background: var(--workspace-tab-background);
+  background: var(--app-header-bg);
 }
 
 .workspace-tab-capsule {
@@ -1138,34 +1138,16 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   white-space: nowrap;
 }
 
-.workspace-session-tab {
-  border-radius: var(--workspace-tab-radius);
-}
-
-.workspace-session-tab:not(.workspace-session-tab-active) {
-  height: calc(100% - 4px);
-  margin-bottom: 4px;
-}
-
 .workspace-session-tab-active {
-  border-radius: var(--workspace-tab-radius) var(--workspace-tab-radius) 0 0;
-  background-color: var(--workspace-tab-active-background);
+  background-color: color-mix(in srgb, var(--app-fg) 8%, transparent);
   border: 0;
   box-shadow: none;
-  color: var(--app-fg);
+  color: var(--ui-text-highlighted);
+  outline: none;
 }
 
-.workspace-session-tab:not(.workspace-session-tab-active):hover {
+.workspace-session-tab:hover {
   background-color: var(--app-hover-soft);
-}
-
-.workspace-session-tab:focus-visible {
-  outline: 2px solid var(--app-focus-ring);
-  outline-offset: -2px;
-}
-
-.workspace-tab-group {
-  margin-bottom: 4px;
 }
 
 .workspace-session-tab-status {
@@ -1207,7 +1189,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 }
 
 .workspace-tab-strip {
-  padding-top: 4px;
+  padding-block: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

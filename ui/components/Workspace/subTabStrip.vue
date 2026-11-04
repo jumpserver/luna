@@ -208,7 +208,7 @@ watch(
 <template>
   <div
     v-if="tabs.length || $slots['after-tabs'] || $slots.trailing"
-    class="workspace-sub-tab-bar flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 px-2"
+    class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-main)] px-2"
   >
     <UButton
       v-if="hasLeftHidden"
@@ -228,15 +228,15 @@ watch(
       <div
         ref="strip"
         role="tablist"
-        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-end gap-1 overflow-x-auto pt-1"
+        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center gap-1 overflow-x-auto"
         @wheel="scrollTabs"
       >
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="workspace-sub-tab group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
+          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
           :class="[
-            activeId === tab.id ? 'workspace-sub-tab-active font-medium' : 'text-muted',
+            activeId === tab.id ? 'text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',
             localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : '',
             tab.preview ? 'italic' : ''
@@ -258,6 +258,7 @@ watch(
           @drop="dropTab(tab.id, $event)"
           @dragend="endDrag"
         >
+          <span v-if="activeId === tab.id" class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
           <span
             v-if="dropTargetId === tab.id && dropPlacement === 'before'"
             class="absolute -left-0.5 inset-y-1 w-0.5 rounded-full bg-primary"
@@ -319,35 +320,6 @@ watch(
 </template>
 
 <style scoped>
-.workspace-sub-tab-bar {
-  background: var(--workspace-tab-background);
-  box-shadow: inset 0 -1px var(--workspace-surface-sub-border);
-}
-
-.workspace-sub-tab {
-  border-radius: var(--workspace-tab-radius);
-}
-
-.workspace-sub-tab:not(.workspace-sub-tab-active) {
-  height: calc(100% - 4px);
-  margin-bottom: 4px;
-}
-
-.workspace-sub-tab:not(.workspace-sub-tab-active):hover {
-  background: var(--app-hover-soft);
-}
-
-.workspace-sub-tab-active {
-  border-radius: var(--workspace-tab-radius) var(--workspace-tab-radius) 0 0;
-  background: var(--workspace-tab-active-background);
-  color: var(--app-fg);
-}
-
-.workspace-sub-tab:focus-visible {
-  outline: 2px solid var(--app-focus-ring);
-  outline-offset: -2px;
-}
-
 .workspace-sub-tab-strip {
   scrollbar-width: none;
   -ms-overflow-style: none;
