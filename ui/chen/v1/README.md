@@ -58,16 +58,14 @@ are written to `output/chen-single-browser/mysql/` or `output/chen-single-browse
 
 ## Managed mode
 
-The full Luna database workbench uses Go by default for all supported SQL protocols.
-Set `NUXT_PUBLIC_CHEN_GO_V1_PROTOCOLS=mysql,postgresql` to limit a deployment, or set it explicitly
-to an empty string to retain the existing Java workspace. This decision is made before exchanging
-the one-use Core connection token, and an authentication failure never causes fallback to another backend.
+The full Luna database workbench uses the Go backend for all supported SQL protocols.
+The retired Java workspace and its protocol-selection override have been removed.
+An authentication failure never causes fallback to another backend or reuses the one-use Core token.
 The workspace recognizes `mysql`, `mariadb`, `postgresql`, `oracle`, `sqlserver`, `db2`, `dameng`,
 `clickhouse`, `oceanbase-mysql`, and `oceanbase-oracle`. PostgreSQL aliases `postgres` and `pgsql`
 map to `postgresql`; `mssql` maps to `sqlserver`, `dm` to `dameng`, and the historical `oceanbase`
-protocol to its MySQL mode. Enable only protocols served by the deployed Go backend. OceanBase's
-Oracle mode is explicit and does not fall back to its MySQL mode. Unconfigured or unknown protocols
-retain the existing workspace.
+protocol to its MySQL mode. OceanBase's Oracle mode is explicit and does not fall back to its
+MySQL mode. Available protocols and operations are reported by the Go backend.
 
 ## Additional dialect presentation and validation boundaries
 
@@ -119,9 +117,9 @@ remain cancelable because they have not started database execution.
 
 ## Managed connection boundary
 
-Route `/chen/api/v1/` to the Go service while retaining the legacy `/chen/` routes.
-Development uses `JMS_CHEN_GO_DEV_URL` for the Go HTTP/SSE API and `JMS_CHEN_DEV_URL` for legacy
-Chen; the Go target defaults to the legacy target when no override is configured.
+Route `/chen/api/v1/` to the Go service as HTTP with SSE streaming enabled.
+Development uses `JMS_CHEN_DEV_URL`, with `JMS_CHEN_GO_DEV_URL` as an optional override;
+both select the Go HTTP/SSE API. The retired `/chen/ws/` proxy is no longer configured.
 Use `pnpm web:dev --host 0.0.0.0 --port 3000` for the full browser workspace at `/luna/`; `pnpm dev`
 starts Electron as well. Core login, asset permissions, ACL checks and one-use connection tokens remain
 on their ordinary Luna paths. The `/luna/chen/?selector=...` route is only the standalone mode. All endpoint building uses the existing `chenPath`

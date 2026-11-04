@@ -54,12 +54,17 @@ for (const [path, prefix] of [
   ["/koko/ws/terminal/", "/koko/"],
   ["/koko/ws/sftp/", "/koko/"],
   ["/koko/ws/monitor/", "/koko/"],
-  ["/koko/lion/ws/connect/", "/koko/lion/"],
-  ["/chen/ws/session", "/chen"]
+  ["/koko/lion/ws/connect/", "/koko/lion/"]
 ]) {
   assert.equal(configuredRoutes.find((route) => path.startsWith(route.prefix))?.prefix, prefix);
   assert.equal(configuredRoutes.find((route) => route.prefix === prefix)?.target.origin, proxy[prefix].target);
 }
+
+assert.equal(
+  configuredRoutes.find((route) => "/chen/api/v1/sessions".startsWith(route.prefix)),
+  undefined
+);
+assert.equal(proxy["/chen/api/v1"].ws, undefined);
 
 const handlers = [];
 proxy["/api/"].configure({

@@ -66,9 +66,7 @@ const tab = computed<ChenPromptConsoleTab>(() => ({
   state: { inQuery: executionActive(props.query.execution), loading: props.query.busy },
   logs: [],
   message: null,
-  historyEntries: history,
-  socket: null,
-  connectionGeneration: generation
+  historyEntries: history
 }));
 const context = computed(() => props.query.context.schema || props.query.context.database);
 function snapshot() {

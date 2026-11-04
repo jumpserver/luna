@@ -17,7 +17,7 @@ const KokoFileEditorSessionSurface = defineAsyncComponent(() =>
 const KokoKubernetesWorkspace = defineAsyncComponent(() =>
   import("#koko").then((module) => module.KokoKubernetesWorkspace)
 );
-const ChenDatabaseSessionSurface = defineAsyncComponent(() => import("~/chen/workspaces/DatabaseSessionRouter.vue"));
+const ChenDatabaseSessionSurface = defineAsyncComponent(() => import("~/chen/v1/GoDatabaseSessionSurface.vue"));
 const LionRemoteSessionSurface = defineAsyncComponent(() => import("~/lion/workspaces/RemoteSessionSurface.vue"));
 const GuideSessionSurface = defineAsyncComponent(() => import("~/shared/connectors/GuideSessionSurface.vue"));
 const LegacyIframeSession = defineAsyncComponent(() => import("~/shared/connectors/LegacyIframeSession.vue"));

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canonicalChenDialect, chenSampleSql, chenSqlDialect } from "~/chen/utils/sqlDialect";
+import { canonicalChenDialect, chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
-import { useGoChenProtocol } from "./routing";
 import { objectSelect, qualifiedObjectName, quoteIdentifier } from "./workspace";
 
 const dialectCases = [
@@ -26,8 +25,6 @@ describe("read-only database dialects", () => {
       expect(objectSelect(object, dialect)).toBe(`SELECT * FROM ${name};`);
       expect(objectSelect(object, dialect, true)).toBe(preview);
       expect(chenSqlDialect(dialect).databaseNamespace).toBe(databaseNamespace);
-      expect(useGoChenProtocol(dialect, dialect)).toBe(true);
-      expect(useGoChenProtocol(dialect, "")).toBe(false);
     }
   );
 
@@ -44,14 +41,6 @@ describe("read-only database dialects", () => {
     expect(quoteIdentifier(name, "oceanbase-mysql")).toBe("`a.b]; SELECT 'value'; --\n``\"`");
   });
 
-  it("starts query consoles with a valid scalar SELECT for engines requiring FROM", () => {
-    for (const dialect of ["oracle", "dameng", "oceanbase-oracle"])
-      expect(chenSampleSql(dialect)).toBe("SELECT 1 FROM DUAL;");
-    expect(chenSampleSql("db2")).toBe("SELECT 1 FROM SYSIBM.SYSDUMMY1;");
-    for (const dialect of ["mysql", "mariadb", "postgresql", "sqlserver", "clickhouse", "oceanbase-mysql"])
-      expect(chenSampleSql(dialect)).toBe("SELECT 1;");
-  });
-
   it("canonicalizes deployment aliases while preserving OceanBase compatibility modes", () => {
     expect(canonicalChenDialect(" PGSQL ")).toBe("postgresql");
     expect(canonicalChenDialect("dm")).toBe("dameng");
@@ -59,8 +48,6 @@ describe("read-only database dialects", () => {
     expect(canonicalChenDialect("oceanbase")).toBe("oceanbase-mysql");
     expect(canonicalChenDialect("oceanbase-oracle")).toBe("oceanbase-oracle");
     expect(canonicalChenDialect("__proto__")).toBeUndefined();
-    expect(useGoChenProtocol("postgresql", "PGSQL")).toBe(true);
-    expect(useGoChenProtocol("oceanbase-oracle", "oceanbase-mysql")).toBe(false);
   });
 
   it.each(dialectCases)(

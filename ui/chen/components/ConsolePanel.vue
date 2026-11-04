@@ -4,7 +4,6 @@ import type {
   ChenConsoleTimelineEntry,
   ChenConsoleTimelineResult,
   ChenPromptConsoleTab,
-  ChenQueryLikeWorkspaceTab,
   ChenSqlEditorSnapshot
 } from "~/chen/types";
 
@@ -24,7 +23,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   run: [tab: ChenPromptConsoleTab];
-  cancel: [tab: ChenQueryLikeWorkspaceTab];
+  cancel: [tab: ChenPromptConsoleTab];
   clear: [tab: ChenPromptConsoleTab];
   updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
   aiGenerate: [tab: ChenPromptConsoleTab];

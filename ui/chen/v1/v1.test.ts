@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChenGoError, createChenGoApi, executionActive, executionCanCancel, reconcileExecution } from "./api";
 import { completionIsCurrent } from "./completion";
 import { readChenEvents } from "./events";
-import { useGoChenProtocol } from "./routing";
 
 vi.mock("~/chen/api/client", () => ({
   chenPath: (path: string, endpoint: string) => `${endpoint}/chen${path}`,
@@ -52,18 +51,7 @@ describe("Chen Go event transport", () => {
     await expect(readChenEvents(stream([`data: ${"x".repeat(1_048_577)}`]), vi.fn())).rejects.toThrow("size limit");
   });
 });
-describe("Go API and routing", () => {
-  it("defaults supported protocols to Go and honors explicit legacy deployment overrides before auth", () => {
-    expect(useGoChenProtocol("mysql")).toBe(true);
-    expect(useGoChenProtocol("oceanbase-oracle")).toBe(true);
-    expect(useGoChenProtocol("mongodb")).toBe(false);
-    expect(useGoChenProtocol("mysql", "mysql,postgresql")).toBe(true);
-    expect(useGoChenProtocol("postgres", "mysql,postgresql")).toBe(true);
-    expect(useGoChenProtocol("mysql", "")).toBe(false);
-    expect(useGoChenProtocol("oracle", "mysql,oracle")).toBe(true);
-    expect(useGoChenProtocol("oracle", "mysql,postgresql")).toBe(false);
-    expect(useGoChenProtocol("redis", "redis")).toBe(false);
-  });
+describe("Go API", () => {
   it("keeps session credentials in headers and stable request IDs in mutation bodies", async () => {
     vi.stubGlobal("getWebApiMutationHeaders", () => ({ "X-CSRFToken": "csrf" }));
     const fetcher = vi.fn<typeof fetch>();

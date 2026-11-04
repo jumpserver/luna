@@ -15,15 +15,6 @@ export interface ChenPlanStep {
 const JOIN_TYPES: ChenNormalizedNodeType[] = ["JOIN", "HASH_JOIN", "MERGE_JOIN", "NESTED_LOOP"];
 const INDEX_TYPES: ChenNormalizedNodeType[] = ["INDEX_SCAN", "INDEX_ONLY_SCAN"];
 
-export function chenPlanNodeTitle(node: ChenPlanNode): string {
-  const native = node.nativeOperator || node.nodeType;
-  const joinType = node.logicalOperator || node.attributes?.["Join Type"] || "";
-  if (joinType && !native.toLowerCase().includes(joinType.toLowerCase())) {
-    return `${native} ${joinType}`;
-  }
-  return native;
-}
-
 export function chenPlanNodePrimaryFacts(node: ChenPlanNode): ChenPlanFact[] {
   const facts: ChenPlanFact[] = [];
   const title = node.nativeOperator || node.nodeType;

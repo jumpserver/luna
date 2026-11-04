@@ -7,7 +7,6 @@ interface SqlDialectProfile {
   monaco: "mysql" | "pgsql" | "sql";
   formatter: SqlLanguage;
   preview: "limit" | "top" | "fetch" | "rownum";
-  sample?: string;
 }
 
 export const chenSqlDialects = {
@@ -34,8 +33,7 @@ export const chenSqlDialects = {
     quote: '"',
     monaco: "sql",
     formatter: "plsql",
-    preview: "rownum",
-    sample: "SELECT 1 FROM DUAL;"
+    preview: "rownum"
   },
   sqlserver: {
     label: "SQL Server",
@@ -51,8 +49,7 @@ export const chenSqlDialects = {
     quote: '"',
     monaco: "sql",
     formatter: "db2",
-    preview: "fetch",
-    sample: "SELECT 1 FROM SYSIBM.SYSDUMMY1;"
+    preview: "fetch"
   },
   // ponytail: the installed formatter has no Dameng or ClickHouse grammar.
   // Use dedicated grammars when available; SQL execution and completion already
@@ -63,8 +60,7 @@ export const chenSqlDialects = {
     quote: '"',
     monaco: "sql",
     formatter: "plsql",
-    preview: "limit",
-    sample: "SELECT 1 FROM DUAL;"
+    preview: "limit"
   },
   clickhouse: {
     label: "ClickHouse",
@@ -88,8 +84,7 @@ export const chenSqlDialects = {
     quote: '"',
     monaco: "sql",
     formatter: "plsql",
-    preview: "rownum",
-    sample: "SELECT 1 FROM DUAL;"
+    preview: "rownum"
   }
 } as const satisfies Record<string, SqlDialectProfile>;
 
@@ -112,8 +107,4 @@ export function chenSqlDialect(value: string): SqlDialectProfile {
   const canonical = canonicalChenDialect(value);
   if (canonical) return chenSqlDialects[canonical];
   return { label: value, databaseNamespace: false, quote: '"', monaco: "sql", formatter: "sql", preview: "fetch" };
-}
-
-export function chenSampleSql(dialect: string): string {
-  return chenSqlDialect(dialect).sample || "SELECT 1;";
 }

@@ -8,7 +8,6 @@ import {
 import {
   compareResultValues,
   formatResultHex,
-  formatResultJson,
   RESULT_JSON_FORMAT_LIMIT,
   resultBinaryHex,
   resultContextSelection,
@@ -102,17 +101,17 @@ describe("read-only result grid", () => {
   it("preserves exact API numeric strings inside ClickHouse arrays and maps", () => {
     const value = ["18446744073709551615", { id: "9007199254740993", nullable: null }];
     expect(resultValueText(value)).toBe('["18446744073709551615",{"id":"9007199254740993","nullable":null}]');
-    expect(formatResultJson(resultValueText(value))).toContain('"18446744073709551615"');
+    expect(resultJsonFormat(resultValueText(value)).text).toContain('"18446744073709551615"');
   });
   it("formats JSON without rounding large numbers or changing escaped string content", () => {
     const text = '{"id":9007199254740993,"text":"x \\" y, []","empty":[],"nested":{"decimal":1.0000000000000001}}';
-    const formatted = formatResultJson(text);
+    const formatted = resultJsonFormat(text).text!;
     expect(formatted).toContain("9007199254740993");
     expect(formatted).toContain("1.0000000000000001");
     expect(formatted).toContain('"text": "x \\" y, []"');
     expect(formatted).toContain('"empty": []');
     expect(JSON.parse(formatted)).toEqual(JSON.parse(text));
-    expect(formatResultJson("not json")).toBe("not json");
+    expect(resultJsonFormat("not json")).toEqual({ text: null, limited: false });
   });
   it("bounds table previews without modifying multiline, empty or copied original values", () => {
     const original = `first\nsecond\t${"x".repeat(300)}`;
@@ -141,7 +140,7 @@ describe("read-only result grid", () => {
   it("skips oversized JSON before parsing and limits deeply indented output", () => {
     const large = `{"body":"${"x".repeat(RESULT_JSON_FORMAT_LIMIT)}"}`;
     expect(resultJsonFormat(large)).toEqual({ text: null, limited: true });
-    expect(formatResultJson(large)).toBe(large);
+    expect(resultJsonFormat(large)).toEqual({ text: null, limited: true });
     const nested = "[".repeat(32) + Array.from({ length: 12000 }).fill("0").join(",") + "]".repeat(32);
     expect(resultJsonFormat(nested)).toEqual({ text: null, limited: true });
     expect(resultJsonFormat("invalid json")).toEqual({ text: null, limited: false });
