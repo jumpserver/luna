@@ -8,7 +8,13 @@ import { chenErrorText } from "~/chen/utils/errorMessages";
 import { editDirty } from "./dataEditing";
 import { downloadGoExport } from "./exportDownload";
 import { exportActive } from "./workspace";
-const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi; ready: boolean }>();
+const props = defineProps<{
+  query: QueryWorkspaceTab;
+  session: GoSession;
+  api: ChenGoApi;
+  ready: boolean;
+  iconOnly?: boolean;
+}>();
 const emit = defineEmits<{
   start: [
     mode: "cached" | "query",
@@ -127,12 +133,13 @@ useIntervalFn(() => {
 <template>
   <UButton
     icon="i-lucide-download"
-    :label="job ? t('Chen.GoV1ExportTask') : t('Chen.ExportData')"
+    :label="iconOnly ? undefined : job ? t('Chen.GoV1ExportTask') : t('Chen.ExportData')"
+    :aria-label="job ? t('Chen.GoV1ExportTask') : t('Chen.ExportData')"
     size="xs"
     color="neutral"
     variant="ghost"
     :disabled="!session.permissions.can_download || (!ready && !job)"
-    :title="!ready ? unavailableMessage : undefined"
+    :title="!ready ? unavailableMessage : job ? t('Chen.GoV1ExportTask') : t('Chen.ExportData')"
     @click="show"
   />
   <UModal v-model:open="open" :title="t('Chen.ExportData')" :ui="{ content: 'sm:max-w-2xl' }">

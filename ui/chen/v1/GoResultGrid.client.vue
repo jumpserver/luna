@@ -848,7 +848,6 @@ onBeforeUnmount(() => {
             size="xs"
             color="neutral"
             variant="ghost"
-            :label="localSearch ? undefined : t('Chen.GoBrowseTableSettings')"
             :title="
               localSearch
                 ? t('Chen.GoBrowseTableSettings')
@@ -1035,7 +1034,7 @@ onBeforeUnmount(() => {
         :get-row-id="rowId"
         :default-col-def="defaults"
         :row-height="gridPreferences.compactRows ? 24 : 28"
-        :header-height="30"
+        :header-height="32"
         :animate-rows="false"
         :ensure-dom-order="true"
         :enable-browser-tooltips="true"
@@ -1097,7 +1096,7 @@ onBeforeUnmount(() => {
 .go-result-grid,
 .go-result-grid :deep(.ag-theme-balham),
 .go-result-grid :deep(.ag-root-wrapper) {
-  --ag-font-family: var(--font-ui-mono, var(--font-mono));
+  --ag-font-family: var(--font-sans);
   --ag-font-size: 12px;
   --ag-background-color: var(--data-grid-row-background);
   --ag-data-background-color: var(--data-grid-row-background);
@@ -1107,9 +1106,9 @@ onBeforeUnmount(() => {
   --ag-odd-row-background-color: var(--data-grid-row-background);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-border-color: var(--data-grid-border);
-  --ag-row-border-color: transparent;
+  --ag-row-border-color: color-mix(in srgb, var(--data-grid-border) 72%, transparent);
   --ag-cell-horizontal-border: none;
-  --ag-header-column-resize-handle-color: var(--theme-accent);
+  --ag-header-column-resize-handle-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
   --ag-range-selection-border-color: var(--theme-accent);
   --ag-wrapper-border-radius: 0;
   --ag-border-radius: 0;

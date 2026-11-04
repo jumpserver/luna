@@ -83,7 +83,7 @@ function changeSize(value: unknown) {
     data-chen-browse-footer
     role="group"
     :aria-label="t('Chen.GoBrowseFilter')"
-    class="flex min-w-0 shrink-0 items-center gap-3 overflow-x-auto whitespace-nowrap border-t border-default px-2 py-1 text-xs"
+    class="flex min-h-9 min-w-0 shrink-0 items-center gap-3 overflow-x-auto whitespace-nowrap border-t border-default px-2 py-1 text-xs"
   >
     <span
       class="shrink-0 tabular-nums text-muted"

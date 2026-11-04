@@ -319,14 +319,19 @@ watch(
 );
 const splitArea = useTemplateRef<HTMLElement>("splitArea");
 const { height: splitHeight } = useElementSize(splitArea);
+const queryToolbar = useTemplateRef<HTMLElement>("queryToolbar");
+const { height: toolbarHeight } = useElementSize(queryToolbar, { width: 0, height: 0 }, { box: "border-box" });
 const editorId = useId();
-const savedEditorPreference = useLocalStorage("jumpserver-client:chen-v1-editor-ratio", 60, { writeDefaults: false });
-const editorPreference = ref(Number.isFinite(savedEditorPreference.value) ? savedEditorPreference.value : 60);
-const availableHeight = computed(() => Math.max(0, splitHeight.value - 6));
+const savedEditorPreference = useLocalStorage("jumpserver-client:chen-v1-editor-ratio", 58, { writeDefaults: false });
+const editorPreference = ref(Number.isFinite(savedEditorPreference.value) ? savedEditorPreference.value : 58);
+// V5.1.1's upper-pane ratio includes the SQL toolbar above the editor.
+const availableHeight = computed(() => Math.max(0, splitHeight.value + toolbarHeight.value - 1));
 const minEditorPercent = computed(() =>
-  availableHeight.value ? Math.min(50, Math.max(15, 16000 / availableHeight.value)) : 15
+  availableHeight.value ? Math.min(50, Math.max(15, ((160 + toolbarHeight.value) * 100) / availableHeight.value)) : 15
 );
-const maxEditorPercent = computed(() => 100 - minEditorPercent.value);
+const maxEditorPercent = computed(
+  () => 100 - (availableHeight.value ? Math.min(50, Math.max(15, 16000 / availableHeight.value)) : 15)
+);
 const editorPercent = computed({
   get: () => Math.min(maxEditorPercent.value, Math.max(minEditorPercent.value, editorPreference.value)),
   set: (value: number) => {
@@ -339,7 +344,7 @@ const editorResize = usePaneResize({
   value: editorPercent,
   min: minEditorPercent,
   max: maxEditorPercent,
-  defaultValue: 60,
+  defaultValue: 58,
   step: 2,
   pixelsPerUnit: () => availableHeight.value / 100,
   enabled: () => props.visible && props.query.kind !== "console"
@@ -479,7 +484,7 @@ function restore(sql: string) {
 const gridRows = computed(() =>
   props.dataOnly
     ? "minmax(0, 1fr)"
-    : `minmax(0, ${editorPercent.value}fr) 6px minmax(0, ${100 - editorPercent.value}fr)`
+    : `minmax(0, ${Math.max(0, (availableHeight.value * editorPercent.value) / 100 - toolbarHeight.value)}px) 1px minmax(0, 1fr)`
 );
 const sqlFile = ref<HTMLInputElement>();
 let fileGeneration = 0;
@@ -609,13 +614,14 @@ defineExpose({
     </div>
     <div
       v-if="!dataOnly && query.kind !== 'console'"
+      ref="queryToolbar"
       data-chen-query-toolbar
-      class="flex min-h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-2 py-1 [&>*]:shrink-0"
+      class="flex shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-3 pb-2 pt-3 [&>*]:shrink-0"
     >
       <UButton
         v-if="session.state === 'ready' && !ready"
         :label="t('Chen.GoV1NewConnection')"
-        size="xs"
+        size="sm"
         color="warning"
         variant="soft"
         :disabled="session.state !== 'ready' || query.busy"
@@ -623,8 +629,8 @@ defineExpose({
       />
       <UButton
         icon="i-lucide-play"
-        :label="t(scope === 'selection' ? 'Chen.GoV1RunSelection' : 'Chen.GoV1RunCurrent')"
-        size="xs"
+        :label="t(scope === 'selection' ? 'Chen.RunSelected' : 'Chen.RunCurrent')"
+        size="sm"
         :disabled="!canRun || !query.sql.trim()"
         title="Ctrl/⌘ Enter"
         @click="editor?.run()"
@@ -643,9 +649,9 @@ defineExpose({
           icon="i-lucide-chevron-down"
           :aria-label="t('Chen.GoV1RunAll')"
           title="Ctrl/⌘ Shift Enter"
-          size="xs"
+          size="sm"
           color="neutral"
-          variant="ghost"
+          variant="soft"
           :disabled="!canRun || !query.sql.trim()"
         />
       </UDropdownMenu>
@@ -654,9 +660,9 @@ defineExpose({
           <UButton
             icon="i-lucide-workflow"
             :label="t('ExecutionPlan.explain')"
-            size="xs"
+            size="sm"
             color="neutral"
-            variant="ghost"
+            variant="soft"
             :disabled="!canRun || !canExplain || !query.sql.trim()"
             @click="editor?.explain()"
           />
@@ -688,7 +694,7 @@ defineExpose({
                     : 'Chen.GoV1Cancel'
               )
             "
-            size="xs"
+            size="sm"
             color="neutral"
             variant="soft"
             :title="
@@ -710,7 +716,7 @@ defineExpose({
       <UButton
         v-if="query.pending && !query.busy"
         :label="t('Chen.GoV1RecoverSubmission')"
-        size="xs"
+        size="sm"
         color="warning"
         variant="soft"
         :disabled="!ready"
@@ -718,10 +724,10 @@ defineExpose({
       />
       <UButton
         icon="i-lucide-align-left"
-        :label="t('Chen.GoV1FormatSql')"
-        size="xs"
+        :label="t('Chen.Format')"
+        size="sm"
         color="neutral"
-        variant="ghost"
+        variant="soft"
         :disabled="query.kind === 'preview' || !query.sql.trim()"
         title="Alt Shift F"
         @click="editor?.format()"
@@ -729,16 +735,17 @@ defineExpose({
       <UDropdownMenu :items="sqlItems">
         <UButton
           label="SQL"
+          icon="i-lucide-file-text"
           trailing-icon="i-lucide-chevron-down"
-          size="xs"
+          size="sm"
           color="neutral"
-          variant="ghost"
+          variant="soft"
           :title="snippetUnavailable || t('Chen.GoWriteSqlFileLimit')"
         />
       </UDropdownMenu>
       <input ref="sqlFile" type="file" accept=".sql,text/plain,application/sql" class="hidden" @change="loadSqlFile" />
       <UDropdownMenu
-        v-if="!single && query.kind === 'query'"
+        v-if="query.kind === 'query'"
         :items="[
           { label: t('RightPanel.SQLAIGenerate'), icon: 'i-lucide-sparkles', onSelect: () => emit('ai', 'generate') },
           {
@@ -753,10 +760,10 @@ defineExpose({
           label="AI"
           trailing-icon="i-lucide-chevron-down"
           icon="i-lucide-sparkles"
-          size="xs"
+          size="sm"
           color="neutral"
-          variant="ghost"
-          :disabled="!ready"
+          variant="soft"
+          :disabled="!ready || !aiAvailable"
           :title="aiAvailable ? undefined : t('RightPanel.SQLAIUnavailableDescription')"
         />
       </UDropdownMenu>
@@ -769,9 +776,9 @@ defineExpose({
           :aria-label="t('Chen.GoV1ConnectionDetails')"
           :title="`${query.context.database} / ${query.context.schema}`"
           :ui="{ label: 'truncate' }"
-          size="xs"
+          size="sm"
           color="neutral"
-          variant="ghost"
+          variant="soft"
         />
         <template #content>
           <div class="max-w-sm space-y-2 p-3 text-xs">
@@ -786,7 +793,7 @@ defineExpose({
                 v-model="contextSchema"
                 :items="contextSchemas"
                 :aria-label="t('Chen.Schema')"
-                size="xs"
+                size="sm"
                 class="w-full"
                 :disabled="!ready || contextBusy"
               />
@@ -794,15 +801,15 @@ defineExpose({
               <UButton
                 v-if="contextMore || contextError"
                 :label="t(contextError ? 'Chen.GoV1Retry' : 'Chen.GoV1LoadMore')"
-                size="xs"
+                size="sm"
                 color="neutral"
-                variant="ghost"
+                variant="soft"
                 :disabled="!ready || contextBusy"
                 @click="loadContexts(contextMore && !contextError)"
               />
               <UButton
                 :label="t('Chen.GoV1NewQueryHere')"
-                size="xs"
+                size="sm"
                 :disabled="!ready || !contextSchemas.includes(contextSchema)"
                 @click="newContext"
               />
@@ -817,9 +824,9 @@ defineExpose({
           icon="i-lucide-history"
           :aria-label="t('Chen.GoV1QueryHistory')"
           :title="t('Chen.GoV1QueryHistory')"
-          size="xs"
+          size="sm"
           color="neutral"
-          variant="ghost"
+          variant="soft"
         />
         <template #content>
           <div
@@ -845,7 +852,7 @@ defineExpose({
                 <UButton
                   :label="t('Chen.GoV1RestoreQuery')"
                   icon="i-lucide-file-plus"
-                  size="xs"
+                  size="sm"
                   color="neutral"
                   variant="soft"
                   :disabled="!session.permissions.can_paste || session.state !== 'ready'"
@@ -1055,9 +1062,10 @@ defineExpose({
       @ai="emit('ai', $event)"
     />
     <div v-else ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden">
+      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden px-3 pb-[3px]">
         <MonacoSqlEditor
           ref="editor"
+          class="rounded-r-md border-y border-r border-default"
           :model-value="query.sql"
           :dialect="session.dialect"
           :sql-keyword-case="sqlKeywordCase"
@@ -1091,7 +1099,7 @@ defineExpose({
         :aria-valuemax="Math.round(maxEditorPercent)"
         :aria-valuetext="`${Math.round(editorPercent)}%`"
         :title="`${t('Chen.ResizeSqlEditorResults')} · ${t('Chen.GoV1ResizeHint')}`"
-        class="group relative z-10 cursor-row-resize touch-none bg-[var(--workspace-surface-sidebar)] outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
+        class="group relative z-10 cursor-row-resize touch-none bg-default/60 outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
         :class="{ 'bg-primary/20': editorResize.dragging.value }"
         @pointerdown="editorResize.begin"
         @pointermove="editorResize.move"
@@ -1101,9 +1109,7 @@ defineExpose({
         @keydown="editorResize.keydown"
         @dblclick="editorResize.reset"
       >
-        <span
-          class="pointer-events-none absolute inset-x-0 top-1/2 border-t border-default group-hover:border-primary group-focus-visible:border-primary"
-        />
+        <span class="absolute -inset-y-1.5 inset-x-0" />
       </div>
       <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
@@ -1444,6 +1450,7 @@ defineExpose({
             <template #actions>
               <GoExportPanel
                 v-if="dataOnly && (query.resultId || query.exportJob)"
+                icon-only
                 :query="query"
                 :session="session"
                 :api="api"
@@ -1518,6 +1525,15 @@ defineExpose({
           />
         </template>
         <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
+          <div
+            v-if="!query.execution && !query.pending && !query.loadingRows"
+            class="grid h-full min-h-0 place-items-center text-sm"
+          >
+            <div class="text-center">
+              <UIcon name="i-lucide-table-properties" class="mx-auto mb-2 size-5" />
+              <p>{{ t("Chen.RunQueryForResults") }}</p>
+            </div>
+          </div>
           <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
             {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}
           </p>

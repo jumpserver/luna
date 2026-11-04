@@ -401,13 +401,13 @@ function preventCopy(event: ClipboardEvent) {
             </td>
             <th
               scope="row"
-              class="whitespace-nowrap border-b border-r border-default px-3 py-1.5 font-ui-mono font-normal"
+              class="whitespace-nowrap border-b border-r border-default px-3 py-1.5 font-normal"
               :title="column.name"
             >
               {{ column.name }}
             </th>
             <td
-              class="whitespace-nowrap border-b border-r border-default px-3 py-1.5 font-ui-mono"
+              class="whitespace-nowrap border-b border-r border-default px-3 py-1.5 text-muted"
               :title="column.data_type"
             >
               {{ column.data_type }}

@@ -485,7 +485,8 @@ function discard() {
           size="xs"
           color="neutral"
           variant="ghost"
-          :label="t('Chen.RefreshData')"
+          :aria-label="t('Chen.RefreshData')"
+          :title="t('Chen.RefreshData')"
           :disabled="
             query.loadingRows ||
             dirty ||
@@ -502,7 +503,7 @@ function discard() {
           size="xs"
           color="neutral"
           variant="ghost"
-          :label="t('Chen.ImportCsv')"
+          :aria-label="t('Chen.ImportCsv')"
           :disabled="!canInsert || count >= GO_EDIT_LIMIT || Object.keys(draft.changes).length > 0"
           :title="t('Chen.GoWriteCsvBatchHint')"
           @click="csvOpen = true"
