@@ -50,6 +50,9 @@ export function applyChenMonacoTheme() {
         "editor.foreground": editor.foreground,
         "editorLineNumber.foreground": editor.gutterForeground,
         "editor.lineHighlightBackground": editor.lineHighlight,
+        "editor.inactiveLineHighlightBackground": editor.lineHighlight,
+        // Match the old editor's soft fill without Monaco's inherited outline.
+        "editor.lineHighlightBorder": "rgba(0, 0, 0, 0)",
         "editor.selectionBackground": editor.selection,
         "editor.inactiveSelectionBackground": editor.selectionInactive,
         "editorCursor.foreground": editor.cursor,

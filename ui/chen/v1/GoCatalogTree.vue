@@ -30,6 +30,7 @@ const emit = defineEmits<{
   browse: [object: GoCatalogObject];
   createTable: [context: QueryContext];
   clearRecent: [];
+  close: [];
 }>();
 const { t } = useI18n();
 const toast = useToast();
@@ -536,9 +537,10 @@ onBeforeUnmount(() => {
     "
   >
     <div class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 border-b border-default px-2.5">
-      <span class="flex-1 text-xs font-medium">{{ t("Chen.GoV1Objects") }}</span>
+      <span class="flex-1 text-xs font-medium text-muted">{{ t("Chen.GoV1Objects") }}</span>
       <UButton
         icon="i-lucide-fold-vertical"
+        :ui="{ leadingIcon: 'size-3.5' }"
         :aria-label="t('Chen.GoV1CollapseAll')"
         :title="t('Chen.GoV1CollapseAll')"
         color="neutral"
@@ -548,6 +550,7 @@ onBeforeUnmount(() => {
       />
       <UButton
         icon="i-lucide-refresh-cw"
+        :ui="{ leadingIcon: 'size-3.5' }"
         :aria-label="t('Chen.GoV1Refresh')"
         color="neutral"
         variant="ghost"
@@ -558,6 +561,7 @@ onBeforeUnmount(() => {
       <UPopover :content="{ align: 'end' }">
         <UButton
           icon="i-lucide-settings-2"
+          :ui="{ leadingIcon: 'size-3.5' }"
           :aria-label="t('Chen.WorkspaceSettings')"
           :title="t('Chen.WorkspaceSettings')"
           size="xs"
@@ -594,6 +598,16 @@ onBeforeUnmount(() => {
           </div>
         </template>
       </UPopover>
+      <UButton
+        icon="i-lucide-panel-left-close"
+        :ui="{ leadingIcon: 'size-3.5' }"
+        :aria-label="t('Chen.CloseDatabaseExplorer')"
+        :title="t('Chen.CloseDatabaseExplorer')"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        @click="emit('close')"
+      />
     </div>
     <div class="shrink-0 space-y-1 border-b border-default p-2">
       <UInput

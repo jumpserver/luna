@@ -347,6 +347,8 @@ onMounted(() => {
     fontFamily: getComputedStyle(host.value).getPropertyValue("--font-mono"),
     fontSize: 13,
     lineNumbersMinChars: 3,
+    renderLineHighlight: "all",
+    padding: { top: 5, bottom: 5 },
     scrollBeyondLastLine: false,
     wordWrap: "off",
     tabSize: 2,

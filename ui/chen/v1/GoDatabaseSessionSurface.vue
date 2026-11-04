@@ -53,7 +53,6 @@ import {
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
 import { chenErrorText } from "~/chen/utils/errorMessages";
-import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import WorkspaceSubTabStrip from "~/components/Workspace/subTabStrip.vue";
 import { registerWorkspaceSessionCloseGuard } from "~/composables/useWorkspaceTabs";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -101,15 +100,15 @@ const workspacePreferences = useChenWorkspacePreferences();
 const recentObjects = ref<GoCatalogObject[]>([]);
 const logs = ref<ChenLogConsoleEntry[]>([]);
 const logsOpen = ref(false);
-const unreadLogs = ref(0);
+const unreadLogErrors = ref(0);
 const loggedExecutions = new Map<string, string>();
 function appendLog(sourceId: string, sourceTitle: string, level: ChenLogConsoleEntry["level"], message: string) {
   logs.value.push({ id: newChenRequestId(), timestamp: Date.now(), sourceId, sourceTitle, level, message });
   if (logs.value.length > 200) logs.value.shift();
-  if (!logsOpen.value) unreadLogs.value++;
+  if (level === "error" && !logsOpen.value) unreadLogErrors.value++;
 }
 watch(logsOpen, (open) => {
-  if (open) unreadLogs.value = 0;
+  if (open) unreadLogErrors.value = 0;
 });
 function objectTitle(tab: ChenWorkspaceTab) {
   if (tab.kind !== "object" || tab.title !== tab.object.name) return tab.title;
@@ -165,7 +164,7 @@ const workspaceBody = useTemplateRef<HTMLElement>("workspaceBody");
 const { width: workspaceWidth } = useElementSize(workspaceBody);
 const sidebarId = useId();
 // Only presentation preferences are persisted; connection details and SQL stay in memory.
-const sidebarPreference = useLocalStorage("jumpserver-client:chen-v1-sidebar-width", 300, {
+const sidebarPreference = useLocalStorage("jumpserver-client:chen-v1-sidebar-width", 280, {
   writeDefaults: false,
   initOnMounted: true
 });
@@ -179,7 +178,7 @@ const sidebarMax = computed(() => Math.max(220, Math.min(800, workspaceWidth.val
 // Keep the user's preferred width while a smaller window temporarily clamps it.
 const sidebarWidth = computed({
   get: () =>
-    Math.max(220, Math.min(sidebarMax.value, Number.isFinite(sidebarPreference.value) ? sidebarPreference.value : 300)),
+    Math.max(220, Math.min(sidebarMax.value, Number.isFinite(sidebarPreference.value) ? sidebarPreference.value : 280)),
   set: (value: number) => {
     sidebarPreference.value = value;
   }
@@ -189,7 +188,7 @@ const sidebarResize = usePaneResize({
   value: sidebarWidth,
   min: 220,
   max: sidebarMax,
-  defaultValue: 300,
+  defaultValue: 280,
   step: 16,
   pixelsPerUnit: () => 1,
   enabled: treeVisible
@@ -1578,7 +1577,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   session.value = null;
   recentObjects.value = [];
   logs.value = [];
-  unreadLogs.value = 0;
+  unreadLogErrors.value = 0;
   loggedExecutions.clear();
   defaultContext.value = { database: "", schema: "" };
   schemaEdit.value = null;
@@ -1694,60 +1693,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     @copy.capture="preventCopy"
     @cut.capture="preventCopy"
   >
-    <div
-      class="flex min-h-[var(--workspace-toolbar-height)] shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-1.5"
-    >
-      <UButton
-        :icon="treeVisible ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
-        :label="t('Chen.GoV1Objects')"
-        :aria-expanded="desktopTree ? treeVisible : drawer"
-        :aria-controls="sidebarId"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        @click="toggleTree"
-      />
-      <UIcon name="i-lucide-database" class="size-4 shrink-0" />
-      <span class="max-w-80 truncate text-xs" :title="session?.asset || tab?.assetName || selector">
-        {{ session?.asset || tab?.assetName || selector }}
-      </span>
-      <UBadge color="neutral" variant="soft" size="xs">
-        {{ chenSqlDialect(session?.dialect || tab?.protocol || "").label }}
-      </UBadge>
-      <span
-        v-if="sessionReady"
-        class="flex items-center gap-1.5 text-xs"
-        :class="eventConnected ? 'text-muted' : 'text-warning'"
-        :title="t(eventConnected ? 'Chen.GoV1EventsConnected' : 'Chen.GoV1EventsReconnecting')"
-      >
-        <UIcon
-          :name="eventConnected ? 'i-lucide-check' : 'i-lucide-loader-circle'"
-          class="size-3"
-          :class="{ 'animate-spin': !eventConnected }"
-        />
-        {{ t(eventConnected ? "Chen.GoV1Connected" : "Chen.GoV1StatusSyncing") }}
-      </span>
-      <UButton
-        v-if="session"
-        class="ml-auto"
-        :label="t('Chen.CreateTable')"
-        icon="i-lucide-table-2"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="!sessionReady"
-        @click="openSchemaEditor('create')"
-      />
-      <UButton
-        icon="i-lucide-unplug"
-        :label="t('Chen.GoV1Close')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="!session || session.state === 'closed' || busy"
-        @click="closeSession"
-      />
-    </div>
     <div v-if="error" role="alert" class="shrink-0 border-b border-error/25 bg-error/10 px-3 py-2 text-xs text-error">
       {{ error }}
     </div>
@@ -1824,6 +1769,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
           @preview="(object) => openObject(object)"
+          @close="toggleTree"
         />
         <div v-else class="p-3 text-xs text-muted">{{ t("Chen.GoV1Connecting") }}</div>
       </aside>
@@ -1839,7 +1785,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         :aria-valuemax="Math.round(sidebarMax)"
         :aria-valuetext="`${Math.round(sidebarWidth)} px`"
         :title="`${t('Chen.ResizeDatabaseSidebar')} · ${t('Chen.GoV1ResizeHint')}`"
-        class="group relative z-10 w-1.5 shrink-0 cursor-col-resize touch-none bg-[var(--workspace-surface-sidebar)] outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
+        class="group relative z-10 w-px shrink-0 cursor-col-resize touch-none bg-default/60 outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
         :class="{ 'bg-primary/20': sidebarResize.dragging.value }"
         @pointerdown="sidebarResize.begin"
         @pointermove="sidebarResize.move"
@@ -1849,9 +1795,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         @keydown="sidebarResize.keydown"
         @dblclick="sidebarResize.reset"
       >
-        <span
-          class="pointer-events-none absolute inset-y-0 left-1/2 border-l border-default group-hover:border-primary group-focus-visible:border-primary"
-        />
+        <span class="absolute inset-y-0 -left-1.5 -right-1.5" />
       </div>
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <div ref="tabStrip" class="shrink-0" @keydown="tabKeydown">
@@ -1886,6 +1830,49 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   :disabled="!sessionReady"
                 />
               </UDropdownMenu>
+            </template>
+            <template #trailing>
+              <UButton
+                v-if="!treeVisible"
+                :icon="drawer ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
+                :aria-label="t('Chen.GoV1Objects')"
+                :title="t('Chen.GoV1Objects')"
+                :aria-expanded="desktopTree ? treeVisible : drawer"
+                :aria-controls="sidebarId"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                @click="toggleTree"
+              />
+              <UButton
+                v-if="!tab"
+                icon="i-lucide-unplug"
+                :aria-label="t('Chen.GoV1Close')"
+                :title="t('Chen.GoV1Close')"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="session.state === 'closed' || busy"
+                @click="closeSession"
+              />
+              <div class="relative shrink-0">
+                <UButton
+                  size="xs"
+                  icon="i-lucide-scroll-text"
+                  color="neutral"
+                  :variant="logsOpen ? 'soft' : 'ghost'"
+                  :aria-pressed="logsOpen"
+                  :aria-label="t('Chen.ToggleLogConsole')"
+                  :title="
+                    unreadLogErrors ? t('Chen.LogConsoleNewErrors', { count: unreadLogErrors }) : t('Chen.LogConsole')
+                  "
+                  @click="logsOpen = !logsOpen"
+                />
+                <span
+                  v-if="unreadLogErrors"
+                  class="pointer-events-none absolute right-0.5 top-0.5 size-1.5 rounded-full bg-error ring-1 ring-[var(--workspace-surface-main)]"
+                />
+              </div>
             </template>
           </WorkspaceSubTabStrip>
           <UDropdownMenu
@@ -1987,24 +1974,10 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :entries="logs"
           @clear="
             logs = [];
-            unreadLogs = 0;
+            unreadLogErrors = 0;
           "
           @close="logsOpen = false"
         />
-        <div
-          class="flex shrink-0 flex-wrap items-center gap-x-3 border-t border-default px-3 py-1 text-[11px] text-muted"
-        >
-          <UButton
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-scroll-text"
-            :label="`${t('Chen.LogConsole')}${unreadLogs ? ` (${unreadLogs})` : ''}`"
-            :aria-expanded="logsOpen"
-            @click="logsOpen = !logsOpen"
-          />
-          <span class="ml-auto" :title="t('Chen.GoV1Shortcuts')">Ctrl/⌘ Enter · {{ t("Chen.GoV1RunCurrent") }}</span>
-        </div>
       </div>
     </div>
     <GoSchemaEditor
