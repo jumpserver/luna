@@ -39,7 +39,7 @@ const databaseNamespace = computed(() => chenSqlDialect(props.dialect).databaseN
 interface Node {
   id: string;
   label: string;
-  type: "connection" | "database" | "schema" | "group" | "object" | "column" | "recent";
+  type: "connection" | "database" | "schema" | "group" | "object" | "recent";
   schema: string;
   kind?: "table" | "view";
   object?: GoCatalogObject;
@@ -101,7 +101,7 @@ const rows = computed(() => {
   const result: Row[] = [];
   function walk(current: Node, depth: number) {
     result.push({ node: current, depth, type: "node" });
-    if (current.expanded) children(current, depth + 1);
+    if (expandable(current) && current.expanded) children(current, depth + 1);
   }
   function children(current: Node, depth: number) {
     for (const child of current.children) walk(child, depth);
@@ -126,11 +126,12 @@ function relation(object: GoCatalogObject): Node {
     id: objectKey(object),
     object,
     kind: object.kind,
+    loaded: true,
     detail: object.comment
   });
 }
 async function load(current: Node, append = false) {
-  if (!props.ready || current.loading) return;
+  if (!props.ready || current.loading || !expandable(current)) return;
   if (current.type === "connection" || current.type === "schema") return;
   if (current.type === "database" && databaseNamespace.value) return;
   const generation = ++current.generation;
@@ -150,23 +151,6 @@ async function load(current: Node, append = false) {
       page = schemas;
       items = schemas.items.map((schema) =>
         node("schema", schema.name, schema.name, { loaded: true, children: groups(schema.name) })
-      );
-    } else if (current.type === "object" && current.object) {
-      const columns = await props.api.catalogColumns(
-        props.sessionId,
-        current.schema,
-        current.object.name,
-        append ? current.cursor : undefined,
-        controller.signal
-      );
-      page = columns;
-      items = columns.items.map((column) =>
-        node("column", column.name, current.schema, {
-          id: JSON.stringify([current.id, column.name]),
-          object: current.object,
-          loaded: true,
-          detail: `${column.data_type} · ${t(column.nullable ? "Chen.GoV1Nullable" : "Chen.GoV1NotNull")}${column.comment ? ` · ${column.comment}` : ""}`
-        })
       );
     } else {
       const objects = await props.api.catalogObjects(
@@ -190,7 +174,7 @@ async function load(current: Node, append = false) {
   }
 }
 function expandable(current: Node) {
-  return current.type !== "column" && !current.id.startsWith("recent:");
+  return current.type !== "object";
 }
 async function toggle(current: Node) {
   if (!expandable(current)) return;
@@ -203,7 +187,7 @@ function select(current: Node, event: MouseEvent) {
   if (event.detail <= 1 && expandable(current)) void toggle(current);
 }
 function activate(current: Node) {
-  if (current.object) emit("object", current.object, current.type === "column" ? "structure" : "data");
+  if (current.object) emit("object", current.object, "data");
   else if (current.type === "database" || current.type === "schema")
     emit("overview", { database: props.database, schema: current.schema });
 }
@@ -214,8 +198,7 @@ function icon(current: Node) {
     database: "i-lucide-database",
     schema: "i-lucide-library-big",
     group: current.expanded ? "i-lucide-folder-open" : "i-lucide-folder",
-    object: current.kind === "view" ? "i-lucide-eye" : "i-lucide-table-properties",
-    column: "i-lucide-columns-3"
+    object: current.kind === "view" ? "i-lucide-eye" : "i-lucide-table-properties"
   }[current.type];
 }
 function label(current: Node) {
@@ -234,8 +217,7 @@ function collapseAll() {
 }
 function sqlName(current: Node, qualified = false) {
   if (current.object && qualified) {
-    const object = qualifiedObjectName(current.object, props.dialect);
-    return current.type === "column" ? `${object}.${quoteIdentifier(current.label, props.dialect)}` : object;
+    return qualifiedObjectName(current.object, props.dialect);
   }
   return quoteIdentifier(current.label, props.dialect);
 }
@@ -250,6 +232,13 @@ async function copyName(current: Node, qualified = false) {
 }
 async function refresh(current = root.value.children[0]!) {
   if (!current) return;
+  if (!expandable(current)) {
+    if (searching.value) return runSearch();
+    const parent = focusable.value.find(({ node }) => node.children.some((child) => child.id === current.id));
+    if (parent?.node.type === "recent") await refresh();
+    else if (parent) await refresh(parent.node);
+    return;
+  }
   if (current.type === "connection") return refresh(current.children[0]);
   if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) {
     current.expanded = true;
@@ -257,8 +246,9 @@ async function refresh(current = root.value.children[0]!) {
     if (current.error) return;
   }
   for (const child of current.children) {
+    if (!expandable(child)) continue;
     if (child.expanded) await refresh(child);
-    else if (child.type !== "schema" && child.type !== "column") child.loaded = false;
+    else if (child.type !== "schema") child.loaded = false;
   }
 }
 function menu(current: Node) {
@@ -318,7 +308,7 @@ function menu(current: Node) {
           }
         ]
       : []),
-    ...(["database", "schema", "object", "column"].includes(current.type)
+    ...(["database", "schema", "object"].includes(current.type)
       ? [
           {
             label: t("Chen.GoV1CopyName"),
@@ -393,7 +383,7 @@ function menu(current: Node) {
     {
       label: t("Chen.GoV1Refresh"),
       icon: "i-lucide-refresh-cw",
-      disabled: !props.ready || current.loading || current.type === "column",
+      disabled: !props.ready || current.loading,
       onSelect: () => refresh(current)
     }
   ];
@@ -663,7 +653,7 @@ onBeforeUnmount(() => {
             :title="
               [
                 row.node.object ? qualifiedObjectName(row.node.object, dialect) : '',
-                row.node.type === 'column' ? row.node.label : row.node.object ? '' : label(row.node),
+                row.node.object ? '' : label(row.node),
                 row.node.detail
               ]
                 .filter(Boolean)
@@ -706,7 +696,6 @@ onBeforeUnmount(() => {
               <span v-if="searching && row.node.object" class="min-w-0 truncate text-muted">
                 {{ row.node.object.schema }}
               </span>
-              <span v-if="row.node.type === 'column'" class="min-w-0 truncate text-muted">{{ row.node.detail }}</span>
             </span>
             <UButton
               v-if="row.node.type === 'recent' && row.node.children.length"
