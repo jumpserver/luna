@@ -616,7 +616,7 @@ defineExpose({
       v-if="!dataOnly && query.kind !== 'console'"
       ref="queryToolbar"
       data-chen-query-toolbar
-      class="flex shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-3 pb-2 pt-3 [&>*]:shrink-0"
+      class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-3 [&>*]:shrink-0"
     >
       <UButton
         v-if="session.state === 'ready' && !ready"
