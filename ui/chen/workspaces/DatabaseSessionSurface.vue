@@ -2024,7 +2024,7 @@ defineExpose({ focus });
         :aria-valuenow="sidebarWidth"
         aria-valuemin="220"
         aria-valuemax="420"
-        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-default/60 hover:bg-primary/40 active:bg-primary/60 max-md:hidden"
+        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-[var(--workspace-surface-border)] hover:bg-primary/40 active:bg-primary/60 max-md:hidden"
         @pointerdown="startResize"
       >
         <div class="absolute inset-y-0 -left-1.5 -right-1.5" />

@@ -50,7 +50,7 @@ const sqlKeywordCaseModel = computed({
 
 <template>
   <aside
-    class="flex min-h-0 shrink-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]"
+    class="flex min-h-0 shrink-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)] md:border-r-0"
     :style="{ width: typeof width === 'number' ? `${width}px` : width }"
   >
     <div

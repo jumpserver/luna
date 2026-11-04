@@ -616,7 +616,7 @@ defineExpose({
       v-if="!dataOnly && query.kind !== 'console'"
       ref="queryToolbar"
       data-chen-query-toolbar
-      class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-3 [&>*]:shrink-0"
+      class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-default px-3 [&>*]:shrink-0"
     >
       <UButton
         v-if="session.state === 'ready' && !ready"
@@ -1062,10 +1062,10 @@ defineExpose({
       @ai="emit('ai', $event)"
     />
     <div v-else ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden px-3 pb-[3px]">
+      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden px-3">
         <MonacoSqlEditor
           ref="editor"
-          class="rounded-r-md border-y border-r border-default"
+          class="rounded-r-md border-r border-default"
           :model-value="query.sql"
           :dialect="session.dialect"
           :sql-keyword-case="sqlKeywordCase"
@@ -1099,7 +1099,7 @@ defineExpose({
         :aria-valuemax="Math.round(maxEditorPercent)"
         :aria-valuetext="`${Math.round(editorPercent)}%`"
         :title="`${t('Chen.ResizeSqlEditorResults')} · ${t('Chen.GoV1ResizeHint')}`"
-        class="group relative z-10 cursor-row-resize touch-none bg-default/60 outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
+        class="group relative z-10 cursor-row-resize touch-none bg-[var(--workspace-surface-border)] outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
         :class="{ 'bg-primary/20': editorResize.dragging.value }"
         @pointerdown="editorResize.begin"
         @pointermove="editorResize.move"

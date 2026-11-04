@@ -437,7 +437,7 @@ defineExpose({ editorSnapshot });
       :aria-valuenow="Math.round(editorHeightRatio)"
       :aria-valuemin="QUERY_PANEL_MIN_RATIO"
       :aria-valuemax="100 - QUERY_PANEL_MIN_RATIO"
-      class="group relative z-20 cursor-row-resize touch-none bg-default/60 outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
+      class="group relative z-20 cursor-row-resize touch-none bg-[var(--workspace-surface-border)] outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
       :class="resizingQueryPanel ? 'bg-primary/60' : ''"
       @pointerdown="beginQueryPanelResize"
       @pointermove="resizeQueryPanel"
