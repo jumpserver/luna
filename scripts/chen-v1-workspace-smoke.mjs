@@ -18,20 +18,19 @@ await mkdir(output, { recursive: true });
 const routeFile = `${root}ui/pages/facelive/chen-v1-smoke.vue`;
 const route = `<script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import DatabaseSessionRouter from "~/chen/workspaces/DatabaseSessionRouter.vue";
+import GoDatabaseSessionSurface from "~/chen/v1/GoDatabaseSessionSurface.vue";
 definePageMeta({ layout: false });
 const tab = reactive({id:"chen-browser-fixture",assetId:"fixture",assetName:${JSON.stringify(`${dialect} browser fixture`)},address:"127.0.0.1",
  assetType:${JSON.stringify(dialect)},assetPlatform:${JSON.stringify(dialect)},assetCategory:"database",protocol:${JSON.stringify(dialect)},account:"fixture",
  status:"connecting",layoutMode:"single",panes:[],payload:{token:{id:${JSON.stringify(connectToken)}}}} as WorkspaceSessionTab);
-</script><template><div class="h-screen w-screen"><DatabaseSessionRouter :tab="tab" /></div></template>`;
+</script><template><div class="h-screen w-screen"><GoDatabaseSessionSurface :tab="tab" /></div></template>`;
 await writeFile(routeFile, route, { flag: "wx" });
 const child = spawn(`${root}node_modules/.bin/nuxt`, ["dev", "--host", "127.0.0.1", "--port", "3019"], {
   cwd: root,
   env: {
     ...process.env,
     JMS_DEV_LIGHT: "1",
-    JMS_CHEN_DEV_URL: fixture.backend_url,
-    NUXT_PUBLIC_CHEN_GO_V1_PROTOCOLS: "mysql,postgresql"
+    JMS_CHEN_DEV_URL: fixture.backend_url
   },
   stdio: ["ignore", "pipe", "pipe"]
 });
@@ -48,7 +47,7 @@ const errors = [];
 const api = [];
 const summary = {
   database: dialect,
-  frontend: "Nuxt + actual DatabaseSessionRouter/Go workspace",
+  frontend: "Nuxt + actual Go workspace",
   backend: `Go HTTP + fake Core/Wisp boundary + real ${dialect}`,
   checks: []
 };

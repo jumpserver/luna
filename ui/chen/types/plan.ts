@@ -110,5 +110,3 @@ export interface ChenExecutionPlan {
   error: PlanDiagnostic | null;
   warnings: PlanDiagnostic[];
 }
-
-export type ChenQueryBottomPane = "results" | "plan";

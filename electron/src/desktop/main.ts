@@ -214,7 +214,6 @@ function installConnectorSessionHooks(targetSession) {
       try {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
-        const isChenSocket = target.pathname.startsWith("/chen/ws/") && allowedChenOrigins.has(httpOrigin);
         // Lion is hosted by Koko and needs the same desktop WebSocket origin handling.
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
@@ -226,14 +225,12 @@ function installConnectorSessionHooks(targetSession) {
           // No authenticated site is available yet.
         }
         const isFaceSocket = isFaceLiveWebSocket(details.url, activeSiteOrigin);
-        if (isChenSocket || isKokoSocket || isFaceSocket) {
+        if (isKokoSocket || isFaceSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
-          // Chromium treats the custom renderer origin as cross-site and may omit
-          // the target HTTP session. Chen and FaceLive both authenticate with it;
-          // Chen additionally requires its WebSocket subprotocol token.
-          if (isChenSocket || isFaceSocket) {
+          // Chromium may omit the target HTTP session for FaceLive's cross-site handshake.
+          if (isFaceSocket) {
             const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
             if (cookies.length) {
               const cookieHeader =
@@ -302,9 +299,7 @@ async function proxyChenRequest(request, url) {
     credentials: "include",
     redirect: "manual"
   });
-  // Chen binds its WebSocket token to the HTTP session created by /api/auth.
-  // Use the renderer's shared Electron session so Set-Cookie is persisted and
-  // automatically attached to the subsequent direct WebSocket handshake.
+  // Keep authenticated HTTP and SSE requests on the renderer's shared session.
   const response = await electronSession.defaultSession.fetch(proxied);
   const responseHeaders = new Headers(response.headers);
   corsHeaders.forEach((value, name) => responseHeaders.set(name, value));

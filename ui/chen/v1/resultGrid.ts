@@ -204,10 +204,6 @@ export function resultJsonFormat(text: string): { text: string | null; limited: 
   return { text: parts.join(""), limited: false };
 }
 
-export function formatResultJson(text: string): string {
-  return resultJsonFormat(text).text ?? text;
-}
-
 export function resultSelectionTsv(
   rows: Record<string, unknown>[],
   columns: { id: string; name: string }[],

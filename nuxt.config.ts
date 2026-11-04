@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { chenSqlDialects } from "./ui/chen/utils/sqlDialect";
 
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
@@ -58,8 +57,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       buildTime,
-      // Choose before consuming the one-use token. An explicit empty override retains legacy routes.
-      chenGoV1Protocols: process.env.NUXT_PUBLIC_CHEN_GO_V1_PROTOCOLS ?? Object.keys(chenSqlDialects).join(","),
       faceLiveSocketBaseUrl: process.env.NUXT_PUBLIC_FACE_LIVE_SOCKET_BASE_URL || ""
     }
   },
@@ -153,9 +150,8 @@ export default defineNuxtConfig({
   vite: {
     clearScreen: false,
     envPrefix: ["VITE_"],
-    // Chen is loaded lazily. Pre-bundle its direct runtime dependencies together
-    // so the first workspace entry cannot re-optimize them, reload the app, or split CodeMirror
-    // across incompatible module instances.
+    // Pre-bundle shared editors and grids so lazy workspaces cannot trigger a
+    // reload or split CodeMirror across incompatible module instances.
     optimizeDeps: {
       include: [
         "@ai-sdk/vue",
@@ -243,13 +239,6 @@ export default defineNuxtConfig({
           secure: false,
           changeOrigin: true,
           configure: configureHttpProxy("chen-go", chenGoTarget)
-        },
-        "/chen": {
-          target: chenTarget,
-          secure: false,
-          ws: true,
-          changeOrigin: true,
-          configure: configureHttpProxy("chen", chenTarget)
         },
         "/kael": {
           target: kaelTarget,
