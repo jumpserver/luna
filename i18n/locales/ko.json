@@ -1302,8 +1302,8 @@
     "NoUserDescription": "사용자 상세 정보를 보려면 JumpServer 사이트에 로그인하세요.",
     "ClientLoginInfo": "이번 로그인",
     "ClientLoginInfoDescription": "현재 사이트와 계정의 이번 로그인 시간 및 만료 시간입니다.",
-    "ClientLoginReauthOnExit": "종료 후 다시 로그인",
-    "ClientLoginMaxLifetime": "최대 로그인 유효기간",
+    "ClientLoginReauthOnExit": "클라이언트 종료 후 다시 로그인",
+    "ClientLoginMaxLifetime": "클라이언트 최대 로그인 유효 시간",
     "ClientLoginStartedAt": "이번 로그인 시작 시간",
     "ClientLoginEffectiveExpiry": "예상 만료 시간",
     "ClientLoginUnknown": "아직 확인되지 않음",
@@ -3668,14 +3668,14 @@
     "LockPassword": "화면 잠금 비밀번호",
     "FileEncryption": "파일 암호화",
     "ClientSettings": "로그인 및 화면 잠금",
-    "Reauth": "종료 후 다시 로그인",
-    "Lifetime": "최대 로그인 시간(분)",
+    "Reauth": "클라이언트 종료 후 다시 로그인",
+    "Lifetime": "클라이언트 최대 로그인 유효 시간 (분)",
     "Idle": "유휴 화면 잠금(분)",
     "ReauthHelp": "종료 후 다시 실행하면 재로그인이 필요합니다. 최소화하거나 숨기는 것은 종료가 아닙니다.",
     "ReauthRequired": "관리자가 활성화하여 끌 수 없습니다. 최소화하거나 숨기는 것은 종료가 아닙니다.",
     "UnlimitedHelp": "0은 무제한입니다. 비우고 저장하면 기본값으로 복원됩니다.",
     "IdleHelp": "설정한 유휴 시간이 지나면 자동 잠깁니다. 기본 창에서 잠금 비밀번호를 입력해 해제합니다. 외부 앱 창은 보호되지 않습니다.",
-    "WebIdleHelp": "설정한 유휴 시간이 지나면 콘솔과 Web 터미널이 잠깁니다. 잠금 비밀번호를 입력해 해제합니다.",
+    "WebIdleHelp": "설정한 유휴 시간이 지나면 콘솔과 Web 터미널이 잠깁니다. 잠금 비밀번호를 입력해 해제합니다. 유휴 잠금이 켜져 있으면 모든 페이지를 닫아도 10초 후 잠깁니다. 페이지 종료 시 로그아웃 설정이 우선합니다. 10초 안에 새로 고치거나 다시 열면 취소됩니다.",
     "LifetimeHelp": "로그인 시점부터 계산합니다. 만료 시 재로그인이 필요하며 활동해도 연장되지 않습니다."
   }
 }

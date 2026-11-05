@@ -1302,8 +1302,8 @@
     "NoUserDescription": "登录 JumpServer 站点后即可查看用户详情。",
     "ClientLoginInfo": "本次登录",
     "ClientLoginInfoDescription": "当前站点、当前账号的本次登录时间和到期时间。",
-    "ClientLoginReauthOnExit": "退出后重新登录",
-    "ClientLoginMaxLifetime": "最长登录有效期",
+    "ClientLoginReauthOnExit": "客户端退出后重新登录",
+    "ClientLoginMaxLifetime": "客户端最长登录有效期",
     "ClientLoginStartedAt": "本次登录时间",
     "ClientLoginEffectiveExpiry": "本次到期时间",
     "ClientLoginUnknown": "暂未获取",
@@ -3668,14 +3668,14 @@
     "LockPassword": "锁屏密码",
     "FileEncryption": "文件加密",
     "ClientSettings": "登录与锁屏",
-    "Reauth": "退出后重新登录",
-    "Lifetime": "最长登录有效期 (分)",
+    "Reauth": "客户端退出后重新登录",
+    "Lifetime": "客户端最长登录有效期 (分)",
     "Idle": "空闲锁屏 (分)",
     "ReauthHelp": "开启后，退出并重新启动需重新登录，最小化或隐藏不受影响。",
     "ReauthRequired": "管理员已开启，不能关闭。最小化或隐藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空后保存恢复默认值。",
     "IdleHelp": "空闲达到设定时间后自动锁屏，在主窗口输入锁屏密码解锁。外部软件窗口不受保护。",
-    "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。",
+    "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。 开启空闲锁屏后，关闭全部页面 10 秒后也会锁定；开启关闭页面退出则优先注销，刷新或 10 秒内重开可取消。",
     "LifetimeHelp": "从登录时间起计算，到期需重新登录，操作不会延长。"
   }
 }

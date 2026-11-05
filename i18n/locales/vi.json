@@ -1302,8 +1302,8 @@
     "NoUserDescription": "Đăng nhập vào một trang JumpServer để xem chi tiết người dùng.",
     "ClientLoginInfo": "Lần đăng nhập hiện tại",
     "ClientLoginInfoDescription": "Thời điểm đăng nhập và hết hạn của phiên hiện tại trên trang web và tài khoản này.",
-    "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát",
-    "ClientLoginMaxLifetime": "Thời hạn đăng nhập tối đa",
+    "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát ứng dụng khách",
+    "ClientLoginMaxLifetime": "Thời gian đăng nhập tối đa của ứng dụng khách",
     "ClientLoginStartedAt": "Bắt đầu lần đăng nhập này",
     "ClientLoginEffectiveExpiry": "Thời điểm hết hạn dự kiến",
     "ClientLoginUnknown": "Chưa có thông tin",
@@ -3668,14 +3668,14 @@
     "LockPassword": "Mật khẩu khóa màn hình",
     "FileEncryption": "Mã hóa tệp",
     "ClientSettings": "Đăng nhập và khóa màn hình",
-    "Reauth": "Đăng nhập lại sau khi thoát",
-    "Lifetime": "Thời gian đăng nhập tối đa (phút)",
+    "Reauth": "Đăng nhập lại sau khi thoát ứng dụng khách",
+    "Lifetime": "Thời gian đăng nhập tối đa của ứng dụng khách (phút)",
     "Idle": "Khóa màn hình khi nhàn rỗi (phút)",
     "ReauthHelp": "Phải đăng nhập lại sau khi thoát và khởi động lại. Thu nhỏ hoặc ẩn ứng dụng không tính là thoát.",
     "ReauthRequired": "Quản trị viên đã bật nên không thể tắt. Thu nhỏ hoặc ẩn không tính là thoát.",
     "UnlimitedHelp": "0 là không giới hạn. Xóa rồi lưu để khôi phục mặc định.",
     "IdleHelp": "Tự khóa khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa tại cửa sổ chính để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
-    "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa.",
+    "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa. Khi bật khóa do không hoạt động, đóng tất cả các trang cũng khóa phiên sau 10 giây. Đăng xuất khi đóng trang được ưu tiên. Làm mới hoặc mở lại trong 10 giây sẽ hủy thao tác này.",
     "LifetimeHelp": "Tính từ lúc đăng nhập. Hết hạn phải đăng nhập lại; hoạt động không kéo dài thời hạn."
   }
 }

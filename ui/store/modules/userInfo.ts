@@ -269,11 +269,11 @@ export const useUserInfoStore = defineStore(
      * @description 删除用户数据
      * @param accountId
      */
-    const deleteUserData = async (accountId: string) => {
+    const deleteUserData = async (accountId: string, options: { alreadyLoggedOut?: boolean } = {}) => {
       const userData = userMap.value[accountId];
 
-      // 退出当前站点时立即请求清理其 Cookie
-      if (isDesktopRuntime() && userData) {
+      // 主进程已完成注销时，只需复用本地账号清理和切换逻辑。
+      if (isDesktopRuntime() && userData && !options.alreadyLoggedOut) {
         await desktopInvoke("logout", {
           name: "main",
           site: userData.site,

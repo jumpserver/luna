@@ -1302,8 +1302,8 @@
     "NoUserDescription": "JumpServer サイトにログインするとユーザー詳細を表示できます。",
     "ClientLoginInfo": "今回のログイン",
     "ClientLoginInfoDescription": "現在のサイトとアカウントの今回のログイン時刻と有効期限です。",
-    "ClientLoginReauthOnExit": "終了後に再ログイン",
-    "ClientLoginMaxLifetime": "ログインの最大有効期間",
+    "ClientLoginReauthOnExit": "クライアント終了後に再ログイン",
+    "ClientLoginMaxLifetime": "クライアントの最長ログイン有効期間",
     "ClientLoginStartedAt": "今回のログイン開始時刻",
     "ClientLoginEffectiveExpiry": "失効予定時刻",
     "ClientLoginUnknown": "未取得",
@@ -3668,14 +3668,14 @@
     "LockPassword": "画面ロックパスワード",
     "FileEncryption": "ファイル暗号化",
     "ClientSettings": "ログインと画面ロック",
-    "Reauth": "終了後に再ログイン",
-    "Lifetime": "最大ログイン時間（分）",
+    "Reauth": "クライアント終了後に再ログイン",
+    "Lifetime": "クライアントの最長ログイン有効期間 (分)",
     "Idle": "無操作時ロック（分）",
     "ReauthHelp": "終了して再起動すると再ログインが必要です。最小化や非表示は終了に含みません。",
     "ReauthRequired": "管理者が有効にしているため無効にできません。最小化や非表示は終了に含みません。",
     "UnlimitedHelp": "0 は無制限です。空欄で保存すると既定値に戻ります。",
     "IdleHelp": "指定した無操作時間で自動ロックします。メインウィンドウでロック用パスワードを入力して解除します。外部アプリのウィンドウは保護されません。",
-    "WebIdleHelp": "指定した無操作時間でコンソールと Web ターミナルをロックします。ロック用パスワードで解除します。",
+    "WebIdleHelp": "指定した無操作時間でコンソールと Web ターミナルをロックします。ロック用パスワードで解除します。 無操作によるロックが有効な場合、すべてのページを閉じても10秒後にロックされます。ページ終了時のログアウト設定が優先されます。更新や10秒以内の再表示でキャンセルされます。",
     "LifetimeHelp": "ログイン時刻から計算し、期限切れ後は再ログインが必要です。操作しても延長されません。"
   }
 }

@@ -1302,8 +1302,8 @@
     "NoUserDescription": "登入 JumpServer 站點後即可檢視使用者詳情。",
     "ClientLoginInfo": "本次登入",
     "ClientLoginInfoDescription": "目前站點、目前帳號的本次登入時間和到期時間。",
-    "ClientLoginReauthOnExit": "退出後重新登入",
-    "ClientLoginMaxLifetime": "最長登入有效期",
+    "ClientLoginReauthOnExit": "用戶端退出後重新登入",
+    "ClientLoginMaxLifetime": "用戶端最長登入有效期",
     "ClientLoginStartedAt": "本次登入時間",
     "ClientLoginEffectiveExpiry": "本次到期時間",
     "ClientLoginUnknown": "尚未取得",
@@ -3668,14 +3668,14 @@
     "LockPassword": "鎖屏密碼",
     "FileEncryption": "檔案加密",
     "ClientSettings": "登入與鎖屏",
-    "Reauth": "退出後重新登入",
-    "Lifetime": "最長登入有效期 (分)",
+    "Reauth": "用戶端退出後重新登入",
+    "Lifetime": "用戶端最長登入有效期 (分)",
     "Idle": "閒置鎖屏 (分)",
     "ReauthHelp": "啟用後，退出並重新啟動須重新登入，最小化或隱藏不受影響。",
     "ReauthRequired": "管理員已啟用，無法停用。最小化或隱藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空後儲存恢復預設值。",
     "IdleHelp": "閒置達到設定時間後自動鎖屏，在主視窗輸入鎖屏密碼解鎖。外部軟體視窗不受保護。",
-    "WebIdleHelp": "閒置達到設定時間後鎖定控制台與 Web 終端，輸入鎖屏密碼解鎖。",
+    "WebIdleHelp": "閒置達到設定時間後鎖定控制台與 Web 終端，輸入鎖屏密碼解鎖。 開啟閒置鎖屏後，關閉全部頁面 10 秒後也會鎖定；開啟關閉頁面登出則優先登出，重新整理或 10 秒內重開可取消。",
     "LifetimeHelp": "從登入時間起計算，到期須重新登入，操作不會延長。"
   }
 }

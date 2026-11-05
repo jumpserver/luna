@@ -10,7 +10,7 @@ import type {
 } from "./workspaceTypes";
 
 import { connectorSessionKey, resolveEndpointUrl } from "@jumpserver/connectors-core";
-import { computed, inject, reactive, ref, toValue, unref, watch } from "vue";
+import { computed, inject, onScopeDispose, reactive, ref, toValue, unref, watch } from "vue";
 import { useKokoHostAdapter } from "#koko/host";
 import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } from "./selectors";
 
@@ -70,6 +70,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   const preconnectingName = ref("");
   const recentConnections = useLocalStorage<RecentSftpConnection[]>("sftp-recent-connections", []);
   const globalActiveIds = reactive<Record<SftpWorkspaceSide, string | null>>({ left: null, right: null });
+  let connectionGeneration = 0;
 
   const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.id || "");
   const currentOrgLabel = computed(
@@ -88,11 +89,12 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     remotePaneRefs.value[id] = (value as SftpRemotePaneHandle | null) || null;
   }
 
-  async function buildSftpContext(assetId: string, tokenId: string, tabId: string) {
+  async function buildSftpContext(assetId: string, tokenId: string, tabId: string, generation: number) {
     const endpoint = await hostAdapter.getSmartEndpoint(
       { protocol: "sftp", assetId, token: tokenId },
       currentOrgId.value
     );
+    if (generation !== connectionGeneration) return null;
     const endpointUrl = resolveEndpointUrl(endpoint, hostAdapter.getWindowOrigin());
 
     let ticket = "";
@@ -102,6 +104,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
       if (isDesktopRuntime) throw cause;
     }
 
+    if (generation !== connectionGeneration) return null;
     return { component: "koko" as const, tokenId, ticket, endpointUrl, tabId };
   }
 
@@ -112,12 +115,14 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   function disconnectAllRemotes() {
+    connectionGeneration += 1;
     remotePanes.value = [];
     remotePaneRefs.value = {};
     activeRemoteId.value = null;
     globalActiveIds.left = defaultGlobalLeftPaneId(isDesktopRuntime);
     globalActiveIds.right = null;
   }
+  onScopeDispose(disconnectAllRemotes);
 
   function cleanupRemotePaneRefs(ids: Set<string>) {
     for (const id of ids) delete remotePaneRefs.value[id];
@@ -256,16 +261,24 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     side: SftpWorkspaceSide;
     replacePaneId?: string;
   }) {
+    const generation = connectionGeneration;
     const id = paneId();
     const replacementIndex = remotePanes.value.findIndex(
       (pane) => pane.id === input.replacePaneId && pane.side === input.side
     );
     const replacement = replacementIndex >= 0 ? remotePanes.value[replacementIndex] : null;
+    const context = await buildSftpContext(
+      input.assetId,
+      input.tokenId,
+      `remote-sftp:${input.assetId}:${id}`,
+      generation
+    );
+    if (!context || generation !== connectionGeneration) return;
     const nextPane: SftpRemotePane = {
       id,
       side: input.side,
       assetId: input.assetId,
-      context: await buildSftpContext(input.assetId, input.tokenId, `remote-sftp:${input.assetId}:${id}`),
+      context,
       organizationName: currentOrgLabel.value,
       assetName: input.assetName,
       transferEndpoint: {
@@ -292,9 +305,11 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
   async function connectRemoteAsset(asset: KokoSftpAsset, connection?: KokoSftpConnectionChoice) {
     if (remoteConnecting.value) return;
+    const generation = connectionGeneration;
     remoteConnecting.value = true;
     try {
       const connectAsset = await hostAdapter.sftp.prepareAsset(asset);
+      if (generation !== connectionGeneration) return;
       if (!assetSupportsSftp(connectAsset.permedProtocols)) {
         toast.add({
           title: options.translate("koko.fileManagement.unsupportedAsset"),
@@ -307,12 +322,14 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
       const side = toValue(options.global) ? connectSide.value : "right";
       const { tokenId } = await createSftpSession(connectAsset, connection);
+      if (generation !== connectionGeneration) return;
       await attachRemotePane({
         assetId: connectAsset.id,
         assetName: connectAsset.name,
         tokenId,
         side
       });
+      if (generation !== connectionGeneration) return;
       connectModalOpen.value = false;
       rememberRecentConnection({
         assetId: connectAsset.id,
@@ -322,7 +339,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
         lastConnectedAt: Date.now()
       });
     } catch (error) {
-      options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
+      if (generation === connectionGeneration)
+        options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
     } finally {
       remoteConnecting.value = false;
     }
@@ -337,6 +355,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     if (!toValue(options.global) || preconnecting.value) return;
     const intent = pendingPreconnect.value;
     if (!intent?.assetId) return;
+    const generation = connectionGeneration;
 
     pendingPreconnect.value = null;
     preconnecting.value = true;
@@ -356,7 +375,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
       }
       await connectRemoteAsset({ id: intent.assetId, name: intent.assetName || intent.assetId });
     } catch (error) {
-      options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
+      if (generation === connectionGeneration)
+        options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
     } finally {
       preconnecting.value = false;
       preconnectingName.value = "";

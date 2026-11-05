@@ -26,7 +26,6 @@ interface ClientSessionBindingState extends ClientSessionBinding {
   serverClock?: { serverTime: number; observedAt: number };
   verifying?: Promise<unknown>;
   lockRequest?: Promise<void>;
-  expiryCheckAt?: number;
   logoutAt?: number;
 }
 
@@ -292,6 +291,7 @@ export class DesktopAuthService {
       const session = this.sessions.get(this.currentSessionKey);
       const stored = session && this.tokens[session.sessionKey];
       if (!stored || (!force && session.nextCheckAt > performance.now())) return;
+      const binding = this.sessionBinding(session.sessionKey);
       // Network failures also wait for the next interval, without a retry storm.
       session.nextCheckAt = performance.now() + this.sessionCheckInterval;
       try {
@@ -330,7 +330,25 @@ export class DesktopAuthService {
         ) {
           await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
         }
-        // Network/server errors are not evidence of expiry; retry on the next tick.
+        // Before the known deadline, transient failures retry at the normal interval.
+      } finally {
+        const token = this.boundToken(binding);
+        const info = token?.client_login_session ?? stored.client_login_session;
+        const deadline = Date.parse(info?.effective_expires_at ?? info?.expires_at ?? "");
+        if (
+          token &&
+          binding?.serverClock &&
+          Number.isFinite(deadline) &&
+          deadline <= binding.serverClock.serverTime + performance.now() - binding.serverClock.observedAt
+        ) {
+          // A failed check cannot extend the last server-confirmed deadline. The binding
+          // keeps an old request from expiring a newer login for the same site/account.
+          await this.expireSession(
+            binding.sessionKey,
+            info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout",
+            info
+          );
+        }
       }
     } finally {
       this.checkingSessions = false;
@@ -880,7 +898,6 @@ export class DesktopAuthService {
     const binding = this.sessionBinding(sessionId);
     if (binding) {
       binding.serverClock = { serverTime: Date.parse(info.server_time), observedAt: performance.now() };
-      delete binding.expiryCheckAt;
     }
     // Broadcast the same server snapshot to settings and main windows without another request.
     this.emitEvent("client-login-session", { sessionId, session: info });
@@ -1154,11 +1171,8 @@ export class DesktopAuthService {
         const reason = info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout";
         if (expires <= now && binding.serverClock) {
           // The administrator may have extended this login since the last sync.
-          // Confirm expiry on the server; offline failures retry at the normal rate.
-          if (!this.checkingSessions && performance.now() >= (binding.expiryCheckAt || 0)) {
-            binding.expiryCheckAt = performance.now() + this.sessionCheckInterval;
-            void this.checkSessions(true);
-          }
+          // Confirm once; a failed check cannot keep an overdue login in use.
+          if (!this.checkingSessions) void this.checkSessions(true);
         }
         if (expires > now && expires - now <= 10 * 60_000) {
           notices.push({ id: `${session.sessionKey}:${reason}:${deadline}`, kind: reason, at: deadline });
@@ -1295,9 +1309,11 @@ export class DesktopAuthService {
       await this.expireSession(session.sessionKey, "logout");
       return;
     }
-    await this.logout({ site: session.origin, sessionId: session.sessionKey });
+    const loggingOut = this.logout({ site: session.origin, sessionId: session.sessionKey });
+    // Publish before disk/network waits so this logout cannot overtake a new login.
     this.emitEvent("auth-session-expired", { sessionId: session.sessionKey, reason: "logout" }, "main");
     this.emitEvent("client-lock-changed");
+    await loggingOut;
     return this.lockState(binding);
   }
 
@@ -1482,7 +1498,11 @@ export class DesktopAuthService {
     this.scheduleSessionCheck();
     if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
     if (this.pendingConnection?.sessionId === sessionId) this.cancelAuth();
-    await this.persistTokens();
+    try {
+      await this.persistTokens();
+    } catch (error) {
+      electronLog.warn("failed to remove logged out auth token", error);
+    }
     if (!token) return;
     const policy = token.client_login_policy;
     if (policy && (policy.reauth_on_exit || policy.idle_lock_time || policy.max_session_time)) {

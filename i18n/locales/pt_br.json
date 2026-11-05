@@ -1302,8 +1302,8 @@
     "NoUserDescription": "Entre em um site do JumpServer para ver os detalhes do usuário.",
     "ClientLoginInfo": "Login atual",
     "ClientLoginInfoDescription": "Os horários de login e expiração da sessão atual neste site e nesta conta.",
-    "ClientLoginReauthOnExit": "Entrar novamente após sair",
-    "ClientLoginMaxLifetime": "Duração máxima do login",
+    "ClientLoginReauthOnExit": "Entrar novamente após sair do cliente",
+    "ClientLoginMaxLifetime": "Duração máxima do login do cliente",
     "ClientLoginStartedAt": "Início deste login",
     "ClientLoginEffectiveExpiry": "Expiração prevista",
     "ClientLoginUnknown": "Ainda não disponível",
@@ -3668,14 +3668,14 @@
     "LockPassword": "Senha de bloqueio de tela",
     "FileEncryption": "Criptografia de arquivos",
     "ClientSettings": "Login e bloqueio de tela",
-    "Reauth": "Entrar novamente ao sair",
-    "Lifetime": "Duração máxima de login (min)",
+    "Reauth": "Entrar novamente após sair do cliente",
+    "Lifetime": "Duração máxima do login do cliente (min)",
     "Idle": "Bloqueio por inatividade (min)",
     "ReauthHelp": "Exige novo login após sair e reiniciar. Minimizar ou ocultar o cliente não conta como sair.",
     "ReauthRequired": "Exigido pelo administrador; não pode ser desativado. Minimizar ou ocultar não conta como sair.",
     "UnlimitedHelp": "0 significa ilimitado. Limpe e salve para restaurar o padrão.",
     "IdleHelp": "Bloqueia após o tempo de inatividade definido. Desbloqueie com a senha de bloqueio na janela principal. Janelas de aplicativos externos não são protegidas.",
-    "WebIdleHelp": "Bloqueia o console e o terminal Web após o tempo de inatividade definido. Digite a senha de bloqueio para desbloquear.",
+    "WebIdleHelp": "Bloqueia o console e o terminal Web após o tempo de inatividade definido. Digite a senha de bloqueio para desbloquear. Com o bloqueio por inatividade ativado, fechar todas as páginas também bloqueia esta sessão após 10 segundos. A saída ao fechar as páginas tem prioridade. Atualizar ou reabrir em até 10 segundos cancela a ação.",
     "LifetimeHelp": "Contado desde o login. Ao expirar, entre novamente; a atividade não prolonga o prazo."
   }
 }

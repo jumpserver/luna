@@ -43,6 +43,7 @@ export function useSftpSocket(): SftpSocketClient {
   const mcpListeners = new Set<(message: SftpMcpMessage) => void>();
   const failureListeners = new Set<(failure: SftpSocketFailure) => void>();
   let generation = 0;
+  let disposed = false;
   let intentionalClose = false;
   let connectionTimeout: ReturnType<typeof setTimeout> | undefined;
   let idleWatchdog: ReturnType<typeof setTimeout> | undefined;
@@ -142,6 +143,7 @@ export function useSftpSocket(): SftpSocketClient {
   }
 
   function connect(context: ConnectorSessionContext) {
+    if (disposed) return;
     close();
     intentionalClose = false;
     hasConnected.value = false;
@@ -229,7 +231,11 @@ export function useSftpSocket(): SftpSocketClient {
     return () => failureListeners.delete(listener);
   }
 
-  if (getCurrentInstance()) onUnmounted(() => close());
+  if (getCurrentInstance())
+    onUnmounted(() => {
+      disposed = true;
+      close();
+    });
 
   return { socket, connected, hasConnected, failure, close, connect, onFailure, onMcp, onMessage, send };
 }

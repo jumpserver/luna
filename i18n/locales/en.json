@@ -1302,8 +1302,8 @@
     "NoUserDescription": "Sign in to a JumpServer site to view user details.",
     "ClientLoginInfo": "Current login",
     "ClientLoginInfoDescription": "Login and expiry times for the current session on this site and account.",
-    "ClientLoginReauthOnExit": "Sign in again after exiting",
-    "ClientLoginMaxLifetime": "Maximum login lifetime",
+    "ClientLoginReauthOnExit": "Sign in again after exiting the client",
+    "ClientLoginMaxLifetime": "Maximum client login lifetime",
     "ClientLoginStartedAt": "This login started",
     "ClientLoginEffectiveExpiry": "Expected expiry",
     "ClientLoginUnknown": "Not available yet",
@@ -3668,14 +3668,14 @@
     "LockPassword": "Screen lock password",
     "FileEncryption": "File encryption",
     "ClientSettings": "Login and screen lock",
-    "Reauth": "Log in again after exit",
-    "Lifetime": "Maximum login duration (min)",
+    "Reauth": "Sign in again after exiting the client",
+    "Lifetime": "Maximum client login lifetime (min)",
     "Idle": "Idle screen lock (min)",
     "ReauthHelp": "Require a new login after exiting and restarting. Minimizing or hiding the client does not count as exiting.",
     "ReauthRequired": "Required by the administrator and cannot be disabled. Minimizing or hiding does not count as exiting.",
     "UnlimitedHelp": "0 means unlimited. Clear and save to restore the default.",
     "IdleHelp": "Locks after the specified idle time. Enter the lock password in the main window to unlock. External application windows are not protected.",
-    "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock.",
+    "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock. With idle locking enabled, closing all pages also locks this login after 10 seconds. Close-page sign-out takes priority. Refreshing or reopening within 10 seconds cancels this.",
     "LifetimeHelp": "Counted from login. Sign in again when it expires; activity does not extend it."
   }
 }

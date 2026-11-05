@@ -336,7 +336,23 @@ function sendCallback(webContents, callbackId, payload) {
   if (!webContents.isDestroyed()) webContents.send("jms:callback", callbackId, payload);
 }
 
+function closeExpiredSessionWindows(sessionId: string) {
+  if (!sessionId) return;
+  for (const [label, win] of windows) {
+    if (win.isDestroyed()) continue;
+    const binding = windowSessionBindings.get(win.webContents);
+    // Keep other accounts and a newer login of the same account untouched.
+    if (binding?.sessionKey !== sessionId || authService.boundToken(binding)) continue;
+    webProxyManager.disposeHost(win.webContents.id);
+    // Expiry is mandatory; a page's beforeunload guard cannot keep an asset usable.
+    if (label.startsWith("asset-")) win.destroy();
+  }
+}
+
 function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) {
+  if (name === "auth-session-expired") {
+    closeExpiredSessionWindows((payload as { sessionId?: string })?.sessionId || "");
+  }
   if (name === "client-policy-notices" && !targetLabel) {
     clientPolicyNotices = payload as typeof clientPolicyNotices;
     for (const [label, win] of windows) {
@@ -1247,11 +1263,8 @@ async function handleInvoke(event, request) {
       if (command === "client_lock_copy_settings") return clipboard.writeText(info.settingsUrl);
       return shell.openExternal(info.settingsUrl);
     }
-    const result = await authService.logoutLockedSession(binding);
-    // Explicit logout closes that account's managed windows; ordinary locking keeps them running.
-    for (const [label, target] of windows) {
-      if (label.startsWith("asset-") && windowSessionBindings.get(target.webContents) === binding) target.close();
-    }
+    const result = authService.logoutLockedSession(binding);
+    closeExpiredSessionWindows(binding?.sessionKey || "");
     return result;
   }
   if (
@@ -1574,7 +1587,13 @@ async function handleInvoke(event, request) {
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
     return withIpcErrorLog(command, async () => {
-      const result = await webProxyManager.invoke(command, event, win, args);
+      const result = await webProxyManager.invoke(command, event, win, args, () => {
+        if (
+          (windowSessionBindings.get(event.sender) ?? null) !== binding ||
+          (binding && (!authService.boundToken(binding) || authService.lockState(binding).locked))
+        )
+          throw new Error("Client login is no longer available");
+      });
       if (["create_web_proxy_view", "set_web_proxy_view_active", "close_web_proxy_view"].includes(command)) {
         clientNoticeLayers.raise(win);
         emitDesktopEvent("client-policy-notice-layer", null, labelForWindow(win));
@@ -1582,7 +1601,12 @@ async function handleInvoke(event, request) {
       return result;
     });
   }
-  if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
+  if (command === "logout")
+    return withIpcErrorLog("logout", () => {
+      const result = authService.logout(args);
+      closeExpiredSessionWindows(args.sessionId);
+      return result;
+    });
   if (command === "open_settings_window") {
     emitDesktopEvent("settings-navigate", args.path || "/setting/general", labelForWindow(win));
     return null;

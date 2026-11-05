@@ -486,7 +486,13 @@ export function createWebProxyManager({
     return { jpeg, signature };
   }
 
-  async function createWebProxyView(event, win, args) {
+  async function createWebProxyView(event, win, args, assertCurrent?: () => void) {
+    const hostContents = win.webContents;
+    const checkHost = () => {
+      if (hostContents.isDestroyed()) throw new Error("Web Proxy host is closed");
+      assertCurrent?.();
+    };
+    checkHost();
     const label = String(args.label || "");
     validateWebProxyLabel(label);
     if (webProxyViews.has(label)) throw new Error("Web Proxy view label already exists");
@@ -507,6 +513,7 @@ export function createWebProxyManager({
     } else {
       await proxySession.setProxy({ mode: "direct" });
     }
+    checkHost();
 
     const view = new WebContentsView({
       webPreferences: {
@@ -523,6 +530,7 @@ export function createWebProxyManager({
       if (args.colorScheme) await view.webContents.loadURL("about:blank");
       // Apply before the first navigation so CSS and startup scripts agree.
       await setWebProxyColorScheme(view.webContents, args.colorScheme);
+      checkHost();
     } catch (error) {
       view.webContents?.close();
       throw error;
@@ -846,8 +854,8 @@ export function createWebProxyManager({
     }
   }
 
-  async function invoke(command, event, win, args) {
-    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args);
+  async function invoke(command, event, win, args, assertCurrent?: () => void) {
+    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args, assertCurrent);
     if (command === "set_web_proxy_view_color_scheme") {
       const managed = webProxyView(event, args.label);
       return setWebProxyColorScheme(managed.view.webContents, args.colorScheme);

@@ -111,7 +111,6 @@ const openLogin = () => {
         </div>
       </template>
 
-      <!-- Login expiry must not tear down transports owned by these surfaces. -->
       <div v-if="activeTab" v-show="!showLoginPrompt" class="h-full min-h-0">
         <template v-for="tab in tabs" :key="tab.id">
           <WorkspaceSessionPane v-show="activeTabId === tab.id" :tab="tab" class="h-full min-h-0" />

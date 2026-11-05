@@ -1302,8 +1302,8 @@
     "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur.",
     "ClientLoginInfo": "Connexion actuelle",
     "ClientLoginInfoDescription": "Les heures de connexion et d’expiration de la session actuelle pour ce site et ce compte.",
-    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté",
-    "ClientLoginMaxLifetime": "Durée maximale de connexion",
+    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté le client",
+    "ClientLoginMaxLifetime": "Durée maximale de connexion du client",
     "ClientLoginStartedAt": "Début de cette connexion",
     "ClientLoginEffectiveExpiry": "Expiration prévue",
     "ClientLoginUnknown": "Pas encore disponible",
@@ -3668,14 +3668,14 @@
     "LockPassword": "Mot de passe de verrouillage",
     "FileEncryption": "Chiffrement des fichiers",
     "ClientSettings": "Connexion et verrouillage",
-    "Reauth": "Se reconnecter après fermeture",
-    "Lifetime": "Durée maximale de connexion (min)",
+    "Reauth": "Se reconnecter après avoir quitté le client",
+    "Lifetime": "Durée maximale de connexion du client (min)",
     "Idle": "Verrouillage après inactivité (min)",
     "ReauthHelp": "Exige une nouvelle connexion après avoir quitté et relancé le client. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "ReauthRequired": "Imposé par l’administrateur et non désactivable. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "UnlimitedHelp": "0 signifie illimité. Effacez puis enregistrez pour rétablir la valeur par défaut.",
     "IdleHelp": "Verrouille après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage dans la fenêtre principale. Les applications externes ne sont pas protégées.",
-    "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller.",
+    "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller. Si le verrouillage pour inactivité est activé, fermer toutes les pages verrouille aussi cette session après 10 secondes. La déconnexion à la fermeture est prioritaire. Actualiser ou rouvrir dans les 10 secondes annule cette action.",
     "LifetimeHelp": "Calculé depuis la connexion. Reconnectez-vous à l’expiration ; l’activité ne prolonge pas la durée."
   }
 }

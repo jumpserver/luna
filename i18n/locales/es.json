@@ -1302,8 +1302,8 @@
     "NoUserDescription": "Inicie sesión en un sitio de JumpServer para ver los detalles del usuario.",
     "ClientLoginInfo": "Inicio de sesión actual",
     "ClientLoginInfoDescription": "Las horas de inicio y vencimiento de la sesión actual para este sitio y esta cuenta.",
-    "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir",
-    "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión",
+    "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir del cliente",
+    "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión del cliente",
     "ClientLoginStartedAt": "Inicio de esta sesión",
     "ClientLoginEffectiveExpiry": "Caducidad prevista",
     "ClientLoginUnknown": "Aún no disponible",
@@ -3668,14 +3668,14 @@
     "LockPassword": "Contraseña de bloqueo",
     "FileEncryption": "Cifrado de archivos",
     "ClientSettings": "Inicio de sesión y bloqueo",
-    "Reauth": "Volver a iniciar sesión al salir",
-    "Lifetime": "Duración máxima de sesión (min)",
+    "Reauth": "Volver a iniciar sesión al salir del cliente",
+    "Lifetime": "Duración máxima del inicio de sesión del cliente (min)",
     "Idle": "Bloqueo por inactividad (min)",
     "ReauthHelp": "Exige iniciar sesión de nuevo al salir y reiniciar. Minimizar u ocultar el cliente no cuenta como salir.",
     "ReauthRequired": "Obligatorio por el administrador; no se puede desactivar. Minimizar u ocultar no cuenta como salir.",
     "UnlimitedHelp": "0 significa sin límite. Borre el campo y guarde para restaurar el valor predeterminado.",
     "IdleHelp": "Se bloquea tras el tiempo de inactividad indicado. Desbloquee con la contraseña de bloqueo en la ventana principal. Las aplicaciones externas no están protegidas.",
-    "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear.",
+    "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear. Con el bloqueo por inactividad activado, cerrar todas las páginas también bloquea esta sesión tras 10 segundos. El cierre de sesión al cerrar las páginas tiene prioridad. Actualizar o reabrir en 10 segundos lo cancela.",
     "LifetimeHelp": "Se cuenta desde el inicio de sesión. Al vencer, vuelva a iniciar sesión; la actividad no lo prolonga."
   }
 }
