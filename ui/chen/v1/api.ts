@@ -19,7 +19,29 @@ export interface GoSession {
   can_cancel?: boolean;
   cancellation_mode?: "connection" | "statement_reconnect";
 }
+export interface GoTransaction {
+  supported: boolean;
+  manual: boolean;
+  state: "idle" | "active" | "unknown";
+  revision: number;
+  idle_timeout_seconds?: number;
+  notice?: {
+    id: string;
+    reason: "idle_timeout";
+    outcome: "rolled_back" | "unknown";
+    timeout_seconds: number;
+    at: string;
+    audit_status: "recorded" | "failed";
+  };
+}
+export interface GoTransactionRequest {
+  action?: "manual" | "auto" | "commit" | "rollback";
+  onPending?: "commit" | "rollback";
+  revision?: number;
+  confirmImplicit?: boolean;
+}
 export interface GoConsole {
+  transaction?: GoTransaction;
   id: string;
   database: string;
   schema: string;
@@ -40,6 +62,11 @@ export interface GoPlan extends ChenExecutionPlan {
   limits: { maxBytes: number; maxNodes: number; maxDepth: number };
 }
 export interface GoExecution {
+  transaction?: GoTransaction & {
+    action?: GoTransactionRequest["action"];
+    outcome?: "committed" | "rolled_back" | "implicit_commit" | "unknown";
+    prior_committed?: boolean;
+  };
   query_count?: { source_result_id: string; scope_id: string; total: string };
   browse_count?: { source_result_id: string; total: string };
   plan?: GoPlanIdentity;
@@ -247,7 +274,15 @@ export interface GoCompletion {
 }
 export interface GoAnalysis {
   document_version: number;
-  statements: { from: number; to: number; kind: string; may_write?: boolean; returns_rows?: boolean }[];
+  statements: {
+    from: number;
+    to: number;
+    kind: string;
+    may_write?: boolean;
+    returns_rows?: boolean;
+    implicit_commit?: boolean;
+    transaction_control?: boolean;
+  }[];
 }
 export interface GoRelation {
   schema: string;
@@ -412,10 +447,15 @@ export function createChenGoApi(
       requestId: string,
       submitReview = false,
       confirmWarnings = false,
-      estimatedPlan = false
+      estimatedPlan = false,
+      transaction?: GoTransactionRequest
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/executions`, "POST", {
-        sql,
+        ...(transaction?.action
+          ? { transaction_action: transaction.action, transaction_on_pending: transaction.onPending }
+          : { sql }),
+        ...(transaction?.revision ? { transaction_revision: transaction.revision } : {}),
+        ...(transaction?.confirmImplicit ? { confirm_implicit_commit: true } : {}),
         ...(estimatedPlan ? { plan_mode: "ESTIMATED" } : {}),
         document_version: documentVersion,
         request_id: requestId,
@@ -616,6 +656,8 @@ export function executionActive(execution: GoExecution | null | undefined) {
 }
 
 export function executionCanCancel(execution: GoExecution | null | undefined, capability?: boolean) {
+  if (execution?.transaction?.action && execution.status !== "queued" && execution.status !== "waiting_review")
+    return false;
   return (
     (capability !== false || execution?.status === "waiting_review") &&
     executionActive(execution) &&

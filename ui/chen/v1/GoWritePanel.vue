@@ -135,6 +135,10 @@ let controller: AbortController | undefined;
 async function loadMetadata() {
   if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
   controller?.abort();
+  if (draft.value.transactionStale) {
+    metadataBusy.value = false;
+    return;
+  }
   controller = new AbortController();
   const current = controller;
   const rowSet = props.query.rows;
@@ -192,7 +196,13 @@ async function loadMetadata() {
   }
 }
 watch(
-  () => [props.query.rows?.id, props.query.rows?.offset, props.query.rows?.rows.length, props.query.console?.id],
+  () => [
+    props.query.rows?.id,
+    props.query.rows?.offset,
+    props.query.rows?.rows.length,
+    props.query.console?.id,
+    draft.value.transactionStale
+  ],
   () => void loadMetadata(),
   { immediate: true }
 );
@@ -365,7 +375,10 @@ function discard() {
     "
   >
     <p v-if="draft.source === 'csv'" class="px-3 py-1 text-xs text-muted">{{ t("Chen.GoWriteCsvBatchHint") }}</p>
-    <p v-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
+    <p v-if="draft.transactionStale" role="status" class="px-3 py-2 text-xs text-default">
+      {{ t("Chen.Transaction.ResultStale") }}
+    </p>
+    <p v-else-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
     <p v-if="draft.status && draft.status !== 'committed'" role="status" class="px-3 py-2 text-xs text-warning">
       {{ t(`Chen.GoWriteOutcome_${draft.status}`) }}
     </p>

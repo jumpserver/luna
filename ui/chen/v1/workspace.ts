@@ -7,6 +7,7 @@ import type {
   GoPlan,
   GoCatalogObject,
   GoConsole,
+  GoTransactionRequest,
   GoExecution,
   GoExport,
   GoExportFormat,
@@ -44,6 +45,7 @@ export interface QueryWorkspaceTab {
   planLoadedId: string;
   loadingPlan: boolean;
   planLoadError: string;
+  executionTransaction?: GoTransactionRequest;
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
@@ -74,6 +76,7 @@ export interface QueryWorkspaceTab {
     loadingSettings: GoResultLoadingSettings;
   };
   pending: {
+    transaction?: GoTransactionRequest;
     sql: string;
     version: number;
     id: string;
@@ -247,6 +250,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
+    ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
     ...(query.executionPlan ? { plan: true } : {}),
     ...(query.executionConfirmWarnings ? { confirmWarnings: true } : {})
   };
@@ -265,6 +269,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
+    ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
     ...(query.executionPlan ? { plan: true } : {}),
     ...(query.executionSubmitReview ? { submitReview: true } : {})
   };
@@ -280,6 +285,16 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
   if (query.closed || value.console_id !== query.console?.id || query.pending) return false;
   if (query.execution && value.id !== query.execution.id) return false;
   query.execution = reconcileExecution(query.execution, value);
+  if (
+    query.rows &&
+    value.transaction?.outcome &&
+    ["committed", "rolled_back", "implicit_commit", "unknown"].includes(value.transaction.outcome)
+  ) {
+    query.edit.refreshRequired = true;
+    query.edit.transactionStale = true;
+  }
+  if (query.console && value.transaction && value.transaction.revision >= (query.console.transaction?.revision || 0))
+    query.console.transaction = value.transaction;
   query.executionPlan = !!query.execution.plan;
   if (query.resultExecution?.id === value.id) query.resultExecution = reconcileExecution(query.resultExecution, value);
   return true;
@@ -315,7 +330,12 @@ export function closeWarnings(queries: QueryWorkspaceTab[]) {
     unknown: queries.some(
       (query) => !!query.pending || !!query.pendingCachedExport || query.execution?.status === "unknown"
     ),
-    transaction: queries.some((query) => query.console && query.console.state !== "closed")
+    transaction: queries.some(
+      (query) =>
+        query.console &&
+        query.console.state !== "closed" &&
+        (!query.console.transaction?.manual || query.console.transaction.state !== "idle")
+    )
   };
 }
 export function exportActive(job: GoExport | null) {

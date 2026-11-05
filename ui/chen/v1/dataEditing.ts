@@ -13,6 +13,7 @@ export interface GoEditDraft {
   source: "grid" | "csv";
   busy: boolean;
   refreshRequired: boolean;
+  transactionStale?: boolean;
   status: "" | "committed" | "staged" | "rolled_back" | "unknown";
 }
 export function createEditDraft(): GoEditDraft {

@@ -1,6 +1,24 @@
 // Stable Chen error codes and compatibility aliases for plain-text metadata/validation errors.
 // User-facing translations live in i18n/locales/* under Chen.Errors.
 export const chenErrorCatalog: Record<string, readonly string[]> = {
+  transaction_unsupported: ["This database does not support manual transactions"],
+  invalid_transaction_action: ["Invalid transaction action"],
+  transaction_busy: ["Finish the existing SQL transaction before enabling manual mode"],
+  transaction_pending: ["Commit or roll back the pending transaction before switching modes"],
+  transaction_idle: ["There is no pending manual transaction"],
+  transaction_changed: ["Transaction state changed; review it before retrying"],
+  transaction_outcome_unknown: [
+    "The transaction outcome could not be confirmed; reconnect and verify the data before retrying"
+  ],
+  transaction_control_sql: [
+    "Use the toolbar to change transactions; transaction and session-control SQL is unavailable in manual mode"
+  ],
+  implicit_commit_confirmation_required: [
+    "This SQL may commit the current transaction and cannot be rolled back; confirmation is required"
+  ],
+  transaction_table_unsupported: ["Manual writes require verifiable transactional base tables"],
+  transaction_cancel_unsupported: ["Transaction boundaries cannot be canceled"],
+
   idle_disconnect: ["The session was disconnected due to inactivity. Reconnect to continue."],
   max_session_timeout: ["The maximum session duration was reached. Reconnect to continue."],
   admin_terminate: ["An administrator terminated this session."],

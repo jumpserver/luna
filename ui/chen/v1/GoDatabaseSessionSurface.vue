@@ -9,7 +9,8 @@ import type {
   GoExport,
   GoExportFormat,
   GoQueryPageRequest,
-  GoSession
+  GoSession,
+  GoTransactionRequest
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type {
@@ -601,18 +602,19 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
   const logState = `${value.status}:${value.audit_status}`;
+  const notExecuted = value.error?.code === "implicit_commit_confirmation_required";
   if (loggedExecutions.get(value.id) !== logState) {
     loggedExecutions.set(value.id, logState);
     if (loggedExecutions.size > 200) loggedExecutions.delete(loggedExecutions.keys().next().value!);
     appendLog(
       query.id,
       query.title,
-      value.status === "failed" || value.audit_status === "failed"
+      (value.status === "failed" && !notExecuted) || value.audit_status === "failed"
         ? "error"
         : value.status === "unknown"
           ? "warning"
           : "info",
-      `${t(`Chen.GoV1Status_${value.status}`)} · ${value.id}${value.error ? ` · ${failureText(value.error)}` : ""} · ${t("Chen.GoV1Audit")}: ${t(`Chen.GoV1Audit_${value.audit_status}`)}`
+      `${t(notExecuted ? "Chen.Transaction.NotExecuted" : `Chen.GoV1Status_${value.status}`)} · ${value.id}${value.error && !notExecuted ? ` · ${failureText(value.error)}` : ""} · ${t("Chen.GoV1Audit")}: ${t(`Chen.GoV1Audit_${value.audit_status}`)}`
     );
   }
   if (!["queued", "running", "waiting_review", "cancel_requested", "succeeded"].includes(value.status)) {
@@ -666,6 +668,18 @@ function loseConsole(query: QueryWorkspaceTab) {
   if (query.execution && executionActive(query.execution)) query.execution = { ...query.execution, status: "unknown" };
   query.error = t("Chen.GoV1ConnectionLost");
 }
+function acceptConsole(query: QueryWorkspaceTab, value: GoConsole) {
+  if ((value.transaction?.revision ?? 0) < (query.console?.transaction?.revision ?? 0)) return;
+  if (
+    query.rows &&
+    value.transaction?.notice &&
+    value.transaction.notice.id !== query.console?.transaction?.notice?.id
+  ) {
+    query.edit.refreshRequired = true;
+    query.edit.transactionStale = true;
+  }
+  query.console = value;
+}
 function acceptEvent(event: GoEvent) {
   if (event.sequence <= sequence && event.type !== "reset") return;
   sequence = event.sequence;
@@ -686,7 +700,7 @@ function acceptEvent(event: GoEvent) {
     const value = event.data as GoConsole;
     const query = queries.value.find((query) => query.console?.id === value.id);
     if (query) {
-      query.console = value;
+      acceptConsole(query, value);
       if (value.state === "lost") loseConsole(query);
     }
   }
@@ -704,7 +718,7 @@ function acceptEvent(event: GoEvent) {
     for (const query of queries.value) {
       if (!query.console) continue;
       const current = (snapshot.consoles || []).find((item) => item.id === query.console!.id);
-      if (current) query.console = current;
+      if (current) acceptConsole(query, current);
       if (!current || current.state === "lost") loseConsole(query);
       const execution = (snapshot.executions || []).find((item) => item.id === query.execution?.id);
       if (execution) acceptExecution(query, execution);
@@ -1207,6 +1221,58 @@ async function submit(query: QueryWorkspaceTab, sql: string, version: number, pl
   query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { plan: true } : {}) };
   await recoverSubmission(query);
 }
+async function transactionAction(query: QueryWorkspaceTab, transaction: GoTransactionRequest) {
+  if (
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    query.console?.state !== "ready" ||
+    query.busy ||
+    query.pending ||
+    executionActive(query.execution) ||
+    editDirty(query.edit) ||
+    query.edit.busy
+  )
+    return;
+  query.pending = {
+    sql:
+      transaction.action === "commit"
+        ? "COMMIT"
+        : transaction.action === "rollback"
+          ? "ROLLBACK"
+          : transaction.action === "manual"
+            ? "BEGIN"
+            : "AUTOCOMMIT",
+    version: 0,
+    id: newChenRequestId(),
+    transaction
+  };
+  await recoverSubmission(query);
+}
+async function confirmImplicitCommit(query: QueryWorkspaceTab, executionId: string) {
+  if (
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    query.console?.state !== "ready" ||
+    query.busy ||
+    query.pending ||
+    editDirty(query.edit) ||
+    query.edit.busy ||
+    query.execution?.id !== executionId ||
+    query.execution.error?.code !== "implicit_commit_confirmation_required"
+  )
+    return;
+  const revision = query.execution.transaction?.revision;
+  if (!revision || query.console.transaction?.revision !== revision) return;
+  query.pending = {
+    sql: query.executionSql,
+    version: query.executionVersion,
+    id: newChenRequestId(),
+    transaction: { confirmImplicit: true, revision },
+    submitReview: query.executionSubmitReview,
+    confirmWarnings: query.executionConfirmWarnings
+  };
+  await recoverSubmission(query);
+}
 async function explainQuery(query: QueryWorkspaceTab, sql: string, version: number) {
   await submit(query, sql, version, true);
 }
@@ -1259,7 +1325,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
                 pending.id,
                 pending.submitReview,
                 pending.confirmWarnings,
-                !!pending.plan
+                !!pending.plan,
+                pending.transaction
               );
     if (!isCurrent(query)) return;
     query.pending = null;
@@ -1272,6 +1339,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     query.executionVersion = pending.version;
     query.executionPlan = !!value.plan;
     query.resultPane = value.plan ? "plan" : "results";
+    query.executionTransaction = pending.transaction;
     query.executionConfirmWarnings = !!pending.confirmWarnings;
     query.executionSubmitReview = !!pending.submitReview;
     query.executionExportFormat = pending.exportFormat;
@@ -1960,6 +2028,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @cancel="cancel(query)"
               @review="requestReview(query)"
               @confirm-warning="(id) => confirmWarning(query, id)"
+              @transaction="(request) => transactionAction(query, request)"
+              @confirm-implicit="(id) => confirmImplicitCommit(query, id)"
               @export="(mode, format, snapshot) => startExport(query, mode, format, snapshot)"
               @export-sync="
                 syncExport(query).catch((cause) => {
@@ -2062,6 +2132,9 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     >
       <template #body>
         <p class="text-sm">{{ t("Chen.GoV1CloseDescription") }}</p>
+        <p v-if="closeDialog?.transaction" class="mt-2 text-sm text-warning">
+          {{ t("Chen.Transaction.RollbackOnClose") }}
+        </p>
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
