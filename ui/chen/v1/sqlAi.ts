@@ -20,7 +20,7 @@ export function goSqlExecutionError(query: QueryWorkspaceTab, snapshot: GoSqlEdi
     query.executionVersion !== snapshot.revision ||
     query.executionEditPlan ||
     query.executionExportFormat ||
-    query.executionPlan ||
+    query.executionPlanNumber ||
     query.executionBrowse ||
     !query.executionSql.trim() ||
     (snapshot.selectedSql

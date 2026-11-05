@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GoQueryPageRequest, GoSession } from "./api";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { lastPageOffset, resultLoadingLocked } from "./workspace";
 
@@ -31,6 +31,14 @@ const nextAvailable = computed(() =>
     ? page.value?.has_more === true && offset.value + size.value <= page.value!.max_offset
     : props.query.rows?.next_offset !== undefined
 );
+const countForLastPage = computed(
+  () =>
+    database.value &&
+    total.value === undefined &&
+    page.value!.has_more !== false &&
+    offset.value + size.value <= page.value!.max_offset
+);
+const lastPageSource = ref<string>();
 const range = computed(() => {
   const rows = props.query.rows;
   if (!rows) return "";
@@ -82,6 +90,24 @@ function navigate(target: number) {
   if (database.value) request("page", target);
   else emit("rows", props.query.rows.id, target);
 }
+function goToLastPage() {
+  if (lastOffset.value !== null) navigate(lastOffset.value);
+  else if (countForLastPage.value && !locked.value) {
+    lastPageSource.value = props.query.rows?.id;
+    request("count");
+  }
+}
+// The count can arrive on the event stream while its submission is still locked.
+watch([() => props.query.rows?.id, total, locked], ([id, count, busy]) => {
+  if (!lastPageSource.value) return;
+  if (lastPageSource.value !== id) {
+    lastPageSource.value = undefined;
+    return;
+  }
+  if (busy || count === undefined) return;
+  lastPageSource.value = undefined;
+  if (lastOffset.value !== null && lastOffset.value !== offset.value) navigate(lastOffset.value);
+});
 function changeSize(value: unknown) {
   if (locked.value || typeof value !== "number" || !sizes.value.some((item) => item.value === value)) return;
   emit("loadingSettings", { mode: props.query.loadingSettings.mode, batchSize: value });
@@ -121,17 +147,6 @@ function changeSize(value: unknown) {
         variant="none"
         @update:model-value="changeSize"
       />
-      <UButton
-        v-if="database"
-        icon="i-lucide-sigma"
-        :aria-label="t('Chen.GoQueryPageCount')"
-        :title="t('Chen.GoQueryPageCount')"
-        :disabled="locked"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        @click="request('count')"
-      />
       <template v-if="paged">
         <UButton
           icon="i-lucide-chevrons-left"
@@ -166,12 +181,12 @@ function changeSize(value: unknown) {
         <UButton
           icon="i-lucide-chevrons-right"
           :aria-label="t('Chen.LastPage')"
-          :title="lastOffset === null ? t('Chen.GoBrowseLastHint') : t('Chen.LastPage')"
-          :disabled="locked || lastOffset === null || offset >= lastOffset"
+          :title="t('Chen.LastPage')"
+          :disabled="locked || (lastOffset === null ? !countForLastPage : offset >= lastOffset)"
           size="xs"
           color="neutral"
           variant="ghost"
-          @click="lastOffset !== null && navigate(lastOffset)"
+          @click="goToLastPage"
         />
       </template>
     </div>

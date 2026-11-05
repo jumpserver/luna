@@ -11,11 +11,11 @@ import type {
   GoTransactionRequest
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
+import type { GoResultLoadingSettings, QueryPlanRun, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
-import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
+import { createReusableTemplate, useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
 import { computed, nextTick, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
@@ -34,6 +34,7 @@ import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoResultGrid from "./GoResultGrid.client.vue";
+import GoResultSql from "./GoResultSql.vue";
 import GoTransactionControls from "./GoTransactionControls.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
@@ -84,7 +85,8 @@ const emit = defineEmits<{
   newContext: [context: { database: string; schema: string }];
   rows: [id: string, offset?: number];
   retryRows: [];
-  pane: [value: "results" | "plan"];
+  pane: [value: QueryWorkspaceTab["resultPane"]];
+  closePlan: [number: number];
   restore: [sql: string];
 }>();
 const { t } = useI18n();
@@ -277,10 +279,21 @@ function newContext() {
   emit("newContext", { database: props.query.context.database, schema: contextSchema.value });
 }
 onBeforeUnmount(() => contextController?.abort());
-const pinned = ref<{ id: number; rows: GoRows; sql: string; title: string; source: string; resultId: string }[]>([]);
+const pinned = ref<
+  { id: number; rows: GoRows; sql: string; title: string; source: string; startedAt?: string; resultId: string }[]
+>([]);
 const pinnedId = ref<number | null>(null);
 let pinSequence = 0;
 const pinnedResult = computed(() => pinned.value.find((item) => item.id === pinnedId.value));
+const showingPin = computed(() => !!pinnedResult.value && props.query.resultPane === "results");
+// The editor may already contain another statement. Only use the execution that owns these rows.
+const loadedResultSql = computed(
+  () =>
+    props.query.rows?.source_sql ||
+    props.query.resultExecution?.statement_results.find((item) => item.result_id === props.query.rows?.id)
+      ?.source_sql ||
+    props.query.resultSql
+);
 function pinResult() {
   if (!props.query.rows || editDirty(props.query.edit) || props.query.edit.busy || props.query.loadingRows) return;
   // A pin is a read-only in-memory copy of loaded rows, never an execution or edit context.
@@ -294,8 +307,9 @@ function pinResult() {
     id,
     resultId: props.query.resultId,
     rows: JSON.parse(json),
-    sql: props.query.rows.source_sql || props.query.resultSql,
-    title: queryResultTitle(props.query.rows.source_sql || props.query.resultSql),
+    sql: loadedResultSql.value,
+    title: queryResultTitle(loadedResultSql.value),
+    startedAt: props.query.resultExecution?.started_at,
     source: props.query.resultExecution?.id || ""
   });
   pinnedId.value = id;
@@ -372,10 +386,10 @@ const canExplain = computed(() =>
   ].includes(props.session.dialect)
 );
 const active = computed(() => executionActive(props.query.execution));
-const planLoading = computed(
-  () => props.query.loadingPlan || !!props.query.pending?.plan || (props.query.executionPlan && active.value)
-);
-const shownPlan = computed(() => (planLoading.value ? null : props.query.planAttempt || props.query.plan));
+const planTabId = useId();
+const selectedPlan = computed(() => props.query.planRuns.find((run) => run.number === props.query.resultPane));
+const planLoading = (run: QueryPlanRun) => run.state === "pending" || run.state === "loading";
+const shownPlan = computed(() => selectedPlan.value?.plan ?? null);
 const displayExecution = computed(() => props.query.resultExecution || props.query.execution);
 const canSubmit = computed(
   () => ready.value && !active.value && !props.query.busy && !props.query.pending && !props.query.edit.busy
@@ -394,7 +408,7 @@ const completedWithoutRows = computed(
     !!props.query.rows &&
     props.query.execution?.status === "succeeded" &&
     !props.query.execution.result_ids.length &&
-    !props.query.executionPlan &&
+    !props.query.executionPlanNumber &&
     !props.query.execution.export_id
 );
 const showExecutionStatus = computed(
@@ -521,7 +535,8 @@ function resultSql(id: string) {
   return (
     displayExecution.value?.statement_results.find((item) => item.result_id === id)?.source_sql ||
     (id === props.query.resultId ? props.query.rows?.source_sql || props.query.resultSql : "") ||
-    props.query.executionSql
+    displayExecution.value?.sql ||
+    (displayExecution.value?.id === props.query.execution?.id ? props.query.executionSql : "")
   );
 }
 const resultNames = computed(
@@ -548,9 +563,7 @@ const hasOutput = computed(
       props.query.pending ||
       props.query.rows ||
       props.query.resultLoadError ||
-      props.query.plan ||
-      props.query.planAttempt ||
-      props.query.loadingPlan ||
+      props.query.planRuns.length ||
       pinned.value.length
     )
 );
@@ -560,8 +573,16 @@ watch(
   (id) => {
     if (!id) return;
     resultsCollapsed.value = false;
-    pinnedId.value = null;
+    if (!props.query.pending?.planNumber) pinnedId.value = null;
   }
+);
+const [DefineExportAction, ExportAction] = createReusableTemplate();
+const showExportJobStatus = computed(
+  () =>
+    !props.dataOnly &&
+    !pinnedResult.value &&
+    !!props.query.exportJob &&
+    (props.query.resultPane !== "results" || !props.query.rows)
 );
 const resultTabList = useTemplateRef<HTMLElement>("resultTabList");
 watch(
@@ -1330,14 +1351,14 @@ defineExpose({
             v-if="!dataOnly"
             icon="i-lucide-pin"
             size="xs"
-            :color="pinnedResult ? 'primary' : 'neutral'"
-            :variant="pinnedResult ? 'soft' : 'ghost'"
+            :color="showingPin ? 'primary' : 'neutral'"
+            :variant="showingPin ? 'soft' : 'ghost'"
             class="!size-6 shrink-0 justify-center !p-0"
-            :aria-label="t(pinnedResult ? 'Chen.UnpinResult' : 'Chen.PinResult')"
-            :aria-pressed="!!pinnedResult"
+            :aria-label="t(showingPin ? 'Chen.UnpinResult' : 'Chen.PinResult')"
+            :aria-pressed="showingPin"
             :title="t('Chen.GoPinnedHint')"
             :disabled="
-              query.resultPane === 'plan' ||
+              query.resultPane !== 'results' ||
               !query.rows ||
               query.loadingRows ||
               editDirty(query.edit) ||
@@ -1417,6 +1438,44 @@ defineExpose({
                 @click="closePin(item.id)"
               />
             </div>
+            <div
+              v-for="planRun in dataOnly ? [] : query.planRuns"
+              :key="`plan:${planRun.number}`"
+              class="group flex h-full shrink-0 items-center border-b-2"
+              :class="
+                query.resultPane === planRun.number
+                  ? 'border-primary bg-[var(--workspace-surface-sub-tab-active)] text-primary'
+                  : 'border-transparent'
+              "
+            >
+              <button
+                :id="`${planTabId}-${planRun.number}`"
+                type="button"
+                role="tab"
+                :aria-controls="query.resultPane === planRun.number ? `${planTabId}-panel` : undefined"
+                :aria-selected="query.resultPane === planRun.number"
+                :disabled="editDirty(query.edit) || query.edit.busy"
+                :title="planRun.sql"
+                class="flex h-full items-center gap-1 px-2 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+                @click="emit('pane', planRun.number)"
+              >
+                <UIcon
+                  :name="planLoading(planRun) ? 'i-lucide-loader-circle' : 'i-lucide-workflow'"
+                  class="size-3.5"
+                  :class="{ 'animate-spin': planLoading(planRun) }"
+                />
+                {{ t("ExecutionPlan.title") }} {{ planRun.number }}
+              </button>
+              <UButton
+                icon="i-lucide-x"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                class="!size-5 shrink-0 justify-center !p-0"
+                :aria-label="`${t('Common.Close')} ${t('ExecutionPlan.title')} ${planRun.number}`"
+                @click="emit('closePlan', planRun.number)"
+              />
+            </div>
           </div>
           <span
             class="flex size-4 shrink-0 items-center justify-center"
@@ -1425,56 +1484,6 @@ defineExpose({
           >
             <UIcon v-if="query.loadingRows" name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
           </span>
-          <UButton
-            v-if="!dataOnly"
-            icon="i-lucide-workflow"
-            size="xs"
-            :label="t('ExecutionPlan.title')"
-            :color="query.resultPane === 'plan' ? 'primary' : 'neutral'"
-            :variant="query.resultPane === 'plan' ? 'soft' : 'ghost'"
-            :aria-pressed="query.resultPane === 'plan'"
-            :disabled="(!shownPlan && !planLoading) || editDirty(query.edit) || query.edit.busy"
-            @click="emit('pane', 'plan')"
-          />
-          <GoExportPanel
-            v-if="!dataOnly && !pinnedResult && (query.resultId || query.exportJob)"
-            icon-only
-            :query="query"
-            :session="session"
-            :api="api"
-            :ready="ready && !editDirty(query.edit) && !query.edit.busy"
-            @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
-            @sync="emit('exportSync')"
-            @cancel="emit('exportCancel')"
-            @remove="emit('exportDelete')"
-          />
-          <UPopover v-if="query.resultExecution">
-            <UButton
-              icon="i-lucide-code"
-              label="SQL"
-              :aria-label="t('Chen.GoV1ResultSource')"
-              :title="t('Chen.GoV1ResultSource')"
-              class="shrink-0"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-            />
-            <template #content>
-              <div class="w-[32rem] max-w-[90vw] p-3 text-xs">
-                <p class="mb-2 text-muted" :title="query.resultExecution.id">
-                  {{ t("Chen.GoV1ResultSource") }}
-                  <time v-if="query.resultExecution.started_at">
-                    · {{ new Date(query.resultExecution.started_at).toLocaleTimeString() }}
-                  </time>
-                </p>
-                <pre
-                  class="max-h-80 overflow-auto whitespace-pre-wrap break-words"
-                  :class="{ 'select-none': !session.permissions.can_copy }"
-                  @copy="preventCopy"
-                  >{{ pinnedResult?.sql || query.resultSql }}</pre>
-              </div>
-            </template>
-          </UPopover>
           <UButton
             v-if="!dataOnly"
             icon="i-lucide-chevron-down"
@@ -1486,8 +1495,21 @@ defineExpose({
             @click="resultsCollapsed = true"
           />
         </div>
+        <DefineExportAction>
+          <GoExportPanel
+            icon-only
+            :query="query"
+            :session="session"
+            :api="api"
+            :ready="ready && !editDirty(query.edit) && !query.edit.busy"
+            @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
+            @sync="emit('exportSync')"
+            @cancel="emit('exportCancel')"
+            @remove="emit('exportDelete')"
+          />
+        </DefineExportAction>
         <div
-          v-if="showExecutionStatus"
+          v-if="showExecutionStatus || showExportJobStatus"
           class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 text-xs"
         >
           <UIcon
@@ -1540,6 +1562,10 @@ defineExpose({
           >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
+          <div v-if="showExportJobStatus" class="ml-auto flex items-center gap-1">
+            <span class="text-muted">{{ t("Chen.GoV1ExportTask") }}</span>
+            <ExportAction />
+          </div>
         </div>
         <div
           v-if="query.execution?.error && !reviewRequired && !implicitRequired && !query.error"
@@ -1569,45 +1595,42 @@ defineExpose({
           />
         </div>
         <div
-          v-if="query.resultPane === 'plan'"
+          v-if="selectedPlan"
+          :id="`${planTabId}-panel`"
+          :key="selectedPlan.number"
+          role="tabpanel"
+          :aria-labelledby="`${planTabId}-${selectedPlan.number}`"
           class="flex min-h-0 flex-1 flex-col"
           :class="{ 'select-none': !session.permissions.can_copy }"
           @copy.capture="preventCopy"
           @cut.capture="preventCopy"
         >
           <p v-if="!canExplain" class="px-3 py-2 text-xs text-warning">{{ t("Chen.GoPlanUnsupported") }}</p>
-          <p
-            v-if="
-              query.planAttempt?.error &&
-              query.planAttempt.executionId === query.execution?.id &&
-              shownPlan !== query.planAttempt
-            "
+          <GoResultSql v-if="!shownPlan" :sql="selectedPlan.sql" :can-copy="session.permissions.can_copy" />
+          <div
+            v-if="selectedPlan.error || selectedPlan.state === 'interrupted'"
             role="alert"
-            class="px-3 py-2 text-xs text-error"
+            class="flex gap-2 px-3 py-2 text-xs text-warning"
           >
-            {{ query.planAttempt.error.message }}
-          </p>
-          <div v-if="query.planLoadError" role="alert" class="flex gap-2 px-3 py-2 text-xs text-warning">
-            {{ query.planLoadError }}
+            {{ selectedPlan.error || t("Chen.GoV1ConnectionLost") }}
             <UButton
+              v-if="selectedPlan.planRequestId"
               size="xs"
               color="neutral"
               :label="t('Chen.GoV1RetryResult')"
-              :disabled="!ready || query.loadingPlan"
-              @click="loadQueryPlan(query, api)"
+              :disabled="!ready"
+              @click="loadQueryPlan(query, selectedPlan, api)"
             />
           </div>
           <ExecutionPlanTree
+            v-if="shownPlan || planLoading(selectedPlan)"
             :plan="shownPlan"
-            :loading="planLoading"
+            :loading="planLoading(selectedPlan)"
             :can-copy="session.permissions.can_copy"
             compact
             preserve-raw
           >
             <template #actions>
-              <span v-if="shownPlan && shownPlan.executionId !== query.execution?.id" class="text-xs text-muted">
-                {{ t("Chen.GoPlanPrevious") }}
-              </span>
               <UPopover v-if="shownPlan" :content="{ align: 'end' }">
                 <UButton
                   size="xs"
@@ -1626,7 +1649,9 @@ defineExpose({
                   >
                     <div>
                       <p class="mb-1 text-muted">{{ t("Chen.GoPlanSourceSQL") }}</p>
-                      <pre class="whitespace-pre-wrap break-words font-ui-mono">{{ shownPlan.sql }}</pre>
+                      <pre class="whitespace-pre-wrap break-words font-ui-mono">{{
+                        shownPlan.sql || selectedPlan.sql
+                      }}</pre>
                     </div>
                     <div>
                       <p class="mb-1 text-muted">{{ t("Chen.GoPlanGenerated") }}</p>
@@ -1640,161 +1665,169 @@ defineExpose({
             </template>
           </ExecutionPlanTree>
         </div>
-        <template v-else-if="pinnedResult">
-          <GoResultGrid
-            :rows="pinnedResult.rows"
-            :can-copy="session.permissions.can_copy"
-            :active="visible"
-            class="min-h-0 flex-1"
-          />
-        </template>
-        <template v-else-if="query.rows">
-          <GoWritePanel
-            :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
-            :visible="visible"
-            :query="query"
-            :session="session"
-            :api="api"
-            class="min-h-0 flex-1"
-            @apply="emit('applyEdits', $event)"
-            @refresh="emit('refreshData')"
-            @loading-settings="emit('loadingSettings', $event)"
-            @load-more="emit('loadMore', $event)"
-          >
-            <template v-if="dataOnly" #settings-actions>
-              <UButton
-                icon="i-lucide-pin"
-                :label="t('Chen.PinResult')"
-                :title="t('Chen.GoPinnedHint')"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                :disabled="
-                  !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
-                "
-                @click="pinResult"
-              />
-              <UPopover v-if="query.resultExecution">
+        <div v-show="query.resultPane === 'results'" class="flex min-h-0 min-w-0 flex-1 flex-col">
+          <template v-if="pinnedResult">
+            <GoResultGrid
+              :rows="pinnedResult.rows"
+              :can-copy="session.permissions.can_copy"
+              :active="visible && query.resultPane === 'results'"
+              class="min-h-0 flex-1"
+            >
+              <template #toolbar-start>
+                <GoResultSql
+                  :sql="pinnedResult.sql"
+                  :can-copy="session.permissions.can_copy"
+                  :started-at="pinnedResult.startedAt"
+                  :execution-id="pinnedResult.source"
+                />
+              </template>
+            </GoResultGrid>
+          </template>
+          <template v-else-if="query.rows">
+            <GoWritePanel
+              :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
+              :visible="visible && query.resultPane === 'results'"
+              :query="query"
+              :session="session"
+              :api="api"
+              class="min-h-0 flex-1"
+              @apply="emit('applyEdits', $event)"
+              @refresh="emit('refreshData')"
+              @loading-settings="emit('loadingSettings', $event)"
+              @load-more="emit('loadMore', $event)"
+            >
+              <template v-if="!dataOnly" #source>
+                <GoResultSql
+                  :sql="loadedResultSql"
+                  :can-copy="session.permissions.can_copy"
+                  :started-at="query.resultExecution?.started_at"
+                  :execution-id="query.resultExecution?.id"
+                />
+              </template>
+              <template v-if="dataOnly" #settings-actions>
                 <UButton
-                  icon="i-lucide-code"
-                  label="SQL"
-                  :aria-label="t('Chen.GoV1ResultSource')"
-                  :title="t('Chen.GoV1ResultSource')"
-                  class="shrink-0"
+                  icon="i-lucide-pin"
+                  :label="t('Chen.PinResult')"
+                  :title="t('Chen.GoPinnedHint')"
                   size="xs"
                   color="neutral"
                   variant="ghost"
+                  :disabled="
+                    !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
+                  "
+                  @click="pinResult"
                 />
-                <template #content>
-                  <div class="w-[32rem] max-w-[90vw] p-3 text-xs">
-                    <p class="mb-2 text-muted" :title="query.resultExecution.id">
-                      {{ t("Chen.GoV1ResultSource") }}
-                      <time v-if="query.resultExecution.started_at">
-                        · {{ new Date(query.resultExecution.started_at).toLocaleTimeString() }}
-                      </time>
-                    </p>
-                    <pre
-                      class="max-h-80 overflow-auto whitespace-pre-wrap break-words"
-                      :class="{ 'select-none': !session.permissions.can_copy }"
-                      @copy="preventCopy"
-                      >{{ query.resultSql }}</pre>
-                  </div>
-                </template>
-              </UPopover>
-            </template>
-            <template #actions>
-              <GoExportPanel
-                v-if="dataOnly && (query.resultId || query.exportJob)"
-                icon-only
-                :query="query"
-                :session="session"
-                :api="api"
-                :ready="ready && !editDirty(query.edit) && !query.edit.busy"
-                @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
-                @sync="emit('exportSync')"
-                @cancel="emit('exportCancel')"
-                @remove="emit('exportDelete')"
-              />
-            </template>
-          </GoWritePanel>
-          <GoBrowseFooter
-            v-if="query.browseObject"
-            :query="query"
-            :session="session"
-            @submit="emit('browse', $event)"
-            @rows="(id, offset) => emit('rows', id, offset)"
-            @loading-settings="emit('loadingSettings', $event)"
-            @load-more="emit('loadMore', false)"
-          />
-          <div
-            v-if="!query.browseObject && query.loadingSettings.mode === 'continuous'"
-            role="status"
-            data-continuous-status
-            class="flex shrink-0 flex-wrap items-center gap-2 border-t border-default px-3 py-1.5 text-xs"
-          >
-            <span class="tabular-nums">{{ t("Chen.GoBrowseLoaded", { rows: query.rows.rows.length }) }}</span>
-            <span
-              v-if="
-                query.loadingRows || (executionActive(query.execution) && query.executionBrowse?.action === 'append')
-              "
-              class="text-muted"
-            >
-              {{ t("Chen.GoBrowseLoadingMore") }}
-            </span>
-            <span v-else-if="editDirty(query.edit) || query.edit.refreshRequired" class="text-warning">
-              {{ t("Chen.GoBrowseScrollDirty") }}
-            </span>
-            <span v-else-if="query.loadMoreFailed || query.resultLoadError" class="text-warning">
-              {{ t("Chen.GoBrowseLoadMoreFailed") }}
-            </span>
-            <span v-else-if="query.rows.browse?.limit_reached === 'rows'" class="text-warning">
-              {{ t("Chen.GoBrowseCacheLimit", { rows: query.rows.browse.max_loaded_rows }) }}
-            </span>
-            <span v-else-if="query.rows.truncated && !hasMoreResultRows(query)" class="text-warning">
-              {{ t("Chen.GoBrowseCacheStopped") }}
-            </span>
-            <span v-else-if="!hasMoreResultRows(query)" class="text-muted">
-              {{ t(query.rows.browse?.supported ? "Chen.GoBrowseEnd" : "Chen.GoBrowseCacheEnd") }}
-            </span>
-            <UButton
-              v-if="hasMoreResultRows(query)"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              class="ml-auto"
-              :label="
-                t(query.loadMoreFailed || query.resultLoadError ? 'Chen.GoBrowseRetryMore' : 'Chen.GoBrowseLoadMore')
-              "
-              :disabled="!ready || resultLoadingLocked(query)"
-              @click="emit('loadMore', false)"
+                <UPopover v-if="query.resultExecution">
+                  <UButton
+                    icon="i-lucide-code"
+                    label="SQL"
+                    :aria-label="t('Chen.GoV1ResultSource')"
+                    :title="t('Chen.GoV1ResultSource')"
+                    class="shrink-0"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                  />
+                  <template #content>
+                    <div class="w-[32rem] max-w-[90vw] p-3 text-xs">
+                      <p class="mb-2 text-muted" :title="query.resultExecution.id">
+                        {{ t("Chen.GoV1ResultSource") }}
+                        <time v-if="query.resultExecution.started_at">
+                          · {{ new Date(query.resultExecution.started_at).toLocaleTimeString() }}
+                        </time>
+                      </p>
+                      <pre
+                        class="max-h-80 overflow-auto whitespace-pre-wrap break-words"
+                        :class="{ 'select-none': !session.permissions.can_copy }"
+                        @copy="preventCopy"
+                        >{{ query.resultSql }}</pre>
+                    </div>
+                  </template>
+                </UPopover>
+              </template>
+              <template #actions>
+                <ExportAction v-if="query.resultId || query.exportJob" />
+              </template>
+            </GoWritePanel>
+            <GoBrowseFooter
+              v-if="query.browseObject"
+              :query="query"
+              :session="session"
+              @submit="emit('browse', $event)"
+              @rows="(id, offset) => emit('rows', id, offset)"
+              @loading-settings="emit('loadingSettings', $event)"
+              @load-more="emit('loadMore', false)"
             />
-          </div>
-          <GoQueryPagePanel
-            v-if="!query.browseObject"
-            :query="query"
-            :session="session"
-            @submit="emit('queryPage', $event)"
-            @cached="emit('cachedResult')"
-            @rows="(id, offset) => emit('rows', id, offset)"
-            @loading-settings="emit('loadingSettings', $event)"
-          />
-        </template>
-        <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
-          <div
-            v-if="!query.execution && !query.pending && !query.loadingRows"
-            class="grid h-full min-h-0 place-items-center text-sm"
-          >
-            <div class="text-center">
-              <UIcon name="i-lucide-table-properties" class="mx-auto mb-2 size-5" />
-              <p>{{ t("Chen.RunQueryForResults") }}</p>
+            <div
+              v-if="!query.browseObject && query.loadingSettings.mode === 'continuous'"
+              role="status"
+              data-continuous-status
+              class="flex shrink-0 flex-wrap items-center gap-2 border-t border-default px-3 py-1.5 text-xs"
+            >
+              <span class="tabular-nums">{{ t("Chen.GoBrowseLoaded", { rows: query.rows.rows.length }) }}</span>
+              <span
+                v-if="
+                  query.loadingRows || (executionActive(query.execution) && query.executionBrowse?.action === 'append')
+                "
+                class="text-muted"
+              >
+                {{ t("Chen.GoBrowseLoadingMore") }}
+              </span>
+              <span v-else-if="editDirty(query.edit) || query.edit.refreshRequired" class="text-warning">
+                {{ t("Chen.GoBrowseScrollDirty") }}
+              </span>
+              <span v-else-if="query.loadMoreFailed || query.resultLoadError" class="text-warning">
+                {{ t("Chen.GoBrowseLoadMoreFailed") }}
+              </span>
+              <span v-else-if="query.rows.browse?.limit_reached === 'rows'" class="text-warning">
+                {{ t("Chen.GoBrowseCacheLimit", { rows: query.rows.browse.max_loaded_rows }) }}
+              </span>
+              <span v-else-if="query.rows.truncated && !hasMoreResultRows(query)" class="text-warning">
+                {{ t("Chen.GoBrowseCacheStopped") }}
+              </span>
+              <span v-else-if="!hasMoreResultRows(query)" class="text-muted">
+                {{ t(query.rows.browse?.supported ? "Chen.GoBrowseEnd" : "Chen.GoBrowseCacheEnd") }}
+              </span>
+              <UButton
+                v-if="hasMoreResultRows(query)"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                class="ml-auto"
+                :label="
+                  t(query.loadMoreFailed || query.resultLoadError ? 'Chen.GoBrowseRetryMore' : 'Chen.GoBrowseLoadMore')
+                "
+                :disabled="!ready || resultLoadingLocked(query)"
+                @click="emit('loadMore', false)"
+              />
             </div>
+            <GoQueryPagePanel
+              v-if="!query.browseObject"
+              :query="query"
+              :session="session"
+              @submit="emit('queryPage', $event)"
+              @cached="emit('cachedResult')"
+              @rows="(id, offset) => emit('rows', id, offset)"
+              @loading-settings="emit('loadingSettings', $event)"
+            />
+          </template>
+          <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
+            <div
+              v-if="!query.execution && !query.pending && !query.loadingRows"
+              class="grid h-full min-h-0 place-items-center text-sm"
+            >
+              <div class="text-center">
+                <UIcon name="i-lucide-table-properties" class="mx-auto mb-2 size-5" />
+                <p>{{ t("Chen.RunQueryForResults") }}</p>
+              </div>
+            </div>
+            <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
+              {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}
+            </p>
+            <p v-if="query.execution?.status === 'succeeded' && !query.execution.result_ids.length">
+              {{ t("Chen.GoV1NoResultSet") }}
+            </p>
           </div>
-          <p v-for="(result, index) in query.execution?.statement_results || []" :key="index">
-            {{ result.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${result.rows_affected}` : "" }}
-          </p>
-          <p v-if="query.execution?.status === 'succeeded' && !query.execution.result_ids.length">
-            {{ t("Chen.GoV1NoResultSet") }}
-          </p>
         </div>
       </div>
     </div>

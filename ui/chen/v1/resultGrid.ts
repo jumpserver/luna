@@ -1,6 +1,6 @@
 import type { ChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
 import { formatChenGridValue } from "~/chen/composables/useChenGridPreferences";
-import type { GoCopySelection, GoRows } from "./api";
+import type { ChenGoApi, GoCopySelection, GoRows } from "./api";
 import type { ChenGridCell, ChenGridSelection } from "~/chen/utils/dataGridSelection";
 import { formatChenTsv } from "~/chen/utils/dataGridCopy";
 import {
@@ -215,6 +215,37 @@ export function resultSelectionTsv(
   );
   if (withHeaders) values.unshift(Object.fromEntries(columns.map((column) => [column.id, column.name])));
   return formatChenTsv(values, fields);
+}
+
+// Copy the immutable result cache in source order, reusing the displayed page (including drafts).
+// Snapshots and database pages have no reader: copying those never runs SQL or changes pagination.
+export async function resultClipboardTsv(
+  source: GoRows,
+  columns: { id: string; name: string }[],
+  headers: boolean,
+  readPage?: ChenGoApi["rows"],
+  signal?: AbortSignal
+) {
+  const format = (page: GoRows, first: boolean) => resultSelectionTsv(resultGridRows(page), columns, first && headers);
+  if (!readPage || (source.offset === 0 && source.rows.length >= source.total_rows)) return format(source, true);
+  const parts: string[] = [];
+  for (let offset = 0; offset < source.total_rows;) {
+    signal?.throwIfAborted();
+    const limit = Math.min(1000, (offset < source.offset ? source.offset : source.total_rows) - offset);
+    const page =
+      offset === source.offset && source.rows.length ? source : await readPage(source.id, offset, limit, signal);
+    signal?.throwIfAborted();
+    if (
+      page.id !== source.id ||
+      page.offset !== offset ||
+      !page.rows.length ||
+      offset + page.rows.length > source.total_rows
+    )
+      throw new Error("Incomplete cached result");
+    parts.push(format(page, offset === 0));
+    offset += page.rows.length;
+  }
+  return parts.join("\n");
 }
 
 // Database drivers preserve large numeric values as strings. Compare decimal digits

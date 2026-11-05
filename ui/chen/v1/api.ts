@@ -559,8 +559,8 @@ export function createChenGoApi(
     },
     execution: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}`),
     cancel: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}/cancel`, "POST"),
-    rows: (resultId: string, offset = 0, limit = 200) =>
-      request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`),
+    rows: (resultId: string, offset = 0, limit = 200, signal?: AbortSignal) =>
+      request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`, "GET", undefined, signal),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
     catalogDiagram: async (sessionId: string, options: DiagramOptions, signal?: AbortSignal) =>

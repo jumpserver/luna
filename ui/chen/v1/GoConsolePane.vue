@@ -3,7 +3,7 @@ import type { ChenGoApi, GoRows, GoSession } from "./api";
 import type { QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenConsoleTimelineEntry, ChenPromptConsoleTab } from "~/chen/types";
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import { chenErrorText } from "~/chen/utils/errorMessages";
@@ -188,19 +188,15 @@ watch(
   },
   { immediate: true }
 );
-watch(
-  () => [props.query.plan, props.query.planAttempt, props.query.loadingPlan, props.query.planLoadError],
-  () => {
-    const entry = timeline.find((item) => item.id === props.query.execution?.id);
-    if (!entry?.planOnly) return;
-    entry.executionPlanLoading = props.query.loadingPlan || executionActive(props.query.execution);
-    const plan = props.query.planAttempt || props.query.plan;
-    if (plan?.executionId === entry.id) entry.executionPlan = plan;
-    if (props.query.planLoadError && !entry.logs.includes(props.query.planLoadError))
-      entry.logs.push(props.query.planLoadError);
-  },
-  { immediate: true }
-);
+watchEffect(() => {
+  for (const run of props.query.planRuns) {
+    const entry = timeline.find((item) => item.id === run.executionId);
+    if (!entry?.planOnly) continue;
+    entry.executionPlanLoading = run.state === "pending" || run.state === "loading";
+    if (run.plan) entry.executionPlan = run.plan;
+    if (run.error && !entry.logs.includes(run.error)) entry.logs.push(run.error);
+  }
+});
 watch(
   () => props.visible,
   (visible) => {

@@ -70,16 +70,19 @@ import { goSqlExecutionError, prepareGoSqlProposal } from "./sqlAi";
 import { usePaneResize } from "./usePaneResize";
 import {
   acceptQueryExecution,
+  closeQueryPlan,
   closeQuerySession,
   closeWarnings,
   createQueryTab,
   exportActive,
   hasMoreResultRows,
+  interruptQueryPlans,
   isQueryWorkspaceTab,
   loadQueryPlan,
   normalizeResultLoading,
   objectSelect,
   objectWorkspaceKey,
+  openQueryPlan,
   queryDirty,
   reconcileExport,
   resultLoadingLocked,
@@ -622,8 +625,17 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     value.query_count.scope_id === query.rows.query_page?.scope_id
   )
     query.queryCount = value.query_count;
-  if (query.execution?.plan && !executionActive(query.execution) && query.planLoadedId !== value.id)
-    void loadQueryPlan(query, api);
+  const execution = query.execution!;
+  const run = query.planRuns.find((item) => item.number === query.executionPlanNumber);
+  if (run && run.state === "pending" && !executionActive(execution)) {
+    if (execution.plan) {
+      run.planRequestId = execution.plan.request_id;
+      void loadQueryPlan(query, run, api);
+    } else {
+      run.state = "failed";
+      run.error = execution.error ? failureText(execution.error) : t(`Chen.GoV1Status_${execution.status}`);
+    }
+  }
   if (
     !query.execution?.plan &&
     (!query.executionBrowse || value.status === "succeeded") &&
@@ -655,6 +667,7 @@ async function syncExport(query: QueryWorkspaceTab, id = query.exportJob?.id) {
   else acceptExport(query, current);
 }
 function loseConsole(query: QueryWorkspaceTab) {
+  interruptQueryPlans(query);
   if (query.console) query.console.state = "lost";
   if (query.execution && executionActive(query.execution)) query.execution = { ...query.execution, status: "unknown" };
   query.error = t("Chen.GoV1ConnectionLost");
@@ -1206,10 +1219,8 @@ async function submit(query: QueryWorkspaceTab, sql: string, version: number, pl
   query.loadGeneration++;
   query.loadingRows = false;
   query.resultLoadError = null;
-  query.loadingPlan = false;
-  query.planLoadError = "";
-  query.resultPane = plan ? "plan" : "results";
-  query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { plan: true } : {}) };
+  if (!plan) query.resultPane = "results";
+  query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { planNumber: openQueryPlan(query, sql) } : {}) };
   await recoverSubmission(query);
 }
 async function transactionAction(query: QueryWorkspaceTab, transaction: GoTransactionRequest) {
@@ -1270,6 +1281,14 @@ async function explainQuery(query: QueryWorkspaceTab, sql: string, version: numb
 async function recoverSubmission(query: QueryWorkspaceTab) {
   const pending = query.pending;
   if (!pending || !sessionReady.value || query.console?.state !== "ready" || query.busy) return;
+  const run = query.planRuns.find((item) => item.number === pending.planNumber);
+  if (run) {
+    run.state = "pending";
+    run.error = "";
+    run.plan = null;
+    run.executionId = "";
+    run.planRequestId = "";
+  }
   query.busy = true;
   query.error = "";
   try {
@@ -1316,7 +1335,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
                 pending.id,
                 pending.submitReview,
                 pending.confirmWarnings,
-                !!pending.plan,
+                !!pending.planNumber,
                 pending.transaction
               );
     if (!isCurrent(query)) return;
@@ -1328,8 +1347,9 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       query.baselineSql = value.sql;
     }
     query.executionVersion = pending.version;
-    query.executionPlan = !!value.plan;
-    query.resultPane = value.plan ? "plan" : "results";
+    query.executionPlanNumber = pending.planNumber;
+    if (run) run.executionId = value.id;
+    if (!pending.planNumber) query.resultPane = "results";
     query.executionTransaction = pending.transaction;
     query.executionConfirmWarnings = !!pending.confirmWarnings;
     query.executionSubmitReview = !!pending.submitReview;
@@ -1356,6 +1376,10 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       query.pendingLoading = null;
     }
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
+    if (run && !run.executionId) {
+      run.state = "failed";
+      run.error = query.error;
+    }
   } finally {
     if (isCurrent(query)) query.busy = false;
   }
@@ -1582,12 +1606,8 @@ async function reconnect(query: QueryWorkspaceTab) {
   query.resultExecution = null;
   query.resultSql = "";
   query.loadGeneration++;
-  query.loadingPlan = false;
-  query.plan = null;
-  query.planAttempt = null;
-  query.planLoadedId = "";
-  query.planLoadError = "";
-  query.executionPlan = false;
+  query.planRuns = [];
+  query.executionPlanNumber = undefined;
   query.resultPane = "results";
   await connectQuery(query);
   if (tabs.value.some((tab) => tab.kind === "object" && tab.data === query) && isCurrent(query)) {
@@ -2031,6 +2051,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @new-context="newQuery($event)"
               @rows="(id, offset) => loadRows(query, id, offset)"
               @retry-rows="retryRows(query)"
+              @close-plan="closeQueryPlan(query, $event)"
               @pane="(pane) => (query.resultPane = pane)"
             />
           </template>
