@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ChenGoApi, GoCopySelection, GoEditColumn, GoEditPlan, GoSession } from "./api";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenDataViewField } from "~/chen/types";
@@ -126,6 +127,24 @@ const asField = (column: GoEditColumn): ChenDataViewField => ({
 const insertFields = computed(() => (draft.value.metadata?.columns || []).map(asField));
 const updateFields = computed(() =>
   (draft.value.metadata?.columns || []).filter((column) => column.editable).map(asField)
+);
+const rowActions = computed<DropdownMenuItem[]>(() =>
+  supported.value
+    ? [
+        {
+          label: t("Chen.UpdateSelectedRows"),
+          icon: "i-lucide-list-restart",
+          disabled:
+            !canChange.value ||
+            !selected.value.length ||
+            !updateFields.value.length ||
+            (draft.value.source === "csv" && selected.value.some((row) => row < props.query.rows!.rows.length)),
+          onSelect: () => {
+            batchOpen.value = true;
+          }
+        }
+      ]
+    : []
 );
 function stageCell(row: number, column: number, value: string | null) {
   if (!canChange.value) return;
@@ -385,6 +404,8 @@ function discard() {
     <GoResultGrid
       ref="grid"
       :rows="rows"
+      :read-result-page="!query.browseObject && query.rows?.query_page?.mode !== 'database' ? api.rows : undefined"
+      :row-actions="rowActions"
       :display-mode="query.browseObject ? 'table' : 'query'"
       :loading-settings="query.loadingSettings"
       :page-size-control="!!query.browseObject"
@@ -428,6 +449,7 @@ function discard() {
       @change="stageCell"
     >
       <template #toolbar-start>
+        <slot name="source" />
         <template v-if="supported">
           <UButton
             v-if="draft.metadata?.mode === 'table'"
@@ -452,20 +474,6 @@ function discard() {
               (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
             "
             @click="deleteRows"
-          />
-          <UButton
-            icon="i-lucide-list-restart"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :label="t('Chen.UpdateRows')"
-            :disabled="
-              !canChange ||
-              !selected.length ||
-              !updateFields.length ||
-              (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
-            "
-            @click="batchOpen = true"
           />
           <UButton
             v-if="dirty"

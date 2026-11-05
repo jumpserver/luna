@@ -27,6 +27,15 @@ export interface QueryContext {
   database: string;
   schema: string;
 }
+export interface QueryPlanRun {
+  number: number;
+  sql: string;
+  executionId: string;
+  planRequestId: string;
+  state: "pending" | "loading" | "loaded" | "failed" | "interrupted";
+  plan: GoPlan | null;
+  error: string;
+}
 export interface QueryWorkspaceTab {
   id: string;
   kind: "query" | "preview" | "console";
@@ -38,13 +47,10 @@ export interface QueryWorkspaceTab {
   execution: GoExecution | null;
   executionSql: string;
   executionVersion: number;
-  executionPlan: boolean;
-  resultPane: "results" | "plan";
-  plan: GoPlan | null;
-  planAttempt: GoPlan | null;
-  planLoadedId: string;
-  loadingPlan: boolean;
-  planLoadError: string;
+  executionPlanNumber?: number;
+  resultPane: "results" | number;
+  planSequence: number;
+  planRuns: QueryPlanRun[];
   executionTransaction?: GoTransactionRequest;
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
@@ -82,7 +88,7 @@ export interface QueryWorkspaceTab {
     id: string;
     submitReview?: boolean;
     confirmWarnings?: boolean;
-    plan?: boolean;
+    planNumber?: number;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
     browse?: GoBrowseRequest;
@@ -164,13 +170,9 @@ export function createQueryTab(
     execution: null,
     executionSql: "",
     executionVersion: 0,
-    executionPlan: false,
     resultPane: "results",
-    plan: null,
-    planAttempt: null,
-    planLoadedId: "",
-    loadingPlan: false,
-    planLoadError: "",
+    planSequence: 0,
+    planRuns: [],
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
@@ -251,7 +253,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
-    ...(query.executionPlan ? { plan: true } : {}),
+    ...(query.executionPlanNumber ? { planNumber: query.executionPlanNumber } : {}),
     ...(query.executionConfirmWarnings ? { confirmWarnings: true } : {})
   };
 }
@@ -270,7 +272,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
-    ...(query.executionPlan ? { plan: true } : {}),
+    ...(query.executionPlanNumber ? { planNumber: query.executionPlanNumber } : {}),
     ...(query.executionSubmitReview ? { submitReview: true } : {})
   };
 }
@@ -279,7 +281,7 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   if (executionActive(query.execution)) query.execution = { ...query.execution!, status: "unknown" };
   query.loadGeneration++;
   query.loadingRows = false;
-  query.loadingPlan = false;
+  interruptQueryPlans(query);
 }
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (query.closed || value.console_id !== query.console?.id || query.pending) return false;
@@ -295,7 +297,6 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
   }
   if (query.console && value.transaction && value.transaction.revision >= (query.console.transaction?.revision || 0))
     query.console.transaction = value.transaction;
-  query.executionPlan = !!query.execution.plan;
   if (query.resultExecution?.id === value.id) query.resultExecution = reconcileExecution(query.resultExecution, value);
   return true;
 }
@@ -351,40 +352,56 @@ export function reconcileExport(current: GoExport, value: GoExport): GoExport {
   return { ...value, rows: Math.max(current.rows, value.rows), bytes: Math.max(current.bytes, value.bytes) };
 }
 
-// Plan resources belong to an execution and its original console. Late responses
-// must not replace another submission, reconnect, closed tab or previous result.
-export async function loadQueryPlan(query: QueryWorkspaceTab, api: Pick<ChenGoApi, "plan">) {
-  const execution = query.execution;
-  if (!execution?.plan || executionActive(execution) || query.loadingPlan || query.closed || query.pending) return;
-  const generation = query.loadGeneration;
+export function openQueryPlan(query: QueryWorkspaceTab, sql: string) {
+  // The prompt console keeps completed plans in its own bounded timeline.
+  if (query.kind === "console") query.planRuns = query.planRuns.filter((run) => run.state === "loading");
+  const number = ++query.planSequence;
+  query.planRuns.push({ number, sql, executionId: "", planRequestId: "", state: "pending", plan: null, error: "" });
+  query.resultPane = number;
+  return number;
+}
+
+export function closeQueryPlan(query: QueryWorkspaceTab, number: number) {
+  const index = query.planRuns.findIndex((run) => run.number === number);
+  if (index < 0) return;
+  query.planRuns.splice(index, 1);
+  if (query.resultPane === number)
+    query.resultPane = (query.planRuns[index] || query.planRuns[index - 1])?.number ?? "results";
+}
+
+export function interruptQueryPlans(query: QueryWorkspaceTab) {
+  for (const run of query.planRuns) {
+    if (run.state === "pending" || run.state === "loading") run.state = "interrupted";
+  }
+}
+
+export async function loadQueryPlan(query: QueryWorkspaceTab, run: QueryPlanRun, api: Pick<ChenGoApi, "plan">) {
+  const { executionId, planRequestId } = run;
   const consoleId = query.console?.id;
-  query.loadingPlan = true;
-  query.planLoadError = "";
+  if (!executionId || !planRequestId || query.closed || query.console?.state !== "ready" || run.state === "loading")
+    return;
+  run.state = "loading";
+  run.error = "";
+  // Another execution or tab selection can be active when this request finishes.
   const current = () =>
     !query.closed &&
-    !query.pending &&
-    query.loadGeneration === generation &&
-    query.execution?.id === execution.id &&
-    query.console?.id === consoleId;
+    query.console?.id === consoleId &&
+    run.state === "loading" &&
+    run.executionId === executionId &&
+    run.planRequestId === planRequestId &&
+    query.planRuns.includes(run);
   try {
-    const plan = await api.plan(execution.id);
+    const plan = await api.plan(executionId);
     if (!current()) return;
-    if (
-      plan.executionId !== execution.id ||
-      plan.consoleId !== consoleId ||
-      plan.requestId !== execution.plan.request_id
-    )
+    if (plan.executionId !== executionId || plan.consoleId !== consoleId || plan.requestId !== planRequestId)
       throw new Error("Plan identity does not match the execution");
-    query.planLoadedId = execution.id;
-    query.planAttempt = plan;
-    if (plan.status === "SUCCESS" || plan.status === "RAW_ONLY") query.plan = plan;
+    run.plan = plan;
+    run.state = "loaded";
   } catch (cause) {
     if (current()) {
-      query.planLoadedId = execution.id;
-      query.planLoadError = cause instanceof Error ? cause.message : String(cause);
+      run.error = cause instanceof Error ? cause.message : String(cause);
+      run.state = "failed";
     }
-  } finally {
-    if (current()) query.loadingPlan = false;
   }
 }
 
