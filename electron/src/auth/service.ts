@@ -26,6 +26,7 @@ interface ClientSessionBindingState extends ClientSessionBinding {
   serverClock?: { serverTime: number; observedAt: number };
   verifying?: Promise<unknown>;
   lockRequest?: Promise<void>;
+  lockRevision?: number;
   logoutAt?: number;
 }
 
@@ -217,8 +218,9 @@ export class DesktopAuthService {
   // ponytail: migration keeps legacy dynamic state; replace with explicit auth/session types when strict mode is enabled.
   [key: string]: any;
 
-  constructor(emitEvent) {
+  constructor(emitEvent, windowSessionBindings?: () => Iterable<ClientSessionBinding | null>) {
     this.emitEvent = emitEvent;
+    this.windowSessionBindings = windowSessionBindings ?? (() => [this.captureSessionBinding()]);
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
@@ -240,7 +242,18 @@ export class DesktopAuthService {
     this.sessionCheckInterval = CLIENT_SESSION_CHECK_INTERVAL - Math.random() * 5_000;
     this.checkingSessions = false;
     this.lockRevision = 0;
-    this.policyNotices = [];
+    this.policyNotices = new Map();
+  }
+
+  activeSessions() {
+    const keys = new Set<string>();
+    for (const binding of this.windowSessionBindings()) {
+      if (this.boundToken(binding)) keys.add(binding.sessionKey);
+    }
+    // Saved accounts without an open window do not generate background requests.
+    return [...keys]
+      .map((key) => this.sessions.get(key))
+      .filter((session) => session && this.tokens[session.sessionKey]);
   }
 
   startSessionMonitor() {
@@ -260,12 +273,12 @@ export class DesktopAuthService {
     clearTimeout(this.sessionMonitor);
     this.sessionMonitor = null;
     if (this.checkingSessions) return;
-    const session = this.sessions.get(this.currentSessionKey);
-    if (!session || !this.tokens[session.sessionKey]) return;
+    const sessions = this.activeSessions();
+    if (!sessions.length) return;
     // Main-process timers keep running when the renderer is hidden or unfocused.
     this.sessionMonitor = setTimeout(
       () => void this.checkSessions(),
-      Math.max(0, (session.nextCheckAt || 0) - performance.now())
+      Math.max(0, Math.min(...sessions.map((session) => session.nextCheckAt || 0)) - performance.now())
     );
     this.sessionMonitor.unref();
   }
@@ -274,7 +287,6 @@ export class DesktopAuthService {
     if (
       !session ||
       this.sessions.get(session.sessionKey) !== session ||
-      this.currentSessionKey !== session.sessionKey ||
       this.tokens[session.sessionKey]?.access_token !== bearer
     )
       return;
@@ -286,73 +298,70 @@ export class DesktopAuthService {
     if (this.checkingSessions) return;
     this.checkingSessions = true;
     try {
-      // Only monitor the login currently in use. Switching/restoring accounts validates
-      // them separately; saved and inactive accounts must not generate background traffic.
-      const session = this.sessions.get(this.currentSessionKey);
-      const stored = session && this.tokens[session.sessionKey];
-      if (!stored || (!force && session.nextCheckAt > performance.now())) return;
-      const binding = this.sessionBinding(session.sessionKey);
-      // Network failures also wait for the next interval, without a retry storm.
-      session.nextCheckAt = performance.now() + this.sessionCheckInterval;
-      try {
-        if (stored.client_lock_pending) await this.syncSessionLock(this.sessionBinding(session.sessionKey));
-        const bearer = await this.freshToken(session.origin, session.sessionKey);
-        if (
-          this.sessions.get(session.sessionKey) !== session ||
-          this.currentSessionKey !== session.sessionKey ||
-          this.tokens[session.sessionKey]?.access_token !== bearer
-        )
-          return;
-        // A successful refresh already validated this login on the server.
-        if (this.tokens[session.sessionKey] !== stored) return;
-        const response = await this.requestApiResponse(session.origin, CLIENT_SESSION_STATUS, {
-          bearerToken: bearer,
-          clientLoginSessionReceipt: this.tokens[session.sessionKey]?.client_login_session_receipt,
-          timeout: 10_000
-        });
-        if (this.sessions.get(session.sessionKey) !== session || this.currentSessionKey !== session.sessionKey) return;
-        if (responseSucceeded(response.status)) {
-          const metadata = parseJsonResponse(response.data);
-          await this.applyClientLoginPolicy(
-            session.origin,
-            session.sessionKey,
-            validateClientLoginPolicy(metadata.client_login_policy)
-          );
-          this.recordClientLoginSession(session.sessionKey, bearer, response.data);
-          this.recordSessionValidation(session, bearer);
-        }
-        await this.handleUnauthorized(session, bearer, response.status, response.data);
-      } catch (error) {
-        if (
-          error?.oauthError === "invalid_grant" &&
-          this.tokens[session.sessionKey] === stored &&
-          this.sessions.get(session.sessionKey) === session
-        ) {
-          await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
-        }
-        // Before the known deadline, transient failures retry at the normal interval.
-      } finally {
-        const token = this.boundToken(binding);
-        const info = token?.client_login_session ?? stored.client_login_session;
-        const deadline = Date.parse(info?.effective_expires_at ?? info?.expires_at ?? "");
-        if (
-          token &&
-          binding?.serverClock &&
-          Number.isFinite(deadline) &&
-          deadline <= binding.serverClock.serverTime + performance.now() - binding.serverClock.observedAt
-        ) {
-          // A failed check cannot extend the last server-confirmed deadline. The binding
-          // keeps an old request from expiring a newer login for the same site/account.
-          await this.expireSession(
-            binding.sessionKey,
-            info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout",
-            info
-          );
-        }
-      }
+      await Promise.all(this.activeSessions().map((session) => this.checkSession(session, force)));
     } finally {
       this.checkingSessions = false;
       this.scheduleSessionCheck();
+    }
+  }
+
+  async checkSession(session, force: boolean) {
+    const stored = this.tokens[session.sessionKey];
+    if (!stored || (!force && session.nextCheckAt > performance.now())) return;
+    const binding = this.sessionBinding(session.sessionKey);
+    // Network failures also wait for the next interval, without a retry storm.
+    session.nextCheckAt = performance.now() + this.sessionCheckInterval;
+    try {
+      if (stored.client_lock_pending) await this.syncSessionLock(this.sessionBinding(session.sessionKey));
+      const bearer = await this.freshToken(session.origin, session.sessionKey);
+      if (this.sessions.get(session.sessionKey) !== session || this.tokens[session.sessionKey]?.access_token !== bearer)
+        return;
+      // A successful refresh already validated this login on the server.
+      if (this.tokens[session.sessionKey] !== stored) return;
+      const response = await this.requestApiResponse(session.origin, CLIENT_SESSION_STATUS, {
+        bearerToken: bearer,
+        clientLoginSessionReceipt: this.tokens[session.sessionKey]?.client_login_session_receipt,
+        timeout: 10_000
+      });
+      if (this.sessions.get(session.sessionKey) !== session) return;
+      if (responseSucceeded(response.status)) {
+        const metadata = parseJsonResponse(response.data);
+        await this.applyClientLoginPolicy(
+          session.origin,
+          session.sessionKey,
+          validateClientLoginPolicy(metadata.client_login_policy)
+        );
+        this.recordClientLoginSession(session.sessionKey, bearer, response.data);
+        this.recordSessionValidation(session, bearer);
+      }
+      await this.handleUnauthorized(session, bearer, response.status, response.data);
+    } catch (error) {
+      if (
+        error?.oauthError === "invalid_grant" &&
+        this.tokens[session.sessionKey] === stored &&
+        this.sessions.get(session.sessionKey) === session
+      ) {
+        await this.expireSession(session.sessionKey, error.clientLoginReason, error.clientLoginSession);
+      }
+      // Before the known deadline, transient failures retry at the normal interval.
+    } finally {
+      const token = this.boundToken(binding);
+      const info = token?.client_login_session ?? stored.client_login_session;
+      const deadline = Date.parse(info?.effective_expires_at ?? info?.expires_at ?? "");
+      if (
+        token &&
+        binding?.serverClock &&
+        Number.isFinite(deadline) &&
+        deadline <= binding.serverClock.serverTime + performance.now() - binding.serverClock.observedAt
+      ) {
+        // A failed check cannot extend the last server-confirmed deadline. The binding
+        // keeps an old request from expiring a newer login for the same site/account.
+        await this.expireSession(
+          binding.sessionKey,
+          info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout",
+          info
+        );
+      }
     }
   }
 
@@ -890,6 +899,8 @@ export class DesktopAuthService {
       const locked = info.locked || token.client_lock_pending === true;
       if (token.client_locked !== locked) {
         token.client_locked = locked;
+        const binding = this.sessionBinding(sessionId);
+        binding.lockRevision = (binding.lockRevision || 0) + 1;
         this.lockRevision += 1;
         this.emitEvent("client-lock-changed");
         void this.persistTokens().catch((error) => electronLog.warn("failed to persist server lock", error));
@@ -1094,6 +1105,7 @@ export class DesktopAuthService {
       locked,
       expired: locked && !token,
       revision: this.lockRevision,
+      lockRevision: state?.lockRevision || 0,
       sessionId: token || locked ? binding.sessionKey : "",
       origin: token || locked ? binding.origin : "",
       username: token?.username || "",
@@ -1104,27 +1116,31 @@ export class DesktopAuthService {
 
   lockIdleSessions(idleSeconds: number) {
     if (!Number.isFinite(idleSeconds) || idleSeconds < 0) return;
-    const session = this.sessions.get(this.currentSessionKey);
-    const token = session && this.tokens[session.sessionKey];
-    const minutes = token?.client_login_policy?.idle_lock_time;
-    if (!minutes || token.client_locked) return;
-    const binding = this.sessionBinding(session.sessionKey);
-    if (!binding) return;
-    // Switching accounts or unlocking begins a fresh interval for the active login.
-    const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
-    if (idle >= minutes * 60) this.lockSessions();
+    for (const session of this.activeSessions()) {
+      const binding = this.sessionBinding(session.sessionKey);
+      const token = this.boundToken(binding);
+      const minutes = token?.client_login_policy?.idle_lock_time;
+      if (!binding || !minutes || token.client_locked) continue;
+      const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
+      if (idle >= minutes * 60) this.lockSession(binding);
+    }
   }
 
   lockSessions(manual = false) {
-    const session = this.sessions.get(this.currentSessionKey);
-    const token = session && this.tokens[session.sessionKey];
+    for (const session of this.activeSessions()) this.lockSession(this.sessionBinding(session.sessionKey), manual);
+  }
+
+  lockSession(binding: ClientSessionBinding | null | undefined, manual = false) {
+    const token = this.boundToken(binding);
     if (!token || (!manual && !token.client_login_policy?.idle_lock_time) || token.client_locked) return;
     token.client_locked = true;
     token.client_lock_pending = true;
+    const state = binding as ClientSessionBindingState;
+    state.lockRevision = (state.lockRevision || 0) + 1;
     this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
     void this.persistTokens().catch((error) => electronLog.warn("failed to persist client lock", error));
-    void this.syncSessionLock(this.sessionBinding(session.sessionKey)).catch((error) =>
+    void this.syncSessionLock(binding).catch((error) =>
       electronLog.warn("client lock pending server confirmation", error)
     );
   }
@@ -1156,52 +1172,62 @@ export class DesktopAuthService {
   }
 
   updatePolicyNotices(idleSeconds: number) {
-    const session = this.sessions.get(this.currentSessionKey);
-    const token = session && this.tokens[session.sessionKey];
-    const notices = [];
-    const binding = token && this.sessionBinding(session.sessionKey);
-    if (binding) {
-      const info = token.client_login_session;
-      const deadline = info?.effective_expires_at ?? info?.expires_at;
-      const expires = deadline ? Date.parse(deadline) : NaN;
-      const now = binding.serverClock
-        ? binding.serverClock.serverTime + performance.now() - binding.serverClock.observedAt
-        : Date.now();
-      if (Number.isFinite(expires)) {
-        const reason = info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout";
-        if (expires <= now && binding.serverClock) {
-          // The administrator may have extended this login since the last sync.
-          // Confirm once; a failed check cannot keep an overdue login in use.
-          if (!this.checkingSessions) void this.checkSessions(true);
+    const active = new Set<string>();
+    let overdue = false;
+    for (const session of this.activeSessions()) {
+      active.add(session.sessionKey);
+      const token = this.tokens[session.sessionKey];
+      const notices = [];
+      const binding = token && this.sessionBinding(session.sessionKey);
+      if (binding) {
+        const info = token.client_login_session;
+        const deadline = info?.effective_expires_at ?? info?.expires_at;
+        const expires = deadline ? Date.parse(deadline) : NaN;
+        const now = binding.serverClock
+          ? binding.serverClock.serverTime + performance.now() - binding.serverClock.observedAt
+          : Date.now();
+        if (Number.isFinite(expires)) {
+          const reason = info.expiry_reason === "policy_changed" ? "policy_changed" : "absolute_timeout";
+          if (expires <= now && binding.serverClock) {
+            // The administrator may have extended this login since the last sync.
+            // Confirm once; a failed check cannot keep an overdue login in use.
+            overdue = true;
+          }
+          if (expires > now && expires - now <= 10 * 60_000) {
+            notices.push({ id: `${session.sessionKey}:${reason}:${deadline}`, kind: reason, at: deadline });
+          }
         }
-        if (expires > now && expires - now <= 10 * 60_000) {
-          notices.push({ id: `${session.sessionKey}:${reason}:${deadline}`, kind: reason, at: deadline });
+        const minutes = token.client_login_policy?.idle_lock_time;
+        if (!token.client_locked && minutes > 0 && Number.isFinite(idleSeconds) && idleSeconds >= 0) {
+          const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
+          // A new input starts a new warning, including after the previous one was dismissed.
+          const resumed = binding.lastIdleSeconds !== undefined && idle < binding.lastIdleSeconds;
+          if (resumed) {
+            binding.idleNoticeRevision = (binding.idleNoticeRevision || 0) + 1;
+          }
+          binding.lastIdleSeconds = idle;
+          const remainingSeconds = Math.ceil(minutes * 60 - idle);
+          if (!resumed && idle > 0 && remainingSeconds > 0 && remainingSeconds < 60) {
+            notices.push({
+              id: `${session.sessionKey}:idle:${binding.unlockedAt}:${binding.idleNoticeRevision || 0}`,
+              kind: "idle_lock",
+              at: new Date(Date.now() + (minutes * 60 - idle) * 1000).toISOString(),
+              remainingSeconds
+            });
+          }
         }
       }
-      const minutes = token.client_login_policy?.idle_lock_time;
-      if (!token.client_locked && minutes > 0 && Number.isFinite(idleSeconds) && idleSeconds >= 0) {
-        const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
-        // A new input starts a new warning, including after the previous one was dismissed.
-        const resumed = binding.lastIdleSeconds !== undefined && idle < binding.lastIdleSeconds;
-        if (resumed) {
-          binding.idleNoticeRevision = (binding.idleNoticeRevision || 0) + 1;
-        }
-        binding.lastIdleSeconds = idle;
-        const remainingSeconds = Math.ceil(minutes * 60 - idle);
-        if (!resumed && idle > 0 && remainingSeconds > 0 && remainingSeconds < 60) {
-          notices.push({
-            id: `${session.sessionKey}:idle:${binding.unlockedAt}:${binding.idleNoticeRevision || 0}`,
-            kind: "idle_lock",
-            at: new Date(Date.now() + (minutes * 60 - idle) * 1000).toISOString(),
-            remainingSeconds
-          });
-        }
+      if (JSON.stringify(this.policyNotices.get(session.sessionKey)) !== JSON.stringify(notices)) {
+        this.policyNotices.set(session.sessionKey, notices);
+        this.emitEvent("client-policy-notices", { sessionId: session.sessionKey, notices });
       }
     }
-    const next = { sessionId: session?.sessionKey || "", notices };
-    if (JSON.stringify(this.policyNotices) === JSON.stringify(next)) return;
-    this.policyNotices = next;
-    this.emitEvent("client-policy-notices", next);
+    for (const sessionId of this.policyNotices.keys()) {
+      if (active.has(sessionId)) continue;
+      this.policyNotices.delete(sessionId);
+      this.emitEvent("client-policy-notices", { sessionId, notices: [] });
+    }
+    if (overdue && !this.checkingSessions) void this.checkSessions(true);
   }
 
   requireLockedSession(binding: ClientSessionBinding | null | undefined) {
@@ -1241,7 +1267,7 @@ export class DesktopAuthService {
     const state = binding as ClientSessionBindingState;
     if (state.logoutAt) return this.lockState(binding);
     if (state.verifying) return state.verifying;
-    const revision = this.lockRevision;
+    const revision = state.lockRevision;
     const verification = (async () => {
       const session = this.requireLockedSession(binding);
       await this.syncSessionLock(binding);
@@ -1257,6 +1283,7 @@ export class DesktopAuthService {
       } catch (cause) {
         const error = cause as Error & { data?: { code?: string; attempts_remaining?: number } };
         if (error.data?.code === "client_lock_password_unset") {
+          state.lockRevision = (state.lockRevision || 0) + 1;
           this.lockRevision += 1;
           this.emitEvent("client-lock-changed");
           return this.lockState(binding);
@@ -1283,7 +1310,7 @@ export class DesktopAuthService {
         throw cause;
       }
       this.requireLockedSession(binding);
-      if (revision !== this.lockRevision || result?.verified !== true) {
+      if (revision !== state.lockRevision || result?.verified !== true) {
         throw new Error("Client lock changed during verification. Please try again.");
       }
       this.recordClientLoginSession(session.sessionKey, this.boundToken(binding).access_token, result);

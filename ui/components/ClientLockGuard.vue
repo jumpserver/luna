@@ -13,6 +13,7 @@ interface LockState {
   username: string;
   idleLockTime: number;
   revision: number;
+  lockRevision: number;
   canUnlock: boolean;
 }
 
@@ -51,7 +52,7 @@ async function loadInfo() {
     const info = await desktopInvoke<{ hasPassword: boolean; settingsUrl: string; attemptsRemaining?: number }>(
       "client_lock_info"
     );
-    if (state.value?.sessionId !== snapshot.sessionId || state.value.revision !== snapshot.revision) return;
+    if (state.value?.sessionId !== snapshot.sessionId || state.value.lockRevision !== snapshot.lockRevision) return;
     hasPassword.value = info.hasPassword;
     if (
       info.hasPassword &&
@@ -77,7 +78,7 @@ function applyState(next: LockState) {
   const changed =
     state.value?.sessionId !== next.sessionId ||
     state.value?.locked !== next.locked ||
-    state.value?.revision !== next.revision;
+    state.value?.lockRevision !== next.lockRevision;
   state.value = next;
   if (changed) {
     password.value = "";
@@ -230,6 +231,10 @@ onBeforeUnmount(() => {
                 {{ t(state?.canUnlock ? "ScreenLock.Description" : "ClientLock.MainOnly") }}
               </p>
             </header>
+            <dl v-if="state?.origin" class="screen-lock-user">
+              <dt class="screen-lock-label">{{ t("Common.LoginSite") }}</dt>
+              <dd class="screen-lock-user-value">{{ state.origin }}</dd>
+            </dl>
             <dl v-if="state?.sessionId" class="screen-lock-user">
               <dt class="screen-lock-label">{{ t("Common.User") }}</dt>
               <dd class="screen-lock-user-value">{{ userName }}</dd>

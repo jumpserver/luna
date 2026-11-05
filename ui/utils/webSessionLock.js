@@ -27,6 +27,7 @@ export function createWebSessionLock({
   let interval;
   let syncing;
   let locking;
+  let stateRevision = 0;
   let pendingLock = false;
   let remoteLockPending = false;
   let lastActivity = Date.now();
@@ -48,8 +49,8 @@ export function createWebSessionLock({
     notifyClose?.({ page_id: pageId, ...(state.session ? { scope: state.session.scope } : {}) });
   }
   const cleanup = [];
-  const documents = new WeakSet();
-  const frames = new WeakSet();
+  let documents = new WeakSet();
+  let frames = new WeakSet();
   const now = () => Date.now();
   const publish = () => onChange({ ...state });
   const read = (key) => {
@@ -87,6 +88,7 @@ export function createWebSessionLock({
   }
   function beginSignOut(at) {
     if (state.logoutAt) return;
+    stateRevision++;
     state.logoutAt = Math.min(now() + 5000, Math.max(now(), at));
     state.locked = true;
     state.error = null;
@@ -101,6 +103,7 @@ export function createWebSessionLock({
     }
     if (message.id === lastSignal) return;
     lastSignal = message.id;
+    if (message.type === "locked" || message.type === "unlocked") stateRevision++;
     if (message.type === "locked") {
       remoteLockPending = message.pending === true;
       state.locked = true;
@@ -149,6 +152,7 @@ export function createWebSessionLock({
   function apply(data) {
     if (state.logoutAt) return;
     validate(data);
+    stateRevision++;
     if (state.session && state.session.scope !== data.scope) {
       state.locked = true;
       publish();
@@ -165,10 +169,10 @@ export function createWebSessionLock({
           ? Math.max(stored, Number.isFinite(elapsed) ? loggedInAt : stored)
           : loggedInAt;
       write(`${prefix}:activity`, lastActivity);
-      if ("BroadcastChannel" in env) {
-        channel = new env.BroadcastChannel(prefix);
-        channel.onmessage = (event) => receive(event.data);
-      }
+    }
+    if (!channel && "BroadcastChannel" in env) {
+      channel = new env.BroadcastChannel(prefix);
+      channel.onmessage = (event) => receive(event.data);
     }
     const wasLocked = state.ready && state.locked;
     state.session = data;
@@ -236,35 +240,42 @@ export function createWebSessionLock({
       if (locking === promise) locking = null;
     }
   }
-  async function sync(afterUnlock = false) {
+  async function sync(afterUnlock = false, fresh = false) {
     if (stopped || pageHidden || state.logoutAt) return;
     if (syncing) {
       await syncing;
       // A concurrent status read must not swallow another tab's verified unlock.
-      return afterUnlock || pageEntering ? sync(afterUnlock) : undefined;
+      return afterUnlock || fresh || pageEntering || !state.ready ? sync(afterUnlock) : undefined;
     }
     lastPoll = now();
+    const syncPageId = pageId;
     const promise = (async () => {
+      let revision = stateRevision;
       try {
         if (!afterUnlock) {
           if (remoteLockPending) pendingLock = true;
           await flushLock();
         }
+        if (pageHidden || stopped || syncPageId !== pageId) return;
         const enteringId = pageEntering ? pageId : null;
         const headers = enteringId ? { "X-JMS-Page-ID": enteringId } : undefined;
         pageStarted = true;
+        revision = stateRevision;
         const data = validate(await request("GET", "/api/v1/authentication/web-session/status/", undefined, headers));
-        if (enteringId && enteringId !== pageId) return;
+        if (syncPageId !== pageId) return;
         pageEntering = false;
         if (pageHidden || stopped) return;
+        // A status snapshot cannot undo a lock/unlock that happened while it was in flight.
+        if (revision !== stateRevision) return;
         if (afterUnlock) {
           pendingLock = false;
           remoteLockPending = false;
         }
         apply(data);
+        revision = stateRevision;
         await flushLock();
       } catch (error) {
-        fail(error, true);
+        if (revision === stateRevision && !pageHidden && !stopped) fail(error, true);
       }
     })();
     syncing = promise;
@@ -277,6 +288,7 @@ export function createWebSessionLock({
   async function lock() {
     if (!state.session) await sync();
     if (!state.session || state.locked) return;
+    stateRevision++;
     pendingLock = true;
     state.locked = true;
     state.error = null;
@@ -291,11 +303,13 @@ export function createWebSessionLock({
   async function unlock(password) {
     if (state.logoutAt) return;
     if (!state.session) throw new Error("No Web Session available");
+    stateRevision++;
     state.pending = true;
     publish();
     try {
       if (remoteLockPending) pendingLock = true;
       await flushLock();
+      const revision = stateRevision;
       const data = validate(
         await request("POST", "/api/v1/authentication/session-lock/unlock/", {
           scope: state.session.scope,
@@ -303,6 +317,17 @@ export function createWebSessionLock({
         })
       );
       if (data.locked) throw new Error("The server did not unlock the session");
+      if (revision !== stateRevision) {
+        // Another tab may have locked again after this unlock reached the server.
+        stateRevision++;
+        state.locked = true;
+        publish();
+        await sync(false, true);
+        if (!stopped && !pageHidden && !state.logoutAt && !state.locked && !state.error) {
+          emit("unlocked");
+        }
+        return;
+      }
       pendingLock = false;
       remoteLockPending = false;
       state.attemptsRemaining = 5;
@@ -400,6 +425,19 @@ export function createWebSessionLock({
     cleanup.push(() => observer.disconnect());
   }
   async function start() {
+    if (cleanup.length) return syncing;
+    if (stopped) {
+      stopped = false;
+      pageId = newId();
+      pageEntering = true;
+      pageStarted = false;
+      pageLeaving = false;
+      pageHidden = false;
+      state.ready = false;
+      state.locked = true;
+      publish();
+    }
+    stateRevision++;
     listen(env, "storage", (event) => {
       if (event.key === `${prefix}:signal`) receive(read(event.key));
       if (event.key === `${prefix}:activity`) {
@@ -408,6 +446,7 @@ export function createWebSessionLock({
       }
     });
     listen(env, "jms:web-session-locked", () => {
+      stateRevision++;
       state.locked = true;
       publish();
       void sync();
@@ -424,11 +463,13 @@ export function createWebSessionLock({
       }
     });
     listen(env, "pagehide", () => {
+      stateRevision++;
       pageHidden = true;
       leavePage();
     });
     listen(env, "pageshow", (event) => {
       if (event.persisted) {
+        stateRevision++;
         pageHidden = false;
         pageId = newId();
         pageEntering = true;
@@ -439,17 +480,21 @@ export function createWebSessionLock({
       }
     });
     observeDocument(doc);
-    await sync();
-    tick();
     interval = env.setInterval(tick, 1000);
+    await sync();
+    if (!stopped) tick();
   }
   function stop() {
+    stateRevision++;
     leavePage();
     stopped = true;
     env.clearInterval(interval);
     env.clearTimeout(logoutTimer);
     channel?.close();
-    for (const remove of cleanup) remove();
+    channel = null;
+    for (const remove of cleanup.splice(0)) remove();
+    documents = new WeakSet();
+    frames = new WeakSet();
     const lease = read(`${prefix}:leader`);
     if (lease?.owner === owner) {
       try {

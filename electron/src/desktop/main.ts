@@ -7,7 +7,7 @@ import {
 } from "../../../ui/shared/shortcuts";
 import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
 import { clientLoginExpiryMessage } from "../../../ui/utils/clientLoginPolicy";
-import type { ClientLoginPolicy, ClientLoginSession } from "../../../ui/types/index";
+import type { ClientLoginPolicy, ClientLoginSession, ClientPolicyNotice } from "../../../ui/types/index";
 import { normalizeLanguageCode } from "../../../i18n/language";
 import enMessages from "../../../i18n/locales/en.json";
 import esMessages from "../../../i18n/locales/es.json";
@@ -148,7 +148,7 @@ const allowedPaths = new Set([
   process.resourcesPath,
   path.join(projectRoot, "plugins")
 ]);
-let clientPolicyNotices = { sessionId: "", notices: [] };
+const clientPolicyNotices = new Map<string, ClientPolicyNotice[]>();
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
@@ -354,11 +354,12 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
     closeExpiredSessionWindows((payload as { sessionId?: string })?.sessionId || "");
   }
   if (name === "client-policy-notices" && !targetLabel) {
-    clientPolicyNotices = payload as typeof clientPolicyNotices;
+    const { sessionId, notices } = payload as { sessionId: string; notices: ClientPolicyNotice[] };
+    if (notices.length) clientPolicyNotices.set(sessionId, notices);
+    else clientPolicyNotices.delete(sessionId);
     for (const [label, win] of windows) {
       const binding = windowSessionBindings.get(win.webContents);
-      const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
-      emitDesktopEvent(name, notices, label);
+      if (binding?.sessionKey === sessionId) emitDesktopEvent(name, notices, label);
     }
     return;
   }
@@ -376,9 +377,11 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
 
 function syncWindowLock(win) {
   if (win.isDestroyed()) return;
-  const bound = authService.lockState(windowSessionBindings.get(win.webContents) ?? null);
-  const canUnlock = labelForWindow(win) === "main";
-  const state = { ...bound, locked: bound.locked && (!canUnlock || !bound.expired), canUnlock };
+  const binding = windowSessionBindings.get(win.webContents) ?? null;
+  const bound = authService.lockState(binding);
+  const main = labelForWindow(win) === "main";
+  const canUnlock = main || Boolean(authService.boundToken(binding));
+  const state = { ...bound, locked: bound.locked && (!main || !bound.expired), canUnlock };
   webProxyManager.setHostLocked(win.webContents.id, state.locked);
   emitDesktopEvent("client-lock-state", state, labelForWindow(win));
   return state;
@@ -691,7 +694,7 @@ function createWindow(
       )
     ) {
       event.preventDefault();
-      authService.lockSessions(true);
+      authService.lockSession(windowSessionBindings.get(windowWebContents), true);
       return;
     }
     const applicationShortcut = shortcutDefinitions.some(({ id }) =>
@@ -718,6 +721,7 @@ function createWindow(
   }
 
   windows.set(label, win);
+  authService.scheduleSessionCheck();
   syncWindowLock(win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => {
@@ -742,6 +746,7 @@ function createWindow(
   win.on("closed", () => {
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
+    authService.scheduleSessionCheck();
     for (const [sessionId, session] of localShellSessions) {
       if (session.webContentsId !== windowWebContentsId) continue;
       localShellSessions.delete(sessionId);
@@ -975,7 +980,11 @@ function buildMenu() {
     {
       label: prefersZh() ? "锁定客户端" : "Lock Client",
       accelerator: shortcutAccelerator("lockClient", shortcutOverrides, shortcutEnvironment),
-      click: () => authService.lockSessions(true)
+      click: (_item, focusedWindow) =>
+        authService.lockSession(
+          windowSessionBindings.get((focusedWindow || windows.get("main"))?.webContents) ?? null,
+          true
+        )
     },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
@@ -1222,10 +1231,9 @@ async function handleInvoke(event, request) {
   const win = windowForEvent(event);
   const binding = windowSessionBindings.get(event.sender) ?? null;
   if (command === "client_lock_state") return syncWindowLock(win);
-  if (command === "client_policy_notices")
-    return binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+  if (command === "client_policy_notices") return clientPolicyNotices.get(binding?.sessionKey || "") || [];
   if (command === "client_policy_notice_overlay") {
-    const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+    const notices = clientPolicyNotices.get(binding?.sessionKey || "") || [];
     const nativeWebsite = [...webProxyManager.views.values()].some(
       (view) => view.hostWebContentsId === win.webContents.id && view.active
     );
@@ -1255,7 +1263,6 @@ async function handleInvoke(event, request) {
       "client_lock_copy_settings"
     ].includes(command)
   ) {
-    if (labelForWindow(win) !== "main") throw new Error("Unlock on the main page");
     if (command === "client_lock_info") return authService.lockInfo(binding);
     if (command === "client_unlock") return authService.unlockSession(binding, args);
     if (command === "client_lock_settings" || command === "client_lock_copy_settings") {
@@ -1278,9 +1285,8 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "client_lock") {
-    if (!binding || binding !== authService.captureSessionBinding())
-      throw new Error("Client login is no longer active");
-    return authService.lockSessions(true);
+    authService.getBoundSession(binding);
+    return authService.lockSession(binding, true);
   }
 
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
@@ -1511,6 +1517,7 @@ async function handleInvoke(event, request) {
         if (!label.startsWith("asset-") || previous?.sessionKey === binding?.sessionKey) {
           windowSessionBindings.set(target.webContents, binding);
           syncWindowLock(target);
+          emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
         }
       }
       void authService.checkSessions(true);
@@ -1907,7 +1914,13 @@ app.whenReady().then(async () => {
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
-  authService = new DesktopAuthService(emitDesktopEvent);
+  authService = new DesktopAuthService(emitDesktopEvent, () =>
+    [...windows].flatMap(([label, win]) =>
+      !win.isDestroyed() && (label === "main" || label.startsWith("asset-"))
+        ? [windowSessionBindings.get(win.webContents) ?? null]
+        : []
+    )
+  );
   await authService.initialize();
   electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
     // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat

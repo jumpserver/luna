@@ -1310,8 +1310,8 @@
     "ClientLoginUnlimited": "Sem limite",
     "ClientLoginCurrentUser": "Usuário atual",
     "ClientLoginExpiryHint": "O vencimento é calculado desde este login e a duração máxima de login da conta atual.",
-    "ClientLoginActivityScope": "As entradas do teclado e mouse do sistema determinam a inatividade apenas do site e da conta ativos. Cada ação não é enviada; ao atingir o prazo ou bloquear manualmente, uma solicitação bloqueia este login no servidor.",
-    "ClientLoginActivityLimits": "O tempo de inatividade efetivo bloqueia a página principal e as janelas de ativos, mesmo sem senha. Desbloqueie na página principal com verificação no servidor. Aplicativos externos não são protegidos.",
+    "ClientLoginActivityScope": "A entrada do teclado e do mouse do sistema determina a inatividade. A conta atual e as contas com janelas de ativos abertas usam seus próprios tempos de inatividade.",
+    "ClientLoginActivityLimits": "O tempo de inatividade bloqueia todas as janelas desse login, mesmo sem senha de bloqueio. Digite a senha de bloqueio da conta do site vinculada em qualquer uma de suas janelas para desbloqueá-las. Aplicativos externos não são protegidos.",
     "ClientLoginIdleLock": "Bloqueio por inatividade",
     "ClientLoginPolicyExpiry": "A nova duração máxima foi excedida; saída ao terminar o prazo de tolerância",
     "ClientLockShortcut": "Pressione {shortcut} para bloquear a conta atual a qualquer momento, mesmo com o bloqueio automático desativado."
@@ -3607,7 +3607,7 @@
   "ClientLock": {
     "Title": "Cliente bloqueado",
     "Description": "Digite a senha de bloqueio desta conta. As conexões permanecem ativas.",
-    "MainOnly": "Esta janela está bloqueada. Desbloqueie esta conta na página principal.",
+    "MainOnly": "Este login foi encerrado. Volte à página principal para entrar novamente.",
     "Password": "Senha de bloqueio de tela",
     "Unlock": "Desbloquear",
     "Unset": "Nenhuma senha de bloqueio está definida. Clique em “Definir senha”, entre no mesmo site com a mesma conta no navegador e defina uma senha. Volte ao cliente, clique em “Atualizar” e digite a nova senha para desbloquear.",
@@ -3674,7 +3674,7 @@
     "ReauthHelp": "Exige novo login após sair e reiniciar. Minimizar ou ocultar o cliente não conta como sair.",
     "ReauthRequired": "Exigido pelo administrador; não pode ser desativado. Minimizar ou ocultar não conta como sair.",
     "UnlimitedHelp": "0 significa ilimitado. Limpe e salve para restaurar o padrão.",
-    "IdleHelp": "Bloqueia após o tempo de inatividade definido. Desbloqueie com a senha de bloqueio na janela principal. Janelas de aplicativos externos não são protegidas.",
+    "IdleHelp": "Cada conta em uso é bloqueada após seu tempo de inatividade configurado. Digite a senha de bloqueio dessa conta em qualquer uma de suas janelas para desbloquear. Janelas de aplicativos externos não são protegidas.",
     "WebIdleHelp": "Bloqueia o console e o terminal Web após o tempo de inatividade definido. Digite a senha de bloqueio para desbloquear. Com o bloqueio por inatividade ativado, fechar todas as páginas também bloqueia esta sessão após 10 segundos. A saída ao fechar as páginas tem prioridade. Atualizar ou reabrir em até 10 segundos cancela a ação.",
     "LifetimeHelp": "Contado desde o login. Ao expirar, entre novamente; a atividade não prolonga o prazo."
   }

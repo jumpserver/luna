@@ -1310,8 +1310,8 @@
     "ClientLoginUnlimited": "Illimitée",
     "ClientLoginCurrentUser": "Utilisateur actuel",
     "ClientLoginExpiryHint": "L’expiration est calculée depuis cette connexion selon la durée maximale de connexion du compte actuel.",
-    "ClientLoginActivityScope": "Les entrées clavier et souris du système déterminent l’inactivité du site et du compte actifs uniquement. Aucune activité n’est envoyée à chaque action ; le délai ou un verrouillage manuel envoie une demande de verrouillage au serveur.",
-    "ClientLoginActivityLimits": "Le délai d’inactivité effectif verrouille la page principale et les fenêtres de ressources, même sans mot de passe. Le déverrouillage se fait sur la page principale avec vérification du serveur. Les applications externes ne sont pas protégées.",
+    "ClientLoginActivityScope": "Les entrées du clavier et de la souris du système déterminent l’inactivité. Le compte actuel et les comptes ayant des fenêtres de ressources ouvertes utilisent chacun leur propre délai.",
+    "ClientLoginActivityLimits": "Le délai d’inactivité verrouille toutes les fenêtres de cette connexion, même sans mot de passe de verrouillage. Saisissez le mot de passe de verrouillage du compte du site associé dans l’une de ses fenêtres pour les déverrouiller. Les applications externes ne sont pas protégées.",
     "ClientLoginIdleLock": "Verrouillage après inactivité",
     "ClientLoginPolicyExpiry": "La nouvelle durée est dépassée ; déconnexion à la fin du délai de grâce",
     "ClientLockShortcut": "Appuyez sur {shortcut} pour verrouiller le compte actif à tout moment, même si le verrouillage automatique est désactivé."
@@ -3607,7 +3607,7 @@
   "ClientLock": {
     "Title": "Client verrouillé",
     "Description": "Saisissez le mot de passe de verrouillage de ce compte. Les connexions restent actives.",
-    "MainOnly": "Cette fenêtre est verrouillée. Déverrouillez ce compte depuis la page principale.",
+    "MainOnly": "Cette connexion a pris fin. Revenez à la page principale pour vous reconnecter.",
     "Password": "Mot de passe de verrouillage",
     "Unlock": "Déverrouiller",
     "Unset": "Aucun mot de passe de verrouillage n’est défini. Cliquez sur « Définir le mot de passe », connectez-vous dans le navigateur au même site avec le même compte et définissez un mot de passe. Revenez au client, cliquez sur « Actualiser » et saisissez le nouveau mot de passe pour déverrouiller.",
@@ -3674,7 +3674,7 @@
     "ReauthHelp": "Exige une nouvelle connexion après avoir quitté et relancé le client. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "ReauthRequired": "Imposé par l’administrateur et non désactivable. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "UnlimitedHelp": "0 signifie illimité. Effacez puis enregistrez pour rétablir la valeur par défaut.",
-    "IdleHelp": "Verrouille après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage dans la fenêtre principale. Les applications externes ne sont pas protégées.",
+    "IdleHelp": "Chaque compte utilisé se verrouille après son délai d’inactivité. Saisissez son mot de passe de verrouillage dans l’une de ses fenêtres pour le déverrouiller. Les fenêtres des applications externes ne sont pas protégées.",
     "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller. Si le verrouillage pour inactivité est activé, fermer toutes les pages verrouille aussi cette session après 10 secondes. La déconnexion à la fermeture est prioritaire. Actualiser ou rouvrir dans les 10 secondes annule cette action.",
     "LifetimeHelp": "Calculé depuis la connexion. Reconnectez-vous à l’expiration ; l’activité ne prolonge pas la durée."
   }
