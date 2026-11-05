@@ -15,7 +15,7 @@ import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
 import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
-import { computed, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
@@ -35,6 +35,7 @@ import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoResultGrid from "./GoResultGrid.client.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
+import { queryResultTitle } from "./resultPresentation";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
 import { hasMoreResultRows, loadQueryPlan, resultLoadingLocked } from "./workspace";
@@ -272,7 +273,7 @@ function newContext() {
   emit("newContext", { database: props.query.context.database, schema: contextSchema.value });
 }
 onBeforeUnmount(() => contextController?.abort());
-const pinned = ref<{ id: number; rows: GoRows; sql: string; source: string }[]>([]);
+const pinned = ref<{ id: number; rows: GoRows; sql: string; title: string; source: string; resultId: string }[]>([]);
 const pinnedId = ref<number | null>(null);
 let pinSequence = 0;
 const pinnedResult = computed(() => pinned.value.find((item) => item.id === pinnedId.value));
@@ -284,12 +285,16 @@ function pinResult() {
     editorError.value = t("Chen.GoPinnedLimit");
     return;
   }
+  const id = ++pinSequence;
   pinned.value.push({
-    id: ++pinSequence,
+    id,
+    resultId: props.query.resultId,
     rows: JSON.parse(json),
-    sql: props.query.resultSql,
+    sql: props.query.rows.source_sql || props.query.resultSql,
+    title: queryResultTitle(props.query.rows.source_sql || props.query.resultSql),
     source: props.query.resultExecution?.id || ""
   });
+  pinnedId.value = id;
 }
 function closePin(id: number) {
   pinned.value = pinned.value.filter((item) => item.id !== id);
@@ -302,7 +307,6 @@ watch(
     pinnedId.value = null;
   }
 );
-const scope = ref("empty");
 const historyOpen = ref(false);
 const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
@@ -363,11 +367,11 @@ const canExplain = computed(() =>
     "db2"
   ].includes(props.session.dialect)
 );
-const shownPlan = computed(() => props.query.plan || props.query.planAttempt);
 const active = computed(() => executionActive(props.query.execution));
 const planLoading = computed(
   () => props.query.loadingPlan || !!props.query.pending?.plan || (props.query.executionPlan && active.value)
 );
+const shownPlan = computed(() => (planLoading.value ? null : props.query.planAttempt || props.query.plan));
 const displayExecution = computed(() => props.query.resultExecution || props.query.execution);
 const canSubmit = computed(
   () => ready.value && !active.value && !props.query.busy && !props.query.pending && !props.query.edit.busy
@@ -380,11 +384,20 @@ const canPolicySubmit = computed(
 const analysisBusy = ref(false);
 const writeConfirmation = ref<{ sql: string; version: number; consoleId: string } | null>(null);
 const canRun = computed(() => canSubmit.value && !editDirty(props.query.edit) && !analysisBusy.value);
+const completedWithoutRows = computed(
+  () =>
+    !props.dataOnly &&
+    !!props.query.rows &&
+    props.query.execution?.status === "succeeded" &&
+    !props.query.execution.result_ids.length &&
+    !props.query.executionPlan &&
+    !props.query.execution.export_id
+);
 const showExecutionStatus = computed(
   () =>
     active.value ||
+    completedWithoutRows.value ||
     props.query.busy ||
-    props.query.loadingRows ||
     (props.query.execution && props.query.execution.status !== "succeeded") ||
     props.query.execution?.audit_status === "failed"
 );
@@ -442,10 +455,73 @@ function duration(execution: GoExecution | null) {
   if (!Number.isFinite(elapsed)) return "";
   return elapsed < 1000 ? `${elapsed} ms` : `${(elapsed / 1000).toFixed(2)} s`;
 }
-function resultNumber(id: string, fallback: number) {
-  const index = displayExecution.value?.statement_results.findIndex((result) => result.result_id === id) ?? -1;
-  return index >= 0 ? index + 1 : fallback + 1;
+const liveResults = computed(() =>
+  (displayExecution.value?.result_ids || []).filter(
+    (id) => !pinned.value.some((item) => item.resultId === id && item.source === displayExecution.value?.id)
+  )
+);
+function resultSql(id: string) {
+  return (
+    displayExecution.value?.statement_results.find((item) => item.result_id === id)?.source_sql ||
+    (id === props.query.resultId ? props.query.rows?.source_sql || props.query.resultSql : "") ||
+    props.query.executionSql
+  );
 }
+const resultNames = computed(
+  () => new Map((displayExecution.value?.result_ids || []).map((id) => [id, queryResultTitle(resultSql(id))]))
+);
+function selectResult(id: string) {
+  if (editDirty(props.query.edit) || props.query.edit.busy) return;
+  pinnedId.value = null;
+  emit("pane", "results");
+  if (id === props.query.resultId && props.query.rows?.id === id && !props.query.loadingRows) return;
+  emit("rows", id);
+}
+function selectPin(id: number) {
+  if (editDirty(props.query.edit) || props.query.edit.busy) return;
+  pinnedId.value = id;
+  emit("pane", "results");
+}
+const resultsCollapsed = ref(false);
+const hasOutput = computed(
+  () =>
+    !!(
+      props.dataOnly ||
+      props.query.execution ||
+      props.query.pending ||
+      props.query.rows ||
+      props.query.resultLoadError ||
+      props.query.plan ||
+      props.query.planAttempt ||
+      props.query.loadingPlan ||
+      pinned.value.length
+    )
+);
+const showResults = computed(() => hasOutput.value && (props.dataOnly || !resultsCollapsed.value));
+watch(
+  () => props.query.pending?.id,
+  (id) => {
+    if (!id) return;
+    resultsCollapsed.value = false;
+    pinnedId.value = null;
+  }
+);
+const resultTabList = useTemplateRef<HTMLElement>("resultTabList");
+watch(
+  () => [props.query.resultId, pinnedId.value, props.query.resultPane],
+  () =>
+    nextTick(() => {
+      const strip = resultTabList.value;
+      const tab = strip?.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (!strip || !tab) return;
+      // Reveal only horizontally; scrollIntoView can move the surrounding result pane.
+      const viewport = strip.getBoundingClientRect();
+      const bounds = tab.getBoundingClientRect();
+      if (bounds.left < viewport.left) strip.scrollLeft -= viewport.left - bounds.left;
+      else if (bounds.right > viewport.right) strip.scrollLeft += bounds.right - viewport.right;
+    }),
+  { flush: "post" }
+);
 async function run(sql: string, version: number) {
   if (!canRun.value || !props.query.console) return;
   if (props.query.browseObject) {
@@ -482,7 +558,7 @@ function restore(sql: string) {
   emit("restore", sql);
 }
 const gridRows = computed(() =>
-  props.dataOnly
+  props.dataOnly || !showResults.value
     ? "minmax(0, 1fr)"
     : `minmax(0, ${Math.max(0, (availableHeight.value * editorPercent.value) / 100 - toolbarHeight.value)}px) 1px minmax(0, 1fr)`
 );
@@ -570,11 +646,11 @@ defineExpose({
     :data-chen-execution-state="query.execution?.status || 'idle'"
   >
     <div
-      v-if="dataOnly && (!query.rows || !ready || query.pending || active)"
+      v-if="dataOnly && ((!ready && !query.busy) || (query.pending && !query.busy) || (!query.rows && !!query.error))"
       class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2"
     >
       <UButton
-        v-if="!query.rows"
+        v-if="!query.rows && !active && !query.busy"
         :label="t('Chen.GoV1Refresh')"
         icon="i-lucide-refresh-cw"
         size="xs"
@@ -627,34 +703,41 @@ defineExpose({
         :disabled="session.state !== 'ready' || query.busy"
         @click="emit('reconnect')"
       />
-      <UButton
-        icon="i-lucide-play"
-        :label="t(scope === 'selection' ? 'Chen.RunSelected' : 'Chen.RunCurrent')"
-        size="sm"
-        :disabled="!canRun || !query.sql.trim()"
-        title="Ctrl/⌘ Enter"
-        @click="editor?.run()"
-      />
-      <UDropdownMenu
-        :items="[
-          {
-            label: t('Chen.GoV1RunAll'),
-            icon: 'i-lucide-list-start',
-            disabled: !canRun || !query.sql.trim(),
-            onSelect: () => editor?.runAll()
-          }
-        ]"
+      <UTooltip
+        :text="
+          active
+            ? t(
+                cancellationUnsupported
+                  ? 'Chen.GoV1CancelUnsupported'
+                  : session.cancellation_mode === 'connection'
+                    ? 'Chen.GoV1InterruptConnectionHint'
+                    : session.cancellation_mode === 'statement_reconnect'
+                      ? 'Chen.GoV1CancelReconnectHint'
+                      : 'Chen.GoV1CancelHint'
+              )
+            : `${t('Chen.RunSelectedOrAll')} (Ctrl/⌘ Enter)`
+        "
       >
         <UButton
-          icon="i-lucide-chevron-down"
-          :aria-label="t('Chen.GoV1RunAll')"
-          title="Ctrl/⌘ Shift Enter"
+          :icon="active ? 'i-lucide-square' : 'i-lucide-play'"
+          :aria-label="
+            active
+              ? t(
+                  waitingReview
+                    ? 'Chen.GoV1CancelReview'
+                    : session.cancellation_mode === 'connection'
+                      ? 'Chen.GoV1InterruptConnection'
+                      : 'Chen.GoV1Cancel'
+                )
+              : t('Chen.RunSelectedOrAll')
+          "
           size="sm"
-          color="neutral"
+          :color="active ? 'neutral' : 'primary'"
           variant="soft"
-          :disabled="!canRun || !query.sql.trim()"
+          :disabled="active ? !executionCanCancel(query.execution, session.can_cancel) : !canRun || !query.sql.trim()"
+          @click="active ? emit('cancel') : editor?.run()"
         />
-      </UDropdownMenu>
+      </UTooltip>
       <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
@@ -665,51 +748,6 @@ defineExpose({
             variant="soft"
             :disabled="!canRun || !canExplain || !query.sql.trim()"
             @click="editor?.explain()"
-          />
-        </span>
-      </UTooltip>
-      <UTooltip
-        v-if="active"
-        :text="
-          t(
-            cancellationUnsupported
-              ? 'Chen.GoV1CancelUnsupported'
-              : session.cancellation_mode === 'connection'
-                ? 'Chen.GoV1InterruptConnectionHint'
-                : session.cancellation_mode === 'statement_reconnect'
-                  ? 'Chen.GoV1CancelReconnectHint'
-                  : 'Chen.GoV1CancelHint'
-          )
-        "
-      >
-        <span class="inline-flex" :tabindex="cancellationUnsupported ? 0 : undefined">
-          <UButton
-            icon="i-lucide-square"
-            :label="
-              t(
-                waitingReview
-                  ? 'Chen.GoV1CancelReview'
-                  : session.cancellation_mode === 'connection'
-                    ? 'Chen.GoV1InterruptConnection'
-                    : 'Chen.GoV1Cancel'
-              )
-            "
-            size="sm"
-            color="neutral"
-            variant="soft"
-            :title="
-              t(
-                cancellationUnsupported
-                  ? 'Chen.GoV1CancelUnsupported'
-                  : session.cancellation_mode === 'connection'
-                    ? 'Chen.GoV1InterruptConnectionHint'
-                    : session.cancellation_mode === 'statement_reconnect'
-                      ? 'Chen.GoV1CancelReconnectHint'
-                      : 'Chen.GoV1CancelHint'
-              )
-            "
-            :disabled="!executionCanCancel(query.execution, session.can_cancel)"
-            @click="emit('cancel')"
           />
         </span>
       </UTooltip>
@@ -1065,7 +1103,6 @@ defineExpose({
       <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden px-3">
         <MonacoSqlEditor
           ref="editor"
-          class="rounded-r-md border-r border-default"
           :model-value="query.sql"
           :dialect="session.dialect"
           :sql-keyword-case="sqlKeywordCase"
@@ -1080,7 +1117,6 @@ defineExpose({
           @update:model-value="emit('sql', $event)"
           @run="run"
           @explain="explain"
-          @scope="scope = $event"
           @editor-error="editorError = $event"
           @cancel="emit('cancel')"
           @open-snippets="openSnippets"
@@ -1088,7 +1124,7 @@ defineExpose({
         />
       </div>
       <div
-        v-if="!dataOnly"
+        v-if="!dataOnly && showResults"
         role="separator"
         tabindex="0"
         aria-orientation="horizontal"
@@ -1111,111 +1147,125 @@ defineExpose({
       >
         <span class="absolute -inset-y-1.5 inset-x-0" />
       </div>
-      <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
+      <div v-if="showResults" class="flex min-h-0 min-w-0 flex-col overflow-hidden" data-chen-results>
         <div
-          v-if="showExecutionStatus"
-          class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 text-xs"
+          v-if="!dataOnly || pinned.length"
+          class="flex h-8 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 text-xs"
+          data-chen-result-tabs
         >
-          <UIcon
-            v-if="active || query.busy || query.loadingRows"
-            name="i-lucide-loader-circle"
-            class="size-3.5 animate-spin"
-          />
-          <span
-            v-if="showExecutionStatus"
-            :class="{
-              'text-error': query.execution?.status === 'failed' && !reviewRequired,
-              'text-warning': query.execution?.status === 'unknown' || query.execution?.status === 'cancel_requested'
-            }"
-          >
-            {{
-              reviewRequired
-                ? t("Chen.GoV1ReviewRequired")
-                : query.execution
-                  ? t(`Chen.GoV1Status_${query.execution.status}`)
-                  : t("Chen.GoV1Ready")
-            }}
-          </span>
-          <span v-if="query.loadingRows" class="text-muted">{{ t("Chen.GoV1FetchingRows") }}</span>
-          <span
-            v-if="query.execution?.audit_status === 'failed'"
-            :title="t(single ? 'Chen.GoV1SingleAuditExplanation' : 'Chen.GoV1AuditExplanation')"
-            :class="query.execution.audit_status === 'failed' ? 'text-error' : 'text-muted'"
-          >
-            {{ t("Chen.GoV1Audit") }}: {{ t(`Chen.GoV1Audit_${query.execution.audit_status}`) }}
-          </span>
-          <span v-if="query.execution?.status === 'unknown'" class="text-warning">{{ t("Chen.GoV1DoNotRetry") }}</span>
-          <span
-            v-if="
-              query.resultPane === 'results' &&
-              query.resultExecution &&
-              query.resultExecution.id !== query.execution?.id &&
-              query.rows?.id !== query.cachedResult?.id &&
-              !(query.executionQueryPage?.action === 'count' && query.execution?.status === 'succeeded')
+          <UButton
+            v-if="!dataOnly"
+            icon="i-lucide-pin"
+            size="xs"
+            :color="pinnedResult ? 'primary' : 'neutral'"
+            :variant="pinnedResult ? 'soft' : 'ghost'"
+            class="!size-6 shrink-0 justify-center !p-0"
+            :aria-label="t(pinnedResult ? 'Chen.UnpinResult' : 'Chen.PinResult')"
+            :aria-pressed="!!pinnedResult"
+            :title="t('Chen.GoPinnedHint')"
+            :disabled="
+              query.resultPane === 'plan' ||
+              !query.rows ||
+              query.loadingRows ||
+              editDirty(query.edit) ||
+              query.edit.busy
             "
-            class="text-warning"
-          >
-            {{ t("Chen.GoV1PreviousResult") }}
-          </span>
-        </div>
-        <div
-          v-if="!dataOnly"
-          class="flex shrink-0 gap-1 border-b border-default px-2 py-1"
-          role="group"
-          :aria-label="t('Chen.GoV1Result')"
-        >
-          <UButton
-            size="xs"
-            color="neutral"
-            :variant="query.resultPane === 'results' ? 'soft' : 'ghost'"
-            :label="t('Chen.GoV1Result')"
-            @click="emit('pane', 'results')"
+            @click="pinnedResult ? closePin(pinnedResult.id) : pinResult()"
           />
+          <div
+            ref="resultTabList"
+            role="tablist"
+            :aria-label="t('Chen.GoV1Result')"
+            class="chen-result-tab-list flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden"
+          >
+            <div
+              v-for="id in dataOnly ? [] : liveResults"
+              :key="`result:${id}`"
+              class="group flex h-full min-w-0 shrink-0 items-center border-b-2"
+              :class="
+                !pinnedResult && query.resultPane === 'results' && id === query.resultId
+                  ? 'border-primary bg-[var(--workspace-surface-sub-tab-active)] text-primary'
+                  : 'border-transparent'
+              "
+            >
+              <button
+                type="button"
+                role="tab"
+                class="h-full max-w-56 min-w-16 truncate px-2 text-left outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+                :aria-selected="!pinnedResult && query.resultPane === 'results' && id === query.resultId"
+                :title="resultSql(id)"
+                :disabled="editDirty(query.edit) || query.edit.busy"
+                @click="selectResult(id)"
+              >
+                {{ resultNames.get(id) }}
+              </button>
+            </div>
+            <button
+              v-if="dataOnly"
+              type="button"
+              role="tab"
+              class="h-full shrink-0 border-b-2 px-2"
+              :class="pinnedId === null ? 'border-primary text-primary' : 'border-transparent'"
+              :aria-selected="pinnedId === null"
+              :disabled="editDirty(query.edit) || query.edit.busy"
+              @click="pinnedId = null"
+            >
+              {{ t("Chen.GoTableWorkspaceData") }}
+            </button>
+            <div
+              v-for="item in pinned"
+              :key="`pin:${item.id}`"
+              class="flex h-full shrink-0 items-center border-b-2"
+              :class="
+                pinnedId === item.id && query.resultPane === 'results'
+                  ? 'border-primary bg-[var(--workspace-surface-sub-tab-active)] text-primary'
+                  : 'border-transparent'
+              "
+            >
+              <button
+                type="button"
+                role="tab"
+                class="flex h-full max-w-56 min-w-0 items-center gap-1 px-2 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+                :aria-selected="pinnedId === item.id && query.resultPane === 'results'"
+                :title="item.sql"
+                :disabled="editDirty(query.edit) || query.edit.busy"
+                @click="selectPin(item.id)"
+              >
+                <UIcon name="i-lucide-pin" class="size-3 shrink-0" :aria-label="t('Chen.PinResult')" />
+                <span class="truncate">{{ item.title }}</span>
+              </button>
+              <UButton
+                icon="i-lucide-x"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                class="!size-5 shrink-0 justify-center !p-0"
+                :aria-label="`${t('Chen.UnpinResult')} ${item.title}`"
+                @click="closePin(item.id)"
+              />
+            </div>
+          </div>
+          <span
+            class="flex size-4 shrink-0 items-center justify-center"
+            role="status"
+            :aria-label="query.loadingRows ? t('Chen.GoV1FetchingRows') : undefined"
+          >
+            <UIcon v-if="query.loadingRows" name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+          </span>
           <UButton
+            v-if="!dataOnly"
+            icon="i-lucide-workflow"
             size="xs"
-            color="neutral"
-            :variant="query.resultPane === 'plan' ? 'soft' : 'ghost'"
             :label="t('ExecutionPlan.title')"
+            :color="query.resultPane === 'plan' ? 'primary' : 'neutral'"
+            :variant="query.resultPane === 'plan' ? 'soft' : 'ghost'"
+            :aria-pressed="query.resultPane === 'plan'"
+            :disabled="(!shownPlan && !planLoading) || editDirty(query.edit) || query.edit.busy"
             @click="emit('pane', 'plan')"
           />
-        </div>
-        <div
-          v-if="!dataOnly && query.resultPane === 'results' && displayExecution?.result_ids.length"
-          role="group"
-          :aria-label="t('Chen.GoV1Result')"
-          class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1"
-        >
-          <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-            <UButton
-              v-for="(id, index) in displayExecution!.result_ids"
-              :key="id"
-              :label="`${t('Chen.GoV1Result')} ${resultNumber(id, index)}`"
-              :aria-pressed="id === query.resultId"
-              class="shrink-0"
-              :variant="id === query.resultId ? 'soft' : 'ghost'"
-              size="xs"
-              color="neutral"
-              :disabled="editDirty(query.edit) || query.edit.busy"
-              @click="
-                pinnedId = null;
-                emit('rows', id);
-              "
-            />
-          </div>
-          <UButton
-            icon="i-lucide-pin"
-            :aria-label="t('Chen.PinResult')"
-            :title="t('Chen.GoPinnedHint')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="
-              !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
-            "
-            @click="pinResult"
-          />
           <GoExportPanel
-            v-if="!pinnedResult && (query.resultId || query.exportJob)"
+            v-if="!dataOnly && !pinnedResult && (query.resultId || query.exportJob)"
+            icon-only
             :query="query"
             :session="session"
             :api="api"
@@ -1252,41 +1302,72 @@ defineExpose({
               </div>
             </template>
           </UPopover>
-        </div>
-        <div
-          v-if="pinned.length && query.resultPane === 'results'"
-          class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-2 py-1"
-        >
           <UButton
+            v-if="!dataOnly"
+            icon="i-lucide-chevron-down"
             size="xs"
             color="neutral"
-            :variant="pinnedId === null ? 'soft' : 'ghost'"
-            :label="t(dataOnly ? 'Chen.GoTableWorkspaceData' : 'Chen.GoV1Result')"
-            @click="pinnedId = null"
+            variant="ghost"
+            :aria-label="t('Chen.GoHideResults')"
+            :title="t('Chen.GoHideResults')"
+            @click="resultsCollapsed = true"
           />
-          <div v-for="item in pinned" :key="item.id" class="flex shrink-0 items-center">
-            <UButton
-              size="xs"
-              color="neutral"
-              :variant="pinnedId === item.id ? 'soft' : 'ghost'"
-              icon="i-lucide-pin"
-              :label="`${t('Chen.PinResult')} ${item.id}`"
-              :title="item.sql"
-              :disabled="editDirty(query.edit) || query.edit.busy"
-              @click="pinnedId = item.id"
-            />
-            <UButton
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-x"
-              :aria-label="`${t('Chen.UnpinResult')} ${item.id}`"
-              @click="closePin(item.id)"
-            />
-          </div>
         </div>
         <div
-          v-if="query.execution?.error && !reviewRequired"
+          v-if="showExecutionStatus"
+          class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 text-xs"
+        >
+          <UIcon
+            v-if="active || query.busy || query.loadingRows"
+            name="i-lucide-loader-circle"
+            class="size-3.5 animate-spin"
+          />
+          <span
+            v-if="showExecutionStatus"
+            :class="{
+              'text-error': query.execution?.status === 'failed' && !reviewRequired,
+              'text-warning': query.execution?.status === 'unknown' || query.execution?.status === 'cancel_requested'
+            }"
+          >
+            {{
+              reviewRequired
+                ? t("Chen.GoV1ReviewRequired")
+                : query.execution
+                  ? t(`Chen.GoV1Status_${query.execution.status}`)
+                  : t("Chen.GoV1Ready")
+            }}
+          </span>
+          <template v-if="completedWithoutRows">
+            <span v-for="(statement, index) in query.execution?.statement_results" :key="index" class="tabular-nums">
+              {{
+                statement.rows_affected !== undefined ? `${t("Chen.GoV1RowsAffected")}: ${statement.rows_affected}` : ""
+              }}
+            </span>
+          </template>
+          <span v-if="query.loadingRows" class="text-muted">{{ t("Chen.GoV1FetchingRows") }}</span>
+          <span
+            v-if="query.execution?.audit_status === 'failed'"
+            :title="t(single ? 'Chen.GoV1SingleAuditExplanation' : 'Chen.GoV1AuditExplanation')"
+            :class="query.execution.audit_status === 'failed' ? 'text-error' : 'text-muted'"
+          >
+            {{ t("Chen.GoV1Audit") }}: {{ t(`Chen.GoV1Audit_${query.execution.audit_status}`) }}
+          </span>
+          <span v-if="query.execution?.status === 'unknown'" class="text-warning">{{ t("Chen.GoV1DoNotRetry") }}</span>
+          <span
+            v-if="
+              query.resultPane === 'results' &&
+              query.resultExecution &&
+              query.resultExecution.id !== query.execution?.id &&
+              query.rows?.id !== query.cachedResult?.id &&
+              !(query.executionQueryPage?.action === 'count' && query.execution?.status === 'succeeded')
+            "
+            class="text-warning"
+          >
+            {{ t("Chen.GoV1PreviousResult") }}
+          </span>
+        </div>
+        <div
+          v-if="query.execution?.error && !reviewRequired && !query.error"
           role="alert"
           class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-xs text-error"
         >
@@ -1385,7 +1466,6 @@ defineExpose({
           </ExecutionPlanTree>
         </div>
         <template v-else-if="pinnedResult">
-          <p class="shrink-0 px-3 py-1 text-xs text-muted">{{ t("Chen.GoPinnedHint") }} · {{ pinnedResult.source }}</p>
           <GoResultGrid
             :rows="pinnedResult.rows"
             :can-copy="session.permissions.can_copy"
@@ -1543,5 +1623,27 @@ defineExpose({
         </div>
       </div>
     </div>
+    <div
+      v-if="!dataOnly && hasOutput && resultsCollapsed"
+      class="flex shrink-0 justify-end border-t border-default px-2 py-1"
+    >
+      <UButton
+        icon="i-lucide-chevron-up"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :label="t('Chen.GoShowResults')"
+        @click="resultsCollapsed = false"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.chen-result-tab-list {
+  scrollbar-width: none;
+}
+.chen-result-tab-list::-webkit-scrollbar {
+  display: none;
+}
+</style>

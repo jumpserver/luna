@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
+import type { OverviewRow } from "./overview";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
+import { overviewNumber } from "./overview";
 const props = defineProps<{
   api: ChenGoApi;
   sessionId: string;
@@ -14,7 +16,31 @@ const props = defineProps<{
   mode?: "structure" | "ddl";
   detailSection?: "basic" | "primary_key" | "foreign_keys" | "indexes" | "defaults" | "constraints";
 }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const statistics = ref<OverviewRow>();
+const statisticsLoaded = ref(false);
+const statisticsPartial = ref(false);
+const statisticLabels: Record<string, string> = {
+  estimated_rows: "EstimatedRows",
+  data_bytes: "DataBytes",
+  index_bytes: "IndexBytes",
+  total_bytes: "TotalBytes",
+  last_analyzed: "LastAnalyzed",
+  engine: "Engine",
+  character_set: "CharacterSet",
+  collation: "Collation",
+  created: "Created",
+  average_row_length: "AverageRowLength",
+  tablespace: "Tablespace",
+  status: "Status"
+};
+function statisticValue(key: string) {
+  const field = statistics.value?.fields[key];
+  if (!field || field.value === null) return field ? t(`Chen.GoOverview${field.state}`) : "—";
+  const value = overviewNumber(field.value, locale.value) + (key.endsWith("_bytes") ? " B" : "");
+  return field.state === "supported" ? value : `${value} · ${t(`Chen.GoOverview${field.state}`)}`;
+}
+
 const data = ref<GoCatalogInspect>();
 const active = ref<keyof GoCatalogInspect["sections"] | "basic">(
   props.mode === "ddl" ? "ddl" : props.detailSection || "basic"
@@ -107,6 +133,50 @@ async function load() {
     if (!current.signal.aborted) busy.value = false;
   }
 }
+async function loadStatistics() {
+  if (!props.ready || props.visible === false || busy.value) return;
+  controller?.abort();
+  const current = new AbortController();
+  controller = current;
+  busy.value = true;
+  error.value = "";
+  statisticsPartial.value = false;
+  try {
+    let cursor: string | undefined;
+    do {
+      const page = await props.api.catalogOverview(
+        props.sessionId,
+        {
+          database: props.object.database,
+          schema: props.object.schema,
+          section: props.object.kind === "view" ? "views" : "tables",
+          q: props.object.name,
+          limit: 200,
+          cursor
+        },
+        current.signal
+      );
+      if (current.signal.aborted) return;
+      if (page.database !== props.object.database || page.schema !== props.object.schema)
+        throw new Error("Catalog scope changed");
+      statisticsPartial.value = page.state !== "supported";
+      statistics.value = page.items.find(
+        (row) =>
+          row.object.database === props.object.database &&
+          row.object.schema === props.object.schema &&
+          row.object.name === props.object.name &&
+          row.object.kind === props.object.kind
+      );
+      cursor = page.next_cursor;
+      if (statistics.value || !page.has_more) break;
+    } while (cursor);
+    statisticsLoaded.value = true;
+  } catch (cause) {
+    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
+  } finally {
+    if (!current.signal.aborted) busy.value = false;
+  }
+}
 async function loadDdl() {
   if (!props.ready || props.visible === false || ddlBusy.value) return;
   ddlController?.abort();
@@ -126,8 +196,13 @@ async function loadDdl() {
 watch(
   () => [active.value, props.ready, props.visible],
   () => {
+    controller?.abort();
+    ddlController?.abort();
+    busy.value = false;
+    ddlBusy.value = false;
     if (!props.ready || props.visible === false) return;
-    if (active.value === "ddl" && !ddl.value && !ddlError.value) void loadDdl();
+    if (active.value === "basic" && !statisticsLoaded.value && !error.value) void loadStatistics();
+    else if (active.value === "ddl" && !ddl.value && !ddlError.value) void loadDdl();
     else if (active.value !== "ddl" && active.value !== "basic" && !data.value && !error.value) void load();
   },
   { immediate: true }
@@ -142,10 +217,7 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="flex min-h-0 flex-1 flex-col" data-chen-object-details @copy="preventCopy">
-    <div
-      v-if="active !== 'basic'"
-      class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-3 py-1"
-    >
+    <div class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-3 py-1">
       <UButton
         v-for="item in detailSection ? [] : sections"
         :key="item.key"
@@ -157,13 +229,14 @@ onBeforeUnmount(() => {
         @click="active = item.key"
       />
       <UButton
+        class="ml-auto"
         icon="i-lucide-refresh-cw"
         :label="t('Chen.GoV1Refresh')"
         size="xs"
         color="neutral"
         variant="ghost"
         :disabled="!ready || (active === 'ddl' ? ddlBusy : busy)"
-        @click="active === 'ddl' ? loadDdl() : load()"
+        @click="active === 'ddl' ? loadDdl() : active === 'basic' ? loadStatistics() : load()"
       />
       <UButton
         v-if="active === 'ddl' && current?.text"
@@ -191,26 +264,36 @@ onBeforeUnmount(() => {
     <p v-if="data?.truncated || current?.truncated" class="px-3 py-2 text-xs text-warning">
       {{ t("Chen.GoV1MetadataPartial") }}
     </p>
-    <dl v-if="active === 'basic'" class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 overflow-auto p-3 text-xs">
-      <template
-        v-for="item in [
-          { label: t('Chen.Name'), value: object.name },
-          { label: t('Chen.GoV1Database'), value: object.database },
-          { label: t('Chen.Schema'), value: object.schema },
-          { label: t('Chen.ObjectType'), value: t(object.kind === 'view' ? 'Chen.Views' : 'Chen.Tables') },
-          { label: t('Chen.Comment'), value: object.comment }
-        ]"
-        :key="item.label"
-      >
-        <dt class="text-muted">{{ item.label }}</dt>
-        <dd class="break-words">{{ item.value || "—" }}</dd>
-      </template>
-    </dl>
+    <div v-if="active === 'basic'" class="min-h-0 flex-1 overflow-auto p-3">
+      <dl class="grid content-start gap-3 md:grid-cols-2" data-chen-basic-info>
+        <div
+          v-for="item in [
+            { label: t('Chen.Name'), value: object.name },
+            { label: t('Chen.GoV1Database'), value: object.database },
+            { label: t('Chen.Schema'), value: object.schema },
+            { label: t('Chen.ObjectType'), value: t(object.kind === 'view' ? 'Chen.Views' : 'Chen.Tables') },
+            { label: t('Chen.Comment'), value: statistics?.fields.comment?.value ?? object.comment }
+          ]"
+          :key="item.label"
+          class="rounded border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2"
+        >
+          <dt class="mb-1 text-xs text-muted">{{ item.label }}</dt>
+          <dd class="break-words text-sm">{{ item.value || "—" }}</dd>
+        </div>
+        <div
+          v-for="(label, key) in statisticLabels"
+          :key="key"
+          class="rounded border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2"
+          :title="statistics?.fields[key]?.source"
+        >
+          <dt class="mb-1 text-xs text-muted">{{ t(`Chen.GoOverview${label}`) }}</dt>
+          <dd class="break-words text-sm tabular-nums">{{ statisticValue(key) }}</dd>
+        </div>
+      </dl>
+      <p v-if="statisticsPartial" class="mt-2 text-xs text-warning">{{ t("Chen.GoV1MetadataPartial") }}</p>
+    </div>
     <template v-if="current?.supported">
       <template v-if="active === 'ddl'">
-        <p v-if="current.source" class="border-b border-default px-3 py-1 text-xs text-muted">
-          {{ t("Chen.GoV1DdlSource") }}: {{ current.source }}
-        </p>
         <MonacoValueViewer
           v-if="current.text"
           ref="viewer"

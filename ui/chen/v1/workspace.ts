@@ -1,3 +1,4 @@
+import type { OverviewViewSection } from "./overview";
 import type {
   ChenGoApi,
   GoBrowseDraft,
@@ -122,7 +123,7 @@ export interface ObjectWorkspaceTab {
 export interface OverviewWorkspaceTab {
   id: string;
   kind: "overview";
-  section?: "diagram" | "tables" | "views" | "statistics" | "indexes" | "properties";
+  section?: OverviewViewSection;
   title: string;
   context: QueryContext;
 }

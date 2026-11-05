@@ -49,6 +49,69 @@ let analysisController: AbortController | undefined;
 let analysisTimer: ReturnType<typeof setTimeout> | undefined;
 let currentDecoration: monaco.editor.IEditorDecorationsCollection | undefined;
 let unregisterClipboard: (() => void) | undefined;
+const runMarkers = shallowRef<
+  {
+    from: number;
+    to: number;
+    line: number;
+    top: number;
+    left: number;
+    version: number;
+    consoleId: string;
+  }[]
+>([]);
+function updateRunMarkers() {
+  const result = currentAnalysis();
+  if (!editor || !model || !result || props.readOnly || props.online === false || props.visible === false) {
+    runMarkers.value = [];
+    return;
+  }
+  const layout = editor.getLayoutInfo();
+  const height = editor.getOption(monaco.editor.EditorOption.lineHeight);
+  const lines = new Set<number>();
+  const sql = model.getValue();
+  runMarkers.value = result.statements.flatMap((range) => {
+    if (
+      !Number.isInteger(range.from) ||
+      !Number.isInteger(range.to) ||
+      range.from < 0 ||
+      range.to > sql.length ||
+      range.from >= range.to
+    )
+      return [];
+    const source = sql.slice(range.from, range.to);
+    if (!source.trim()) return [];
+    const from = range.from + source.length - source.trimStart().length;
+    const line = model!.getPositionAt(from).lineNumber;
+    const top = editor!.getTopForLineNumber(line) - editor!.getScrollTop();
+    if (lines.has(line) || top < 0 || top + height > layout.height) return [];
+    lines.add(line);
+    return [
+      {
+        from,
+        to: range.to,
+        line,
+        top,
+        left: layout.glyphMarginLeft,
+        version: model!.getVersionId(),
+        consoleId: props.consoleId
+      }
+    ];
+  });
+}
+function runMarker(marker: (typeof runMarkers.value)[number]) {
+  if (
+    !model ||
+    !currentAnalysis() ||
+    props.online === false ||
+    props.visible === false ||
+    props.readOnly ||
+    marker.version !== model.getVersionId() ||
+    marker.consoleId !== props.consoleId
+  )
+    return;
+  emit("run", model.getValue().slice(marker.from, marker.to), marker.version);
+}
 
 function invalidateCompletion() {
   completion?.abort();
@@ -99,6 +162,7 @@ function currentAnalysis() {
 }
 
 function updateScope() {
+  updateRunMarkers();
   if (!editor || !model) return;
   const selection = editor.getSelection();
   if (selection && !selection.isEmpty()) {
@@ -192,7 +256,12 @@ function emitStatement(action: "run" | "explain", sql: string, version: number) 
   else emit("run", sql, version);
 }
 function run() {
-  return currentStatement("run");
+  if (!editor || !model) return;
+  const selection = editor.getSelection();
+  if (!selection || selection.isEmpty()) return runAll();
+  const sql = model.getValueInRange(selection);
+  if (sql.trim()) emit("run", sql, model.getVersionId());
+  else emit("editorError", t("Chen.GoV1NothingAtCursor"));
 }
 function explain() {
   return currentStatement("explain");
@@ -347,6 +416,7 @@ onMounted(() => {
     fontFamily: getComputedStyle(host.value).getPropertyValue("--font-mono"),
     fontSize: 13,
     lineNumbersMinChars: 3,
+    glyphMargin: true,
     lineDecorationsWidth: 20,
     renderLineHighlight: "all",
     padding: { top: 5, bottom: 5 },
@@ -373,6 +443,7 @@ onMounted(() => {
     contextmenu: props.canCopy && props.canPaste
   });
   currentDecoration = editor.createDecorationsCollection();
+  disposables.push(editor.onDidScrollChange(updateRunMarkers), editor.onDidLayoutChange(updateRunMarkers));
   void layoutWhenVisible();
   disposables.push(
     editor.onDidChangeModelContent(() => {
@@ -393,7 +464,7 @@ onMounted(() => {
   disposables.push(
     editor.addAction({
       id: "chen.run",
-      label: t("Chen.GoV1RunCurrent"),
+      label: t("Chen.RunSelectedOrAll"),
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
       run
     })
@@ -629,10 +700,47 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="host" class="chen-sql-editor h-full min-h-0 w-full" />
+  <div class="relative h-full min-h-0 w-full">
+    <div ref="host" class="chen-sql-editor h-full min-h-0 w-full" />
+    <button
+      v-for="marker in runMarkers"
+      :key="marker.from"
+      type="button"
+      class="chen-run-statement-button absolute z-10"
+      :style="{ top: `${marker.top}px`, left: `${marker.left}px` }"
+      :aria-label="`${t('Chen.RunStatement')} · ${marker.line}`"
+      :title="t('Chen.RunStatement')"
+      data-chen-run-statement
+      @click="runMarker(marker)"
+    >
+      <span aria-hidden="true">▶</span>
+    </button>
+  </div>
 </template>
 
 <style scoped>
+.chen-run-statement-button {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  cursor: pointer;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-accent);
+  font-size: 10px;
+  line-height: 1;
+}
+.chen-run-statement-button:hover {
+  background: var(--app-hover-soft);
+}
+.chen-run-statement-button:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: -2px;
+}
+
 .chen-sql-editor :deep(.monaco-editor) {
   --chen-sql-content-inset: 6px;
   --vscode-editorGutter-background: var(--editor-gutter-background);

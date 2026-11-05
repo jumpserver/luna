@@ -2165,6 +2165,11 @@
   "Chen": {
     "GoBrowseLastHint": "Hãy đếm số dòng trước. Không khả dụng khi chưa biết tổng số dòng hoặc trang cuối vượt giới hạn máy chủ.",
     "GoPinnedLimit": "Có thể ghim tối đa 3 kết quả, mỗi bản chụp không quá 2 MiB.",
+    "GoHideResults": "Thu gọn kết quả",
+    "GoShowResults": "Hiển thị kết quả",
+    "RunSelectedOrAll": "Chạy phần đã chọn / tất cả",
+    "RemoveFromRecent": "Xóa khỏi mục gần đây",
+    "GoBrowseSimpleHint": "Sử dụng các điều kiện so sánh đơn giản ở đây. Mở không gian làm việc SQL cho các truy vấn phức tạp.",
     "GoPinnedHint": "Bản chụp chỉ đọc trong bộ nhớ của các dòng đã tải; không chạy lại SQL.",
     "GoPinnedCachePage": "Chỉ duyệt các dòng trong bộ nhớ đệm; không chạy lại SQL.",
     "GoDiagramIncoming": "Tham chiếu đến bảng này",

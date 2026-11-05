@@ -549,7 +549,7 @@ function discard() {
           "
         >
           <p class="text-sm">{{ cell?.column.name }} · {{ cell?.column.data_type }}</p>
-          <USelect v-model="cellMode" :items="cellModes" class="w-full" />
+          <USelect v-model="cellMode" size="xs" :items="cellModes" class="w-full" />
           <UTextarea
             v-model="cellValue"
             class="w-full font-ui-mono"

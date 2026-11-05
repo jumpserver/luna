@@ -325,9 +325,13 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
 </script>
 
 <template>
-  <div class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--workspace-surface-background)]">
+  <div
+    class="relative h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-background)]"
+    :class="{ 'flex flex-col': showDetails }"
+  >
     <div
-      class="z-30 m-3 flex min-w-0 shrink-0 flex-wrap items-center gap-2 rounded-lg border border-default bg-[var(--app-surface-overlay)] p-2 shadow-sm"
+      class="z-30 flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-default bg-[var(--app-surface-overlay)] p-2 shadow-sm"
+      :class="showDetails ? 'm-3 shrink-0' : 'absolute inset-x-3 top-3'"
     >
       <div class="mr-1 shrink-0">
         <div class="text-xs font-semibold">{{ displayTitle }}</div>
@@ -409,6 +413,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
       />
 
       <div class="ml-auto flex shrink-0 items-center gap-1">
+        <slot name="actions" />
         <UButton
           icon="i-lucide-minus"
           size="xs"
@@ -469,8 +474,8 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
 
     <div
       ref="viewport"
-      class="diagram-grid relative min-h-0 flex-1 touch-none overflow-hidden"
-      :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+      class="diagram-grid touch-none overflow-hidden"
+      :class="[showDetails ? 'relative min-h-0 flex-1' : 'h-full', dragging ? 'cursor-grabbing' : 'cursor-grab']"
       @wheel.prevent="handleWheel"
       @pointerdown="startDrag"
       @pointermove="drag"
@@ -548,8 +553,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               <div class="min-w-0 flex-1">
                 <div class="truncate text-xs font-semibold">{{ entity.name }}</div>
                 <div class="truncate text-[10px] text-muted">
-                  {{ [entity.database, entity.schema].filter(Boolean).join(" / ") }}
-                  <span v-if="entity.metadataStatus">· {{ t(`Chen.GoDiagram${entity.metadataStatus}`) }}</span>
+                  {{ entity.schema }}
+                  <span v-if="showDetails && entity.metadataStatus">
+                    · {{ t(`Chen.GoDiagram${entity.metadataStatus}`) }}
+                  </span>
                 </div>
               </div>
             </button>

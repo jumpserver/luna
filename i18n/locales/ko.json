@@ -2165,6 +2165,11 @@
   "Chen": {
     "GoBrowseLastHint": "먼저 행 수를 집계하세요. 총 행 수를 모르거나 마지막 페이지가 서버 제한을 초과하면 사용할 수 없습니다.",
     "GoPinnedLimit": "결과는 최대 3개까지 고정할 수 있으며 각 스냅샷은 2 MiB 이하여야 합니다.",
+    "GoHideResults": "결과 접기",
+    "GoShowResults": "결과 표시",
+    "RunSelectedOrAll": "선택 영역 / 전체 실행",
+    "RemoveFromRecent": "최근 사용 항목에서 제거",
+    "GoBrowseSimpleHint": "여기서는 간단한 비교 조건을 사용하세요. 복잡한 쿼리는 SQL 워크벤치에서 작성하세요.",
     "GoPinnedHint": "불러온 행의 읽기 전용 메모리 스냅샷입니다. SQL을 다시 실행하지 않습니다.",
     "GoPinnedCachePage": "캐시된 행만 탐색하며 SQL을 다시 실행하지 않습니다.",
     "GoDiagramIncoming": "이 테이블을 참조하는 관계",

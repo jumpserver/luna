@@ -73,7 +73,7 @@ export interface GoExecution {
     error_code?: string;
   };
   result_ids: string[];
-  statement_results: { result_id?: string; rows_affected?: string }[];
+  statement_results: { result_id?: string; source_sql?: string; rows_affected?: string }[];
   error?: { code: string; message: string };
   audit_status: "pending" | "recorded" | "failed";
   started_at?: string;

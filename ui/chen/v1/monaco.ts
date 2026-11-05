@@ -62,7 +62,16 @@ export function applyChenMonacoTheme() {
         "editorWidget.border": workspace.border,
         "editorSuggestWidget.background": workspace.panel,
         "editorSuggestWidget.foreground": editor.foreground,
-        "editorSuggestWidget.selectedBackground": editor.selection
+        "editorSuggestWidget.selectedBackground": workspace.subTabActive,
+        "editorSuggestWidget.selectedForeground": editor.foreground,
+        "editorSuggestWidget.highlightForeground": editor.foreground,
+        "editorSuggestWidget.focusHighlightForeground": editor.foreground,
+        "editorSuggestWidget.border": workspace.border,
+        "editorWidget.foreground": editor.foreground,
+        "input.background": workspace.panel,
+        "input.foreground": editor.foreground,
+        "input.border": workspace.border,
+        "input.placeholderForeground": editor.foreground
       }).flatMap(([key, value]) => {
         const color = hex(value);
         return color ? [[key, color]] : [];

@@ -261,6 +261,7 @@ function preventCopy(event: ClipboardEvent) {
       v-show="section === 'diagram'"
       :api="api"
       :session-id="sessionId"
+      :dialect="dialect"
       :scope="{ database: object.database, schema: object.schema }"
       :target="object"
       :ready="ready && diagramReady !== false"
@@ -307,15 +308,6 @@ function preventCopy(event: ClipboardEvent) {
       v-show="section === 'columns'"
       class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-default px-3 py-2"
     >
-      <UButton
-        icon="i-lucide-refresh-cw"
-        :label="t('Chen.GoV1Refresh')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="busy || !ready"
-        @click="load()"
-      />
       <UInput
         v-model="search"
         icon="i-lucide-search"
@@ -345,6 +337,16 @@ function preventCopy(event: ClipboardEvent) {
         }}
         <span v-if="hasMore">· {{ t("Chen.GoV1ColumnsPartial") }}</span>
       </span>
+      <UButton
+        class="ml-auto"
+        icon="i-lucide-refresh-cw"
+        :label="t('Chen.GoV1Refresh')"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :disabled="busy || !ready"
+        @click="load()"
+      />
       <p v-if="object.comment" class="w-full break-words text-xs text-muted">{{ object.comment }}</p>
       <p v-if="!ready" class="w-full text-xs text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     </div>

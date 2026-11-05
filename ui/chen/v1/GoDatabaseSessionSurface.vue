@@ -1169,7 +1169,7 @@ function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "
   drawer.value = false;
   objectSection(tab, section);
 }
-function openOverview(context: QueryContext, section: "diagram" | "tables" = "tables") {
+function openOverview(context: QueryContext, section: "diagram" | "basic" = "basic") {
   if (!sessionReady.value || context.database !== defaultContext.value.database) return;
   const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
   if (!tabs.value.some((tab) => tab.id === id))
@@ -1177,7 +1177,7 @@ function openOverview(context: QueryContext, section: "diagram" | "tables" = "ta
       id,
       kind: "overview",
       section,
-      title: `${t("Chen.GoOverviewTitle")} · ${context.schema || context.database}`,
+      title: context.schema || context.database,
       context: { ...context }
     });
   const tab = tabs.value.find((tab) => tab.id === id);
@@ -1761,6 +1761,14 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :can-copy="session.permissions.can_copy"
           :can-insert="!!insertTarget"
           :recent-objects="recentObjects"
+          :active-object="activeTab?.kind === 'object' ? activeTab.object : undefined"
+          :active-scope="activeTab ? tabContext(activeTab, defaultContext) : undefined"
+          @remove-recent="
+            (object) =>
+              (recentObjects = recentObjects.filter(
+                (item) => objectWorkspaceKey(session!.id, item) !== objectWorkspaceKey(session!.id, object)
+              ))
+          "
           @clear-recent="recentObjects = []"
           @insert="insertName"
           @object="(object, section) => openObject(object, section)"
