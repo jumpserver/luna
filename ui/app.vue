@@ -17,9 +17,9 @@ const ManagedApp = defineAsyncComponent(() => import("~/components/ManagedApp.vu
 <template>
   <UApp v-if="nativeNotices"><NuxtPage /></UApp>
   <ClientLockGuard v-else>
-    <WebSessionLockGuard>
-      <SingleAppShell v-if="single" />
-      <ManagedApp v-else />
+    <SingleAppShell v-if="single" />
+    <WebSessionLockGuard v-else>
+      <ManagedApp />
     </WebSessionLockGuard>
   </ClientLockGuard>
 </template>

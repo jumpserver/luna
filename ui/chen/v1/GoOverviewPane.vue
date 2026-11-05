@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { ChenGoApi, GoCatalogObject } from "./api";
-import type { GoOverview, OverviewSection, OverviewValue } from "./overview";
+import type { GoOverview, OverviewRow, OverviewSection, OverviewValue, OverviewViewSection } from "./overview";
 import type { QueryContext } from "./workspace";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { writeClipboardText } from "~/utils/clipboard";
 import { ChenGoError } from "./api";
 import GoCatalogDiagram from "./GoCatalogDiagram.vue";
-import { overviewNumber, overviewPageTotal, overviewSections } from "./overview";
+import { overviewBytes, overviewIndexRows, overviewNumber } from "./overview";
 
 const props = defineProps<{
-  section?: OverviewSection | "diagram";
+  section?: OverviewViewSection;
   api: ChenGoApi;
   sessionId: string;
   scope: QueryContext;
@@ -22,10 +22,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   diagramObject: [object: GoCatalogObject];
   object: [object: GoCatalogObject];
-  section: [section: OverviewSection | "diagram"];
+  section: [section: OverviewViewSection];
 }>();
 const { t, locale } = useI18n();
-const section = ref<OverviewSection | "diagram">(props.section || "tables");
+const section = ref<OverviewViewSection>(props.section || "basic");
+const diagramVisited = ref(section.value === "diagram");
+const sectionCache = new Map<OverviewSection, GoOverview>();
 watch(
   () => props.section,
   (value) => {
@@ -33,13 +35,6 @@ watch(
   }
 );
 watch(section, (value) => emit("section", value));
-const search = ref("");
-const appliedSearch = ref("");
-const sort = ref<"name_asc" | "name_desc">("name_asc");
-const limit = ref(50);
-const page = ref(0);
-const loadedPage = ref(0);
-const cursors = ref([""]);
 const data = ref<GoOverview | null>(null);
 const loading = ref(false);
 const stale = ref(false);
@@ -47,35 +42,78 @@ const errorKey = ref("");
 const unavailable = ref(false);
 let controller: AbortController | undefined;
 let generation = 0;
-const paged = computed(() => ["tables", "views", "indexes"].includes(section.value));
-const columns = computed(() =>
-  section.value === "indexes"
-    ? [
-        "unique",
-        "method",
-        "definition",
-        "column",
-        "expression",
-        "position",
-        "direction",
-        "prefix_length",
-        ...(data.value?.items.some((row) => row.fields.included) ? ["included"] : [])
-      ]
-    : [
-        "estimated_rows",
-        "data_bytes",
-        "index_bytes",
-        "total_bytes",
-        "last_analyzed",
-        "engine",
-        "character_set",
-        "collation",
-        "comment",
-        ...["tablespace", "status", "average_row_length", "sample_size", "created"].filter((key) =>
-          data.value?.items.some((row) => row.fields[key])
-        )
-      ]
+const requestSection = computed<OverviewSection>(() =>
+  section.value === "basic"
+    ? "statistics"
+    : section.value === "ddl" || section.value === "diagram"
+      ? "properties"
+      : section.value
 );
+const sections = computed(() => [
+  { id: "basic" as const, label: t("Chen.BasicInfo") },
+  { id: "tables" as const, label: t("Chen.Tables") },
+  { id: "views" as const, label: t("Chen.Views") },
+  { id: "indexes" as const, label: t("Chen.Indexes") },
+  { id: "ddl" as const, label: "DDL" },
+  { id: "diagram" as const, label: t("Chen.Diagram") }
+]);
+const basicInfo = computed(() => [
+  { label: t("Chen.Name"), value: props.scope.schema || props.scope.database },
+  { label: t("Chen.DatabaseType"), value: props.dialect },
+  { label: t("Chen.ObjectType"), value: "schema" },
+  ...["tables", "views", "indexes"].map((key) => ({
+    label: label(key),
+    value: display(data.value?.section === "statistics" ? data.value.fields[key] : undefined, key)
+  }))
+]);
+const paged = computed(() => ["tables", "views", "indexes"].includes(section.value));
+const catalogRows = computed(() =>
+  section.value === "indexes"
+    ? overviewIndexRows(data.value?.items || [], data.value?.has_more)
+    : data.value?.items || []
+);
+const catalogColumns = computed(() =>
+  section.value === "tables"
+    ? ["name", "schema", "estimated_rows", "total_bytes", "engine", "character_set", "collation", "comment"]
+    : section.value === "views"
+      ? ["name", "schema", "type"]
+      : ["name", "schema", "table", "column", "unique", "method"]
+);
+const catalogLabels: Record<string, string> = {
+  name: "Name",
+  schema: "Schema",
+  estimated_rows: "Rows",
+  total_bytes: "Size",
+  engine: "Engine",
+  character_set: "CharacterSet",
+  collation: "Collation",
+  comment: "Comment",
+  type: "Type",
+  table: "Table",
+  column: "Columns",
+  unique: "Unique",
+  method: "Method"
+};
+function catalogValue(row: OverviewRow, key: string) {
+  if (key === "name") return row.name;
+  if (key === "schema") return row.object.schema || "-";
+  if (key === "table") return row.object.name;
+  if (key === "type") return (row.object.object_type || row.object.kind).toUpperCase();
+  const value = row.fields[key]?.value;
+  if (value === undefined || value === null || value === "") return "-";
+  if (key === "total_bytes") return overviewBytes(value, locale.value);
+  if (key === "unique") return t(value === "true" ? "Chen.Yes" : "Chen.No");
+  return key === "estimated_rows" ? overviewNumber(value, locale.value) : value;
+}
+function catalogTitle(row: OverviewRow, key: string) {
+  const field = row.fields[key];
+  if (key === "estimated_rows") return t("Chen.RowCountEstimateHint");
+  return field && field.state !== "supported"
+    ? t(`Chen.GoOverview${field.state}`)
+    : key === "comment"
+      ? field?.value || ""
+      : undefined;
+}
 const labels: Record<string, string> = {
   tables: "Tables",
   views: "Views",
@@ -152,36 +190,45 @@ function stop() {
   loading.value = false;
   if (data.value) stale.value = true;
 }
-async function load() {
+async function load(append = false) {
   stop();
   if (!props.ready || !props.visible || unavailable.value || section.value === "diagram") return;
   const current = generation;
   const abort = new AbortController();
   controller = abort;
   const scope = { ...props.scope };
-  const requestedSection = section.value;
+  const requestedSection = requestSection.value;
   loading.value = true;
   errorKey.value = "";
   try {
-    const value = await props.api.catalogOverview(
-      props.sessionId,
-      {
-        ...scope,
-        section: requestedSection,
-        q: paged.value ? appliedSearch.value : undefined,
-        sort: sort.value,
-        limit: limit.value,
-        cursor: paged.value ? cursors.value[page.value] : undefined
-      },
-      abort.signal
-    );
-    if (abort.signal.aborted || generation !== current) return;
-    if (value.database !== scope.database || value.schema !== scope.schema || value.section !== requestedSection)
-      throw new Error("Catalog scope changed");
-    data.value = value;
-    loadedPage.value = page.value;
+    const items: OverviewRow[] = append && data.value?.section === requestedSection ? [...data.value.items] : [];
+    let cursor = append ? data.value?.next_cursor : undefined;
+    const seen = new Set<string>();
+    let value: GoOverview;
+    for (let batch = 0; ; batch++) {
+      value = await props.api.catalogOverview(
+        props.sessionId,
+        {
+          ...scope,
+          section: requestedSection,
+          sort: "name_asc",
+          limit: 200,
+          cursor
+        },
+        abort.signal
+      );
+      if (abort.signal.aborted || generation !== current) return;
+      if (value.database !== scope.database || value.schema !== scope.schema || value.section !== requestedSection)
+        throw new Error("Catalog scope changed");
+      items.push(...value.items);
+      if (!paged.value || !value.has_more || batch >= 9 || items.length >= 10000) break;
+      if (!value.next_cursor || seen.has(value.next_cursor)) throw new Error("Catalog cursor did not advance");
+      seen.add(value.next_cursor);
+      cursor = value.next_cursor;
+    }
+    data.value = { ...value, items };
+    sectionCache.set(requestedSection, data.value);
     stale.value = false;
-    if (value.next_cursor) cursors.value[page.value + 1] = value.next_cursor;
   } catch (cause) {
     if (abort.signal.aborted || generation !== current) return;
     if (cause instanceof ChenGoError && [404, 405, 501].includes(cause.status) && cause.code !== "catalog_not_found") {
@@ -200,36 +247,36 @@ async function load() {
     if (generation === current) loading.value = false;
   }
 }
-function resetPage() {
-  page.value = 0;
-  cursors.value = [""];
-}
-function applySearch() {
-  appliedSearch.value = search.value.trim();
-  resetPage();
-  void load();
-}
 function refresh() {
-  resetPage();
   void load();
 }
 function open(object: GoCatalogObject) {
   if (props.ready && props.visible && !stale.value) emit("object", { ...object });
 }
-watch([section, sort, limit], refresh);
+watch(section, (value) => {
+  if (value === "diagram") diagramVisited.value = true;
+  const cached = sectionCache.get(requestSection.value);
+  if (value !== "diagram" && cached && props.ready && props.visible) {
+    stop();
+    data.value = cached;
+    stale.value = false;
+    errorKey.value = "";
+  } else refresh();
+});
 watch(
   () => [props.api, props.sessionId, props.scope.database, props.scope.schema],
   () => {
     stop();
     data.value = null;
+    sectionCache.clear();
     unavailable.value = false;
-    resetPage();
     void load();
   }
 );
 watch(
   () => [props.ready, props.visible],
   () => {
+    if (!props.ready) sectionCache.clear();
     if (!props.ready || !props.visible) stop();
     else void load();
   },
@@ -254,246 +301,223 @@ onBeforeUnmount(stop);
       }
     "
   >
-    <header class="shrink-0 space-y-2 border-b border-default p-3">
-      <div class="flex min-w-0 items-center justify-between gap-2">
-        <h2 class="min-w-0 truncate text-sm font-semibold" :title="`${scope.database} / ${scope.schema}`">
-          {{ t("Chen.GoOverviewTitle") }} · {{ scope.database }}
-          <span v-if="scope.schema && scope.schema !== scope.database">/ {{ scope.schema }}</span>
-        </h2>
+    <header class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1">
+      <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" :aria-label="t('Chen.GoOverviewTitle')">
         <UButton
-          v-if="section !== 'diagram'"
-          :label="t('Chen.GoV1Refresh')"
-          icon="i-lucide-refresh-cw"
+          v-for="item in sections"
+          :key="item.id"
+          :label="item.label"
+          :variant="section === item.id ? 'soft' : 'ghost'"
           color="neutral"
-          variant="ghost"
+          :aria-pressed="section === item.id"
+          class="shrink-0 text-xs"
+          :class="section === item.id ? 'bg-accented' : 'text-muted'"
           size="xs"
-          :disabled="!ready || loading || unavailable"
-          @click="refresh"
-        />
-      </div>
-      <p class="text-xs text-muted">{{ t("Chen.GoOverviewScope") }}</p>
-      <nav class="flex flex-wrap gap-1" :aria-label="t('Chen.GoOverviewTitle')">
-        <UButton
-          v-for="item in [
-            ...overviewSections,
-            ...([
-              'postgresql',
-              'mysql',
-              'mariadb',
-              'oceanbase-mysql',
-              'sqlserver',
-              'oracle',
-              'dameng',
-              'oceanbase-oracle',
-              'db2',
-              'clickhouse'
-            ].includes(dialect)
-              ? ['diagram' as const]
-              : [])
-          ]"
-          :key="item"
-          :label="item === 'diagram' ? t('Chen.GoDiagramTitle') : label(item)"
-          :variant="section === item ? 'soft' : 'ghost'"
-          :aria-pressed="section === item"
-          color="neutral"
-          size="xs"
-          @click="section = item"
+          @click="section = item.id"
         />
       </nav>
-      <form v-if="paged" class="flex flex-wrap items-center gap-2" @submit.prevent="applySearch">
-        <UInput
-          v-model="search"
-          :aria-label="t('Chen.GoOverviewSearch')"
-          :placeholder="t('Chen.GoOverviewSearch')"
-          icon="i-lucide-search"
-          class="min-w-32 flex-1"
-          size="xs"
-          :maxlength="256"
-        />
-        <UButton
-          type="submit"
-          :label="t('Chen.GoOverviewSearch')"
-          size="xs"
-          color="neutral"
-          variant="soft"
-          :disabled="!ready || unavailable"
-        />
-        <USelect
-          v-model="sort"
-          :items="[
-            { label: t('Chen.GoOverviewAscending'), value: 'name_asc' },
-            { label: t('Chen.GoOverviewDescending'), value: 'name_desc' }
-          ]"
-          :aria-label="t('Chen.GoOverviewSort')"
-          size="xs"
-        />
-        <USelect v-model="limit" :items="[25, 50, 100, 200]" :aria-label="t('Chen.GoOverviewPageSize')" size="xs" />
-      </form>
+      <UButton
+        v-if="section === 'ddl' && ddl?.value"
+        icon="i-lucide-copy"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        :aria-label="t('Common.Copy')"
+        :disabled="!canCopy || !ready || stale || ddl.state !== 'supported'"
+        @click="copyDDL"
+      />
+      <UDropdownMenu
+        :items="
+          ['statistics', 'properties'].map((id) => ({
+            label: label(id),
+            onSelect: () => (section = id as OverviewSection)
+          }))
+        "
+      >
+        <UButton icon="i-lucide-ellipsis" size="xs" color="neutral" variant="ghost" :aria-label="t('Common.More')" />
+      </UDropdownMenu>
+      <UButton
+        v-if="section !== 'diagram'"
+        :label="t('Chen.GoV1Refresh')"
+        icon="i-lucide-refresh-cw"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        :disabled="!ready || loading || unavailable"
+        @click="refresh"
+      />
     </header>
     <GoCatalogDiagram
-      v-if="section === 'diagram'"
+      v-if="diagramVisited"
+      v-show="section === 'diagram'"
       :api="api"
       :session-id="sessionId"
       :scope="scope"
+      :dialect="dialect"
       :ready="ready"
-      :active="visible"
+      :active="visible && section === 'diagram'"
       :can-copy="canCopy"
       @object="emit('diagramObject', $event)"
     />
-    <template v-else>
-      <div class="shrink-0 space-y-1 px-3 pt-2 text-xs" aria-live="polite">
+    <template v-if="section !== 'diagram'">
+      <div v-if="!ready || stale || errorKey" class="shrink-0 space-y-1 px-3 py-2 text-xs" aria-live="polite">
         <p v-if="!ready || stale" class="text-warning">{{ t("Chen.GoOverviewStale") }}</p>
-        <p v-if="loading" role="status" class="text-muted">{{ t("Chen.GoV1Loading") }}</p>
         <div v-if="errorKey" role="alert" class="flex items-center gap-2 text-error">
           <span>{{ t(`Chen.GoOverview${errorKey}`) }}</span>
           <UButton
             v-if="!unavailable"
-            :label="t('Chen.GoV1Retry')"
+            :label="t('Chen.Retry')"
             color="neutral"
             variant="ghost"
             size="xs"
             :disabled="!ready || loading"
-            @click="load"
+            @click="refresh"
           />
         </div>
-        <p v-if="data && data.state !== 'supported'" class="text-warning">{{ t(`Chen.GoOverview${data.state}`) }}</p>
       </div>
-      <div class="min-h-0 flex-1 overflow-auto p-3">
-        <template v-if="data && data.section === section">
-          <table v-if="paged && data.items.length" class="w-full border-collapse text-left text-xs tabular-nums">
-            <thead class="border-b border-default text-muted">
+      <div v-if="loading" class="grid min-h-0 flex-1 place-items-center text-sm text-muted" role="status">
+        <span class="flex items-center gap-2">
+          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
+          {{ t(paged ? "Chen.LoadingCatalog" : "Chen.LoadingSchemaMetadata") }}
+        </span>
+      </div>
+      <dl v-else-if="section === 'basic'" class="grid min-h-0 flex-1 gap-3 overflow-auto p-4 md:grid-cols-2">
+        <div
+          v-for="item in basicInfo"
+          :key="item.label"
+          class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2"
+        >
+          <dt class="mb-1 text-[11px] uppercase tracking-wide text-muted">{{ item.label }}</dt>
+          <dd class="break-words text-sm">{{ item.value }}</dd>
+        </div>
+      </dl>
+      <div v-else-if="paged" class="min-h-0 flex-1 overflow-auto p-3">
+        <div
+          v-if="data?.section === requestSection && catalogRows.length"
+          class="overflow-x-auto rounded-lg border border-default"
+          data-overview-catalog
+        >
+          <table class="w-full min-w-max text-left text-sm">
+            <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="p-2 font-medium">{{ t("Chen.GoOverviewObject") }}</th>
-                <th v-if="section === 'indexes'" class="p-2 font-medium">{{ t("Chen.GoOverviewName") }}</th>
-                <th v-for="key in columns" :key="key" class="whitespace-nowrap p-2 font-medium">{{ label(key) }}</th>
+                <th
+                  v-for="key in catalogColumns"
+                  :key="key"
+                  class="px-3 py-2 font-medium"
+                  :class="{ 'text-right': ['estimated_rows', 'total_bytes'].includes(key) }"
+                  :title="key === 'estimated_rows' ? t('Chen.RowCountEstimateHint') : undefined"
+                >
+                  {{ t(`Chen.${catalogLabels[key]}`) }}
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="row in data.items"
-                :key="JSON.stringify([row.object.database, row.object.schema, row.object.name, row.name, row.ordinal])"
-                class="border-b border-default hover:bg-[var(--workspace-surface-sub-tab-active)]"
+                v-for="row in catalogRows"
+                :key="JSON.stringify([row.object.database, row.object.schema, row.object.name, row.name])"
+                class="border-t border-default"
               >
-                <td class="p-2 align-top">
-                  <UButton
-                    :label="`${row.object.schema}.${row.object.name}`"
-                    color="neutral"
-                    variant="link"
-                    size="xs"
-                    class="max-w-72 break-all whitespace-normal text-left"
+                <td
+                  v-for="key in catalogColumns"
+                  :key="key"
+                  class="px-3 py-2"
+                  :class="[
+                    key === 'name' ? '' : 'text-muted',
+                    ['estimated_rows', 'total_bytes'].includes(key) ? 'text-right tabular-nums' : '',
+                    key === 'comment' ? 'max-w-64 truncate' : ''
+                  ]"
+                  :title="catalogTitle(row, key)"
+                >
+                  <button
+                    v-if="section === 'tables' && key === 'name'"
+                    type="button"
+                    class="text-left text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     :disabled="!ready || stale"
                     @click="open(row.object)"
-                  />
-                  <p class="px-2 text-muted">{{ row.object.object_type || row.object.kind }}</p>
-                </td>
-                <td v-if="section === 'indexes'" class="p-2 align-top">{{ row.name }}</td>
-                <td
-                  v-for="key in columns"
-                  :key="key"
-                  class="max-w-96 min-w-28 p-2 align-top break-words whitespace-pre-wrap"
-                  :title="row.fields[key]?.source"
-                  :class="{ 'text-muted': row.fields[key]?.value === null }"
-                >
-                  {{ display(row.fields[key], key) }}
+                  >
+                    {{ row.object.name }}
+                  </button>
+                  <template v-else>{{ catalogValue(row, key) }}</template>
+                  <UPopover v-if="section === 'indexes' && key === 'name' && row.fields.definition?.value">
+                    <UButton
+                      class="ml-1 !size-5 justify-center !p-0"
+                      icon="i-lucide-code"
+                      aria-label="SQL"
+                      title="SQL"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                    />
+                    <template #content>
+                      <pre
+                        class="max-h-80 max-w-[min(48rem,90vw)] overflow-auto p-3 font-ui-mono text-xs"
+                        :class="{ 'select-none': !canCopy }"
+                        @copy="
+                          (event) => {
+                            if (!canCopy) event.preventDefault();
+                          }
+                        "
+                        @cut="
+                          (event) => {
+                            if (!canCopy) event.preventDefault();
+                          }
+                        "
+                        >{{ row.fields.definition.value }}</pre>
+                    </template>
+                  </UPopover>
                 </td>
               </tr>
             </tbody>
           </table>
-          <p v-else-if="paged && data.state === 'supported'" class="py-8 text-center text-sm text-muted">
-            {{ t("Chen.GoOverviewEmpty") }}
-          </p>
-          <dl v-if="!paged" class="divide-y divide-default text-xs">
-            <div
-              v-for="[key, value] in summary"
-              :key="key"
-              class="flex flex-wrap items-baseline justify-between gap-2 py-3"
-              :title="value.source"
-            >
-              <dt class="text-muted">{{ label(key) }}</dt>
-              <dd class="break-all text-right tabular-nums">{{ display(value, key) }}</dd>
-            </div>
-          </dl>
-          <section
-            v-if="section === 'properties' && ddl"
-            class="space-y-2 border-t border-default pt-3 text-xs"
-            data-overview-ddl
-          >
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="font-medium">{{ label("schema_ddl") }}</h3>
-              <UButton
-                :label="t('Common.Copy')"
-                icon="i-lucide-copy"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                :disabled="!canCopy || !ready || stale || ddl.state !== 'supported' || !ddl.value"
-                @click="copyDDL"
-              />
-            </div>
-            <p class="text-muted">{{ t("Chen.GoOverviewDDLNote") }}</p>
-            <p v-if="ddl.state !== 'supported'" class="text-warning">
-              {{ display({ ...ddl, value: null }, "schema_ddl") }}
-            </p>
-            <p v-if="ddl.state === 'truncated'" class="text-warning">{{ t("Chen.GoOverviewDDLTruncated") }}</p>
-            <pre
-              v-if="ddl.value !== null"
-              class="max-h-96 overflow-auto rounded border border-default p-3 font-mono whitespace-pre-wrap break-all"
-              >{{ ddl.value }}</pre>
-            <p class="break-words text-muted">{{ ddl.source }}</p>
-            <p v-if="copyFailed" role="alert" class="text-error">{{ t("Common.CopyFailed") }}</p>
-          </section>
-        </template>
-      </div>
-      <footer class="shrink-0 space-y-2 border-t border-default p-3 text-xs text-muted">
-        <div v-if="paged && data?.section === section" class="flex flex-wrap items-center gap-2">
-          <span>{{ t("Chen.GoOverviewPage", { page: loadedPage + 1, count: data.items.length }) }}</span>
-          <UButton
-            :label="t('Chen.GoOverviewPrevious')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="!ready || loading || page === 0 || unavailable"
-            @click="
-              page--;
-              load();
-            "
-          />
-          <UButton
-            :label="t('Chen.GoOverviewNext')"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :disabled="!ready || loading || stale || !data.has_more || unavailable"
-            @click="
-              page++;
-              load();
-            "
-          />
-          <span v-if="section === 'tables' || section === 'views'">
-            {{ t("Chen.GoOverviewPageTotal") }}:
-            {{ display(overviewPageTotal(data.items, "total_bytes"), "total_bytes") }}
-          </span>
         </div>
-        <p>
-          {{
-            t(
-              dialect === "postgresql"
-                ? "Chen.GoOverviewPGSource"
-                : dialect === "mysql"
-                  ? "Chen.GoOverviewMySource"
-                  : dialect === "mariadb"
-                    ? "Chen.GoOverviewMariaSource"
-                    : dialect === "oceanbase-mysql"
-                      ? "Chen.GoOverviewOBSource"
-                      : "Chen.GoOverviewOtherSource"
-            )
-          }}
+        <div v-else-if="!errorKey" class="grid h-full place-items-center text-sm text-muted">
+          {{ t("Chen.NoCatalogItems", { type: sections.find((item) => item.id === section)?.label }) }}
+        </div>
+        <div v-if="data?.has_more" class="flex justify-center py-3">
+          <UButton
+            :label="t(data.items.length >= 10000 ? 'Chen.GoOverviewtruncated' : 'Chen.GoV1LoadMore')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :disabled="!ready || stale || data.items.length >= 10000"
+            @click="load(true)"
+          />
+        </div>
+      </div>
+      <div v-else-if="section === 'ddl'" class="min-h-0 flex-1 overflow-auto p-3" data-overview-ddl>
+        <pre
+          v-if="ddl?.value"
+          class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs text-[var(--app-fg)]"
+          >{{ ddl.value }}</pre>
+        <div v-else-if="!errorKey" class="grid h-full place-items-center p-6 text-center text-sm text-muted">
+          <div class="max-w-lg">
+            <UIcon name="i-lucide-file-code-2" class="mx-auto mb-3 size-8" />
+            <div class="font-medium text-[var(--app-fg)]">
+              {{ t("Chen.DdlUnavailableTitle", { object: t("Chen.Schema") }) }}
+            </div>
+            <p class="mt-2 text-xs leading-5">
+              {{ t(ddl?.state === "unsupported" ? "Chen.SchemaDdlNotSupported" : "Chen.NoSchemaDdl") }}
+            </p>
+          </div>
+        </div>
+        <p v-if="ddl?.state === 'truncated'" class="mt-2 text-xs text-warning">
+          {{ t("Chen.GoOverviewDDLTruncated") }}
         </p>
-        <p>
-          {{ t("Chen.GoOverviewNonSnapshot") }}
-          <span v-if="data">· {{ data.sampled_at }}</span>
-        </p>
-      </footer>
+        <p v-if="copyFailed" role="alert" class="mt-2 text-xs text-error">{{ t("Common.CopyFailed") }}</p>
+      </div>
+      <div v-else class="min-h-0 flex-1 overflow-auto p-3">
+        <dl v-if="data?.section === requestSection" class="divide-y divide-default text-xs">
+          <div
+            v-for="[key, value] in summary"
+            :key="key"
+            class="flex flex-wrap items-baseline justify-between gap-2 py-3"
+            :title="value.source"
+          >
+            <dt class="text-muted">{{ label(key) }}</dt>
+            <dd class="break-all text-right tabular-nums">{{ display(value, key) }}</dd>
+          </div>
+        </dl>
+      </div>
     </template>
   </section>
 </template>

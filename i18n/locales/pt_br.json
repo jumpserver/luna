@@ -2165,6 +2165,11 @@
   "Chen": {
     "GoBrowseLastHint": "Conte as linhas primeiro. Indisponível quando o total é desconhecido ou a última página excede o limite do servidor.",
     "GoPinnedLimit": "Mantenha até 3 resultados fixados, com no máximo 2 MiB cada.",
+    "GoHideResults": "Recolher resultados",
+    "GoShowResults": "Mostrar resultados",
+    "RunSelectedOrAll": "Executar seleção / tudo",
+    "RemoveFromRecent": "Remover dos itens recentes",
+    "GoBrowseSimpleHint": "Use comparações simples aqui. Abra a área de trabalho SQL para consultas complexas.",
     "GoPinnedHint": "Cópia somente leitura na memória das linhas carregadas; não executa o SQL novamente.",
     "GoPinnedCachePage": "Navega apenas pelas linhas em cache; não executa o SQL novamente.",
     "GoDiagramIncoming": "Referências a esta tabela",

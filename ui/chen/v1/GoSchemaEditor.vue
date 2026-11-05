@@ -344,7 +344,9 @@ defineExpose({ dirty, confirmDiscard });
         <p v-if="busy" class="text-xs text-muted">{{ t("Chen.LoadingTableMetadata") }}</p>
         <template v-if="!preview">
           <template v-if="mode === 'create'">
-            <UFormField :label="t('Chen.TableName')"><UInput v-model="tableName" class="w-full" /></UFormField>
+            <UFormField :label="t('Chen.TableName')">
+              <UInput v-model="tableName" size="xs" class="w-full" />
+            </UFormField>
             <div class="max-h-[50vh] overflow-auto">
               <table class="w-full text-left text-xs">
                 <thead>
@@ -399,6 +401,7 @@ defineExpose({ dirty, confirmDiscard });
           </template>
           <template v-else-if="mode === 'alter'">
             <USelect
+              size="xs"
               :model-value="action"
               :items="actions"
               :disabled="!metadata"
@@ -407,6 +410,7 @@ defineExpose({ dirty, confirmDiscard });
             />
             <UFormField v-if="action !== 'add'" :label="t('Chen.Column')">
               <USelect
+                size="xs"
                 :model-value="chosen"
                 :items="metadata?.columns.map((column) => column.name) || []"
                 class="w-full"
@@ -414,13 +418,15 @@ defineExpose({ dirty, confirmDiscard });
               />
             </UFormField>
             <UFormField v-if="action === 'add' || action === 'rename'" :label="t('Chen.Name')">
-              <UInput v-model="name" class="w-full" />
+              <UInput v-model="name" size="xs" class="w-full" />
             </UFormField>
             <div v-if="action === 'add' || action === 'alter'" class="grid grid-cols-2 gap-3">
               <UFormField :label="t('Chen.Type')">
-                <USelect v-model="type" :items="columnTypes" class="w-full" />
+                <USelect v-model="type" size="xs" :items="columnTypes" class="w-full" />
               </UFormField>
-              <UFormField :label="t('Chen.LengthPrecision')"><UInput v-model="size" class="w-full" /></UFormField>
+              <UFormField :label="t('Chen.LengthPrecision')">
+                <UInput v-model="size" size="xs" class="w-full" />
+              </UFormField>
               <UCheckbox v-model="nullable" :label="t('Chen.Nullable')" />
             </div>
             <p v-if="action !== 'add' && original" class="text-xs text-muted">
@@ -447,6 +453,7 @@ defineExpose({ dirty, confirmDiscard });
               {{ t("Chen.IndexChangesNotSupported") }}
             </p>
             <USelect
+              size="xs"
               :model-value="indexAction"
               :items="[
                 { label: t('Chen.CreateIndex'), value: 'create' },
@@ -456,8 +463,8 @@ defineExpose({ dirty, confirmDiscard });
               @update:model-value="changeIndexAction"
             />
             <UFormField :label="t('Chen.IndexName')">
-              <USelect v-if="indexAction === 'drop'" v-model="indexName" :items="indexNames" class="w-full" />
-              <UInput v-else v-model="indexName" class="w-full" />
+              <USelect v-if="indexAction === 'drop'" v-model="indexName" size="xs" :items="indexNames" class="w-full" />
+              <UInput v-else v-model="indexName" size="xs" class="w-full" />
             </UFormField>
             <template v-if="indexAction === 'create'">
               <UFormField :label="t('Chen.Columns')">
@@ -471,6 +478,7 @@ defineExpose({ dirty, confirmDiscard });
               <UCheckbox v-model="unique" :label="t('Chen.UniqueIndex')" />
               <USelect
                 v-if="chenIndexMethods(session.dialect).length"
+                size="xs"
                 :model-value="method || 'default'"
                 :items="[
                   { label: 'DEFAULT', value: 'default' },

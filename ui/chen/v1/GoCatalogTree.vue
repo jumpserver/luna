@@ -20,6 +20,8 @@ const props = defineProps<{
   canCopy: boolean;
   canInsert: boolean;
   recentObjects?: GoCatalogObject[];
+  activeObject?: GoCatalogObject;
+  activeScope?: QueryContext;
 }>();
 const emit = defineEmits<{
   object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
@@ -30,6 +32,7 @@ const emit = defineEmits<{
   browse: [object: GoCatalogObject];
   createTable: [context: QueryContext];
   clearRecent: [];
+  removeRecent: [object: GoCatalogObject];
   close: [];
 }>();
 const { t } = useI18n();
@@ -95,6 +98,27 @@ let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let searchController: AbortController | undefined;
 const controllers = new Set<AbortController>();
 const searching = computed(() => !!search.value.trim());
+function syncSelection() {
+  const scope = props.activeScope;
+  if (!scope || searching.value) return;
+  const schema = scope.schema;
+  let match: Node | undefined;
+  function visit(current: Node) {
+    if (props.activeObject && current.object && objectKey(current.object) === objectKey(props.activeObject))
+      match = current;
+    else if (
+      !props.activeObject &&
+      current.type === (schema && !databaseNamespace.value ? "schema" : "database") &&
+      current.schema === schema
+    )
+      match = current;
+    for (const child of current.children) visit(child);
+  }
+  visit(root.value);
+  if (!match && props.activeObject) visit(recent.value);
+  if (match) selected.value = match.id;
+}
+watch(() => [props.activeObject, props.activeScope], syncSelection, { flush: "post" });
 let browsingSelection = "";
 let browsingScroll = 0;
 const rows = computed(() => {
@@ -188,8 +212,7 @@ function select(current: Node, event: MouseEvent) {
 }
 function activate(current: Node) {
   if (current.object) emit("object", current.object, "data");
-  else if (current.type === "database" || current.type === "schema")
-    emit("overview", { database: props.database, schema: current.schema });
+  else if (current.type === "schema") emit("overview", { database: props.database, schema: current.schema });
 }
 function icon(current: Node) {
   return {
@@ -204,16 +227,6 @@ function icon(current: Node) {
 function label(current: Node) {
   if (current.type === "recent") return t("Chen.RecentlyTables");
   return current.type === "group" ? t(current.kind === "view" ? "Chen.GoV1Views" : "Chen.GoV1Tables") : current.label;
-}
-function collapseAll() {
-  function collapse(current: Node) {
-    current.expanded = false;
-    current.children.forEach(collapse);
-  }
-  root.value.children.forEach(collapse);
-  root.value.expanded = true;
-  searchNode.value.children.forEach(collapse);
-  selected.value = searching.value ? searchNode.value.children[0]?.id || "" : root.value.id;
 }
 function sqlName(current: Node, qualified = false) {
   if (current.object && qualified) {
@@ -293,7 +306,11 @@ function menu(current: Node) {
                   "diagram"
                 );
             }
-          },
+          }
+        ]
+      : []),
+    ...(current.type === "schema"
+      ? [
           {
             label: t("Chen.GoOverviewOpen"),
             icon: "i-lucide-list-tree",
@@ -413,7 +430,7 @@ async function keydown(event: KeyboardEvent, current: Node) {
   if (event.key === "Home") void focusNode(0);
   if (event.key === "End") void focusNode(focusable.value.length - 1);
   if (event.key === "Enter") {
-    if (current.object || current.type === "database" || current.type === "schema") activate(current);
+    if (current.object || current.type === "schema") activate(current);
     else void toggle(current);
   }
   if (event.key === " ") selected.value = current.id;
@@ -496,7 +513,10 @@ function initialize() {
   selected.value = database.id;
   if (!databaseNamespace.value) void load(root.value.children[0]!);
 }
-onMounted(initialize);
+onMounted(() => {
+  initialize();
+  syncSelection();
+});
 watch(
   () => props.ready,
   (ready) => {
@@ -528,16 +548,6 @@ onBeforeUnmount(() => {
   >
     <div class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 border-b border-default px-2.5">
       <span class="flex-1 text-xs font-medium text-muted">{{ t("Chen.GoV1Objects") }}</span>
-      <UButton
-        icon="i-lucide-fold-vertical"
-        :ui="{ leadingIcon: 'size-3.5' }"
-        :aria-label="t('Chen.GoV1CollapseAll')"
-        :title="t('Chen.GoV1CollapseAll')"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        @click="collapseAll"
-      />
       <UButton
         icon="i-lucide-refresh-cw"
         :ui="{ leadingIcon: 'size-3.5' }"
@@ -603,6 +613,7 @@ onBeforeUnmount(() => {
       <UInput
         v-model="search"
         icon="i-lucide-search"
+        :ui="{ leadingIcon: 'sidebar-icon' }"
         :placeholder="t('Chen.GoV1FindTable')"
         :aria-label="t('Chen.GoV1FindTable')"
         size="xs"
@@ -698,13 +709,16 @@ onBeforeUnmount(() => {
               </span>
             </span>
             <UButton
-              v-if="row.node.type === 'recent' && row.node.children.length"
+              v-if="(row.node.type === 'recent' && row.node.children.length) || row.node.id.startsWith('recent:')"
               icon="i-lucide-trash-2"
-              :aria-label="t('Chen.ClearRecentTables')"
+              :aria-label="
+                row.node.object ? `${t('Chen.RemoveFromRecent')} ${row.node.object.name}` : t('Chen.ClearRecentTables')
+              "
               size="xs"
               color="neutral"
               variant="ghost"
-              @click.stop="emit('clearRecent')"
+              class="!size-5 shrink-0 justify-center !p-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+              @click.stop="row.node.object ? emit('removeRecent', row.node.object) : emit('clearRecent')"
               @dblclick.stop
             />
           </div>

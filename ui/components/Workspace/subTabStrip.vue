@@ -234,9 +234,9 @@ watch(
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
+          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:bg-[var(--app-hover-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
           :class="[
-            activeId === tab.id ? 'text-primary' : 'text-muted',
+            activeId === tab.id ? 'bg-[var(--workspace-surface-sub-tab-active)] text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',
             localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : '',
             tab.preview ? 'italic' : ''
@@ -263,7 +263,7 @@ watch(
             v-if="dropTargetId === tab.id && dropPlacement === 'before'"
             class="absolute -left-0.5 inset-y-1 w-0.5 rounded-full bg-primary"
           />
-          <span class="relative flex h-full min-w-0 items-center gap-1.5">
+          <span class="relative flex h-full min-w-0 flex-1 items-center gap-1.5">
             <UIcon :name="tab.icon" class="size-3.5 shrink-0" />
             <span class="min-w-0 truncate">{{ tab.label }}</span>
             <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" :title="t('Common.Unsaved')" />

@@ -84,8 +84,7 @@ function preventCopy(event: ClipboardEvent) {
     @cut="preventCopy"
   >
     <div class="shrink-0 border-b border-default px-3 py-2 text-xs">
-      <div class="flex items-start gap-2">
-        <p class="min-w-0 flex-1 text-muted">{{ t("Chen.GoDiagramScope") }}</p>
+      <div class="flex justify-end gap-2">
         <UButton
           :label="t(error ? 'Chen.GoV1Retry' : 'Chen.GoV1Refresh')"
           icon="i-lucide-refresh-cw"
@@ -95,11 +94,6 @@ function preventCopy(event: ClipboardEvent) {
           :disabled="!ready || busy"
           @click="load"
         />
-      </div>
-      <div v-if="data" class="mt-1 flex flex-wrap gap-x-4 gap-y-1" role="status">
-        <span v-for="(status, section) in data.statuses" :key="section" :data-diagram-section="section">
-          {{ t(`Chen.GoDiagramSection_${section}`) }}: {{ t(`Chen.GoDiagram${status}`) }}
-        </span>
       </div>
       <p v-if="!ready || stale" class="mt-1 text-warning">{{ t("Chen.GoDiagramStale") }}</p>
       <p v-if="busy" role="status" class="mt-1 text-muted">{{ t("Chen.GoV1Loading") }}</p>
