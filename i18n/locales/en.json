@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
     "ServerError": "The server is temporarily unavailable. Please try again later.",
-    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again."
+    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again.",
+    "SwitchDesktopSessionsDescription": "Switching closes all asset sessions for the current account, including separate windows. Save your changes and finish file transfers first.",
+    "LogoutDesktopSessionsDescription": "Logging out closes all asset sessions for the current account, including separate windows. Save your changes and finish file transfers first.",
+    "CloseSessionsAndSwitch": "Close sessions and switch"
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"
@@ -1310,8 +1313,8 @@
     "ClientLoginUnlimited": "Unlimited",
     "ClientLoginCurrentUser": "Current user",
     "ClientLoginExpiryHint": "Expiry is calculated from this login time and the maximum login duration for the current account.",
-    "ClientLoginActivityScope": "System keyboard and mouse input determines inactivity. The current account and accounts with open asset windows each use their own idle timeout.",
-    "ClientLoginActivityLimits": "The idle timeout locks all windows of that login, even without a lock password. Enter the bound site account’s lock password in any of its windows to unlock them. External applications are not protected.",
+    "ClientLoginActivityScope": "System keyboard and mouse input updates the current account’s activity. Switching preserves its last activity time; activity in other accounts does not count.",
+    "ClientLoginActivityLimits": "Switching back checks expiry and idle time against the latest settings. Unlock if idle has timed out; sign in again if the login has expired. External application windows are not protected.",
     "ClientLoginIdleLock": "Idle lock",
     "ClientLoginPolicyExpiry": "The new lifetime has been exceeded; sign-out follows the grace period",
     "ClientLockShortcut": "Press {shortcut} to lock the current account at any time, even when automatic locking is disabled."
@@ -3674,7 +3677,7 @@
     "ReauthHelp": "Require a new login after exiting and restarting. Minimizing or hiding the client does not count as exiting.",
     "ReauthRequired": "Required by the administrator and cannot be disabled. Minimizing or hiding does not count as exiting.",
     "UnlimitedHelp": "0 means unlimited. Clear and save to restore the default.",
-    "IdleHelp": "Each account in use locks after its configured idle time. Enter that account’s lock password in any of its windows to unlock. External application windows are not protected.",
+    "IdleHelp": "Locks after the idle timeout. Switching accounts does not reset the previous account’s idle time. Enter the lock password to unlock. External application windows are not protected.",
     "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock. With idle locking enabled, closing all pages also locks this login after 10 seconds. Close-page sign-out takes priority. Refreshing or reopening within 10 seconds cancels this.",
     "LifetimeHelp": "Counted from login. Sign in again when it expires; activity does not extend it."
   }

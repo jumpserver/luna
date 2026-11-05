@@ -352,6 +352,30 @@ function sendCallback(webContents, callbackId, payload) {
   if (!webContents.isDestroyed()) webContents.send("jms:callback", callbackId, payload);
 }
 
+function assetWindows() {
+  return [...windows].filter(([label, win]) => label.startsWith("asset-") && !win.isDestroyed());
+}
+
+function closeAssetWindows() {
+  // The user has confirmed leaving. beforeunload cannot retain an old account's connection.
+  for (const [, win] of assetWindows()) win.destroy();
+}
+
+function disposeWindowSessions(webContentsId: number) {
+  for (const [sessionId, session] of localShellSessions) {
+    if (session.webContentsId !== webContentsId) continue;
+    localShellSessions.delete(sessionId);
+    session.process.kill();
+  }
+  for (const [streamId, stream] of apiStreams) {
+    if (stream.webContentsId !== webContentsId) continue;
+    apiStreams.delete(streamId);
+    stream.controller.abort();
+  }
+  webProxyManager.disposeHost(webContentsId);
+  faceEngine?.stopOwner(webContentsId);
+}
+
 function closeExpiredSessionWindows(sessionId: string) {
   if (!sessionId) return;
   for (const [label, win] of windows) {
@@ -767,19 +791,8 @@ function createWindow(
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
     authService.scheduleSessionCheck();
-    for (const [sessionId, session] of localShellSessions) {
-      if (session.webContentsId !== windowWebContentsId) continue;
-      localShellSessions.delete(sessionId);
-      session.process.kill();
-    }
-    for (const [streamId, stream] of apiStreams) {
-      if (stream.webContentsId !== windowWebContentsId) continue;
-      apiStreams.delete(streamId);
-      stream.controller.abort();
-    }
-    webProxyManager.disposeHost(windowWebContentsId);
+    disposeWindowSessions(windowWebContentsId);
     clearDesktopEventSubscriptions(windowWebContents);
-    faceEngine?.stopOwner(windowWebContentsId);
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;
@@ -1250,6 +1263,12 @@ async function handleInvoke(event, request) {
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
   const binding = windowSessionBindings.get(event.sender) ?? null;
+  if (command === "get_asset_window_count" || command === "close_asset_windows") {
+    const mainWindow = labelForWindow(win) === "main";
+    if (command === "get_asset_window_count") return mainWindow ? assetWindows().length : 0;
+    if (mainWindow) closeAssetWindows();
+    return;
+  }
   if (command === "client_lock_state") return syncWindowLock(win);
   if (command === "client_policy_notices") return clientPolicyNotices.get(binding?.sessionKey || "") || [];
   if (command === "client_policy_notice_overlay") {
@@ -1527,14 +1546,29 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "set_api_session") {
-    const result = authService.setSession(args);
+    if (
+      labelForWindow(win) !== "main" &&
+      (args.sessionKey !== binding?.sessionKey || args.origin !== binding?.origin || !authService.boundToken(binding))
+    )
+      throw new Error("Account switching requires the main window");
+    const result = authService.setSession(
+      args,
+      () => {
+        // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
+        closeAssetWindows();
+        const main = windows.get("main");
+        if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
+        // Bind the new login below before publishing its lock state to the surviving windows.
+        for (const target of windows.values()) windowSessionBindings.delete(target.webContents);
+      },
+      powerMonitor.getSystemIdleTime()
+    );
     if (result.status === "success") {
       const binding = authService.captureSessionBinding();
       for (const [label, target] of windows) {
         const previous = windowSessionBindings.get(target.webContents);
-        // Asset windows keep their account when the main window switches accounts.
-        // An explicit activation of that same account can bind them to its new login.
-        if (!label.startsWith("asset-") || previous?.sessionKey === binding?.sessionKey) {
+        // Existing asset windows belong to this same login; a real account change closes them above.
+        if (!label.startsWith("asset-") || previous === binding) {
           windowSessionBindings.set(target.webContents, binding);
           syncWindowLock(target);
           emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
@@ -1934,13 +1968,7 @@ app.whenReady().then(async () => {
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
-  authService = new DesktopAuthService(emitDesktopEvent, () =>
-    [...windows].flatMap(([label, win]) =>
-      !win.isDestroyed() && (label === "main" || label.startsWith("asset-"))
-        ? [windowSessionBindings.get(win.webContents) ?? null]
-        : []
-    )
-  );
+  authService = new DesktopAuthService(emitDesktopEvent);
   await authService.initialize();
   electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
     // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat

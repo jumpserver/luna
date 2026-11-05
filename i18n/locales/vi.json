@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
     "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
-    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại."
+    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại.",
+    "SwitchDesktopSessionsDescription": "Chuyển tài khoản sẽ đóng tất cả phiên tài sản của tài khoản hiện tại, kể cả cửa sổ riêng. Hãy lưu thay đổi và hoàn tất truyền tệp trước.",
+    "LogoutDesktopSessionsDescription": "Đăng xuất sẽ đóng tất cả phiên tài sản của tài khoản hiện tại, kể cả cửa sổ riêng. Hãy lưu thay đổi và hoàn tất truyền tệp trước.",
+    "CloseSessionsAndSwitch": "Đóng phiên và chuyển"
   },
   "Asset": {
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
@@ -1310,8 +1313,8 @@
     "ClientLoginUnlimited": "Không giới hạn",
     "ClientLoginCurrentUser": "Người dùng hiện tại",
     "ClientLoginExpiryHint": "Thời điểm hết hạn được tính từ lần đăng nhập này theo thời hạn đăng nhập tối đa của tài khoản hiện tại.",
-    "ClientLoginActivityScope": "Hoạt động bàn phím và chuột của hệ thống xác định thời gian không hoạt động. Tài khoản hiện tại và các tài khoản có cửa sổ tài sản đang mở áp dụng thời gian không hoạt động riêng.",
-    "ClientLoginActivityLimits": "Hết thời gian không hoạt động sẽ khóa mọi cửa sổ của lần đăng nhập đó, kể cả khi chưa đặt mật khẩu khóa. Nhập mật khẩu khóa của tài khoản trang web được liên kết trong bất kỳ cửa sổ nào của tài khoản đó để mở khóa. Ứng dụng bên ngoài không được bảo vệ.",
+    "ClientLoginActivityScope": "Bàn phím và chuột hệ thống cập nhật hoạt động của tài khoản hiện tại. Khi chuyển, thời điểm hoạt động cuối được giữ lại; hoạt động ở tài khoản khác không được tính.",
+    "ClientLoginActivityLimits": "Khi quay lại, kiểm tra thời hạn đăng nhập và thời gian nhàn rỗi theo thiết lập mới nhất. Mở khóa nếu đã quá thời gian nhàn rỗi; đăng nhập lại nếu đã hết hạn. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
     "ClientLoginIdleLock": "Khóa khi không hoạt động",
     "ClientLoginPolicyExpiry": "Đã vượt thời hạn tối đa mới; đăng xuất sau thời gian gia hạn",
     "ClientLockShortcut": "Nhấn {shortcut} để khóa tài khoản hiện tại bất cứ lúc nào, kể cả khi tắt khóa tự động."
@@ -3674,7 +3677,7 @@
     "ReauthHelp": "Phải đăng nhập lại sau khi thoát và khởi động lại. Thu nhỏ hoặc ẩn ứng dụng không tính là thoát.",
     "ReauthRequired": "Quản trị viên đã bật nên không thể tắt. Thu nhỏ hoặc ẩn không tính là thoát.",
     "UnlimitedHelp": "0 là không giới hạn. Xóa rồi lưu để khôi phục mặc định.",
-    "IdleHelp": "Mỗi tài khoản đang sử dụng sẽ khóa theo thời gian không hoạt động đã đặt. Nhập mật khẩu khóa của tài khoản đó trong bất kỳ cửa sổ nào của nó để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
+    "IdleHelp": "Khóa khi hết thời gian nhàn rỗi. Chuyển tài khoản không đặt lại thời gian nhàn rỗi của tài khoản trước. Nhập mật khẩu khóa để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
     "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa. Khi bật khóa do không hoạt động, đóng tất cả các trang cũng khóa phiên sau 10 giây. Đăng xuất khi đóng trang được ưu tiên. Làm mới hoặc mở lại trong 10 giây sẽ hủy thao tác này.",
     "LifetimeHelp": "Tính từ lúc đăng nhập. Hết hạn phải đăng nhập lại; hoạt động không kéo dài thời hạn."
   }

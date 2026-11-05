@@ -90,10 +90,17 @@ const {
   leaveKind: siteLeaveKind,
   confirmLeave: confirmSiteLeave
 } = useSiteAccountSwitch();
+const siteLeaveDescription = (kind: string) => {
+  if (isDesktopRuntime())
+    return t(kind === "logout" ? "Login.LogoutDesktopSessionsDescription" : "Login.SwitchDesktopSessionsDescription");
+  return t(kind === "logout" ? "Login.LogoutSessionsDescription" : "Login.SwitchSiteSessionsDescription");
+};
 const { confirmOpen: aiTaskLeaveOpen, leaveKind: aiTaskLeaveKind, confirmLeave: confirmAiLeave } = useAiTaskLeave();
 const aiTaskLeaveDescription = computed(() => {
-  if (aiTaskLeaveKind.value === "logout") return t("TerminalAi.LeaveLogout");
-  if (aiTaskLeaveKind.value === "account") return t("TerminalAi.LeaveAccount");
+  if (aiTaskLeaveKind.value === "logout" || aiTaskLeaveKind.value === "account") {
+    const description = t(aiTaskLeaveKind.value === "logout" ? "TerminalAi.LeaveLogout" : "TerminalAi.LeaveAccount");
+    return isDesktopRuntime() ? `${description} ${siteLeaveDescription(aiTaskLeaveKind.value)}` : description;
+  }
   if (aiTaskLeaveKind.value === "org") return t("TerminalAi.LeaveOrg");
   return t("TerminalAi.LeaveTab");
 });
@@ -502,9 +509,7 @@ onBeforeUnmount(() => {
         <UModal
           v-model:open="siteLeaveConfirmOpen"
           :title="siteLeaveKind === 'logout' ? t('Login.Logout') : t('Login.SwitchSite')"
-          :description="
-            siteLeaveKind === 'logout' ? t('Login.LogoutSessionsDescription') : t('Login.SwitchSiteSessionsDescription')
-          "
+          :description="siteLeaveDescription(siteLeaveKind)"
           :dismissible="false"
           :close="false"
           :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
@@ -514,7 +519,9 @@ onBeforeUnmount(() => {
               {{ t("Common.Cancel") }}
             </UButton>
             <UButton color="warning" @click="confirmSiteLeave">
-              {{ t("Common.Confirm") }}
+              {{
+                t(isDesktopRuntime() && siteLeaveKind !== "logout" ? "Login.CloseSessionsAndSwitch" : "Common.Confirm")
+              }}
             </UButton>
           </template>
         </UModal>

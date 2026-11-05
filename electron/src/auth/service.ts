@@ -218,9 +218,8 @@ export class DesktopAuthService {
   // ponytail: migration keeps legacy dynamic state; replace with explicit auth/session types when strict mode is enabled.
   [key: string]: any;
 
-  constructor(emitEvent, windowSessionBindings?: () => Iterable<ClientSessionBinding | null>) {
+  constructor(emitEvent) {
     this.emitEvent = emitEvent;
-    this.windowSessionBindings = windowSessionBindings ?? (() => [this.captureSessionBinding()]);
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
@@ -246,14 +245,9 @@ export class DesktopAuthService {
   }
 
   activeSessions() {
-    const keys = new Set<string>();
-    for (const binding of this.windowSessionBindings()) {
-      if (this.boundToken(binding)) keys.add(binding.sessionKey);
-    }
-    // Saved accounts without an open window do not generate background requests.
-    return [...keys]
-      .map((key) => this.sessions.get(key))
-      .filter((session) => session && this.tokens[session.sessionKey]);
+    // Saved accounts keep their server deadline, without background polling or idle timers.
+    const session = this.sessions.get(this.currentSessionKey);
+    return session && this.tokens[session.sessionKey] ? [session] : [];
   }
 
   startSessionMonitor() {
@@ -463,7 +457,7 @@ export class DesktopAuthService {
     return changed;
   }
 
-  setSession({ sessionKey, origin, connectionId, orgId = "" }) {
+  setSession({ sessionKey, origin, connectionId, orgId = "" }, beforeSwitch?: () => void, idleSeconds = 0) {
     if (!sessionKey || !origin) throw new Error("session key and origin are required");
     origin = normalizeCompatibilitySite(origin);
     const current = this.sessions.get(this.currentSessionKey);
@@ -478,12 +472,35 @@ export class DesktopAuthService {
     // A renderer can update the active organization, but cannot approve a new connection.
     if (!approved && (current?.sessionKey !== sessionKey || current?.origin !== origin)) return { status: "stale" };
     const bearerToken = approved ? pending.bearer : current.bearerToken;
+    const loginBinding = this.sessionBinding(sessionKey);
+    const switching =
+      approved &&
+      (current?.sessionKey !== sessionKey ||
+        current?.origin !== origin ||
+        (current.loginBinding && current.loginBinding !== loginBinding));
+    if (switching) {
+      beforeSwitch?.();
+      const previousBinding = current?.loginBinding ?? this.captureSessionBinding();
+      const previousToken = this.boundToken(previousBinding);
+      if (previousToken) {
+        const idle = Math.max(
+          0,
+          Math.min(
+            Number.isFinite(idleSeconds) ? idleSeconds : 0,
+            (performance.now() - previousBinding.unlockedAt) / 1000
+          )
+        );
+        // Inactive accounts retain their own last activity across token rotation and restarts.
+        previousToken.client_inactive_last_activity_at = Date.now() - idle * 1000;
+      }
+    }
     this.currentSessionKey = sessionKey;
     if (approved) {
       this.sessions.set(sessionKey, {
         sessionKey,
         origin,
         bearerToken,
+        loginBinding,
         orgId,
         nextCheckAt: performance.now() + this.sessionCheckInterval
       });
@@ -492,12 +509,26 @@ export class DesktopAuthService {
       current.orgId = orgId;
     }
     if (approved) {
-      if (this.tokens[sessionKey]) this.tokens[sessionKey].username = pending.username;
+      const token = this.tokens[sessionKey];
+      if (token) {
+        token.username = pending.username;
+        const lastActivity = token.client_inactive_last_activity_at;
+        const minutes = token.client_login_policy?.idle_lock_time;
+        if (Number.isFinite(lastActivity) && minutes > 0 && Date.now() - lastActivity >= minutes * 60_000) {
+          // Lock before the newly bound renderer can use this login. Unlocking waits
+          // for Core to confirm any pending lock, including after a network failure.
+          this.lockSession(loginBinding);
+        }
+        delete token.client_inactive_last_activity_at;
+      }
       this.pendingConnection = null;
       this.pendingCompatibility = null;
       const binding = this.sessionBinding(sessionKey);
       if (binding) binding.unlockedAt = performance.now();
       this.lockRevision += 1;
+      if (switching) {
+        void this.persistTokens().catch((error) => electronLog.warn("failed to persist inactive client state", error));
+      }
     }
     this.scheduleSessionCheck();
     electronLog.info(`auth session ${parseUrl(origin).origin}`);
@@ -1062,7 +1093,8 @@ export class DesktopAuthService {
     return {
       status: "success",
       bearer,
-      profile: clientStatus.status === 401 ? clientStatus : profile,
+      // A saved login is not usable until Core confirms both identity and session state.
+      profile: clientStatus.success ? profile : clientStatus,
       client_session_status: clientStatus,
       resolved_site: site,
       current_org: currentOrg,

@@ -1184,7 +1184,10 @@
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "网络不可用，请检查网络连接",
     "ServerError": "服务器暂时不可用，请稍后重试",
-    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。"
+    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。",
+    "SwitchDesktopSessionsDescription": "切换将关闭当前账号的所有资产会话，包括独立窗口。请先保存更改并完成文件传输。",
+    "LogoutDesktopSessionsDescription": "退出登录将关闭当前账号的所有资产会话，包括独立窗口。请先保存更改并完成文件传输。",
+    "CloseSessionsAndSwitch": "关闭会话并切换"
   },
   "Loading": {
     "Loading": "加载中",
@@ -1310,8 +1313,8 @@
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "当前用户",
     "ClientLoginExpiryHint": "按本次登录时间和当前账号的最长有效期时间计算到期时间。",
-    "ClientLoginActivityScope": "根据本机系统键鼠输入判断空闲。当前账号和仍有资产窗口的账号分别使用各自的空闲时间设置。",
-    "ClientLoginActivityLimits": "达到空闲时间后锁定本次登录的所有窗口，未设置锁屏密码也会锁定。可在任一窗口输入其绑定站点账号的锁屏密码解锁。外部软件窗口不受保护。",
+    "ClientLoginActivityScope": "当前账号按系统键鼠活动计时。切走后保留最后活动时间，其他账号的操作不计入。",
+    "ClientLoginActivityLimits": "切回时按最新配置检查有效期和空闲时间；空闲超时需解锁，登录到期需重新登录。外部软件窗口不受保护。",
     "ClientLoginIdleLock": "空闲锁屏",
     "ClientLoginPolicyExpiry": "已超过新配置的最长登录有效期，宽限结束后退出",
     "ClientLockShortcut": "随时可按 {shortcut} 锁定当前账号；关闭自动锁屏也可手动锁定。"
@@ -3674,7 +3677,7 @@
     "ReauthHelp": "开启后，退出并重新启动需重新登录，最小化或隐藏不受影响。",
     "ReauthRequired": "管理员已开启，不能关闭。最小化或隐藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空后保存恢复默认值。",
-    "IdleHelp": "使用中的账号按各自设置的空闲时间锁定，可在其任一窗口输入该账号的锁屏密码解锁。外部软件窗口不受保护。",
+    "IdleHelp": "空闲超时后锁定，切换账号不会重置原账号的空闲时间。输入锁屏密码解锁，外部软件窗口不受保护。",
     "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。 开启空闲锁屏后，关闭全部页面 10 秒后也会锁定；开启关闭页面退出则优先注销，刷新或 10 秒内重开可取消。",
     "LifetimeHelp": "从登录时间起计算，到期需重新登录，操作不会延长。"
   }

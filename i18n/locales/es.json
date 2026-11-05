@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
     "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
-    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión."
+    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión.",
+    "SwitchDesktopSessionsDescription": "Cambiar cierra todas las sesiones de activos de la cuenta actual, incluidas las ventanas independientes. Guarde los cambios y termine las transferencias de archivos primero.",
+    "LogoutDesktopSessionsDescription": "Cerrar sesión cierra todas las sesiones de activos de la cuenta actual, incluidas las ventanas independientes. Guarde los cambios y termine las transferencias de archivos primero.",
+    "CloseSessionsAndSwitch": "Cerrar sesiones y cambiar"
   },
   "Asset": {
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
@@ -1310,8 +1313,8 @@
     "ClientLoginUnlimited": "Sin límite",
     "ClientLoginCurrentUser": "Usuario actual",
     "ClientLoginExpiryHint": "El vencimiento se calcula desde este inicio de sesión y la duración máxima de acceso de la cuenta actual.",
-    "ClientLoginActivityScope": "La actividad del teclado y el ratón del sistema determina la inactividad. La cuenta actual y las cuentas con ventanas de activos abiertas usan sus propios tiempos de inactividad.",
-    "ClientLoginActivityLimits": "El tiempo de inactividad bloquea todas las ventanas de ese inicio de sesión, incluso sin contraseña de bloqueo. Introduzca la contraseña de bloqueo de la cuenta del sitio vinculada en cualquiera de sus ventanas para desbloquearlas. Las aplicaciones externas no están protegidas.",
+    "ClientLoginActivityScope": "El teclado y el ratón del sistema actualizan la actividad de la cuenta actual. Al cambiar, se conserva su última actividad; la actividad de otras cuentas no cuenta.",
+    "ClientLoginActivityLimits": "Al volver, se comprueban la caducidad y la inactividad con la configuración más reciente. Desbloquee si se superó la inactividad; vuelva a iniciar sesión si caducó. Las aplicaciones externas no están protegidas.",
     "ClientLoginIdleLock": "Bloqueo por inactividad",
     "ClientLoginPolicyExpiry": "Se superó la nueva duración máxima; se cerrará sesión al terminar la prórroga",
     "ClientLockShortcut": "Pulsa {shortcut} para bloquear la cuenta actual en cualquier momento, aunque el bloqueo automático esté desactivado."
@@ -3674,7 +3677,7 @@
     "ReauthHelp": "Exige iniciar sesión de nuevo al salir y reiniciar. Minimizar u ocultar el cliente no cuenta como salir.",
     "ReauthRequired": "Obligatorio por el administrador; no se puede desactivar. Minimizar u ocultar no cuenta como salir.",
     "UnlimitedHelp": "0 significa sin límite. Borre el campo y guarde para restaurar el valor predeterminado.",
-    "IdleHelp": "Cada cuenta en uso se bloquea tras su tiempo de inactividad configurado. Introduzca su contraseña de bloqueo en cualquiera de sus ventanas para desbloquearla. Las ventanas de aplicaciones externas no están protegidas.",
+    "IdleHelp": "Se bloquea al superar el tiempo de inactividad. Cambiar de cuenta no reinicia la inactividad de la cuenta anterior. Introduzca la contraseña de bloqueo para desbloquear. Las aplicaciones externas no están protegidas.",
     "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear. Con el bloqueo por inactividad activado, cerrar todas las páginas también bloquea esta sesión tras 10 segundos. El cierre de sesión al cerrar las páginas tiene prioridad. Actualizar o reabrir en 10 segundos lo cancela.",
     "LifetimeHelp": "Se cuenta desde el inicio de sesión. Al vencer, vuelva a iniciar sesión; la actividad no lo prolonga."
   }

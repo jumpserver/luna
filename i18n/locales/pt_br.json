@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Falha no login: problema no certificado ou na conexão segura.",
     "NetworkError": "Rede indisponível. Verifique a conectividade.",
     "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde.",
-    "ExpiredLifetimeDetail": "Este login expirou em {expiresAt}. Entre novamente."
+    "ExpiredLifetimeDetail": "Este login expirou em {expiresAt}. Entre novamente.",
+    "SwitchDesktopSessionsDescription": "A troca fecha todas as sessões de ativos da conta atual, incluindo janelas separadas. Salve as alterações e conclua as transferências de arquivos primeiro.",
+    "LogoutDesktopSessionsDescription": "Sair fecha todas as sessões de ativos da conta atual, incluindo janelas separadas. Salve as alterações e conclua as transferências de arquivos primeiro.",
+    "CloseSessionsAndSwitch": "Fechar sessões e trocar"
   },
   "Asset": {
     "GetAssetFailed": "Falha ao obter o ativo. Atualize e tente novamente"
@@ -1310,8 +1313,8 @@
     "ClientLoginUnlimited": "Sem limite",
     "ClientLoginCurrentUser": "Usuário atual",
     "ClientLoginExpiryHint": "O vencimento é calculado desde este login e a duração máxima de login da conta atual.",
-    "ClientLoginActivityScope": "A entrada do teclado e do mouse do sistema determina a inatividade. A conta atual e as contas com janelas de ativos abertas usam seus próprios tempos de inatividade.",
-    "ClientLoginActivityLimits": "O tempo de inatividade bloqueia todas as janelas desse login, mesmo sem senha de bloqueio. Digite a senha de bloqueio da conta do site vinculada em qualquer uma de suas janelas para desbloqueá-las. Aplicativos externos não são protegidos.",
+    "ClientLoginActivityScope": "O teclado e o mouse do sistema atualizam a atividade da conta atual. A troca preserva sua última atividade; a atividade em outras contas não conta.",
+    "ClientLoginActivityLimits": "Ao voltar, a expiração e a inatividade são verificadas com as configurações mais recentes. Desbloqueie se o tempo de inatividade foi excedido; entre novamente se o login expirou. Aplicativos externos não são protegidos.",
     "ClientLoginIdleLock": "Bloqueio por inatividade",
     "ClientLoginPolicyExpiry": "A nova duração máxima foi excedida; saída ao terminar o prazo de tolerância",
     "ClientLockShortcut": "Pressione {shortcut} para bloquear a conta atual a qualquer momento, mesmo com o bloqueio automático desativado."
@@ -3674,7 +3677,7 @@
     "ReauthHelp": "Exige novo login após sair e reiniciar. Minimizar ou ocultar o cliente não conta como sair.",
     "ReauthRequired": "Exigido pelo administrador; não pode ser desativado. Minimizar ou ocultar não conta como sair.",
     "UnlimitedHelp": "0 significa ilimitado. Limpe e salve para restaurar o padrão.",
-    "IdleHelp": "Cada conta em uso é bloqueada após seu tempo de inatividade configurado. Digite a senha de bloqueio dessa conta em qualquer uma de suas janelas para desbloquear. Janelas de aplicativos externos não são protegidas.",
+    "IdleHelp": "Bloqueia após o tempo de inatividade. Trocar de conta não reinicia a inatividade da conta anterior. Digite a senha de bloqueio para desbloquear. Aplicativos externos não são protegidos.",
     "WebIdleHelp": "Bloqueia o console e o terminal Web após o tempo de inatividade definido. Digite a senha de bloqueio para desbloquear. Com o bloqueio por inatividade ativado, fechar todas as páginas também bloqueia esta sessão após 10 segundos. A saída ao fechar as páginas tem prioridade. Atualizar ou reabrir em até 10 segundos cancela a ação.",
     "LifetimeHelp": "Contado desde o login. Ao expirar, entre novamente; a atividade não prolonga o prazo."
   }

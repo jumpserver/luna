@@ -5,6 +5,7 @@ import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import {
   closeCurrentSiteWorkspace,
   confirmLeaveCurrentSiteSessions,
+  hasActiveSiteSessions,
   hasActiveWorkspaceSessions
 } from "~/composables/useSiteAccountSwitch";
 import type {
@@ -133,7 +134,7 @@ export const useAuthSession = () => {
     const authenticatedUserId = typeof profileData.id === "string" ? profileData.id.trim() : "";
     const userId = authenticatedUserId || existingUser?.userId || "";
     const currentUser = userInfoStore.currentUser;
-    const keepingWorkspace = isDesktopRuntime() && hasActiveWorkspaceSessions();
+    const keepingWorkspace = isDesktopRuntime() && Boolean(currentUser) && (await hasActiveSiteSessions());
     const sameIdentity = Boolean(
       currentUser?.userId &&
       currentUser.userId === authenticatedUserId &&
