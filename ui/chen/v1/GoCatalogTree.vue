@@ -33,7 +33,6 @@ const emit = defineEmits<{
   createTable: [context: QueryContext];
   clearRecent: [];
   removeRecent: [object: GoCatalogObject];
-  close: [];
 }>();
 const { t } = useI18n();
 const toast = useToast();
@@ -92,15 +91,42 @@ watch(
 );
 const selected = ref("");
 const tree = ref<HTMLElement>();
+const searchOpen = ref(false);
 const search = ref("");
+const searchButton = useTemplateRef("searchButton");
+const searchInput = useTemplateRef("searchInput");
 const searchNode = ref<Node>(node("group", "search"));
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let searchController: AbortController | undefined;
 const controllers = new Set<AbortController>();
 const searching = computed(() => !!search.value.trim());
+let browsingSelection = "";
+let browsingScroll = 0;
+async function toggleSearch() {
+  if (searchOpen.value) {
+    searchOpen.value = false;
+    search.value = "";
+    selected.value = browsingSelection;
+    await nextTick();
+    if (tree.value) tree.value.scrollTop = browsingScroll;
+    searchButton.value?.$el.focus();
+  } else {
+    browsingSelection = selected.value;
+    browsingScroll = tree.value?.scrollTop || 0;
+    searchOpen.value = true;
+    await nextTick();
+    searchInput.value?.focus();
+  }
+}
+function escapeSearch(event: KeyboardEvent) {
+  if (!searchOpen.value || event.isComposing || event.defaultPrevented) return;
+  event.preventDefault();
+  event.stopPropagation();
+  void toggleSearch();
+}
 function syncSelection() {
   const scope = props.activeScope;
-  if (!scope || searching.value) return;
+  if (!scope || searchOpen.value) return;
   const schema = scope.schema;
   let match: Node | undefined;
   function visit(current: Node) {
@@ -119,8 +145,6 @@ function syncSelection() {
   if (match) selected.value = match.id;
 }
 watch(() => [props.activeObject, props.activeScope], syncSelection, { flush: "post" });
-let browsingSelection = "";
-let browsingScroll = 0;
 const rows = computed(() => {
   const result: Row[] = [];
   function walk(current: Node, depth: number) {
@@ -198,7 +222,7 @@ async function load(current: Node, append = false) {
   }
 }
 function expandable(current: Node) {
-  return current.type !== "object";
+  return current.type !== "object" && (current.type !== "recent" || current.children.length > 0);
 }
 async function toggle(current: Node) {
   if (!expandable(current)) return;
@@ -264,6 +288,10 @@ async function refresh(current = root.value.children[0]!) {
     else if (child.type !== "schema") child.loaded = false;
   }
 }
+function clearRecent() {
+  emit("clearRecent");
+  void focusNode(0);
+}
 function menu(current: Node) {
   if (current.type === "recent")
     return [
@@ -271,11 +299,20 @@ function menu(current: Node) {
         label: t("Chen.ClearRecentTables"),
         icon: "i-lucide-trash-2",
         disabled: !current.children.length,
-        onSelect: () => emit("clearRecent")
+        onSelect: clearRecent
       }
     ];
   const context = { database: props.database, schema: current.schema };
   return [
+    ...(current.id.startsWith("recent:") && current.object
+      ? [
+          {
+            label: t("Chen.RemoveFromRecent"),
+            icon: "i-lucide-trash-2",
+            onSelect: () => emit("removeRecent", current.object!)
+          }
+        ]
+      : []),
     ...(["connection", "database", "schema"].includes(current.type)
       ? [
           {
@@ -412,6 +449,11 @@ async function focusNode(index: number) {
   await nextTick();
   tree.value?.querySelectorAll<HTMLElement>("[data-tree-node]")[index]?.focus();
 }
+function focusSearchResults(event: KeyboardEvent) {
+  if (event.isComposing || !searching.value || !focusable.value.length) return;
+  event.preventDefault();
+  void focusNode(0);
+}
 async function keydown(event: KeyboardEvent, current: Node) {
   if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
     event.preventDefault();
@@ -479,11 +521,7 @@ async function runSearch(append = false) {
     if (!controller.signal.aborted) current.loading = false;
   }
 }
-watch(search, (value, previous) => {
-  if (value.trim() && !previous.trim()) {
-    browsingSelection = selected.value;
-    browsingScroll = tree.value?.scrollTop || 0;
-  }
+watch(search, () => {
   clearTimeout(searchTimer);
   searchController?.abort();
   searchNode.value.children = [];
@@ -494,11 +532,6 @@ watch(search, (value, previous) => {
   if (searching.value && props.ready) {
     searchNode.value.loading = true;
     searchTimer = setTimeout(runSearch, 250);
-  } else if (!searching.value) {
-    selected.value = browsingSelection;
-    void nextTick(() => {
-      if (tree.value) tree.value.scrollTop = browsingScroll;
-    });
   }
 });
 function initialize() {
@@ -540,6 +573,7 @@ onBeforeUnmount(() => {
     class="flex h-full min-h-0 flex-col"
     :class="{ 'select-none': !canCopy }"
     data-chen-catalog
+    @keydown.esc="escapeSearch"
     @copy="
       (event) => {
         if (!canCopy) event.preventDefault();
@@ -552,18 +586,36 @@ onBeforeUnmount(() => {
         icon="i-lucide-refresh-cw"
         :ui="{ leadingIcon: 'size-3.5' }"
         :aria-label="t('Chen.GoV1Refresh')"
+        :title="t('Chen.GoV1Refresh')"
+        class="sidebar-icon-button"
         color="neutral"
         variant="ghost"
         size="xs"
         :disabled="!ready"
         @click="searching ? runSearch() : refresh()"
       />
+      <UTooltip :text="t('Chen.GoV1FindTable')" :delay-duration="150">
+        <UButton
+          ref="searchButton"
+          icon="i-lucide-search"
+          :ui="{ leadingIcon: 'size-3.5' }"
+          :aria-label="t('Chen.GoV1FindTable')"
+          :aria-pressed="searchOpen"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          class="sidebar-icon-button"
+          :class="{ 'sidebar-icon-button-active': searchOpen }"
+          @click="toggleSearch"
+        />
+      </UTooltip>
       <UPopover :content="{ align: 'end' }">
         <UButton
           icon="i-lucide-settings-2"
           :ui="{ leadingIcon: 'size-3.5' }"
           :aria-label="t('Chen.WorkspaceSettings')"
           :title="t('Chen.WorkspaceSettings')"
+          class="sidebar-icon-button"
           size="xs"
           color="neutral"
           variant="ghost"
@@ -598,45 +650,27 @@ onBeforeUnmount(() => {
           </div>
         </template>
       </UPopover>
-      <UButton
-        icon="i-lucide-panel-left-close"
-        :ui="{ leadingIcon: 'size-3.5' }"
-        :aria-label="t('Chen.CloseDatabaseExplorer')"
-        :title="t('Chen.CloseDatabaseExplorer')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        @click="emit('close')"
-      />
-    </div>
-    <div class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center border-b border-default px-2">
-      <UInput
-        v-model="search"
-        icon="i-lucide-search"
-        :ui="{ leadingIcon: 'sidebar-icon' }"
-        :placeholder="t('Chen.GoV1FindTable')"
-        :aria-label="t('Chen.GoV1FindTable')"
-        size="xs"
-        class="w-full"
-        @keydown.esc="search = ''"
-        @keydown.down.prevent="focusNode(0)"
-      >
-        <template v-if="search" #trailing>
-          <UButton
-            icon="i-lucide-x"
-            :aria-label="t('Chen.GoV1ClearSearch')"
-            color="neutral"
-            variant="link"
-            size="xs"
-            @click="search = ''"
-          />
-        </template>
-      </UInput>
     </div>
     <p v-if="!ready" class="shrink-0 border-b border-default px-3 py-1 text-[11px] text-warning">
       {{ t("Chen.GoV1CatalogStale") }}
     </p>
+    <div v-if="searchOpen" class="shrink-0 border-b border-default px-2.5 py-1.5">
+      <SideBarSearchInput
+        ref="searchInput"
+        v-model="search"
+        :placeholder="t('Chen.GoV1FindTable')"
+        :clear-label="t('Chen.GoV1ClearSearch')"
+        @keydown.down="focusSearchResults"
+      />
+    </div>
+    <p
+      v-if="searchOpen && !searching"
+      class="grid min-h-0 flex-1 place-items-center px-4 text-center text-xs text-muted"
+    >
+      {{ t("Chen.GoV1FindTableHint") }}
+    </p>
     <div
+      v-else
       ref="tree"
       role="tree"
       :aria-label="t('Chen.GoV1Objects')"
@@ -673,7 +707,7 @@ onBeforeUnmount(() => {
             @click="select(row.node, $event)"
             @contextmenu="selected = row.node.id"
             @dblclick="activate(row.node)"
-            @keydown="keydown($event, row.node)"
+            @keydown.self="keydown($event, row.node)"
           >
             <button
               v-if="expandable(row.node)"
@@ -709,16 +743,16 @@ onBeforeUnmount(() => {
               </span>
             </span>
             <UButton
-              v-if="(row.node.type === 'recent' && row.node.children.length) || row.node.id.startsWith('recent:')"
+              v-if="row.node.type === 'recent' && row.node.children.length"
               icon="i-lucide-trash-2"
-              :aria-label="
-                row.node.object ? `${t('Chen.RemoveFromRecent')} ${row.node.object.name}` : t('Chen.ClearRecentTables')
-              "
+              :aria-label="t('Chen.ClearRecentTables')"
+              :title="t('Chen.ClearRecentTables')"
               size="xs"
               color="neutral"
               variant="ghost"
-              class="!size-5 shrink-0 justify-center !p-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
-              @click.stop="row.node.object ? emit('removeRecent', row.node.object) : emit('clearRecent')"
+              :ui="{ leadingIcon: 'size-3.5' }"
+              class="size-5 shrink-0 justify-center p-0 text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-(--app-hover-strong) hover:text-highlighted [@media(hover:none)]:opacity-100"
+              @click.stop="clearRecent"
               @dblclick.stop
             />
           </div>

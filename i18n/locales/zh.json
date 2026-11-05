@@ -2782,6 +2782,7 @@
     "GoV1Connecting": "正在认证并连接数据库…",
     "GoV1ConnectionFailed": "数据库连接失败",
     "GoV1FindTable": "查找表或视图",
+    "GoV1FindTableHint": "输入表名或视图名的一部分即可搜索",
     "GoV1NoRelations": "没有匹配的表或视图",
     "GoV1Database": "数据库",
     "GoV1Schema": "Schema",

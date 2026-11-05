@@ -169,12 +169,7 @@ const sidebarPreference = useLocalStorage("jumpserver-client:chen-v1-sidebar-wid
   writeDefaults: false,
   initOnMounted: true
 });
-const sidebarHidden = useLocalStorage("jumpserver-client:chen-v1-sidebar-hidden", false, {
-  writeDefaults: false,
-  initOnMounted: true
-});
 const desktopTree = computed(() => workspaceWidth.value >= 720);
-const treeVisible = computed(() => desktopTree.value && !sidebarHidden.value);
 const sidebarMax = computed(() => Math.max(220, Math.min(800, workspaceWidth.value - 426)));
 // Keep the user's preferred width while a smaller window temporarily clamps it.
 const sidebarWidth = computed({
@@ -192,7 +187,7 @@ const sidebarResize = usePaneResize({
   defaultValue: 280,
   step: 16,
   pixelsPerUnit: () => 1,
-  enabled: treeVisible
+  enabled: desktopTree
 });
 let eventController = new AbortController();
 interface QueryPaneHandle {
@@ -412,10 +407,6 @@ function insertName(text: string) {
   if (!session.value?.permissions.can_paste || !insertTarget.value) return;
   queryPanes.get(insertTarget.value.id)?.insertText(text);
   drawer.value = false;
-}
-function toggleTree() {
-  if (desktopTree.value) sidebarHidden.value = !sidebarHidden.value;
-  else drawer.value = !drawer.value;
 }
 async function tabKeydown(event: KeyboardEvent) {
   const elements = Array.from(tabStrip.value?.querySelectorAll<HTMLElement>('[role="tab"]') || []);
@@ -1808,9 +1799,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         class="shrink-0 flex-col bg-[var(--workspace-surface-sidebar)]"
         :class="
           desktopTree
-            ? treeVisible
-              ? 'relative flex'
-              : 'hidden'
+            ? 'relative flex'
             : drawer
               ? 'absolute inset-y-0 left-0 z-20 flex max-w-[90%] border-r border-default shadow-xl'
               : 'hidden'
@@ -1845,12 +1834,11 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
           @preview="(object) => openObject(object)"
-          @close="toggleTree"
         />
         <div v-else class="p-3 text-xs text-muted">{{ t("Chen.GoV1Connecting") }}</div>
       </aside>
       <div
-        v-if="treeVisible"
+        v-if="desktopTree"
         role="separator"
         tabindex="0"
         aria-orientation="vertical"
@@ -1909,16 +1897,16 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             </template>
             <template #trailing>
               <UButton
-                v-if="!treeVisible"
+                v-if="!desktopTree"
                 :icon="drawer ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
                 :aria-label="t('Chen.GoV1Objects')"
                 :title="t('Chen.GoV1Objects')"
-                :aria-expanded="desktopTree ? treeVisible : drawer"
+                :aria-expanded="drawer"
                 :aria-controls="sidebarId"
                 size="xs"
                 color="neutral"
                 variant="ghost"
-                @click="toggleTree"
+                @click="drawer = !drawer"
               />
               <UButton
                 v-if="!tab"
