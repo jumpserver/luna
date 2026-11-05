@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
-import type { ComponentPublicInstance } from "vue";
 import type { SidebarSectionKey } from "~/types";
 
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
@@ -36,7 +35,7 @@ const {
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
-const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
+const assetSearchInputRef = useTemplateRef("assetSearchInputRef");
 const assetTreeOpen = ref(true);
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
@@ -195,8 +194,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 
 const focusAssetSearchInput = async () => {
   await nextTick();
-  const input = assetSearchInputRef.value?.$el?.querySelector("input") as HTMLInputElement | undefined;
-  input?.focus();
+  assetSearchInputRef.value?.focus();
 };
 
 const toggleAssetSearch = async () => {
@@ -316,40 +314,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         :style="{ backgroundColor: contentBackgroundColor }"
       >
         <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
-          <UInput
-            ref="assetSearchInputRef"
-            v-model="sidebarSearch"
-            size="sm"
-            autofocus
-            clearable
-            autocapitalize="none"
-            autocorrect="off"
-            icon="i-lucide-search"
-            variant="none"
-            :placeholder="t('Operation.Search')"
-            class="search-input w-full rounded-xl"
-            :ui="{
-              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]',
-              leadingIcon: 'sidebar-icon',
-              trailingIcon: 'sidebar-icon'
-            }"
-          >
-            <template v-if="sidebarSearch?.length" #trailing>
-              <UButton
-                color="neutral"
-                variant="link"
-                size="xs"
-                icon="i-lucide-circle-x"
-                :aria-label="t('Common.ClearInput')"
-                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                @click="
-                  () => {
-                    sidebarSearch = '';
-                  }
-                "
-              />
-            </template>
-          </UInput>
+          <SideBarSearchInput ref="assetSearchInputRef" v-model="sidebarSearch" :placeholder="t('Operation.Search')" />
         </div>
 
         <div v-if="sidebarSearch.trim()" class="min-h-0 flex-1">

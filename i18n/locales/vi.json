@@ -2607,6 +2607,7 @@
     "GoV1Connecting": "Authenticating and connecting…",
     "GoV1ConnectionFailed": "Database connection failed",
     "GoV1FindTable": "Find tables or views",
+    "GoV1FindTableHint": "Nhập một phần tên bảng hoặc khung nhìn để tìm kiếm.",
     "GoV1NoRelations": "No matching relations",
     "GoV1Database": "Database",
     "GoV1Schema": "Schema",

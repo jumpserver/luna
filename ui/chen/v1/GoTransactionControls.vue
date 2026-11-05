@@ -6,6 +6,10 @@ import { useI18n } from "vue-i18n";
 const props = defineProps<{ transaction?: GoTransaction; disabled: boolean }>();
 const emit = defineEmits<{ action: [request: GoTransactionRequest] }>();
 const { t } = useI18n();
+const transactionActions = [
+  { action: "commit", icon: "i-lucide-check", label: "Chen.Transaction.Commit" },
+  { action: "rollback", icon: "i-lucide-undo-2", label: "Chen.Transaction.Rollback" }
+] as const;
 const pending = computed(() => props.transaction?.state === "active");
 const switching = ref<number | null>(null);
 function action(action: GoTransactionRequest["action"], onPending?: "commit" | "rollback") {
@@ -44,26 +48,16 @@ watch(
       />
     </UTooltip>
     <template v-if="transaction.manual">
-      <UTooltip :text="t(pending ? 'Chen.Transaction.Commit' : 'Chen.Transaction.Idle')">
+      <UTooltip v-for="item in transactionActions" :key="item.action" :text="t(item.label)">
         <UButton
-          icon="i-lucide-check"
+          :icon="item.icon"
+          :aria-label="t(item.label)"
           size="sm"
           color="neutral"
-          variant="outline"
-          :aria-label="t('Chen.Transaction.Commit')"
+          variant="ghost"
+          class="text-muted enabled:hover:bg-(--app-hover-soft) enabled:hover:text-highlighted enabled:active:bg-(--app-hover-strong) disabled:opacity-50"
           :disabled="disabled || !pending"
-          @click="action('commit')"
-        />
-      </UTooltip>
-      <UTooltip :text="t(pending ? 'Chen.Transaction.Rollback' : 'Chen.Transaction.Idle')">
-        <UButton
-          icon="i-lucide-undo-2"
-          size="sm"
-          color="neutral"
-          variant="outline"
-          :aria-label="t('Chen.Transaction.Rollback')"
-          :disabled="disabled || !pending"
-          @click="action('rollback')"
+          @click="action(item.action)"
         />
       </UTooltip>
     </template>
