@@ -7,7 +7,8 @@ import type {
   GoExportFormat,
   GoQueryPageRequest,
   GoRows,
-  GoSession
+  GoSession,
+  GoTransactionRequest
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
@@ -33,6 +34,7 @@ import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoResultGrid from "./GoResultGrid.client.vue";
+import GoTransactionControls from "./GoTransactionControls.vue";
 import GoWritePanel from "./GoWritePanel.vue";
 import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { queryResultTitle } from "./resultPresentation";
@@ -66,6 +68,8 @@ const emit = defineEmits<{
   cancel: [];
   review: [];
   confirmWarning: [executionId: string];
+  transaction: [request: GoTransactionRequest];
+  confirmImplicit: [executionId: string];
   export: [
     mode: "cached" | "query",
     format: GoExportFormat,
@@ -410,6 +414,59 @@ const warningRequired = computed(
     props.query.execution?.status === "failed" &&
     props.query.execution.error?.code === "command_warning_confirmation_required"
 );
+const implicitDialog = ref<{ id: string; sql: string; revision: number } | null>(null);
+const implicitRequired = computed(() => props.query.execution?.error?.code === "implicit_commit_confirmation_required");
+watch(
+  () => [props.query.execution?.id, props.query.execution?.error?.code],
+  () => {
+    const execution = props.query.execution;
+    implicitDialog.value =
+      execution?.error?.code === "implicit_commit_confirmation_required" && execution.transaction
+        ? { id: execution.id, sql: props.query.executionSql, revision: execution.transaction.revision }
+        : null;
+  }
+);
+const canConfirmImplicit = computed(
+  () =>
+    canPolicySubmit.value &&
+    !editDirty(props.query.edit) &&
+    implicitDialog.value?.revision === props.query.console?.transaction?.revision &&
+    implicitDialog.value?.id === props.query.execution?.id
+);
+function confirmImplicit() {
+  if (!implicitDialog.value || !canConfirmImplicit.value) return;
+  const id = implicitDialog.value.id;
+  implicitDialog.value = null;
+  emit("confirmImplicit", id);
+}
+const dismissedIdleNotice = ref("");
+const idleNotice = computed(() => {
+  const notice = props.query.console?.transaction?.notice;
+  const started = props.query.execution?.started_at;
+  if (notice && started && Date.parse(started) > Date.parse(notice.at)) return null;
+  return notice?.reason === "idle_timeout" && notice.id !== dismissedIdleNotice.value ? notice : null;
+});
+function idleDuration(seconds: number) {
+  return seconds % 60 === 0
+    ? t("Chen.Transaction.IdleMinutes", { count: seconds / 60 })
+    : t("Chen.Transaction.IdleSeconds", { count: seconds });
+}
+const transactionNotice = computed(() => {
+  const tx = props.query.execution?.transaction;
+  if (!tx?.outcome) return "";
+  if (tx.outcome === "rolled_back")
+    return t(
+      props.query.execution?.status === "succeeded" ? "Chen.Transaction.RolledBack" : "Chen.Transaction.AutoRolledBack"
+    );
+  if (tx.outcome === "unknown") return t("Chen.Transaction.OutcomeUnknown");
+  if (tx.outcome === "implicit_commit")
+    return t(
+      props.query.execution?.status === "succeeded"
+        ? "Chen.Transaction.ImplicitCommitted"
+        : "Chen.Transaction.ImplicitFailed"
+    );
+  return t("Chen.Transaction.Committed");
+});
 const warningDialog = ref<{ id: string; sql: string } | null>(null);
 function openWarning() {
   if (!canPolicySubmit.value || !warningRequired.value || !props.query.execution) return;
@@ -535,7 +592,12 @@ async function run(sql: string, version: number) {
     const analysis = await props.api.analyze(consoleId, sql, version);
     if (!canSubmit.value || editDirty(props.query.edit) || props.query.console?.id !== consoleId) return;
     // Parser classification informs confirmation; authorization is always enforced by Chen.
-    if (analysis.statements.some((statement) => statement.may_write !== false))
+    if (
+      props.query.console.transaction?.manual &&
+      analysis.statements.some((statement) => statement.implicit_commit || statement.transaction_control)
+    )
+      emit("run", sql, version);
+    else if (analysis.statements.some((statement) => statement.may_write !== false))
       writeConfirmation.value = { sql, version, consoleId };
     else emit("run", sql, version);
   } catch (cause) {
@@ -738,6 +800,12 @@ defineExpose({
           @click="active ? emit('cancel') : editor?.run()"
         />
       </UTooltip>
+      <GoTransactionControls
+        :transaction="query.console?.transaction"
+        :disabled="!canRun"
+        @action="emit('transaction', $event)"
+      />
+      <span v-if="query.console?.transaction?.supported" class="h-5 w-px shrink-0 bg-[var(--app-border)]" />
       <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
@@ -852,7 +920,19 @@ defineExpose({
                 @click="newContext"
               />
             </div>
-            <p>{{ t("Chen.GoV1TransactionUnknown") }}</p>
+            <p>
+              {{
+                query.console?.transaction?.manual
+                  ? t(
+                      query.console.transaction.state === "active"
+                        ? "Chen.Transaction.Active"
+                        : query.console.transaction.state === "unknown"
+                          ? "Chen.Transaction.OutcomeUnknown"
+                          : "Chen.Transaction.Idle"
+                    )
+                  : t("Chen.Transaction.Auto")
+              }}
+            </p>
             <p class="text-muted">{{ t("Chen.GoV1TransactionHint") }}</p>
           </div>
         </template>
@@ -880,7 +960,15 @@ defineExpose({
                   {{ t("ExecutionPlan.modeEstimated") }}
                 </span>
                 <div class="flex items-center gap-2 text-xs text-muted">
-                  <span>{{ t(`Chen.GoV1Status_${item.execution.status}`) }}</span>
+                  <span>
+                    {{
+                      t(
+                        item.execution.error?.code === "implicit_commit_confirmation_required"
+                          ? "Chen.Transaction.NotExecuted"
+                          : `Chen.GoV1Status_${item.execution.status}`
+                      )
+                    }}
+                  </span>
                   <span>{{ duration(item.execution) }}</span>
                   <time v-if="item.execution.started_at" class="ml-auto">
                     {{ new Date(item.execution.started_at).toLocaleTimeString() }}
@@ -901,6 +989,90 @@ defineExpose({
           </div>
         </template>
       </UPopover>
+    </div>
+    <UModal
+      :open="!!implicitDialog && visible"
+      :title="t('Chen.Transaction.ImplicitTitle')"
+      :description="t('Chen.Transaction.ImplicitDescription')"
+      :ui="{ content: 'sm:max-w-lg' }"
+      @update:open="
+        (value) => {
+          if (!value) implicitDialog = null;
+        }
+      "
+    >
+      <template #body>
+        <pre
+          class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-default bg-muted p-3 text-xs"
+          :class="{ 'select-none': !session.permissions.can_copy }"
+          @copy="preventCopy"
+          >{{ implicitDialog?.sql }}</pre>
+        <p class="mt-3 flex gap-2 text-sm text-default">
+          <UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0 text-warning" />
+          {{ t("Chen.Transaction.ImplicitWarning") }}
+        </p>
+        <p class="mt-2 text-sm text-muted">{{ t("Chen.Transaction.KeepManual") }}</p>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            class="mr-auto"
+            :label="t('Common.Cancel')"
+            color="neutral"
+            variant="ghost"
+            autofocus
+            @click="implicitDialog = null"
+          />
+          <UButton
+            :label="t('Chen.Transaction.ConfirmExecute')"
+            color="neutral"
+            variant="solid"
+            :disabled="!canConfirmImplicit"
+            @click="confirmImplicit"
+          />
+        </div>
+      </template>
+    </UModal>
+    <div
+      v-if="idleNotice"
+      data-transaction-idle-notice
+      role="status"
+      class="flex shrink-0 items-center gap-2 border-b border-default px-3 py-1 text-xs"
+      :class="idleNotice.outcome === 'unknown' ? 'bg-error/5 text-error' : 'bg-warning/5'"
+    >
+      <UIcon name="i-lucide-timer-reset" class="size-4 shrink-0 text-warning" />
+      <span class="min-w-0">
+        {{
+          idleNotice.outcome === "unknown"
+            ? t("Chen.Transaction.OutcomeUnknown")
+            : t("Chen.Transaction.IdleRolledBack", { duration: idleDuration(idleNotice.timeout_seconds) })
+        }}
+        <span v-if="idleNotice.audit_status === 'failed'">· {{ t("Chen.GoV1Audit_failed") }}</span>
+      </span>
+      <UButton
+        icon="i-lucide-x"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        class="ml-auto shrink-0"
+        :aria-label="t('Common.Close')"
+        @click="dismissedIdleNotice = idleNotice.id"
+      />
+    </div>
+    <div
+      v-else-if="transactionNotice"
+      role="status"
+      class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-1.5 text-xs"
+      :class="
+        query.execution?.transaction?.outcome === 'unknown' ? 'bg-error/5 text-default' : 'bg-warning/5 text-default'
+      "
+    >
+      <UIcon
+        :name="query.execution?.transaction?.outcome === 'committed' ? 'i-lucide-check' : 'i-lucide-info'"
+        class="size-3.5 shrink-0"
+      />
+      <span>{{ transactionNotice }}</span>
+      <span v-if="query.execution?.transaction?.prior_committed">{{ t("Chen.Transaction.PriorCommitted") }}</span>
     </div>
     <SqlSnippetSaveDialog
       v-if="saveSnippetOpen"
@@ -1100,9 +1272,10 @@ defineExpose({
       @ai="emit('ai', $event)"
     />
     <div v-else ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-if="!dataOnly" :id="editorId" class="min-h-0 min-w-0 overflow-hidden px-3">
+      <div v-if="!dataOnly" :id="editorId" class="flex min-h-0 min-w-0 flex-col overflow-hidden px-3">
         <MonacoSqlEditor
           ref="editor"
+          class="min-h-0 flex-1"
           :model-value="query.sql"
           :dialect="session.dialect"
           :sql-keyword-case="sqlKeywordCase"
@@ -1325,16 +1498,18 @@ defineExpose({
           <span
             v-if="showExecutionStatus"
             :class="{
-              'text-error': query.execution?.status === 'failed' && !reviewRequired,
+              'text-error': query.execution?.status === 'failed' && !reviewRequired && !implicitRequired,
               'text-warning': query.execution?.status === 'unknown' || query.execution?.status === 'cancel_requested'
             }"
           >
             {{
-              reviewRequired
-                ? t("Chen.GoV1ReviewRequired")
-                : query.execution
-                  ? t(`Chen.GoV1Status_${query.execution.status}`)
-                  : t("Chen.GoV1Ready")
+              implicitRequired
+                ? t(implicitDialog ? "Chen.Transaction.AwaitingConfirmation" : "Chen.Transaction.NotExecuted")
+                : reviewRequired
+                  ? t("Chen.GoV1ReviewRequired")
+                  : query.execution
+                    ? t(`Chen.GoV1Status_${query.execution.status}`)
+                    : t("Chen.GoV1Ready")
             }}
           </span>
           <template v-if="completedWithoutRows">
@@ -1361,13 +1536,13 @@ defineExpose({
               query.rows?.id !== query.cachedResult?.id &&
               !(query.executionQueryPage?.action === 'count' && query.execution?.status === 'succeeded')
             "
-            class="text-warning"
+            :class="implicitRequired ? 'text-muted' : 'text-warning'"
           >
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
         </div>
         <div
-          v-if="query.execution?.error && !reviewRequired && !query.error"
+          v-if="query.execution?.error && !reviewRequired && !implicitRequired && !query.error"
           role="alert"
           class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-xs text-error"
         >
