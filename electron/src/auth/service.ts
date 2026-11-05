@@ -504,8 +504,8 @@ export class DesktopAuthService {
     return { status: "success" };
   }
 
-  setCurrentOrg(orgId) {
-    const session = this.currentSession();
+  setCurrentOrg(orgId, binding?: ClientSessionBinding | null) {
+    const session = binding === undefined ? this.currentSession() : this.getBoundSession(binding);
     session.orgId = orgId || "";
     electronLog.info(`auth org ${session.orgId || "(none)"}`);
   }
@@ -660,12 +660,17 @@ export class DesktopAuthService {
     return { ...payload, connection_id: attempt.generation };
   }
 
-  async syncBackendLanguage({ language }) {
+  async syncBackendLanguage({ language }, binding = undefined) {
     if (typeof language !== "string" || !/^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(language)) {
       throw new Error("Invalid language code");
     }
     this.currentLanguage = language;
-    const session = this.sessions.get(this.currentSessionKey);
+    const session =
+      binding === undefined
+        ? this.sessions.get(this.currentSessionKey)
+        : binding
+          ? this.getRequestSession(binding)
+          : null;
     if (!session) return;
 
     // Electron net.fetch rejects manual redirects. Follow the cookie-setting
@@ -1345,13 +1350,21 @@ export class DesktopAuthService {
   }
 
   async apiRequest(request, binding?: ClientSessionBinding | null) {
-    const session = binding ? this.getBoundSession(binding) : this.currentSession();
-    if (binding && this.lockState(binding).locked) throw new Error("Client login is locked");
-    return this.sendApiRequest(session, request);
+    const session = this.getRequestSession(binding);
+    return this.sendApiRequest(session, request, "", binding);
   }
 
-  async sendApiRequest(session, request, bearer = "") {
+  getRequestSession(binding?: ClientSessionBinding | null) {
+    // Undefined is an internal current-account call; null is an unbound window.
+    const session = binding === undefined ? this.currentSession() : this.getBoundSession(binding);
+    if (binding && this.lockState(binding).locked) throw new Error("Client login is locked");
+    return session;
+  }
+
+  async sendApiRequest(session, request, bearer = "", binding?: ClientSessionBinding | null) {
     bearer ||= await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+    if (binding !== undefined && this.getRequestSession(binding) !== session)
+      throw new Error("Client login changed during request");
     session.bearerToken = bearer;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
@@ -1418,10 +1431,13 @@ export class DesktopAuthService {
 
   async apiStreamRequest(
     request,
-    { signal, onChunk }: { signal?: AbortSignal; onChunk?: (chunk: string) => void } = {}
+    { signal, onChunk }: { signal?: AbortSignal; onChunk?: (chunk: string) => void } = {},
+    binding?: ClientSessionBinding | null
   ) {
-    const session = this.currentSession();
+    const session = this.getRequestSession(binding);
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+    if (binding !== undefined && this.getRequestSession(binding) !== session)
+      throw new Error("Client login changed during request");
     session.bearerToken = bearer;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
@@ -1469,9 +1485,11 @@ export class DesktopAuthService {
     }
   }
 
-  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }) {
-    const session = this.currentSession();
+  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }, binding?: ClientSessionBinding | null) {
+    const session = this.getRequestSession(binding);
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+    if (binding !== undefined && this.getRequestSession(binding) !== session)
+      throw new Error("Client login changed during request");
     session.bearerToken = bearer;
     const ticketOrgId = orgId || session.orgId || "";
 

@@ -197,8 +197,15 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-function resolveConnectorEndpoint(smartEndpoint: string, component: "chen" | "koko") {
-  const origin = normalizedHttpOrigin(smartEndpoint || authService.currentSession().origin, `${component} endpoint`);
+function resolveConnectorEndpoint(
+  smartEndpoint: string,
+  component: "chen" | "koko",
+  binding: ReturnType<DesktopAuthService["captureSessionBinding"]>
+) {
+  const origin = normalizedHttpOrigin(
+    smartEndpoint || authService.getRequestSession(binding).origin,
+    `${component} endpoint`
+  );
   (component === "chen" ? allowedChenOrigins : allowedKokoOrigins).add(origin);
   electronLog.info(`${component} endpoint ${origin}`);
   return origin;
@@ -211,6 +218,7 @@ function installConnectorSessionHooks(targetSession) {
   targetSession.webRequest.onBeforeSendHeaders({ urls: socketPatterns }, (details, callback) => {
     const requestHeaders = { ...details.requestHeaders };
     void (async () => {
+      let isFaceSocket = false;
       try {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
@@ -218,35 +226,43 @@ function installConnectorSessionHooks(targetSession) {
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
           allowedKokoOrigins.has(httpOrigin);
-        let activeSiteOrigin = "";
-        try {
-          activeSiteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-        } catch {
-          // No authenticated site is available yet.
-        }
-        const isFaceSocket = isFaceLiveWebSocket(details.url, activeSiteOrigin);
+        isFaceSocket = isFaceLiveWebSocket(details.url, httpOrigin);
         if (isKokoSocket || isFaceSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
           // Chromium may omit the target HTTP session for FaceLive's cross-site handshake.
           if (isFaceSocket) {
+            const source = [...windows.values()].find(
+              (win) => !win.isDestroyed() && win.webContents.id === details.webContentsId
+            );
+            const binding = source ? (windowSessionBindings.get(source.webContents) ?? null) : null;
+            const sourceSession = authService.getRequestSession(binding);
+            if (normalizedHttpOrigin(sourceSession.origin, "JumpServer site") !== httpOrigin)
+              throw new Error("FaceLive endpoint does not match this window's login");
             const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
             if (cookies.length) {
               const cookieHeader =
                 Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
               requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
             }
-          }
-          if (isFaceSocket) {
-            const current = authService.currentSession();
-            const bearer = await authService.freshToken(current.origin, current.sessionKey, current.bearerToken);
+            const bearer = await authService.freshToken(
+              sourceSession.origin,
+              sourceSession.sessionKey,
+              sourceSession.bearerToken
+            );
+            if (authService.getRequestSession(binding) !== sourceSession)
+              throw new Error("Client login changed during websocket request");
             const authorization =
               Object.keys(requestHeaders).find((name) => name.toLowerCase() === "authorization") || "Authorization";
             requestHeaders[authorization] = `Bearer ${bearer}`;
           }
         }
       } catch {
+        if (isFaceSocket) {
+          callback({ cancel: true });
+          return;
+        }
         // Leave headers untouched when the connector URL is malformed.
       }
       callback({ requestHeaders });
@@ -431,7 +447,7 @@ function clearDesktopEventSubscriptions(webContents) {
   }
 }
 
-function startApiStream(event, win, args) {
+function startApiStream(event, win, args, binding: ReturnType<DesktopAuthService["captureSessionBinding"]>) {
   const streamId = String(args.streamId || "").trim();
   if (!streamId) throw new Error("api stream id is required");
   if (apiStreams.has(streamId)) throw new Error("api stream already exists");
@@ -441,10 +457,14 @@ function startApiStream(event, win, args) {
   apiStreams.set(streamId, owner);
   const label = labelForWindow(win);
   void authService
-    .apiStreamRequest(args.request, {
-      signal: controller.signal,
-      onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
-    })
+    .apiStreamRequest(
+      args.request,
+      {
+        signal: controller.signal,
+        onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
+      },
+      binding
+    )
     .then(() => emitDesktopEvent("api-stream", { streamId, type: "done" }, label))
     .catch((error) => {
       if (controller.signal.aborted) return;
@@ -1525,8 +1545,8 @@ async function handleInvoke(event, request) {
     }
     return result;
   }
-  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
+  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId, binding);
+  if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
@@ -1534,7 +1554,7 @@ async function handleInvoke(event, request) {
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   if (command === "api_request") return authService.apiRequest(args.request, binding);
-  if (command === "api_stream_start") return startApiStream(event, win, args);
+  if (command === "api_stream_start") return startApiStream(event, win, args, binding);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
   if (command === "face_engine_initialize") return faceEngine.initialize();
@@ -1561,9 +1581,9 @@ async function handleInvoke(event, request) {
     await saveChenDownload(response, filePath);
     return "saved";
   }
-  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
-  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
-  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
+  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen", binding);
+  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko", binding);
+  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args, binding);
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();
   if (command === "remove_offline_recording") return offlineRecordings.removeRecording(args.recordingId);
@@ -1590,7 +1610,7 @@ async function handleInvoke(event, request) {
       (command === "create_web_proxy_view" &&
         (args.successSelector || args.interactiveSelector || args.allowedUrls?.length))
     ) {
-      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
+      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" }, binding);
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
     return withIpcErrorLog(command, async () => {
