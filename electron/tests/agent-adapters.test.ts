@@ -26,6 +26,9 @@ const finish = () => {
   if (engine === 'pi') out({ type:'agent_settled', aborted:prompt !== 'complete' });
 };
 async function initialize() {
+  if(engine === 'codex') {
+    mcpName = /^mcp_servers\.([^ ]+) = /.exec(process.argv.find(arg=>arg.startsWith('mcp_servers.')))[1];
+  }
   if(engine === 'claude') {
     const mcp = JSON.parse(fs.readFileSync(process.argv[process.argv.indexOf('--mcp-config') + 1], 'utf8'));
     mcpName = Object.keys(mcp.mcpServers)[0]; trace({ mcp });
@@ -38,6 +41,16 @@ async function initialize() {
   }
 }
 function approval() {
+  if(engine === 'codex' && prompt.endsWith('-elicitation')) {
+    const request = prompt === 'url-elicitation'
+      ? {mode:'url',url:'https://example.com/authorize',elicitationId:'form-1'}
+      : {mode:'form',requestedSchema:{type:'object',properties:{confirm:{type:'boolean'}},required:['confirm']}};
+    out({id:'approve-1',method:'mcpServer/elicitation/request',params:{
+      threadId:'thread-1',turnId:'turn-1',serverName:prompt==='other-elicitation'?'user_server':mcpName,
+      message:'Complete this MCP form',_meta:null,...request
+    }});
+    return;
+  }
   const toolName = prompt === 'owned-mcp' ? 'mcp__' + mcpName + '__execute_command'
     : prompt === 'other-mcp' ? 'mcp__user_server__execute_command'
     : prompt === 'lookalike-mcp' ? 'mcp__' + mcpName + '_other__execute_command'
@@ -79,7 +92,7 @@ initialize().then(() => {
       else if(m.method === 'thread/start') out({id:m.id,result:{thread:{id:'thread-1'}}});
       else if(m.method === 'turn/start') {out({id:m.id,result:{turn:{id:'turn-1'}}});started(m.params.input[0].text);}
       else if(m.method === 'turn/interrupt') {out({id:m.id,result:{}});finish();}
-      else if(m.id === 'approve-1' && prompt === 'complete') finish();
+      else if(m.id === 'approve-1' && (prompt === 'complete' || prompt.endsWith('-elicitation'))) finish();
     }
     if(engine === 'claude') {
       if(m.type === 'control_request') {out({type:'control_response',response:{subtype:'success',request_id:m.request_id,response:{}}});if(m.request.subtype==='interrupt')finish();}
@@ -160,6 +173,9 @@ for (const engine of ["codex", "claude", "pi"] as const) {
         assert.ok(messages.some((m) => m.id === "approve-1" && m.result?.decision === "accept"));
         assert.ok(messages.some((m) => m.id === "approve-1" && m.result?.decision === "decline"));
         assert.ok(messages[0].args.some((arg: string) => arg.includes("env_http_headers")));
+        const overrides = messages[0].args.filter((_: string, index: number) => messages[0].args[index - 1] === "-c");
+        assert.equal(overrides.length, 1, "only the injected MCP server gets a policy override");
+        assert.match(overrides[0], /^mcp_servers\.luna_[a-f0-9]{32} = \{.*default_tools_approval_mode = "approve"/);
       } else if (engine === "claude") {
         assert.equal(
           Object.values(messages.find((m) => m.mcp).mcp.mcpServers)[0]["headers"].Authorization,
@@ -196,6 +212,24 @@ test("malformed protocol output fails closed", { skip: process.platform === "win
   await waitFor(() => events.some((event) => event.text.includes("Invalid agent protocol")));
   await assert.rejects(adapter.send("again"), /closed/);
 });
+
+test(
+  "Codex still declines MCP forms and URL flows from owned and other servers",
+  { skip: process.platform === "win32" },
+  async (t) => {
+    const { adapter, events, trace } = await setup(t, "codex");
+    let idleCount = 1;
+    for (const prompt of ["owned-elicitation", "other-elicitation", "url-elicitation"]) {
+      await adapter.send(prompt);
+      idleCount += 1;
+      await waitFor(() => events.filter((event) => event.status === "idle").length === idleCount);
+    }
+    assert.equal(events.filter((event) => event.type === "approval").length, 0);
+    const replies = (await trace()).filter((message) => message.id === "approve-1");
+    assert.equal(replies.length, 3);
+    for (const reply of replies) assert.deepEqual(reply.result, { action: "decline", content: null, _meta: null });
+  }
+);
 
 for (const engine of ["claude", "pi"] as const) {
   test(

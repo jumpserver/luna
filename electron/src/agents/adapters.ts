@@ -214,7 +214,9 @@ class NativeAdapter implements AgentAdapter {
       args = [
         "app-server",
         "-c",
-        `mcp_servers.${name} = { url = ${JSON.stringify(this.mcp.url)}, required = true, env_http_headers = { ${headers} } }`
+        // This exact session-only server gates every tool call in Luna's host proxy.
+        // Avoid Codex's extra elicitation approval; other servers retain their policy.
+        `mcp_servers.${name} = { url = ${JSON.stringify(this.mcp.url)}, required = true, default_tools_approval_mode = "approve", env_http_headers = { ${headers} } }`
       ];
     } else {
       this.directory = await mkdtemp(path.join(tmpdir(), "luna-agent-"));
