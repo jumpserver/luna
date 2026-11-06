@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "인증 시작"
   },
   "ConnectionGuide": {
+    "ClientTransport": "클라이언트 → Magnus",
+    "DatabaseTransport": "백엔드 TLS 설정",
+    "TLSUnknown": "설정을 가져올 수 없음",
+    "TLSDisabled": "암호화되지 않음",
+    "TLSConfigured": "설정된 TLS 모드",
+    "TLSVerified": "CA 및 호스트 이름을 검증하는 TLS",
+    "TLSInsecure": "인증서를 검증하지 않는 TLS",
+    "TLSBoundary": "데이터베이스 백엔드 연결에만 TLS 적용",
+    "TLSBoundaryHelp": "이 MySQL/PostgreSQL 명령은 Magnus에 명시적으로 평문 연결합니다. 구성 요소에서 데이터베이스로 연결하는 구간만 자산의 SSL 설정을 따르며, Prefer 모드는 평문으로 전환될 수 있습니다. 클라이언트 구간에는 신뢰할 수 있는 네트워크를 사용하세요. 백엔드 CA 인증서와 개인 키는 서버에 보관하며 로컬 클라이언트에 설정하면 안 됩니다. 이 방식은 Magnus가 클라이언트의 평문 연결을 허용해야 합니다.",
     "DoubleClickToCopy": "두 번 클릭하여 복사",
     "TokenCommand": "연결 명령 (토큰)",
     "DirectCommand": "연결 명령 (자산 ID로 직접 연결)",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "데이터베이스 TLS 연결에 실패했습니다. 자산의 SSL 모드, 신뢰할 수 있는 CA, 인증서 호스트 이름과 유효 기간, 클라이언트 인증서와 개인 키의 일치 여부를 확인하세요. 오류를 숨기기 위해 인증서 검증을 끄지 마세요.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

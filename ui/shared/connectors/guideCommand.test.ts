@@ -27,7 +27,9 @@ describe("connection guide CLI", () => {
     "uses the MySQL client for %s without changing connection details",
     (protocol) => {
       const connection = { ...database, protocol, port: "5525" };
-      expect(getGuideConnectCommand(connection)).toBe("mysql -u token-id -ps3cret -h gateway.example.com -P 5525 app");
+      expect(getGuideConnectCommand(connection)).toBe(
+        "mysql --protocol=TCP -u token-id -ps3cret -h gateway.example.com -P 5525 --ssl-mode=DISABLED app"
+      );
       expect(connection.protocol).toBe(protocol);
     }
   );
@@ -47,10 +49,10 @@ describe("connection guide CLI", () => {
 
   it("keeps the v4 SQL client command shapes", () => {
     expect(getGuideConnectCommand({ ...database, protocol: "mysql" })).toBe(
-      "mysql -u token-id -ps3cret -h gateway.example.com -P 33060 app"
+      "mysql --protocol=TCP -u token-id -ps3cret -h gateway.example.com -P 33060 --ssl-mode=DISABLED app"
     );
     expect(getGuideConnectCommand({ ...database, protocol: "postgresql", port: "5432" })).toBe(
-      'psql "user=token-id password=s3cret host=gateway.example.com dbname=app port=5432"'
+      'psql "user=token-id password=s3cret host=gateway.example.com dbname=app port=5432 sslmode=disable"'
     );
     expect(getGuideConnectCommand({ ...database, protocol: "dameng", port: "5525" })).toBe(
       "disql token-id/s3cret@gateway.example.com:5525"
@@ -74,7 +76,7 @@ describe("Oracle connection guide role", () => {
   });
   it("does not add Oracle roles to other protocols", () => {
     expect(getGuideConnectCommand({ ...database, protocol: "mysql", useSysDBA: true })).toBe(
-      "mysql -u token-id -ps3cret -h gateway.example.com -P 33060 app"
+      "mysql --protocol=TCP -u token-id -ps3cret -h gateway.example.com -P 33060 --ssl-mode=DISABLED app"
     );
   });
 });

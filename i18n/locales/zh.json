@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "开始核验"
   },
   "ConnectionGuide": {
+    "ClientTransport": "客户端 → Magnus",
+    "DatabaseTransport": "后端 TLS 配置",
+    "TLSUnknown": "未获取到配置",
+    "TLSDisabled": "明文",
+    "TLSConfigured": "配置的 TLS 模式",
+    "TLSVerified": "TLS（校验 CA 和主机名）",
+    "TLSInsecure": "TLS（不校验证书）",
+    "TLSBoundary": "本轮只加密数据库后端连接",
+    "TLSBoundaryHelp": "下方 MySQL/PostgreSQL 命令明确使用明文连接 Magnus，只有组件到数据库的一段按资产的 SSL 配置处理；Prefer 模式仍可能回退明文。客户端一段请使用可信网络。后端 CA 和私钥留在服务端，不要配置到本地客户端。此连接方式要求 Magnus 监听器允许前端明文。",
     "DoubleClickToCopy": "双击复制",
     "TokenCommand": "连接命令（使用 Token）",
     "DirectCommand": "连接命令（通过资产 ID 直连）",
@@ -3205,6 +3214,7 @@
     "GoWriteOriginalType": "当前数据库类型",
     "GoWriteUnsupportedType": "保留当前原生类型，不自动替换。如需改类型，请明确选择支持的类型，或参考原始 DDL 在 SQL 编辑器中修改。",
     "Errors": {
+      "database_tls_error": "数据库 TLS 连接失败。请检查资产的 SSL 模式、受信 CA、证书主机名和有效期，以及客户端证书与私钥是否匹配。不要为了消除错误而直接关闭证书校验。",
       "idle_disconnect": "会话因长时间无操作而断开，请重新连接。",
       "max_session_timeout": "会话已达到最长连接时间，请重新连接。",
       "admin_terminate": "管理员已终止此会话。",

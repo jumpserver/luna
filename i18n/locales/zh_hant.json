@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "開始核驗"
   },
   "ConnectionGuide": {
+    "ClientTransport": "用戶端 → Magnus",
+    "DatabaseTransport": "後端 TLS 設定",
+    "TLSUnknown": "未取得設定",
+    "TLSDisabled": "明文",
+    "TLSConfigured": "設定的 TLS 模式",
+    "TLSVerified": "TLS（驗證 CA 與主機名稱）",
+    "TLSInsecure": "TLS（不驗證憑證）",
+    "TLSBoundary": "僅加密資料庫後端連線",
+    "TLSBoundaryHelp": "下方 MySQL/PostgreSQL 命令明確使用明文連線 Magnus，只有元件到資料庫的一段遵循資產的 SSL 設定；Prefer 模式仍可能回退為明文。用戶端這一段請使用可信任的網路。後端 CA 憑證與私密金鑰保留在伺服器，不要設定到本機用戶端。此連線方式要求 Magnus 接聽器允許前端明文連線。",
     "DoubleClickToCopy": "按兩下複製",
     "TokenCommand": "連線命令（使用 Token）",
     "DirectCommand": "連線命令（透過資產 ID 直連）",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "当前数据库类型",
     "GoWriteUnsupportedType": "保留当前原生类型，不自动替换。如需改类型，请明确选择支持的类型，或参考原始 DDL 在 SQL 编辑器中修改。",
     "Errors": {
+      "database_tls_error": "資料庫 TLS 連線失敗。請檢查資產的 SSL 模式、受信 CA、憑證主機名稱與有效期，以及用戶端憑證與私鑰是否相符。請勿為了消除錯誤而關閉憑證驗證。",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

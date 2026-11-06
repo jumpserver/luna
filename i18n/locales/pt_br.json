@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "Iniciar verificação"
   },
   "ConnectionGuide": {
+    "ClientTransport": "Cliente → Magnus",
+    "DatabaseTransport": "Configuração TLS do backend",
+    "TLSUnknown": "Configuração indisponível",
+    "TLSDisabled": "Sem criptografia",
+    "TLSConfigured": "Modo TLS configurado",
+    "TLSVerified": "TLS com verificação da CA e do nome do servidor",
+    "TLSInsecure": "TLS sem verificação do certificado",
+    "TLSBoundary": "TLS apenas na conexão com o banco de dados",
+    "TLSBoundaryHelp": "Estes comandos MySQL/PostgreSQL usam explicitamente uma conexão sem criptografia com o Magnus. Apenas o trecho entre o componente e o banco de dados segue a configuração SSL do ativo; Prefer pode retornar a uma conexão sem criptografia. Use uma rede confiável no trecho do cliente. Os certificados CA e as chaves privadas do backend permanecem no servidor e não devem ser configurados no cliente local. Este método exige que o Magnus permita conexões de clientes sem criptografia.",
     "DoubleClickToCopy": "Clique duas vezes para copiar",
     "TokenCommand": "Comando de conexão (token)",
     "DirectCommand": "Comando de conexão (direta pelo ID do ativo)",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "Falha no TLS do banco de dados. Verifique o modo SSL do ativo, a CA confiável, o nome do host e a validade do certificado, e a correspondência entre o certificado do cliente e a chave privada. Não desative a verificação para ocultar o erro.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

@@ -231,3 +231,20 @@ it.each([undefined, false, true])(
     ]);
   }
 );
+
+it.each(["mysql", "postgresql"])("keeps %s frontend plaintext and backend TLS settings separate", async (protocol) => {
+  const { state } = mountGuide({
+    protocol,
+    detail: {
+      spec_info: { db_name: "app", use_ssl: true, pg_ssl_mode: "verify-full", ca_cert: "BACKEND_CA" },
+      secret_info: { client_key: "BACKEND_KEY" }
+    }
+  });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.rows.value.find((row) => row.name === "frontend_tls")?.value).toBe("ConnectionGuide.TLSDisabled");
+  const backend = String(state.rows.value.find((row) => row.name === "backend_tls")?.value);
+  expect(backend).toContain(protocol === "mysql" ? "TLSVerified" : "verify-full");
+  const command = state.commands.value[0]!.value;
+  expect(command).toContain(protocol === "mysql" ? "--ssl-mode=DISABLED" : "sslmode=disable");
+  expect(JSON.stringify(state.rows.value) + command).not.toMatch(/BACKEND_CA|BACKEND_KEY|sslrootcert|ssl-ca/);
+});

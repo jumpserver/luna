@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "Start verification"
   },
   "ConnectionGuide": {
+    "ClientTransport": "Client → Magnus",
+    "DatabaseTransport": "Backend TLS configuration",
+    "TLSUnknown": "Not available",
+    "TLSDisabled": "Plaintext",
+    "TLSConfigured": "Configured TLS mode",
+    "TLSVerified": "TLS with CA and hostname verification",
+    "TLSInsecure": "TLS without certificate verification",
+    "TLSBoundary": "Backend-only database TLS",
+    "TLSBoundaryHelp": "These MySQL/PostgreSQL commands explicitly use plaintext to Magnus. Only the component-to-database leg follows the asset SSL configuration; Prefer can fall back to plaintext. Use a trusted network for the client leg. Backend CA certificates and private keys remain on the server and must not be configured in the local client. Magnus must allow plaintext frontend connections for this workflow.",
     "DoubleClickToCopy": "Double-click to copy",
     "TokenCommand": "Connect command (token)",
     "DirectCommand": "Connect command (direct by asset ID)",
@@ -3211,6 +3220,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "Database TLS failed. Check the asset SSL mode, trusted CA, certificate hostname/expiry and matching client certificate/private key. Do not disable verification just to hide the error.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

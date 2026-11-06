@@ -20,10 +20,11 @@ const route = `<script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import GoDatabaseSessionSurface from "~/chen/v1/GoDatabaseSessionSurface.vue";
 definePageMeta({ layout: false });
+const open = ref(true);
 const tab = reactive({id:"chen-browser-fixture",assetId:"fixture",assetName:${JSON.stringify(`${dialect} browser fixture`)},address:"127.0.0.1",
  assetType:${JSON.stringify(dialect)},assetPlatform:${JSON.stringify(dialect)},assetCategory:"database",protocol:${JSON.stringify(dialect)},account:"fixture",
  status:"connecting",layoutMode:"single",panes:[],payload:{token:{id:${JSON.stringify(connectToken)}}}} as WorkspaceSessionTab);
-</script><template><div class="h-screen w-screen"><GoDatabaseSessionSurface :tab="tab" /></div></template>`;
+</script><template><div class="h-screen w-screen"><UButton v-if="open" class="fixed right-12 top-0 z-50" @click="open = false">Close fixture workspace</UButton><GoDatabaseSessionSurface v-if="open" :tab="tab" /><p v-else data-fixture-closed>Workspace closed</p></div></template>`;
 await writeFile(routeFile, route, { flag: "wx" });
 const child = spawn(`${root}node_modules/.bin/nuxt`, ["dev", "--host", "127.0.0.1", "--port", "3019"], {
   cwd: root,
@@ -43,6 +44,7 @@ child.stderr.on("data", (chunk) => {
 });
 let browser;
 let page;
+let auditHeaders;
 const errors = [];
 const api = [];
 const summary = {
@@ -68,6 +70,21 @@ try {
   assert.ok(ready, "Nuxt did not start");
   browser = await chromium.launch({ headless: true });
   page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  // Only the Core login/public-settings boundary is synthetic. All Chen
+  // session, SQL, completion and cancellation requests reach the real handler.
+  await page.route("**/api/v1/settings/public/**", (route) => route.fulfill({ json: {} }));
+  await page.route("**/api/v1/authentication/web-session/status/**", (route) =>
+    route.fulfill({
+      json: {
+        scope: "a".repeat(40),
+        state_version: 1,
+        locked: false,
+        has_password: true,
+        idle_lock_time: 0,
+        user: { id: "browser-fixture", name: "Fixture", username: "fixture" }
+      }
+    })
+  );
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("response", async (response) => {
     if (!response.url().includes("/chen/api/v1/")) return;
@@ -75,6 +92,13 @@ try {
     const call = { path, method: response.request().method(), status: response.status() };
     api.push(call);
     if (path.includes("/executions") || path.endsWith("/cancel")) {
+      if (response.request().method() === "POST" && path.endsWith("/executions")) {
+        // Keep the synthetic session credential only in memory, never in reports.
+        const headers = response.request().headers();
+        auditHeaders = Object.fromEntries(
+          Object.entries(headers).filter(([name]) => ["authorization", "token"].includes(name))
+        );
+      }
       try {
         call.body = await response.json();
       } catch {
@@ -101,8 +125,25 @@ try {
   await page.getByText("9007199254740993", { exact: true }).waitFor({ timeout: 20_000 });
   await page.getByText("数据库工作台", { exact: true }).waitFor();
   await page.getByText("NULL", { exact: true }).waitFor();
-  await page.getByText(/已本地记录|Recorded locally/).waitFor();
-  summary.checks.push("query, exact BIGINT, Unicode, NULL, locally-recorded audit status");
+  // The UI intentionally only shows audit failures now. Verify the real
+  // execution receipt, rather than expecting an obsolete success-status label.
+  const execution = api.findLast((call) => call.method === "POST" && call.path.endsWith("/executions"));
+  assert.ok(execution?.body?.id && auditHeaders, "Missing actual query execution");
+  let recorded = false;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const receipt = await page.request.get(`http://127.0.0.1:3019/chen/api/v1/executions/${execution.body.id}`, {
+      headers: auditHeaders
+    });
+    assert.equal(receipt.status(), 200, "Execution receipt request failed");
+    const state = await receipt.json();
+    if (state.status === "succeeded" && state.audit_status === "recorded") {
+      recorded = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.ok(recorded, "Successful SQL did not reach recorded audit status");
+  summary.checks.push("query, exact BIGINT, Unicode, NULL, recorded execution receipt");
   await page.screenshot({ path: `${output}/query.png`, fullPage: true });
   // A bare MySQL SELECT SLEEP() returns 1 after KILL QUERY as a successful known result.
   // A UNION query reports server error 1317, so this checks the canceled terminal state.
@@ -118,13 +159,18 @@ try {
   await cancel.click();
   await page.locator('[data-chen-execution-state="canceled"]').waitFor({ timeout: 20_000 });
   summary.checks.push(`HTTP cancellation confirmed by ${dialect}, separate from cancellation request`);
-  await page.getByRole("button", { name: /关闭连接|Close connection/ }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: /确认关闭|Confirm close/ })
-    .click();
-  await page.locator('[data-chen-session-state="closed"]').waitFor();
-  summary.checks.push("explicit session close disables editor submission");
+  // A managed tab is closed by its parent workspace, not the single-mode
+  // in-panel close button. Unmount the actual component like that parent does.
+  await page.getByRole("button", { name: "Close fixture workspace" }).click();
+  await page.locator("[data-fixture-closed]").waitFor();
+  for (
+    let attempt = 0;
+    attempt < 50 && !api.some((call) => call.method === "DELETE" && call.status === 204);
+    attempt++
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  summary.checks.push("managed workspace unmount closes the real HTTP session");
   assert.deepEqual(errors, [], "Unhandled browser errors");
   assert.ok(api.some((call) => call.path.endsWith("/completion") && call.status === 200));
   assert.ok(api.some((call) => call.path.endsWith("/cancel") && [200, 202].includes(call.status)));
