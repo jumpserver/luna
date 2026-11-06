@@ -188,6 +188,17 @@ export const useAssetAction = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
+  // A connection started before an account switch must not resume under the new login.
+  const captureConnectionLogin = () => {
+    const accountId = userInfoStore.currentAccountId;
+    const site = userInfoStore.currentSite;
+    const user = userInfoStore.currentUser;
+    return () =>
+      userInfoStore.loggedIn &&
+      userInfoStore.currentAccountId === accountId &&
+      userInfoStore.currentSite === site &&
+      userInfoStore.currentUser === user;
+  };
   const {
     getSessionConnectionAttempt,
     markSessionFailed,
@@ -518,6 +529,7 @@ export const useAssetAction = () => {
       admin?: boolean;
     }
   ) => {
+    const isCurrentLogin = captureConnectionLogin();
     const personalCredentialScope: PersonalCredentialSessionScope = {
       accountId: userInfoStore.currentAccountId,
       currentOrgId: userInfoStore.currentUser?.org?.id || "",
@@ -536,7 +548,8 @@ export const useAssetAction = () => {
           : undefined;
     const tabId = meta?.tabId || session?.id;
     const connectionAttempt = tabId ? getSessionConnectionAttempt(tabId) : 0;
-    const isCurrentConnectionAttempt = () => !tabId || getSessionConnectionAttempt(tabId) === connectionAttempt;
+    const isCurrentConnectionAttempt = () =>
+      isCurrentLogin() && (!tabId || getSessionConnectionAttempt(tabId) === connectionAttempt);
 
     let creatingConnectionToken = false;
     try {
@@ -568,6 +581,7 @@ export const useAssetAction = () => {
       if (meta?.downloadRdp && !canDownloadRdpFile(method, body.connect_options)) {
         throw new Error(t("ConnectError.MethodDisabled"));
       }
+      if (!isCurrentConnectionAttempt()) return;
       creatingConnectionToken = true;
       const token = await createConnectionTokenWithAcl(serverBody, {
         orgId: meta?.orgId,
@@ -599,12 +613,14 @@ export const useAssetAction = () => {
           query.remote_microphone = body.connect_options.remote_microphone ? "1" : "0";
         }
         const content = await getConnectionRdpFile(token.id, query, meta.orgId);
+        if (!isCurrentConnectionAttempt()) return;
         const filename = `${(meta.asset?.name || body.asset).replace(/[<>:"/\\|?*\p{Cc}]/gu, "_")}.rdp`;
         if (isDesktopRuntime()) {
           const path = await desktopDialog.save({
             defaultPath: filename,
             filters: [{ name: "RDP", extensions: ["rdp"] }]
           });
+          if (!isCurrentConnectionAttempt()) return;
           if (path) await desktopFs.writeFile(path, new TextEncoder().encode(content));
         } else if (typeof document !== "undefined") {
           const url = URL.createObjectURL(new Blob([content], { type: "application/x-rdp" }));
@@ -614,7 +630,7 @@ export const useAssetAction = () => {
           link.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
-        meta.onSessionReady?.({ token, ...token, connectMethod: method });
+        if (isCurrentConnectionAttempt()) meta.onSessionReady?.({ token, ...token, connectMethod: method });
         return;
       }
 
@@ -624,8 +640,10 @@ export const useAssetAction = () => {
       ) {
         if (body.connect_options?.token_reusable) {
           Object.assign(token, await setConnectionTokenReusable(token.id, true));
+          if (!isCurrentConnectionAttempt()) return;
         }
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams(body.connect_options));
+        if (!isCurrentConnectionAttempt()) return;
         const localClientUrl = url || "";
         if (!localClientUrl.startsWith("jms2://")) {
           throw new Error("Invalid local client URL");
@@ -639,7 +657,7 @@ export const useAssetAction = () => {
           await desktopInvoke("pull_up", {
             url: withLocalClientOptions(localClientUrl, { clientName: nativeApp.clientName })
           });
-          meta?.onSessionReady?.(payload);
+          if (isCurrentConnectionAttempt()) meta?.onSessionReady?.(payload);
         } else {
           meta?.onSessionReady?.(payload);
           pageLocation().assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
@@ -712,6 +730,7 @@ export const useAssetAction = () => {
       admin?: boolean;
     }
   ) => {
+    const isCurrentLogin = captureConnectionLogin();
     const personalCredentialScope: PersonalCredentialSessionScope = {
       accountId: userInfoStore.currentAccountId,
       currentOrgId: userInfoStore.currentUser?.org?.id || "",
@@ -720,11 +739,12 @@ export const useAssetAction = () => {
     };
     const connectionAttempt = meta.tabId ? getSessionConnectionAttempt(meta.tabId) : 0;
     const isCurrentConnectionAttempt = () =>
-      !meta.tabId || getSessionConnectionAttempt(meta.tabId) === connectionAttempt;
+      isCurrentLogin() && (!meta.tabId || getSessionConnectionAttempt(meta.tabId) === connectionAttempt);
     let creatingConnectionToken = false;
     try {
       await assertConnectMethodEnabled(body.protocol, body.connect_method, body.asset);
       const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
+      if (!isCurrentConnectionAttempt()) return;
       creatingConnectionToken = true;
       const token = await createConnectionTokenWithAcl(serverBody, {
         orgId: meta.orgId,
@@ -760,6 +780,7 @@ export const useAssetAction = () => {
       let endpointUrl = webProxyEndpoint
         ? getEndpointUrl({ ...webProxyEndpoint, web_proxy_port: webProxyPort }, "http", "web_proxy_port")
         : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+      if (!isCurrentConnectionAttempt()) return;
       if (component === "chen" && isElectronRuntime()) {
         endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
       } else if (!isWebProxy && (component === "koko" || component === "lion") && isElectronRuntime()) {
@@ -769,6 +790,7 @@ export const useAssetAction = () => {
       if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
         if (!meta.asset) throw new Error("Website 资产信息不完整");
         const assetDetail = await getAssetDetailRequest(meta.assetId, meta.orgId);
+        if (!isCurrentConnectionAttempt()) return;
         const successSelector = String(assetDetail.spec_info?.success_selector || "").trim();
         webProxy = useWebProxyManager().buildWebProxyRequest(
           { ...meta.asset, permedProtocols: assetDetail.permed_protocols },
@@ -882,6 +904,7 @@ export const useAssetAction = () => {
       admin?: boolean;
     }
   ) => {
+    const isCurrentLogin = captureConnectionLogin();
     const saved = currentConnectionInfoMap.value[assetId];
 
     // The selection from the current dialog always wins. Saved data is only a
@@ -954,6 +977,7 @@ export const useAssetAction = () => {
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
     const methods = await getMethodsForProtocol(protocol, assetId);
+    if (!isCurrentLogin()) return;
     const connectMethod =
       pickConnectMethod(
         protocol,
@@ -962,6 +986,7 @@ export const useAssetAction = () => {
         saved?.protocol === protocol ? saved?.connectMethod?.trim() || "" : "",
         settingManager.appConfig.value
       ) || (await resolveConnectMethod(protocol, assetId));
+    if (!isCurrentLogin()) return;
 
     if (ephemeral?.tabId && !ephemeral.downloadRdp) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 
@@ -977,6 +1002,7 @@ export const useAssetAction = () => {
           : undefined;
       mergedConnectOptions.resolution = preferences?.graphics?.rdp_resolution || rdpResolution.value || "auto";
     }
+    if (!isCurrentLogin()) return;
 
     const isManual = accountForToken === "@INPUT";
     const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;
@@ -1059,6 +1085,7 @@ export const useAssetAction = () => {
     };
 
     await nextTick();
+    if (!isCurrentLogin()) return;
     const account = selected || user;
     let tabId = ephemeral?.tabId;
 
@@ -1109,12 +1136,14 @@ export const useAssetAction = () => {
   };
 
   const handleWebClientProtocolPayload = async (payload: { protocol?: unknown; asset?: { id?: unknown } }) => {
+    const isCurrentLogin = captureConnectionLogin();
     const protocol = String(payload.protocol || "").toLowerCase();
     const assetId = typeof payload.asset?.id === "string" ? payload.asset.id.trim() : "";
     if (!["http", "https"].includes(protocol) || !assetId) throw new Error("Invalid web client protocol payload");
 
     const currentOrgId = userInfoStore.currentUser?.org?.id || "";
     const detail = await getAssetDetailRequest(assetId, currentOrgId);
+    if (!isCurrentLogin()) return;
     const asset = {
       ...transformAssetDetail(assetId, detail),
       org_id: detail.org_id || currentOrgId

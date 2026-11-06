@@ -161,14 +161,18 @@ export const isWebAuthPath = (pathname = window.location.pathname) => {
   );
 };
 
-export const redirectToWebLogin = () => {
+export const redirectToWebLogin = (authPath?: unknown) => {
   if (!import.meta.client) return;
   if (isWebAuthPath()) return;
 
   const location = pageLocation();
-  const loginUrl = new URL(withWebSitePrefix("/core/auth/login/"), location.origin);
+  let loginUrl = new URL(withWebSitePrefix("/core/auth/login/"), location.origin);
+  if (typeof authPath === "string") {
+    const target = new URL(authPath, location.origin);
+    if (target.origin === location.origin && target.pathname.startsWith(loginUrl.pathname)) loginUrl = target;
+  }
   if (loginUrl.origin !== location.origin) return;
-  loginUrl.searchParams.set("next", `${location.pathname}${location.search}`);
+  loginUrl.searchParams.set("next", `${location.pathname}${location.search}${location.hash || ""}`);
   location.assign(`${loginUrl.pathname}${loginUrl.search}`);
 };
 

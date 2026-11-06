@@ -11,6 +11,7 @@ const pendingAction = ref<"unlock" | "logout" | "retry" | null>(null);
 const busy = computed(() => pendingAction.value !== null);
 const blocked = computed(() => !desktop && (!state.value.ready || state.value.locked));
 const unconfirmed = computed(() => !state.value.session);
+const logoutAsText = computed(() => Boolean(state.value.error || state.value.session?.has_password));
 const displayedError = computed(
   () =>
     error.value ||
@@ -136,7 +137,7 @@ onMounted(() => {
                     t(
                       state.logoutAt
                         ? "ScreenLock.SignedOut"
-                        : unconfirmed
+                        : unconfirmed || state.error
                           ? "ScreenLock.CheckFailed"
                           : "ScreenLock.Title"
                     )
@@ -144,7 +145,7 @@ onMounted(() => {
                 </h1>
               </div>
               <p
-                v-if="!state.logoutAt && !unconfirmed && state.session?.has_password !== false"
+                v-if="!state.logoutAt && !unconfirmed && !state.error && state.session?.has_password !== false"
                 class="screen-lock-description"
               >
                 {{ t("ScreenLock.Description") }}
@@ -164,18 +165,12 @@ onMounted(() => {
             >
               {{ displayedError || t("ScreenLock.LoadFailed") }}
             </p>
-            <UButton
-              v-if="!state.logoutAt && state.error"
-              block
-              class="screen-lock-unlock-button"
-              :loading="pendingAction === 'retry'"
-              :disabled="busy"
-              @click="retry"
-            >
-              {{ t("ScreenLock.Retry") }}
-            </UButton>
             <ScreenLockCountdown v-if="state.logoutAt" :at="state.logoutAt" @return-to-login="redirectToWebLogin" />
-            <form v-else-if="state.session?.has_password" class="screen-lock-form" @submit.prevent="unlock">
+            <form
+              v-else-if="!state.error && state.session?.has_password"
+              class="screen-lock-form"
+              @submit.prevent="unlock"
+            >
               <UFormField
                 :label="t('ScreenLock.Password')"
                 :error="state.error ? undefined : displayedError"
@@ -204,15 +199,27 @@ onMounted(() => {
                 {{ t("ScreenLock.Unlock") }}
               </UButton>
             </form>
-            <p v-else-if="state.session" class="screen-lock-unset-message" role="status">{{ t("ScreenLock.Unset") }}</p>
+            <p v-else-if="!state.error && state.session" class="screen-lock-unset-message" role="status">
+              {{ t("ScreenLock.Unset") }}
+            </p>
             <p v-else-if="!state.error" class="text-sm text-muted">{{ t("ScreenLock.Checking") }}</p>
             <div v-if="!state.logoutAt" class="screen-lock-actions">
               <UButton
-                :color="state.session?.has_password ? 'neutral' : 'primary'"
-                :variant="state.session?.has_password ? 'link' : 'solid'"
-                :block="!state.session?.has_password"
+                v-if="state.error"
+                block
+                class="screen-lock-unlock-button"
+                :loading="pendingAction === 'retry'"
+                :disabled="busy"
+                @click="retry"
+              >
+                {{ t("ScreenLock.Retry") }}
+              </UButton>
+              <UButton
+                :color="logoutAsText ? 'neutral' : 'primary'"
+                :variant="logoutAsText ? 'link' : 'solid'"
+                :block="!logoutAsText"
                 :class="
-                  state.session?.has_password
+                  logoutAsText
                     ? 'screen-lock-logout-button cursor-pointer text-muted hover:text-primary'
                     : 'screen-lock-unlock-button'
                 "
@@ -253,6 +260,9 @@ onMounted(() => {
 .web-session-lock-shield :deep(.screen-lock-form-card) {
   background: var(--app-surface-card);
   border-color: var(--app-border-card);
+}
+.screen-lock-actions {
+  flex-direction: column;
 }
 </style>
 

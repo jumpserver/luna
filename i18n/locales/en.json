@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Network unavailable. Please check connectivity.",
     "ServerError": "The server is temporarily unavailable. Please try again later.",
-    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again."
+    "ExpiredLifetimeDetail": "This login expired at {expiresAt}. Please sign in again.",
+    "SwitchDesktopSessionsDescription": "Switching closes all asset sessions for the current account, including separate windows. Save your changes and finish file transfers first.",
+    "LogoutDesktopSessionsDescription": "Logging out closes all asset sessions for the current account, including separate windows. Save your changes and finish file transfers first.",
+    "CloseSessionsAndSwitch": "Close sessions and switch"
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "Sign in to a JumpServer site to view user details.",
     "ClientLoginInfo": "Current login",
     "ClientLoginInfoDescription": "Login and expiry times for the current session on this site and account.",
-    "ClientLoginReauthOnExit": "Sign in again after exiting",
-    "ClientLoginMaxLifetime": "Maximum login lifetime",
+    "ClientLoginReauthOnExit": "Sign in again after exiting the client",
+    "ClientLoginMaxLifetime": "Maximum client login lifetime",
     "ClientLoginStartedAt": "This login started",
     "ClientLoginEffectiveExpiry": "Expected expiry",
     "ClientLoginUnknown": "Not available yet",
     "ClientLoginUnlimited": "Unlimited",
     "ClientLoginCurrentUser": "Current user",
     "ClientLoginExpiryHint": "Expiry is calculated from this login time and the maximum login duration for the current account.",
-    "ClientLoginActivityScope": "System keyboard and mouse input determines inactivity for the active site and account only. Activity is not reported for each action; an idle timeout or manual lock sends one request to lock this login on the server.",
-    "ClientLoginActivityLimits": "The effective idle timeout locks the main page and asset windows, even without a lock password. Unlock on the main page with server verification. External applications are not protected.",
+    "ClientLoginActivityScope": "System keyboard and mouse input updates the current account’s activity. Switching preserves its last activity time; activity in other accounts does not count.",
+    "ClientLoginActivityLimits": "Switching back checks expiry and idle time against the latest settings. Unlock if idle has timed out; sign in again if the login has expired. External application windows are not protected.",
     "ClientLoginIdleLock": "Idle lock",
     "ClientLoginPolicyExpiry": "The new lifetime has been exceeded; sign-out follows the grace period",
     "ClientLockShortcut": "Press {shortcut} to lock the current account at any time, even when automatic locking is disabled."
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "Client locked",
     "Description": "Enter the screen lock password for this account to continue. Connections remain active.",
-    "MainOnly": "This window is locked. Unlock this account on the main page.",
+    "MainOnly": "This login has ended. Return to the main page to sign in again.",
     "Password": "Screen lock password",
     "Unlock": "Unlock",
     "Unset": "No screen lock password is set. Click “Set lock password”, sign in to the same site with the same account in your browser, and set a password. Return to the client, click “Refresh”, and enter the new password to unlock.",
@@ -3668,14 +3671,14 @@
     "LockPassword": "Screen lock password",
     "FileEncryption": "File encryption",
     "ClientSettings": "Login and screen lock",
-    "Reauth": "Log in again after exit",
-    "Lifetime": "Maximum login duration (min)",
+    "Reauth": "Sign in again after exiting the client",
+    "Lifetime": "Maximum client login lifetime (min)",
     "Idle": "Idle screen lock (min)",
     "ReauthHelp": "Require a new login after exiting and restarting. Minimizing or hiding the client does not count as exiting.",
     "ReauthRequired": "Required by the administrator and cannot be disabled. Minimizing or hiding does not count as exiting.",
     "UnlimitedHelp": "0 means unlimited. Clear and save to restore the default.",
-    "IdleHelp": "Locks after the specified idle time. Enter the lock password in the main window to unlock. External application windows are not protected.",
-    "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock.",
+    "IdleHelp": "Locks after the idle timeout. Switching accounts does not reset the previous account’s idle time. Enter the lock password to unlock. External application windows are not protected.",
+    "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock. With idle locking enabled, closing all pages also locks this login after 10 seconds. Close-page sign-out takes priority. Refreshing or reopening within 10 seconds cancels this.",
     "LifetimeHelp": "Counted from login. Sign in again when it expires; activity does not extend it."
   }
 }

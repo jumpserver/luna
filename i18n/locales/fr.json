@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Échec de la connexion : problème de certificat ou de connexion sécurisée.",
     "NetworkError": "Réseau indisponible. Vérifiez votre connexion.",
     "ServerError": "Le serveur est temporairement indisponible. Réessayez plus tard.",
-    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter."
+    "ExpiredLifetimeDetail": "Cette connexion a expiré le {expiresAt}. Veuillez vous reconnecter.",
+    "SwitchDesktopSessionsDescription": "Le changement ferme toutes les sessions d’actifs du compte actuel, y compris les fenêtres séparées. Enregistrez vos modifications et terminez les transferts de fichiers.",
+    "LogoutDesktopSessionsDescription": "La déconnexion ferme toutes les sessions d’actifs du compte actuel, y compris les fenêtres séparées. Enregistrez vos modifications et terminez les transferts de fichiers.",
+    "CloseSessionsAndSwitch": "Fermer les sessions et changer"
   },
   "Asset": {
     "GetAssetFailed": "Impossible de récupérer l’actif. Actualisez et réessayez"
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "Connectez-vous à un site JumpServer pour consulter les détails de l’utilisateur.",
     "ClientLoginInfo": "Connexion actuelle",
     "ClientLoginInfoDescription": "Les heures de connexion et d’expiration de la session actuelle pour ce site et ce compte.",
-    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté",
-    "ClientLoginMaxLifetime": "Durée maximale de connexion",
+    "ClientLoginReauthOnExit": "Se reconnecter après avoir quitté le client",
+    "ClientLoginMaxLifetime": "Durée maximale de connexion du client",
     "ClientLoginStartedAt": "Début de cette connexion",
     "ClientLoginEffectiveExpiry": "Expiration prévue",
     "ClientLoginUnknown": "Pas encore disponible",
     "ClientLoginUnlimited": "Illimitée",
     "ClientLoginCurrentUser": "Utilisateur actuel",
     "ClientLoginExpiryHint": "L’expiration est calculée depuis cette connexion selon la durée maximale de connexion du compte actuel.",
-    "ClientLoginActivityScope": "Les entrées clavier et souris du système déterminent l’inactivité du site et du compte actifs uniquement. Aucune activité n’est envoyée à chaque action ; le délai ou un verrouillage manuel envoie une demande de verrouillage au serveur.",
-    "ClientLoginActivityLimits": "Le délai d’inactivité effectif verrouille la page principale et les fenêtres de ressources, même sans mot de passe. Le déverrouillage se fait sur la page principale avec vérification du serveur. Les applications externes ne sont pas protégées.",
+    "ClientLoginActivityScope": "Le clavier et la souris du système mettent à jour l’activité du compte actuel. Un changement conserve sa dernière activité ; celle des autres comptes ne compte pas.",
+    "ClientLoginActivityLimits": "Au retour, l’expiration et l’inactivité sont vérifiées avec les derniers réglages. Déverrouillez si le délai d’inactivité est dépassé ; reconnectez-vous si la connexion a expiré. Les applications externes ne sont pas protégées.",
     "ClientLoginIdleLock": "Verrouillage après inactivité",
     "ClientLoginPolicyExpiry": "La nouvelle durée est dépassée ; déconnexion à la fin du délai de grâce",
     "ClientLockShortcut": "Appuyez sur {shortcut} pour verrouiller le compte actif à tout moment, même si le verrouillage automatique est désactivé."
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "Client verrouillé",
     "Description": "Saisissez le mot de passe de verrouillage de ce compte. Les connexions restent actives.",
-    "MainOnly": "Cette fenêtre est verrouillée. Déverrouillez ce compte depuis la page principale.",
+    "MainOnly": "Cette connexion a pris fin. Revenez à la page principale pour vous reconnecter.",
     "Password": "Mot de passe de verrouillage",
     "Unlock": "Déverrouiller",
     "Unset": "Aucun mot de passe de verrouillage n’est défini. Cliquez sur « Définir le mot de passe », connectez-vous dans le navigateur au même site avec le même compte et définissez un mot de passe. Revenez au client, cliquez sur « Actualiser » et saisissez le nouveau mot de passe pour déverrouiller.",
@@ -3668,14 +3671,14 @@
     "LockPassword": "Mot de passe de verrouillage",
     "FileEncryption": "Chiffrement des fichiers",
     "ClientSettings": "Connexion et verrouillage",
-    "Reauth": "Se reconnecter après fermeture",
-    "Lifetime": "Durée maximale de connexion (min)",
+    "Reauth": "Se reconnecter après avoir quitté le client",
+    "Lifetime": "Durée maximale de connexion du client (min)",
     "Idle": "Verrouillage après inactivité (min)",
     "ReauthHelp": "Exige une nouvelle connexion après avoir quitté et relancé le client. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "ReauthRequired": "Imposé par l’administrateur et non désactivable. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "UnlimitedHelp": "0 signifie illimité. Effacez puis enregistrez pour rétablir la valeur par défaut.",
-    "IdleHelp": "Verrouille après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage dans la fenêtre principale. Les applications externes ne sont pas protégées.",
-    "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller.",
+    "IdleHelp": "Verrouille après le délai d’inactivité. Changer de compte ne réinitialise pas l’inactivité du compte précédent. Saisissez le mot de passe de verrouillage pour déverrouiller. Les applications externes ne sont pas protégées.",
+    "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller. Si le verrouillage pour inactivité est activé, fermer toutes les pages verrouille aussi cette session après 10 secondes. La déconnexion à la fermeture est prioritaire. Actualiser ou rouvrir dans les 10 secondes annule cette action.",
     "LifetimeHelp": "Calculé depuis la connexion. Reconnectez-vous à l’expiration ; l’activité ne prolonge pas la durée."
   }
 }

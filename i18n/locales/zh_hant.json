@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "登入失敗：證書或安全連線異常。",
     "NetworkError": "網路不可用，請檢查網路連線",
     "ServerError": "伺服器暫時不可用，請稍後重試",
-    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期。請重新登入。"
+    "ExpiredLifetimeDetail": "本次登入於 {expiresAt} 到期。請重新登入。",
+    "SwitchDesktopSessionsDescription": "切換將關閉目前帳號的所有資產工作階段，包括獨立視窗。請先儲存變更並完成檔案傳輸。",
+    "LogoutDesktopSessionsDescription": "登出將關閉目前帳號的所有資產工作階段，包括獨立視窗。請先儲存變更並完成檔案傳輸。",
+    "CloseSessionsAndSwitch": "關閉工作階段並切換"
   },
   "Asset": {
     "GetAssetFailed": "獲取資產失敗,請重新整理重試"
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "登入 JumpServer 站點後即可檢視使用者詳情。",
     "ClientLoginInfo": "本次登入",
     "ClientLoginInfoDescription": "目前站點、目前帳號的本次登入時間和到期時間。",
-    "ClientLoginReauthOnExit": "退出後重新登入",
-    "ClientLoginMaxLifetime": "最長登入有效期",
+    "ClientLoginReauthOnExit": "用戶端退出後重新登入",
+    "ClientLoginMaxLifetime": "用戶端最長登入有效期",
     "ClientLoginStartedAt": "本次登入時間",
     "ClientLoginEffectiveExpiry": "本次到期時間",
     "ClientLoginUnknown": "尚未取得",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "目前使用者",
     "ClientLoginExpiryHint": "依本次登入時間及目前帳號的最長有效期時間計算到期時間。",
-    "ClientLoginActivityScope": "依據本機系統鍵盤滑鼠輸入判斷閒置，只對目前啟用的站點與帳號計時。平時不逐次回報活動；閒置逾時或手動鎖定時，通知伺服器鎖定本次登入。",
-    "ClientLoginActivityLimits": "達到目前生效的閒置時間後，鎖定用戶端主頁及資產視窗，即使未設定鎖屏密碼也會鎖定。只能在主視窗由伺服器驗證密碼後解鎖，外部軟體視窗不受保護。",
+    "ClientLoginActivityScope": "目前帳號依系統鍵鼠活動計時。切換後保留最後活動時間，其他帳號的操作不計入。",
+    "ClientLoginActivityLimits": "切回時依最新設定檢查有效期與閒置時間；閒置逾時需解鎖，登入到期需重新登入。外部軟體視窗不受保護。",
     "ClientLoginIdleLock": "閒置鎖定",
     "ClientLoginPolicyExpiry": "已超過新設定的最長登入有效期，寬限結束後登出",
     "ClientLockShortcut": "隨時可按 {shortcut} 鎖定目前帳號；停用自動鎖定仍可手動鎖定。"
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "用戶端已鎖定",
     "Description": "輸入目前帳號的鎖屏密碼以繼續使用，現有連線保持執行。",
-    "MainOnly": "此視窗已鎖定，請在主頁面解鎖此帳號。",
+    "MainOnly": "本次登入已結束，請返回主頁面重新登入。",
     "Password": "鎖屏密碼",
     "Unlock": "解鎖",
     "Unset": "尚未設定鎖屏密碼。請按「設定鎖屏密碼」，在瀏覽器中登入目前站點的同一帳號並設定密碼，再返回用戶端按「重新整理」，輸入新密碼解鎖。",
@@ -3668,14 +3671,14 @@
     "LockPassword": "鎖屏密碼",
     "FileEncryption": "檔案加密",
     "ClientSettings": "登入與鎖屏",
-    "Reauth": "退出後重新登入",
-    "Lifetime": "最長登入有效期 (分)",
+    "Reauth": "用戶端退出後重新登入",
+    "Lifetime": "用戶端最長登入有效期 (分)",
     "Idle": "閒置鎖屏 (分)",
     "ReauthHelp": "啟用後，退出並重新啟動須重新登入，最小化或隱藏不受影響。",
     "ReauthRequired": "管理員已啟用，無法停用。最小化或隱藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空後儲存恢復預設值。",
-    "IdleHelp": "閒置達到設定時間後自動鎖屏，在主視窗輸入鎖屏密碼解鎖。外部軟體視窗不受保護。",
-    "WebIdleHelp": "閒置達到設定時間後鎖定控制台與 Web 終端，輸入鎖屏密碼解鎖。",
+    "IdleHelp": "閒置逾時後鎖定，切換帳號不會重設原帳號的閒置時間。輸入鎖定密碼解鎖，外部軟體視窗不受保護。",
+    "WebIdleHelp": "閒置達到設定時間後鎖定控制台與 Web 終端，輸入鎖屏密碼解鎖。 開啟閒置鎖屏後，關閉全部頁面 10 秒後也會鎖定；開啟關閉頁面登出則優先登出，重新整理或 10 秒內重開可取消。",
     "LifetimeHelp": "從登入時間起計算，到期須重新登入，操作不會延長。"
   }
 }

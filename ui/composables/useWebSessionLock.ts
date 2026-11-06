@@ -1,9 +1,11 @@
-import { createWebSessionLock } from "~/utils/webSessionLock";
-import { apiRequest, deferAuthFailureUntil } from "~/composables/useApiRequest";
+import { apiRequest, deferAuthFailureUntil, notifyWebSessionClose } from "~/composables/useApiRequest";
 import { isDesktopRuntime, redirectToWebLogin, redirectToWebLogout } from "~/utils/runtime";
+import { createWebSessionLock } from "~/utils/webSessionLock";
 
 export interface WebLoginSession {
   scope: string;
+  state_version: number;
+  unlocked_at: string | null;
   locked: boolean;
   has_password: boolean;
   idle_lock_time: number;
@@ -11,6 +13,7 @@ export interface WebLoginSession {
   expires_at: string | null;
   max_expires_at: string | null;
   session_timeout: number;
+  server_time?: string;
   sliding_expiry: boolean;
   expire_at_browser_close: boolean;
   user: { id: string; name: string; username: string };
@@ -30,7 +33,6 @@ interface WebLockController {
   sync(): Promise<void>;
   lock(): Promise<void>;
   unlock(password: string): Promise<void>;
-  logout(): Promise<void>;
   stop(): void;
 }
 let creating: Promise<WebLockController> | null = null;
@@ -50,15 +52,16 @@ export function useWebSessionLock() {
     if (!creating) {
       creating = (async () => {
         const controller: WebLockController = createWebSessionLock({
-          request: (method: "GET" | "POST", path: string, body?: unknown) =>
-            apiRequest({ method, path, ...(body === undefined ? {} : { body }), timeoutMs: 10000 }),
+          notifyClose: notifyWebSessionClose,
+          request: (method: "GET" | "POST", path: string, body?: unknown, headers?: Record<string, string>) =>
+            apiRequest({ method, path, headers, ...(body === undefined ? {} : { body }), timeoutMs: 10000 }),
           onChange: (next: WebLockState) => {
             if (next.logoutAt) deferAuthFailureUntil(next.logoutAt);
             if (next.error) console.error("Web session lock status check failed");
             state.value = { ...next, error: Boolean(next.error) };
           },
           onSessionChanged: () => window.location.reload(),
-          onUnauthenticated: () => redirectToWebLogin()
+          onUnauthenticated: (authPath?: string) => redirectToWebLogin(authPath)
         });
         await controller.start();
         return controller;

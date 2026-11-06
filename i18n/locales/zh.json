@@ -1184,7 +1184,10 @@
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "网络不可用，请检查网络连接",
     "ServerError": "服务器暂时不可用，请稍后重试",
-    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。"
+    "ExpiredLifetimeDetail": "本次登录于 {expiresAt} 到期。请重新登录。",
+    "SwitchDesktopSessionsDescription": "切换将关闭当前账号的所有资产会话，包括独立窗口。请先保存更改并完成文件传输。",
+    "LogoutDesktopSessionsDescription": "退出登录将关闭当前账号的所有资产会话，包括独立窗口。请先保存更改并完成文件传输。",
+    "CloseSessionsAndSwitch": "关闭会话并切换"
   },
   "Loading": {
     "Loading": "加载中",
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "登录 JumpServer 站点后即可查看用户详情。",
     "ClientLoginInfo": "本次登录",
     "ClientLoginInfoDescription": "当前站点、当前账号的本次登录时间和到期时间。",
-    "ClientLoginReauthOnExit": "退出后重新登录",
-    "ClientLoginMaxLifetime": "最长登录有效期",
+    "ClientLoginReauthOnExit": "客户端退出后重新登录",
+    "ClientLoginMaxLifetime": "客户端最长登录有效期",
     "ClientLoginStartedAt": "本次登录时间",
     "ClientLoginEffectiveExpiry": "本次到期时间",
     "ClientLoginUnknown": "暂未获取",
     "ClientLoginUnlimited": "不限",
     "ClientLoginCurrentUser": "当前用户",
     "ClientLoginExpiryHint": "按本次登录时间和当前账号的最长有效期时间计算到期时间。",
-    "ClientLoginActivityScope": "根据本机系统键鼠输入判断空闲，只对当前激活的站点和账号计时。平时不逐次上报活动；达到空闲超时或手动锁定时，通知服务器锁定本次登录。",
-    "ClientLoginActivityLimits": "达到当前生效的空闲时间后，锁定客户端主页面及资产窗口，即使未设置锁屏密码也会锁定。只能在主窗口经服务器验证密码后解锁，外部软件窗口不受保护。",
+    "ClientLoginActivityScope": "当前账号按系统键鼠活动计时。切走后保留最后活动时间，其他账号的操作不计入。",
+    "ClientLoginActivityLimits": "切回时按最新配置检查有效期和空闲时间；空闲超时需解锁，登录到期需重新登录。外部软件窗口不受保护。",
     "ClientLoginIdleLock": "空闲锁屏",
     "ClientLoginPolicyExpiry": "已超过新配置的最长登录有效期，宽限结束后退出",
     "ClientLockShortcut": "随时可按 {shortcut} 锁定当前账号；关闭自动锁屏也可手动锁定。"
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "客户端已锁定",
     "Description": "输入当前账号的锁屏密码继续使用，已有连接保持运行。",
-    "MainOnly": "当前窗口已锁定，请在主页面解锁此账号。",
+    "MainOnly": "本次登录已结束，请返回主页面重新登录。",
     "Password": "锁屏密码",
     "Unlock": "解锁",
     "Unset": "尚未设置锁屏密码。请点击“设置锁屏密码”，在浏览器中登录当前站点的同一账号并设置密码，然后返回客户端点击“刷新”，输入新密码解锁。",
@@ -3668,14 +3671,14 @@
     "LockPassword": "锁屏密码",
     "FileEncryption": "文件加密",
     "ClientSettings": "登录与锁屏",
-    "Reauth": "退出后重新登录",
-    "Lifetime": "最长登录有效期 (分)",
+    "Reauth": "客户端退出后重新登录",
+    "Lifetime": "客户端最长登录有效期 (分)",
     "Idle": "空闲锁屏 (分)",
     "ReauthHelp": "开启后，退出并重新启动需重新登录，最小化或隐藏不受影响。",
     "ReauthRequired": "管理员已开启，不能关闭。最小化或隐藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空后保存恢复默认值。",
-    "IdleHelp": "空闲达到设定时间后自动锁屏，在主窗口输入锁屏密码解锁。外部软件窗口不受保护。",
-    "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。",
+    "IdleHelp": "空闲超时后锁定，切换账号不会重置原账号的空闲时间。输入锁屏密码解锁，外部软件窗口不受保护。",
+    "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。 开启空闲锁屏后，关闭全部页面 10 秒后也会锁定；开启关闭页面退出则优先注销，刷新或 10 秒内重开可取消。",
     "LifetimeHelp": "从登录时间起计算，到期需重新登录，操作不会延长。"
   }
 }

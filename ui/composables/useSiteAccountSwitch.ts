@@ -2,7 +2,9 @@ import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
 import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
 
@@ -47,10 +49,14 @@ export const hasActiveWorkspaceSessions = () =>
   useWorkspaceTabs().tabs.value.some((tab) => tab.panes.some((pane) => pane.mode !== "empty")) ||
   Boolean(fileWorkspaceLeaveHandler?.hasActive());
 
+export const hasActiveSiteSessions = async () =>
+  hasActiveWorkspaceSessions() || (isDesktopRuntime() && (await desktopInvoke<number>("get_asset_window_count")) > 0);
+
 export const closeCurrentSiteWorkspace = async () => {
   useBatchCommandPanel().setOpen(false);
   await useWorkspaceTabs().closeAllSessions({ force: true });
   await fileWorkspaceLeaveHandler?.close();
+  if (isDesktopRuntime()) await desktopInvoke("close_asset_windows");
 };
 
 export const confirmLeaveCurrentSiteSessions = async (
@@ -64,7 +70,7 @@ export const confirmLeaveCurrentSiteSessions = async (
   try {
     if (hasActiveAiTask()) {
       if (!(await confirmAiTaskLeave(kind === "logout" ? "logout" : "account"))) return false;
-    } else if (hasActiveWorkspaceSessions()) {
+    } else if (await hasActiveSiteSessions()) {
       const confirmed = await new Promise<boolean>((resolve) => {
         leaveConfirm.value = { kind, resolve };
       });

@@ -2,7 +2,12 @@ import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
 import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
-import { confirmLeaveCurrentSiteSessions, hasActiveWorkspaceSessions } from "~/composables/useSiteAccountSwitch";
+import {
+  closeCurrentSiteWorkspace,
+  confirmLeaveCurrentSiteSessions,
+  hasActiveSiteSessions,
+  hasActiveWorkspaceSessions
+} from "~/composables/useSiteAccountSwitch";
 import type {
   ConnectionInfo,
   ClientLoginSession,
@@ -129,7 +134,7 @@ export const useAuthSession = () => {
     const authenticatedUserId = typeof profileData.id === "string" ? profileData.id.trim() : "";
     const userId = authenticatedUserId || existingUser?.userId || "";
     const currentUser = userInfoStore.currentUser;
-    const keepingWorkspace = isDesktopRuntime() && hasActiveWorkspaceSessions();
+    const keepingWorkspace = isDesktopRuntime() && Boolean(currentUser) && (await hasActiveSiteSessions());
     const sameIdentity = Boolean(
       currentUser?.userId &&
       currentUser.userId === authenticatedUserId &&
@@ -525,12 +530,21 @@ export const useAuthSession = () => {
     if (!sessionId) return false;
     const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
     if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
-    if (sessionId !== currentAccountId.value) return false;
-
-    if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
-    userInfoStore.setUserLoggedIn(false);
-    useEventBus().emit("clearAssets", undefined);
-    return true;
+    const account = userMap.value[sessionId];
+    const wasCurrent = sessionId === currentAccountId.value;
+    if (wasCurrent) {
+      if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      // Expiry ends live connections immediately, independently of the dismissible notice.
+      await closeCurrentSiteWorkspace();
+    }
+    if (reason === "logout" && userMap.value[sessionId] === account) {
+      if (expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
+      await userInfoStore.deleteUserData(sessionId, { alreadyLoggedOut: true });
+      if (wasCurrent && !userInfoStore.loggedIn) await navigateTo(localePath({ path: "/" }));
+    }
+    return wasCurrent;
   };
 
   const expiredSessionDescription = computed(() => {

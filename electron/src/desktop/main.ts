@@ -7,7 +7,7 @@ import {
 } from "../../../ui/shared/shortcuts";
 import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
 import { clientLoginExpiryMessage } from "../../../ui/utils/clientLoginPolicy";
-import type { ClientLoginPolicy, ClientLoginSession } from "../../../ui/types/index";
+import type { ClientLoginPolicy, ClientLoginSession, ClientPolicyNotice } from "../../../ui/types/index";
 import { normalizeLanguageCode } from "../../../i18n/language";
 import enMessages from "../../../i18n/locales/en.json";
 import esMessages from "../../../i18n/locales/es.json";
@@ -148,7 +148,7 @@ const allowedPaths = new Set([
   process.resourcesPath,
   path.join(projectRoot, "plugins")
 ]);
-let clientPolicyNotices = { sessionId: "", notices: [] };
+const clientPolicyNotices = new Map<string, ClientPolicyNotice[]>();
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
@@ -197,8 +197,15 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-function resolveConnectorEndpoint(smartEndpoint: string, component: "chen" | "koko") {
-  const origin = normalizedHttpOrigin(smartEndpoint || authService.currentSession().origin, `${component} endpoint`);
+function resolveConnectorEndpoint(
+  smartEndpoint: string,
+  component: "chen" | "koko",
+  binding: ReturnType<DesktopAuthService["captureSessionBinding"]>
+) {
+  const origin = normalizedHttpOrigin(
+    smartEndpoint || authService.getRequestSession(binding).origin,
+    `${component} endpoint`
+  );
   (component === "chen" ? allowedChenOrigins : allowedKokoOrigins).add(origin);
   electronLog.info(`${component} endpoint ${origin}`);
   return origin;
@@ -211,6 +218,7 @@ function installConnectorSessionHooks(targetSession) {
   targetSession.webRequest.onBeforeSendHeaders({ urls: socketPatterns }, (details, callback) => {
     const requestHeaders = { ...details.requestHeaders };
     void (async () => {
+      let isFaceSocket = false;
       try {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
@@ -218,35 +226,43 @@ function installConnectorSessionHooks(targetSession) {
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
           allowedKokoOrigins.has(httpOrigin);
-        let activeSiteOrigin = "";
-        try {
-          activeSiteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-        } catch {
-          // No authenticated site is available yet.
-        }
-        const isFaceSocket = isFaceLiveWebSocket(details.url, activeSiteOrigin);
+        isFaceSocket = isFaceLiveWebSocket(details.url, httpOrigin);
         if (isKokoSocket || isFaceSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
           // Chromium may omit the target HTTP session for FaceLive's cross-site handshake.
           if (isFaceSocket) {
+            const source = [...windows.values()].find(
+              (win) => !win.isDestroyed() && win.webContents.id === details.webContentsId
+            );
+            const binding = source ? (windowSessionBindings.get(source.webContents) ?? null) : null;
+            const sourceSession = authService.getRequestSession(binding);
+            if (normalizedHttpOrigin(sourceSession.origin, "JumpServer site") !== httpOrigin)
+              throw new Error("FaceLive endpoint does not match this window's login");
             const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
             if (cookies.length) {
               const cookieHeader =
                 Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
               requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
             }
-          }
-          if (isFaceSocket) {
-            const current = authService.currentSession();
-            const bearer = await authService.freshToken(current.origin, current.sessionKey, current.bearerToken);
+            const bearer = await authService.freshToken(
+              sourceSession.origin,
+              sourceSession.sessionKey,
+              sourceSession.bearerToken
+            );
+            if (authService.getRequestSession(binding) !== sourceSession)
+              throw new Error("Client login changed during websocket request");
             const authorization =
               Object.keys(requestHeaders).find((name) => name.toLowerCase() === "authorization") || "Authorization";
             requestHeaders[authorization] = `Bearer ${bearer}`;
           }
         }
       } catch {
+        if (isFaceSocket) {
+          callback({ cancel: true });
+          return;
+        }
         // Leave headers untouched when the connector URL is malformed.
       }
       callback({ requestHeaders });
@@ -336,13 +352,54 @@ function sendCallback(webContents, callbackId, payload) {
   if (!webContents.isDestroyed()) webContents.send("jms:callback", callbackId, payload);
 }
 
+function assetWindows() {
+  return [...windows].filter(([label, win]) => label.startsWith("asset-") && !win.isDestroyed());
+}
+
+function closeAssetWindows() {
+  // The user has confirmed leaving. beforeunload cannot retain an old account's connection.
+  for (const [, win] of assetWindows()) win.destroy();
+}
+
+function disposeWindowSessions(webContentsId: number) {
+  for (const [sessionId, session] of localShellSessions) {
+    if (session.webContentsId !== webContentsId) continue;
+    localShellSessions.delete(sessionId);
+    session.process.kill();
+  }
+  for (const [streamId, stream] of apiStreams) {
+    if (stream.webContentsId !== webContentsId) continue;
+    apiStreams.delete(streamId);
+    stream.controller.abort();
+  }
+  webProxyManager.disposeHost(webContentsId);
+  faceEngine?.stopOwner(webContentsId);
+}
+
+function closeExpiredSessionWindows(sessionId: string) {
+  if (!sessionId) return;
+  for (const [label, win] of windows) {
+    if (win.isDestroyed()) continue;
+    const binding = windowSessionBindings.get(win.webContents);
+    // Keep other accounts and a newer login of the same account untouched.
+    if (binding?.sessionKey !== sessionId || authService.boundToken(binding)) continue;
+    webProxyManager.disposeHost(win.webContents.id);
+    // Expiry is mandatory; a page's beforeunload guard cannot keep an asset usable.
+    if (label.startsWith("asset-")) win.destroy();
+  }
+}
+
 function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) {
+  if (name === "auth-session-expired") {
+    closeExpiredSessionWindows((payload as { sessionId?: string })?.sessionId || "");
+  }
   if (name === "client-policy-notices" && !targetLabel) {
-    clientPolicyNotices = payload as typeof clientPolicyNotices;
+    const { sessionId, notices } = payload as { sessionId: string; notices: ClientPolicyNotice[] };
+    if (notices.length) clientPolicyNotices.set(sessionId, notices);
+    else clientPolicyNotices.delete(sessionId);
     for (const [label, win] of windows) {
       const binding = windowSessionBindings.get(win.webContents);
-      const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
-      emitDesktopEvent(name, notices, label);
+      if (binding?.sessionKey === sessionId) emitDesktopEvent(name, notices, label);
     }
     return;
   }
@@ -360,9 +417,11 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
 
 function syncWindowLock(win) {
   if (win.isDestroyed()) return;
-  const bound = authService.lockState(windowSessionBindings.get(win.webContents) ?? null);
-  const canUnlock = labelForWindow(win) === "main";
-  const state = { ...bound, locked: bound.locked && (!canUnlock || !bound.expired), canUnlock };
+  const binding = windowSessionBindings.get(win.webContents) ?? null;
+  const bound = authService.lockState(binding);
+  const main = labelForWindow(win) === "main";
+  const canUnlock = main || Boolean(authService.boundToken(binding));
+  const state = { ...bound, locked: bound.locked && (!main || !bound.expired), canUnlock };
   webProxyManager.setHostLocked(win.webContents.id, state.locked);
   emitDesktopEvent("client-lock-state", state, labelForWindow(win));
   return state;
@@ -412,7 +471,7 @@ function clearDesktopEventSubscriptions(webContents) {
   }
 }
 
-function startApiStream(event, win, args) {
+function startApiStream(event, win, args, binding: ReturnType<DesktopAuthService["captureSessionBinding"]>) {
   const streamId = String(args.streamId || "").trim();
   if (!streamId) throw new Error("api stream id is required");
   if (apiStreams.has(streamId)) throw new Error("api stream already exists");
@@ -422,10 +481,14 @@ function startApiStream(event, win, args) {
   apiStreams.set(streamId, owner);
   const label = labelForWindow(win);
   void authService
-    .apiStreamRequest(args.request, {
-      signal: controller.signal,
-      onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
-    })
+    .apiStreamRequest(
+      args.request,
+      {
+        signal: controller.signal,
+        onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
+      },
+      binding
+    )
     .then(() => emitDesktopEvent("api-stream", { streamId, type: "done" }, label))
     .catch((error) => {
       if (controller.signal.aborted) return;
@@ -675,7 +738,7 @@ function createWindow(
       )
     ) {
       event.preventDefault();
-      authService.lockSessions(true);
+      authService.lockSession(windowSessionBindings.get(windowWebContents), true);
       return;
     }
     const applicationShortcut = shortcutDefinitions.some(({ id }) =>
@@ -702,6 +765,7 @@ function createWindow(
   }
 
   windows.set(label, win);
+  authService.scheduleSessionCheck();
   syncWindowLock(win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => {
@@ -726,19 +790,9 @@ function createWindow(
   win.on("closed", () => {
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
-    for (const [sessionId, session] of localShellSessions) {
-      if (session.webContentsId !== windowWebContentsId) continue;
-      localShellSessions.delete(sessionId);
-      session.process.kill();
-    }
-    for (const [streamId, stream] of apiStreams) {
-      if (stream.webContentsId !== windowWebContentsId) continue;
-      apiStreams.delete(streamId);
-      stream.controller.abort();
-    }
-    webProxyManager.disposeHost(windowWebContentsId);
+    authService.scheduleSessionCheck();
+    disposeWindowSessions(windowWebContentsId);
     clearDesktopEventSubscriptions(windowWebContents);
-    faceEngine?.stopOwner(windowWebContentsId);
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;
@@ -959,7 +1013,11 @@ function buildMenu() {
     {
       label: prefersZh() ? "锁定客户端" : "Lock Client",
       accelerator: shortcutAccelerator("lockClient", shortcutOverrides, shortcutEnvironment),
-      click: () => authService.lockSessions(true)
+      click: (_item, focusedWindow) =>
+        authService.lockSession(
+          windowSessionBindings.get((focusedWindow || windows.get("main"))?.webContents) ?? null,
+          true
+        )
     },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
@@ -1205,11 +1263,16 @@ async function handleInvoke(event, request) {
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
   const binding = windowSessionBindings.get(event.sender) ?? null;
+  if (command === "get_asset_window_count" || command === "close_asset_windows") {
+    const mainWindow = labelForWindow(win) === "main";
+    if (command === "get_asset_window_count") return mainWindow ? assetWindows().length : 0;
+    if (mainWindow) closeAssetWindows();
+    return;
+  }
   if (command === "client_lock_state") return syncWindowLock(win);
-  if (command === "client_policy_notices")
-    return binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+  if (command === "client_policy_notices") return clientPolicyNotices.get(binding?.sessionKey || "") || [];
   if (command === "client_policy_notice_overlay") {
-    const notices = binding?.sessionKey === clientPolicyNotices.sessionId ? clientPolicyNotices.notices : [];
+    const notices = clientPolicyNotices.get(binding?.sessionKey || "") || [];
     const nativeWebsite = [...webProxyManager.views.values()].some(
       (view) => view.hostWebContentsId === win.webContents.id && view.active
     );
@@ -1239,7 +1302,6 @@ async function handleInvoke(event, request) {
       "client_lock_copy_settings"
     ].includes(command)
   ) {
-    if (labelForWindow(win) !== "main") throw new Error("Unlock on the main page");
     if (command === "client_lock_info") return authService.lockInfo(binding);
     if (command === "client_unlock") return authService.unlockSession(binding, args);
     if (command === "client_lock_settings" || command === "client_lock_copy_settings") {
@@ -1247,11 +1309,8 @@ async function handleInvoke(event, request) {
       if (command === "client_lock_copy_settings") return clipboard.writeText(info.settingsUrl);
       return shell.openExternal(info.settingsUrl);
     }
-    const result = await authService.logoutLockedSession(binding);
-    // Explicit logout closes that account's managed windows; ordinary locking keeps them running.
-    for (const [label, target] of windows) {
-      if (label.startsWith("asset-") && windowSessionBindings.get(target.webContents) === binding) target.close();
-    }
+    const result = authService.logoutLockedSession(binding);
+    closeExpiredSessionWindows(binding?.sessionKey || "");
     return result;
   }
   if (
@@ -1265,9 +1324,8 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "client_lock") {
-    if (!binding || binding !== authService.captureSessionBinding())
-      throw new Error("Client login is no longer active");
-    return authService.lockSessions(true);
+    authService.getBoundSession(binding);
+    return authService.lockSession(binding, true);
   }
 
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
@@ -1488,16 +1546,32 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "set_api_session") {
-    const result = authService.setSession(args);
+    if (
+      labelForWindow(win) !== "main" &&
+      (args.sessionKey !== binding?.sessionKey || args.origin !== binding?.origin || !authService.boundToken(binding))
+    )
+      throw new Error("Account switching requires the main window");
+    const result = authService.setSession(
+      args,
+      () => {
+        // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
+        closeAssetWindows();
+        const main = windows.get("main");
+        if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
+        // Bind the new login below before publishing its lock state to the surviving windows.
+        for (const target of windows.values()) windowSessionBindings.delete(target.webContents);
+      },
+      powerMonitor.getSystemIdleTime()
+    );
     if (result.status === "success") {
       const binding = authService.captureSessionBinding();
       for (const [label, target] of windows) {
         const previous = windowSessionBindings.get(target.webContents);
-        // Asset windows keep their account when the main window switches accounts.
-        // An explicit activation of that same account can bind them to its new login.
-        if (!label.startsWith("asset-") || previous?.sessionKey === binding?.sessionKey) {
+        // Existing asset windows belong to this same login; a real account change closes them above.
+        if (!label.startsWith("asset-") || previous === binding) {
           windowSessionBindings.set(target.webContents, binding);
           syncWindowLock(target);
+          emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
         }
       }
       void authService.checkSessions(true);
@@ -1505,8 +1579,8 @@ async function handleInvoke(event, request) {
     }
     return result;
   }
-  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
+  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId, binding);
+  if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
@@ -1514,7 +1588,7 @@ async function handleInvoke(event, request) {
   if (command === "bootstrap_auth_session")
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   if (command === "api_request") return authService.apiRequest(args.request, binding);
-  if (command === "api_stream_start") return startApiStream(event, win, args);
+  if (command === "api_stream_start") return startApiStream(event, win, args, binding);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
   if (command === "face_engine_initialize") return faceEngine.initialize();
@@ -1541,9 +1615,9 @@ async function handleInvoke(event, request) {
     await saveChenDownload(response, filePath);
     return "saved";
   }
-  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
-  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
-  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
+  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen", binding);
+  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko", binding);
+  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args, binding);
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();
   if (command === "remove_offline_recording") return offlineRecordings.removeRecording(args.recordingId);
@@ -1570,11 +1644,17 @@ async function handleInvoke(event, request) {
       (command === "create_web_proxy_view" &&
         (args.successSelector || args.interactiveSelector || args.allowedUrls?.length))
     ) {
-      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
+      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" }, binding);
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
     return withIpcErrorLog(command, async () => {
-      const result = await webProxyManager.invoke(command, event, win, args);
+      const result = await webProxyManager.invoke(command, event, win, args, () => {
+        if (
+          (windowSessionBindings.get(event.sender) ?? null) !== binding ||
+          (binding && (!authService.boundToken(binding) || authService.lockState(binding).locked))
+        )
+          throw new Error("Client login is no longer available");
+      });
       if (["create_web_proxy_view", "set_web_proxy_view_active", "close_web_proxy_view"].includes(command)) {
         clientNoticeLayers.raise(win);
         emitDesktopEvent("client-policy-notice-layer", null, labelForWindow(win));
@@ -1582,7 +1662,12 @@ async function handleInvoke(event, request) {
       return result;
     });
   }
-  if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
+  if (command === "logout")
+    return withIpcErrorLog("logout", () => {
+      const result = authService.logout(args);
+      closeExpiredSessionWindows(args.sessionId);
+      return result;
+    });
   if (command === "open_settings_window") {
     emitDesktopEvent("settings-navigate", args.path || "/setting/general", labelForWindow(win));
     return null;

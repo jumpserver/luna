@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
     "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
-    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại."
+    "ExpiredLifetimeDetail": "Lần đăng nhập này đã hết hạn vào {expiresAt}. Vui lòng đăng nhập lại.",
+    "SwitchDesktopSessionsDescription": "Chuyển tài khoản sẽ đóng tất cả phiên tài sản của tài khoản hiện tại, kể cả cửa sổ riêng. Hãy lưu thay đổi và hoàn tất truyền tệp trước.",
+    "LogoutDesktopSessionsDescription": "Đăng xuất sẽ đóng tất cả phiên tài sản của tài khoản hiện tại, kể cả cửa sổ riêng. Hãy lưu thay đổi và hoàn tất truyền tệp trước.",
+    "CloseSessionsAndSwitch": "Đóng phiên và chuyển"
   },
   "Asset": {
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "Đăng nhập vào một trang JumpServer để xem chi tiết người dùng.",
     "ClientLoginInfo": "Lần đăng nhập hiện tại",
     "ClientLoginInfoDescription": "Thời điểm đăng nhập và hết hạn của phiên hiện tại trên trang web và tài khoản này.",
-    "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát",
-    "ClientLoginMaxLifetime": "Thời hạn đăng nhập tối đa",
+    "ClientLoginReauthOnExit": "Đăng nhập lại sau khi thoát ứng dụng khách",
+    "ClientLoginMaxLifetime": "Thời gian đăng nhập tối đa của ứng dụng khách",
     "ClientLoginStartedAt": "Bắt đầu lần đăng nhập này",
     "ClientLoginEffectiveExpiry": "Thời điểm hết hạn dự kiến",
     "ClientLoginUnknown": "Chưa có thông tin",
     "ClientLoginUnlimited": "Không giới hạn",
     "ClientLoginCurrentUser": "Người dùng hiện tại",
     "ClientLoginExpiryHint": "Thời điểm hết hạn được tính từ lần đăng nhập này theo thời hạn đăng nhập tối đa của tài khoản hiện tại.",
-    "ClientLoginActivityScope": "Thời gian không hoạt động chỉ tính cho trang và tài khoản đang dùng, dựa trên bàn phím và chuột của hệ thống. Không gửi từng thao tác; khi hết thời gian hoặc khóa thủ công, ứng dụng gửi yêu cầu khóa phiên đăng nhập này tới máy chủ.",
-    "ClientLoginActivityLimits": "Hết thời gian nhàn rỗi đang áp dụng sẽ khóa trang chính và cửa sổ tài sản, dù chưa đặt mật khẩu. Mở khóa trên trang chính qua xác minh máy chủ. Phần mềm bên ngoài không được bảo vệ.",
+    "ClientLoginActivityScope": "Bàn phím và chuột hệ thống cập nhật hoạt động của tài khoản hiện tại. Khi chuyển, thời điểm hoạt động cuối được giữ lại; hoạt động ở tài khoản khác không được tính.",
+    "ClientLoginActivityLimits": "Khi quay lại, kiểm tra thời hạn đăng nhập và thời gian nhàn rỗi theo thiết lập mới nhất. Mở khóa nếu đã quá thời gian nhàn rỗi; đăng nhập lại nếu đã hết hạn. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
     "ClientLoginIdleLock": "Khóa khi không hoạt động",
     "ClientLoginPolicyExpiry": "Đã vượt thời hạn tối đa mới; đăng xuất sau thời gian gia hạn",
     "ClientLockShortcut": "Nhấn {shortcut} để khóa tài khoản hiện tại bất cứ lúc nào, kể cả khi tắt khóa tự động."
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "Ứng dụng khách đã khóa",
     "Description": "Nhập mật khẩu khóa của tài khoản này để tiếp tục. Kết nối vẫn hoạt động.",
-    "MainOnly": "Cửa sổ đã khóa. Mở khóa tài khoản này tại trang chính.",
+    "MainOnly": "Lần đăng nhập này đã kết thúc. Quay lại trang chính để đăng nhập lại.",
     "Password": "Mật khẩu khóa màn hình",
     "Unlock": "Mở khóa",
     "Unset": "Chưa đặt mật khẩu khóa màn hình. Nhấn “Đặt mật khẩu khóa”, đăng nhập cùng tài khoản trên cùng trang trong trình duyệt và đặt mật khẩu. Quay lại ứng dụng, nhấn “Làm mới” rồi nhập mật khẩu mới để mở khóa.",
@@ -3668,14 +3671,14 @@
     "LockPassword": "Mật khẩu khóa màn hình",
     "FileEncryption": "Mã hóa tệp",
     "ClientSettings": "Đăng nhập và khóa màn hình",
-    "Reauth": "Đăng nhập lại sau khi thoát",
-    "Lifetime": "Thời gian đăng nhập tối đa (phút)",
+    "Reauth": "Đăng nhập lại sau khi thoát ứng dụng khách",
+    "Lifetime": "Thời gian đăng nhập tối đa của ứng dụng khách (phút)",
     "Idle": "Khóa màn hình khi nhàn rỗi (phút)",
     "ReauthHelp": "Phải đăng nhập lại sau khi thoát và khởi động lại. Thu nhỏ hoặc ẩn ứng dụng không tính là thoát.",
     "ReauthRequired": "Quản trị viên đã bật nên không thể tắt. Thu nhỏ hoặc ẩn không tính là thoát.",
     "UnlimitedHelp": "0 là không giới hạn. Xóa rồi lưu để khôi phục mặc định.",
-    "IdleHelp": "Tự khóa khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa tại cửa sổ chính để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
-    "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa.",
+    "IdleHelp": "Khóa khi hết thời gian nhàn rỗi. Chuyển tài khoản không đặt lại thời gian nhàn rỗi của tài khoản trước. Nhập mật khẩu khóa để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
+    "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa. Khi bật khóa do không hoạt động, đóng tất cả các trang cũng khóa phiên sau 10 giây. Đăng xuất khi đóng trang được ưu tiên. Làm mới hoặc mở lại trong 10 giây sẽ hủy thao tác này.",
     "LifetimeHelp": "Tính từ lúc đăng nhập. Hết hạn phải đăng nhập lại; hoạt động không kéo dài thời hạn."
   }
 }

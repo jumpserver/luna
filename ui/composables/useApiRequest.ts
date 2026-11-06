@@ -25,6 +25,7 @@ export interface ApiRequest {
   orgId?: string;
   responseType?: "text";
   timeoutMs?: number;
+  keepalive?: boolean;
 }
 
 export class ApiRequestError extends Error {
@@ -328,6 +329,20 @@ const buildWebQuery = (request: ApiRequest) => {
   return query.toString();
 };
 
+// Session lifecycle requests need a form body so sendBeacon can pass the existing CSRF check.
+export function notifyWebSessionClose(close: { scope?: string; page_id: string }) {
+  if (import.meta.server || isDesktopRuntime()) return;
+  const path = "/api/v1/authentication/user-session/";
+  const csrf = new Headers(getWebApiMutationHeaders()).get("X-CSRFToken") || "";
+  const body = new URLSearchParams({ ...close, csrfmiddlewaretoken: csrf });
+  try {
+    if (navigator.sendBeacon?.(withWebSitePrefix(path), body)) return;
+  } catch {
+    /* Fall back when the browser cannot queue a beacon. */
+  }
+  void apiRequest({ method: "POST", path, body: close, keepalive: true }).catch(() => {});
+}
+
 async function webApiRequest<T>(
   request: ApiRequest,
   options: Pick<RequestInit, "cache" | "headers" | "signal"> = {}
@@ -340,6 +355,7 @@ async function webApiRequest<T>(
     ...options,
     method: request.method,
     credentials: "include",
+    ...(request.keepalive ? { keepalive: true } : {}),
     ...(request.timeoutMs !== undefined && !options.signal ? { signal: AbortSignal.timeout(request.timeoutMs) } : {}),
     headers: options.headers ?? {
       Accept: "application/json",
@@ -461,6 +477,9 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
 
     return await webApiRequest<T>(request);
   } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 401 && error.data?.code === "authentication_required") {
+      throw error;
+    }
     if (isAuthFailure(error)) {
       if (isDesktopRuntime()) handleApiAuthFailure();
       else await handleWebApiAuthFailure();

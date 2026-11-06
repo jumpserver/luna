@@ -1189,7 +1189,10 @@
     "InvalidCertificateGeneric": "Error de inicio de sesión: problema con el certificado o la conexión segura.",
     "NetworkError": "La red no está disponible. Compruebe la conectividad.",
     "ServerError": "El servidor no está disponible temporalmente. Inténtelo de nuevo más tarde.",
-    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión."
+    "ExpiredLifetimeDetail": "Esta sesión caducó el {expiresAt}. Vuelva a iniciar sesión.",
+    "SwitchDesktopSessionsDescription": "Cambiar cierra todas las sesiones de activos de la cuenta actual, incluidas las ventanas independientes. Guarde los cambios y termine las transferencias de archivos primero.",
+    "LogoutDesktopSessionsDescription": "Cerrar sesión cierra todas las sesiones de activos de la cuenta actual, incluidas las ventanas independientes. Guarde los cambios y termine las transferencias de archivos primero.",
+    "CloseSessionsAndSwitch": "Cerrar sesiones y cambiar"
   },
   "Asset": {
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
@@ -1302,16 +1305,16 @@
     "NoUserDescription": "Inicie sesión en un sitio de JumpServer para ver los detalles del usuario.",
     "ClientLoginInfo": "Inicio de sesión actual",
     "ClientLoginInfoDescription": "Las horas de inicio y vencimiento de la sesión actual para este sitio y esta cuenta.",
-    "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir",
-    "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión",
+    "ClientLoginReauthOnExit": "Volver a iniciar sesión al salir del cliente",
+    "ClientLoginMaxLifetime": "Duración máxima del inicio de sesión del cliente",
     "ClientLoginStartedAt": "Inicio de esta sesión",
     "ClientLoginEffectiveExpiry": "Caducidad prevista",
     "ClientLoginUnknown": "Aún no disponible",
     "ClientLoginUnlimited": "Sin límite",
     "ClientLoginCurrentUser": "Usuario actual",
     "ClientLoginExpiryHint": "El vencimiento se calcula desde este inicio de sesión y la duración máxima de acceso de la cuenta actual.",
-    "ClientLoginActivityScope": "Las entradas del teclado y ratón del sistema determinan la inactividad solo del sitio y la cuenta activos. No se informa cada acción; al vencer el plazo o bloquear manualmente se solicita al servidor que bloquee esta sesión.",
-    "ClientLoginActivityLimits": "Al alcanzar el tiempo de inactividad efectivo se bloquean la página principal y las ventanas de activos, incluso sin contraseña. Desbloquea en la página principal con verificación del servidor. Las aplicaciones externas no están protegidas.",
+    "ClientLoginActivityScope": "El teclado y el ratón del sistema actualizan la actividad de la cuenta actual. Al cambiar, se conserva su última actividad; la actividad de otras cuentas no cuenta.",
+    "ClientLoginActivityLimits": "Al volver, se comprueban la caducidad y la inactividad con la configuración más reciente. Desbloquee si se superó la inactividad; vuelva a iniciar sesión si caducó. Las aplicaciones externas no están protegidas.",
     "ClientLoginIdleLock": "Bloqueo por inactividad",
     "ClientLoginPolicyExpiry": "Se superó la nueva duración máxima; se cerrará sesión al terminar la prórroga",
     "ClientLockShortcut": "Pulsa {shortcut} para bloquear la cuenta actual en cualquier momento, aunque el bloqueo automático esté desactivado."
@@ -3607,7 +3610,7 @@
   "ClientLock": {
     "Title": "Cliente bloqueado",
     "Description": "Introduce la contraseña de bloqueo de esta cuenta. Las conexiones siguen activas.",
-    "MainOnly": "Esta ventana está bloqueada. Desbloquea esta cuenta en la página principal.",
+    "MainOnly": "Este inicio de sesión ha terminado. Vuelva a la página principal para iniciar sesión de nuevo.",
     "Password": "Contraseña de bloqueo",
     "Unlock": "Desbloquear",
     "Unset": "No hay una contraseña de bloqueo configurada. Pulsa “Establecer contraseña”, inicia sesión en el navegador en el mismo sitio con la misma cuenta y configura una contraseña. Vuelve al cliente, pulsa “Actualizar” e introduce la nueva contraseña para desbloquear.",
@@ -3668,14 +3671,14 @@
     "LockPassword": "Contraseña de bloqueo",
     "FileEncryption": "Cifrado de archivos",
     "ClientSettings": "Inicio de sesión y bloqueo",
-    "Reauth": "Volver a iniciar sesión al salir",
-    "Lifetime": "Duración máxima de sesión (min)",
+    "Reauth": "Volver a iniciar sesión al salir del cliente",
+    "Lifetime": "Duración máxima del inicio de sesión del cliente (min)",
     "Idle": "Bloqueo por inactividad (min)",
     "ReauthHelp": "Exige iniciar sesión de nuevo al salir y reiniciar. Minimizar u ocultar el cliente no cuenta como salir.",
     "ReauthRequired": "Obligatorio por el administrador; no se puede desactivar. Minimizar u ocultar no cuenta como salir.",
     "UnlimitedHelp": "0 significa sin límite. Borre el campo y guarde para restaurar el valor predeterminado.",
-    "IdleHelp": "Se bloquea tras el tiempo de inactividad indicado. Desbloquee con la contraseña de bloqueo en la ventana principal. Las aplicaciones externas no están protegidas.",
-    "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear.",
+    "IdleHelp": "Se bloquea al superar el tiempo de inactividad. Cambiar de cuenta no reinicia la inactividad de la cuenta anterior. Introduzca la contraseña de bloqueo para desbloquear. Las aplicaciones externas no están protegidas.",
+    "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear. Con el bloqueo por inactividad activado, cerrar todas las páginas también bloquea esta sesión tras 10 segundos. El cierre de sesión al cerrar las páginas tiene prioridad. Actualizar o reabrir en 10 segundos lo cancela.",
     "LifetimeHelp": "Se cuenta desde el inicio de sesión. Al vencer, vuelva a iniciar sesión; la actividad no lo prolonga."
   }
 }
