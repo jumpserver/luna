@@ -13,7 +13,7 @@ import type {
 } from "~/types/index";
 import { defineStore } from "pinia";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
-import { desktopInvoke } from "~/shared/desktop/bridge";
+import { desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 import { normalizeClientLoginReason, serializeUserInfo } from "~/utils/clientLoginPolicy";
 import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
@@ -121,6 +121,8 @@ export const useUserInfoStore = defineStore(
      */
     const syncApiSession = async (accountId: string, userData: UserData, connectionId?: number) => {
       if (!isDesktopRuntime()) return true;
+      // The assistant inherits a main-process login and must never reactivate a persisted account.
+      if (desktopWindow.label().startsWith("agents-")) return true;
       if (!accountId || !userData.bearerToken) return false;
 
       try {

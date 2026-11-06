@@ -2,7 +2,7 @@ import type { SiteUserData } from "./userInfo";
 import { createPinia, setActivePinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "vue";
+import { createApp, nextTick } from "vue";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { useUserInfoStore } from "./userInfo";
@@ -20,10 +20,10 @@ const { desktopInvoke, runtime, storage } = vi.hoisted(() => {
     clear: () => memory.clear()
   };
   vi.stubGlobal("localStorage", storage);
-  return { desktopInvoke: vi.fn(), runtime: { desktop: true }, storage };
+  return { desktopInvoke: vi.fn(), runtime: { desktop: true, label: "main" }, storage };
 });
 
-vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
+vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke, desktopWindow: { label: () => runtime.label } }));
 vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => runtime.desktop }));
 
 const org = {
@@ -143,6 +143,19 @@ describe("setCurrentAccount session order", () => {
 
   afterEach(() => {
     runtime.desktop = true;
+    runtime.label = "main";
+  });
+
+  it("does not reactivate a persisted account from an independently bound Agent window", async () => {
+    runtime.label = "agents-test";
+    const store = useUserInfoStore();
+    store.$patch({
+      currentAccountId: "saved",
+      currentUser: siteUser("saved", "https://saved.example"),
+      loggedIn: true
+    });
+    await nextTick();
+    expect(desktopInvoke).not.toHaveBeenCalled();
   });
 
   it("keeps web account selection free of desktop checks and preserves its validated login state", async () => {
