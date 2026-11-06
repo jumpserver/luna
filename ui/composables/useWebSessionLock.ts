@@ -1,6 +1,6 @@
 import { apiRequest, deferAuthFailureUntil, notifyWebSessionClose } from "~/composables/useApiRequest";
 import { isDesktopRuntime, redirectToWebLogin, redirectToWebLogout } from "~/utils/runtime";
-import { createWebSessionLock } from "~/utils/webSessionLock";
+import { createWebSessionLock, describeWebSessionError } from "~/utils/webSessionLock";
 
 export interface WebLoginSession {
   scope: string;
@@ -26,6 +26,7 @@ interface WebLockState {
   logoutAt: number;
   attemptsRemaining: number | null;
   error: boolean;
+  errorInfo: ReturnType<typeof describeWebSessionError> | null;
   session: WebLoginSession | null;
 }
 interface WebLockController {
@@ -45,6 +46,7 @@ export function useWebSessionLock() {
     logoutAt: 0,
     attemptsRemaining: null,
     error: false,
+    errorInfo: null,
     session: null
   }));
   const start = async () => {
@@ -55,10 +57,14 @@ export function useWebSessionLock() {
           notifyClose: notifyWebSessionClose,
           request: (method: "GET" | "POST", path: string, body?: unknown, headers?: Record<string, string>) =>
             apiRequest({ method, path, headers, ...(body === undefined ? {} : { body }), timeoutMs: 10000 }),
-          onChange: (next: WebLockState) => {
+          onChange: (next: Omit<WebLockState, "error" | "errorInfo"> & { error: unknown }) => {
             if (next.logoutAt) deferAuthFailureUntil(next.logoutAt);
-            if (next.error) console.error("Web session lock status check failed");
-            state.value = { ...next, error: Boolean(next.error) };
+            if (next.error) console.error("Web session status check failed");
+            state.value = {
+              ...next,
+              error: Boolean(next.error),
+              errorInfo: next.error ? describeWebSessionError(next.error) : null
+            };
           },
           onSessionChanged: () => window.location.reload(),
           onUnauthenticated: (authPath?: string) => redirectToWebLogin(authPath)
@@ -66,12 +72,15 @@ export function useWebSessionLock() {
         await controller.start();
         return controller;
       })().catch((error) => {
-        console.error(
-          "Web session lock initialization failed:",
-          error instanceof Error ? error.message : "Unknown error"
-        );
+        console.error("Web session initialization failed:", error instanceof Error ? error.message : "Unknown error");
         creating = null;
-        state.value = { ...state.value, ready: true, locked: true, error: true };
+        state.value = {
+          ...state.value,
+          ready: true,
+          locked: true,
+          error: true,
+          errorInfo: describeWebSessionError(error)
+        };
         throw error;
       });
     }

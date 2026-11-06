@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { redirectToWebLogin } from "~/utils/runtime";
+import { describeWebSessionError } from "~/utils/webSessionLock";
 
 const desktop = isDesktopRuntime();
 const { t } = useI18n();
@@ -12,8 +13,12 @@ const busy = computed(() => pendingAction.value !== null);
 const blocked = computed(() => !desktop && (!state.value.ready || state.value.locked));
 const unconfirmed = computed(() => !state.value.session);
 const logoutAsText = computed(() => Boolean(state.value.error || state.value.session?.has_password));
-const displayedError = computed(
-  () =>
+const displayedError = computed(() => {
+  if (state.value.error) {
+    const info = state.value.errorInfo;
+    return info ? t(info.key, info.params) : formatError(null);
+  }
+  return (
     error.value ||
     (state.value.session?.has_password &&
     state.value.attemptsRemaining !== null &&
@@ -21,8 +26,14 @@ const displayedError = computed(
     state.value.attemptsRemaining < 5
       ? t("ScreenLock.AttemptsRemaining", { count: state.value.attemptsRemaining })
       : "")
-);
+  );
+});
 const rendered = ref(desktop);
+
+function formatError(cause: unknown) {
+  const info = describeWebSessionError(cause);
+  return t(info.key, info.params);
+}
 
 watch(
   [() => state.value.ready, blocked, dialog],
@@ -60,13 +71,7 @@ async function unlock() {
       error.value = "";
       return;
     }
-    error.value = t(
-      status === 429
-        ? "ClientLock.TooManyAttempts"
-        : status === 400
-          ? "ScreenLock.UnlockFailed"
-          : "ScreenLock.LoadFailed"
-    );
+    error.value = status === 400 ? t("ScreenLock.UnlockFailed") : formatError(cause);
   } finally {
     password.value = "";
     pendingAction.value = null;
@@ -78,8 +83,8 @@ async function exit() {
   pendingAction.value = "logout";
   try {
     await logout();
-  } catch {
-    error.value = t("ScreenLock.LoadFailed");
+  } catch (cause) {
+    error.value = formatError(cause);
   } finally {
     pendingAction.value = null;
   }
@@ -90,8 +95,8 @@ async function retry() {
   error.value = "";
   try {
     await refresh();
-  } catch {
-    error.value = t("ScreenLock.LoadFailed");
+  } catch (cause) {
+    error.value = formatError(cause);
   } finally {
     pendingAction.value = null;
   }
