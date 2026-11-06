@@ -683,6 +683,7 @@ function acceptConsole(query: QueryWorkspaceTab, value: GoConsole) {
     query.edit.transactionStale = true;
   }
   query.console = value;
+  query.context = { database: value.database, schema: value.schema };
 }
 function acceptEvent(event: GoEvent) {
   if (event.sequence <= sequence && event.type !== "reset") return;
@@ -2048,7 +2049,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @export-delete="deleteExport(query)"
               @recover="recoverSubmission(query)"
               @reconnect="reconnect(query)"
-              @new-context="newQuery($event)"
               @rows="(id, offset) => loadRows(query, id, offset)"
               @retry-rows="retryRows(query)"
               @close-plan="closeQueryPlan(query, $event)"

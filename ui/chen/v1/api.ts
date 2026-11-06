@@ -561,6 +561,13 @@ export function createChenGoApi(
     cancel: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}/cancel`, "POST"),
     rows: (resultId: string, offset = 0, limit = 200, signal?: AbortSignal) =>
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`, "GET", undefined, signal),
+    consoleContexts: (consoleId: string, after?: string, signal?: AbortSignal) =>
+      request<GoCatalogPage<string>>(
+        `/consoles/${id(consoleId)}/contexts?${catalogQuery({ after })}`,
+        "GET",
+        undefined,
+        signal
+      ),
     relations: (consoleId: string, prefix = "") =>
       request<{ items: GoRelation[] }>(`/consoles/${id(consoleId)}/relations?prefix=${id(prefix)}`),
     catalogDiagram: async (sessionId: string, options: DiagramOptions, signal?: AbortSignal) =>
