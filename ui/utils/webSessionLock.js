@@ -1,5 +1,34 @@
 // Browser Session coordination. Keep API and storage keys aligned between Lina and Luna.
 // No credentials enter browser storage.
+export function describeWebSessionError(error) {
+  const status = Number(error?.response?.status ?? error?.status ?? error?.statusCode);
+  /** @type {Record<string, number>} */
+  const params = {};
+  let key = "RequestFailedUnknown";
+  if (Number.isInteger(status) && status >= 400 && status <= 599) {
+    params.status = status;
+    key =
+      status === 404
+        ? "EndpointNotFound"
+        : status === 429
+          ? "RequestRateLimited"
+          : status >= 500
+            ? "ServiceUnavailable"
+            : "RequestFailed";
+  } else if (error?.code === "invalid_web_session_state") {
+    key = "InvalidResponse";
+  } else if (error?.name === "TimeoutError" || ["ECONNABORTED", "ETIMEDOUT"].includes(error?.code)) {
+    key = "RequestTimeout";
+  } else if (
+    error?.code === "ERR_NETWORK" ||
+    (error?.name === "TypeError" && /fetch|network|load failed/i.test(error?.message || ""))
+  ) {
+    key = "NetworkUnavailable";
+  }
+  // Show actionable categories, never raw response HTML, stack traces or request credentials.
+  return { key: `ScreenLock.${key}`, params };
+}
+
 export function createWebSessionLock({
   request,
   notifyClose,
@@ -155,7 +184,9 @@ export function createWebSessionLock({
       data.idle_lock_time < 0 ||
       typeof data.user?.id !== "string"
     ) {
-      throw new Error("Invalid Web Session lock state");
+      throw Object.assign(new Error("Invalid Web Session lock state"), {
+        code: "invalid_web_session_state"
+      });
     }
     return data;
   }
