@@ -23,7 +23,6 @@ import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { chenErrorText } from "~/chen/utils/errorMessages";
-import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { executionActive, executionCanCancel } from "./api";
@@ -32,6 +31,7 @@ import GoBrowseFooter from "./GoBrowseFooter.vue";
 import GoBrowsePanel from "./GoBrowsePanel.vue";
 import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
+import GoQueryContextMenu from "./GoQueryContextMenu.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
 import GoResultGrid from "./GoResultGrid.client.vue";
 import GoResultSql from "./GoResultSql.vue";
@@ -82,7 +82,6 @@ const emit = defineEmits<{
   ai: [operation: ChenSqlAiOperation];
   recover: [];
   reconnect: [];
-  newContext: [context: { database: string; schema: string }];
   rows: [id: string, offset?: number];
   retryRows: [];
   pane: [value: QueryWorkspaceTab["resultPane"]];
@@ -232,53 +231,6 @@ async function deleteSnippet(snippet: ChenSqlSnippet) {
 }
 const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const editorError = ref("");
-const contextOpen = ref(false);
-const contextSchemas = ref<string[]>([]);
-const contextSchema = ref(props.query.context.schema);
-const contextCursor = ref<string>();
-const contextMore = ref(false);
-const contextBusy = ref(false);
-const contextError = ref("");
-let contextController: AbortController | undefined;
-async function loadContexts(append = false) {
-  if (!ready.value || contextBusy.value || chenSqlDialect(props.session.dialect).databaseNamespace) return;
-  const sessionId = props.session.id;
-  const controller = new AbortController();
-  contextController?.abort();
-  contextController = controller;
-  contextBusy.value = true;
-  contextError.value = "";
-  try {
-    const page = await props.api.catalogSchemas(sessionId, append ? contextCursor.value : undefined, controller.signal);
-    if (controller.signal.aborted || props.session.id !== sessionId) return;
-    contextSchemas.value = [
-      ...new Set(
-        [
-          props.query.context.schema,
-          ...(append ? contextSchemas.value : []),
-          ...page.items.map((schema) => schema.name)
-        ].filter(Boolean)
-      )
-    ];
-    contextCursor.value = page.next_cursor;
-    contextMore.value = page.has_more;
-  } catch (cause) {
-    if (!controller.signal.aborted) contextError.value = chenErrorText(cause, t);
-  } finally {
-    if (!controller.signal.aborted) contextBusy.value = false;
-  }
-}
-watch(contextOpen, (open) => {
-  if (!open) return;
-  contextSchema.value = props.query.context.schema;
-  if (!contextSchemas.value.length) void loadContexts();
-});
-function newContext() {
-  if (!ready.value || !contextSchemas.value.includes(contextSchema.value)) return;
-  contextOpen.value = false;
-  emit("newContext", { database: props.query.context.database, schema: contextSchema.value });
-}
-onBeforeUnmount(() => contextController?.abort());
 const pinned = ref<
   { id: number; rows: GoRows; sql: string; title: string; source: string; startedAt?: string; resultId: string }[]
 >([]);
@@ -894,72 +846,18 @@ defineExpose({
           :title="aiAvailable ? undefined : t('RightPanel.SQLAIUnavailableDescription')"
         />
       </UDropdownMenu>
-      <UPopover v-model:open="contextOpen">
-        <UButton
-          class="ml-auto max-w-64 min-w-24"
-          trailing-icon="i-lucide-chevron-down"
-          icon="i-lucide-database"
-          :label="[query.context.database || t('Chen.GoV1Database'), query.context.schema].filter(Boolean).join(' / ')"
-          :aria-label="t('Chen.GoV1ConnectionDetails')"
-          :title="`${query.context.database} / ${query.context.schema}`"
-          :ui="{ label: 'truncate' }"
-          size="sm"
-          color="neutral"
-          variant="soft"
-        />
-        <template #content>
-          <div class="max-w-sm space-y-2 p-3 text-xs">
-            <p class="font-medium">
-              {{ query.context.database }}
-              <template v-if="query.context.schema">/ {{ query.context.schema }}</template>
-            </p>
-            <p>{{ session.asset }} · {{ session.account }}</p>
-            <p class="text-muted">{{ t("Chen.GoV1DedicatedConnection") }}</p>
-            <div v-if="!chenSqlDialect(session.dialect).databaseNamespace" class="space-y-2">
-              <USelect
-                v-model="contextSchema"
-                :items="contextSchemas"
-                :aria-label="t('Chen.Schema')"
-                size="sm"
-                class="w-full"
-                :disabled="!ready || contextBusy"
-              />
-              <p v-if="contextError" role="alert" class="text-error">{{ contextError }}</p>
-              <UButton
-                v-if="contextMore || contextError"
-                :label="t(contextError ? 'Chen.GoV1Retry' : 'Chen.GoV1LoadMore')"
-                size="sm"
-                color="neutral"
-                variant="soft"
-                :disabled="!ready || contextBusy"
-                @click="loadContexts(contextMore && !contextError)"
-              />
-              <UButton
-                :label="t('Chen.GoV1NewQueryHere')"
-                size="sm"
-                :disabled="!ready || !contextSchemas.includes(contextSchema)"
-                @click="newContext"
-              />
-            </div>
-            <p>
-              {{
-                query.console?.transaction?.manual
-                  ? t(
-                      query.console.transaction.state === "active"
-                        ? "Chen.Transaction.Active"
-                        : query.console.transaction.state === "unknown"
-                          ? "Chen.Transaction.OutcomeUnknown"
-                          : "Chen.Transaction.Idle"
-                    )
-                  : t("Chen.Transaction.Auto")
-              }}
-            </p>
-            <p class="text-muted">{{ t("Chen.GoV1TransactionHint") }}</p>
-          </div>
-        </template>
-      </UPopover>
+      <GoQueryContextMenu
+        v-if="query.console"
+        :key="query.console.id"
+        :api="api"
+        :console="query.console"
+        :dialect="session.dialect"
+        :disabled="!visible || !canRun || query.kind !== 'query' || !!query.console.transaction?.manual"
+        @select="emit('run', $event, editor?.snapshot().revision ?? 0)"
+      />
       <UPopover v-model:open="historyOpen">
         <UButton
+          :class="{ 'ml-auto': !query.console }"
           icon="i-lucide-history"
           :aria-label="t('Chen.GoV1QueryHistory')"
           :title="t('Chen.GoV1QueryHistory')"
