@@ -51,6 +51,7 @@ const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
+const showDatabaseTLS = computed(() => ["mysql", "postgresql"].includes(clientProtocol.value));
 const showDirectCommand = computed(() => {
   const method = props.tab.payload?.connectMethod;
   return (
@@ -92,6 +93,16 @@ const username = computed(() => {
 const password = computed(() =>
   protocol.value === "redis" ? `${token.value.id}@${token.value.value}` : token.value.value
 );
+const backendTLS = computed(() => {
+  const spec = assetDetail.value?.spec_info ?? asset.value?.spec_info;
+  if (typeof spec?.use_ssl !== "boolean") return t("ConnectionGuide.TLSUnknown");
+  if (!spec.use_ssl) return t("ConnectionGuide.TLSDisabled");
+  if (clientProtocol.value === "postgresql") {
+    const mode = typeof spec.pg_ssl_mode === "object" ? spec.pg_ssl_mode?.value : spec.pg_ssl_mode;
+    return `${t("ConnectionGuide.TLSConfigured")}: ${mode || t("ConnectionGuide.TLSUnknown")}`;
+  }
+  return t(spec.allow_invalid_cert ? "ConnectionGuide.TLSInsecure" : "ConnectionGuide.TLSVerified");
+});
 
 const rows = computed(() => {
   const values = [
@@ -104,6 +115,16 @@ const rows = computed(() => {
       ? [{ name: "database", label: t("ConnectionGuide.Database"), value: database.value }]
       : []),
     { name: "protocol", label: t("ConnectionGuide.Protocol"), value: clientProtocol.value },
+    ...(showDatabaseTLS.value
+      ? [
+          {
+            name: "frontend_tls",
+            label: t("ConnectionGuide.ClientTransport"),
+            value: t("ConnectionGuide.TLSDisabled")
+          },
+          { name: "backend_tls", label: t("ConnectionGuide.DatabaseTransport"), value: backendTLS.value }
+        ]
+      : []),
     { name: "date_expired", label: t("ConnectionGuide.ExpireTime"), value: token.value.date_expired }
   ];
 
@@ -206,7 +227,7 @@ onMounted(async () => {
         endpoint.value = value;
       }),
       // Connection tokens normally include only asset id/name, not the default database.
-      showDatabaseHelp.value && protocol.value !== "oracle" && !database.value && assetId
+      showDatabaseHelp.value && protocol.value !== "oracle" && (!database.value || showDatabaseTLS.value) && assetId
         ? getAssetDetailRequest(assetId, token.value.org_id || props.tab.orgId)
             .then((value) => {
               assetDetail.value = value;
@@ -271,6 +292,15 @@ onMounted(async () => {
           </header>
 
           <div class="bg-[var(--workspace-surface-panel)] p-3 pb-6">
+            <UAlert
+              v-if="showDatabaseTLS"
+              icon="i-lucide-shield-alert"
+              color="warning"
+              variant="subtle"
+              class="mb-3"
+              :title="t('ConnectionGuide.TLSBoundary')"
+              :description="t('ConnectionGuide.TLSBoundaryHelp')"
+            />
             <div class="overflow-hidden rounded-lg border border-[var(--workspace-surface-border)]">
               <table class="w-full border-collapse text-sm">
                 <tbody>

@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "Начать проверку"
   },
   "ConnectionGuide": {
+    "ClientTransport": "Клиент → Magnus",
+    "DatabaseTransport": "Настройки TLS к базе данных",
+    "TLSUnknown": "Настройки недоступны",
+    "TLSDisabled": "Без шифрования",
+    "TLSConfigured": "Настроенный режим TLS",
+    "TLSVerified": "TLS с проверкой CA и имени сервера",
+    "TLSInsecure": "TLS без проверки сертификата",
+    "TLSBoundary": "TLS только между компонентом и базой данных",
+    "TLSBoundaryHelp": "Эти команды MySQL/PostgreSQL явно используют подключение к Magnus без шифрования. Только соединение от компонента к базе данных использует настройки SSL актива; режим Prefer допускает переход на незашифрованное соединение. Используйте доверенную сеть для клиентского участка. Сертификаты CA и закрытые ключи базы данных остаются на сервере и не должны настраиваться в локальном клиенте. Для этого способа прослушиватель Magnus должен разрешать незашифрованные клиентские подключения.",
     "DoubleClickToCopy": "Дважды щёлкните, чтобы скопировать",
     "TokenCommand": "Команда подключения (токен)",
     "DirectCommand": "Команда подключения (напрямую по ID актива)",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "Ошибка TLS базы данных. Проверьте режим SSL ресурса, доверенный CA, имя хоста и срок действия сертификата, а также соответствие клиентского сертификата и закрытого ключа. Не отключайте проверку сертификата для устранения ошибки.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

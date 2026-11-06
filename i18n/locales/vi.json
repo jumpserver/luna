@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "Bắt đầu xác minh"
   },
   "ConnectionGuide": {
+    "ClientTransport": "Máy khách → Magnus",
+    "DatabaseTransport": "Cấu hình TLS phía cơ sở dữ liệu",
+    "TLSUnknown": "Không lấy được cấu hình",
+    "TLSDisabled": "Không mã hóa",
+    "TLSConfigured": "Chế độ TLS đã cấu hình",
+    "TLSVerified": "TLS có xác minh CA và tên máy chủ",
+    "TLSInsecure": "TLS không xác minh chứng chỉ",
+    "TLSBoundary": "Chỉ mã hóa TLS cho kết nối phía cơ sở dữ liệu",
+    "TLSBoundaryHelp": "Các lệnh MySQL/PostgreSQL này kết nối rõ ràng với Magnus mà không mã hóa. Chỉ kết nối từ thành phần đến cơ sở dữ liệu tuân theo cấu hình SSL của tài sản; chế độ Prefer có thể quay về kết nối không mã hóa. Hãy dùng mạng tin cậy cho đoạn kết nối của máy khách. Chứng chỉ CA và khóa riêng của phía cơ sở dữ liệu được giữ trên máy chủ, không cấu hình chúng trong máy khách cục bộ. Cách kết nối này yêu cầu Magnus cho phép máy khách kết nối không mã hóa.",
     "DoubleClickToCopy": "Nhấp đúp để sao chép",
     "TokenCommand": "Lệnh kết nối (token)",
     "DirectCommand": "Lệnh kết nối (trực tiếp bằng ID tài sản)",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "Kết nối TLS tới cơ sở dữ liệu thất bại. Kiểm tra chế độ SSL, CA tin cậy, tên máy chủ và thời hạn chứng chỉ, cùng cặp chứng chỉ và khóa riêng của máy khách. Không tắt xác minh chứng chỉ chỉ để bỏ qua lỗi.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "認証を開始"
   },
   "ConnectionGuide": {
+    "ClientTransport": "クライアント → Magnus",
+    "DatabaseTransport": "バックエンド TLS 設定",
+    "TLSUnknown": "設定を取得できません",
+    "TLSDisabled": "暗号化なし",
+    "TLSConfigured": "設定された TLS モード",
+    "TLSVerified": "CA とホスト名を検証する TLS",
+    "TLSInsecure": "証明書を検証しない TLS",
+    "TLSBoundary": "データベースへのバックエンド接続のみを TLS で暗号化",
+    "TLSBoundaryHelp": "これらの MySQL/PostgreSQL コマンドは、Magnus に明示的に平文で接続します。コンポーネントからデータベースへの接続のみが資産の SSL 設定に従います。Prefer モードでは平文にフォールバックする場合があります。クライアント側の接続には信頼できるネットワークを使用してください。バックエンドの CA 証明書と秘密鍵はサーバー側に保持し、ローカルクライアントには設定しないでください。この接続方法では、Magnus がクライアントからの平文接続を許可している必要があります。",
     "DoubleClickToCopy": "ダブルクリックしてコピー",
     "TokenCommand": "接続コマンド（トークン）",
     "DirectCommand": "接続コマンド（資産 ID で直接接続）",
@@ -3028,6 +3037,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "データベースの TLS 接続に失敗しました。資産の SSL モード、信頼する CA、証明書のホスト名と有効期限、クライアント証明書と秘密鍵の一致を確認してください。エラーを隠すために証明書の検証を無効にしないでください。",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",

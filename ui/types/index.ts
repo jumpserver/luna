@@ -443,6 +443,9 @@ export interface AssetDetail {
   permedAccounts?: PermedAccount[];
   spec_info?: {
     db_name?: string;
+    use_ssl?: boolean;
+    allow_invalid_cert?: boolean;
+    pg_ssl_mode?: string | { value?: string; label?: string };
     success_selector?: string;
     interactive_selector?: string;
     allowed_urls?: string[];

@@ -22,9 +22,9 @@ export function getGuideConnectCommand(input: {
     case "vnc":
       return `vncviewer -UserName=${id} ${host}:${port || "5900"}`;
     case "mysql":
-      return `mysql -u ${id} -p${secret} -h ${host} -P ${port} ${database}`;
+      return `mysql --protocol=TCP -u ${id} -p${secret} -h ${host} -P ${port} --ssl-mode=DISABLED ${database}`;
     case "postgresql":
-      return `psql "user=${id} password=${secret} host=${host} dbname=${database} port=${port}"`;
+      return `psql "user=${id} password=${secret} host=${host} dbname=${database} port=${port} sslmode=disable"`;
     case "redis":
       return `redis-cli -h ${host} -p ${port} -a ${input.redisAuth || ""}`;
     case "oracle":

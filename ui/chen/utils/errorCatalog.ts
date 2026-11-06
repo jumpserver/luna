@@ -1,6 +1,9 @@
 // Stable Chen error codes and compatibility aliases for plain-text metadata/validation errors.
 // User-facing translations live in i18n/locales/* under Chen.Errors.
 export const chenErrorCatalog: Record<string, readonly string[]> = {
+  database_tls_error: [
+    "Database TLS failed; check the asset SSL mode, CA, certificate hostname/expiry and client certificate/key."
+  ],
   transaction_unsupported: ["This database does not support manual transactions"],
   invalid_transaction_action: ["Invalid transaction action"],
   transaction_busy: ["Finish the existing SQL transaction before enabling manual mode"],

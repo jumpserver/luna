@@ -1244,6 +1244,15 @@
     "StartFaceVerify": "Démarrer la vérification"
   },
   "ConnectionGuide": {
+    "ClientTransport": "Client → Magnus",
+    "DatabaseTransport": "Configuration TLS du serveur de base de données",
+    "TLSUnknown": "Configuration indisponible",
+    "TLSDisabled": "Sans chiffrement",
+    "TLSConfigured": "Mode TLS configuré",
+    "TLSVerified": "TLS avec vérification de la CA et du nom d’hôte",
+    "TLSInsecure": "TLS sans vérification du certificat",
+    "TLSBoundary": "TLS uniquement vers la base de données",
+    "TLSBoundaryHelp": "Ces commandes MySQL/PostgreSQL se connectent explicitement à Magnus sans chiffrement. Seule la liaison du composant vers la base de données suit la configuration SSL de l’actif ; Prefer peut revenir à une connexion non chiffrée. Utilisez un réseau de confiance pour la liaison cliente. Les certificats CA et les clés privées du serveur de base de données restent sur le serveur et ne doivent pas être configurés dans le client local. Cette méthode exige que Magnus autorise les connexions clientes non chiffrées.",
     "DoubleClickToCopy": "Double-cliquez pour copier",
     "TokenCommand": "Commande de connexion (jeton)",
     "DirectCommand": "Commande de connexion (directe par ID d’actif)",
@@ -3211,6 +3220,7 @@
     "GoWriteOriginalType": "Current database type",
     "GoWriteUnsupportedType": "The native type is preserved, never substituted automatically. Explicitly choose a supported type or use the original DDL in the SQL editor to change it.",
     "Errors": {
+      "database_tls_error": "Échec TLS de la base de données. Vérifiez le mode SSL de la ressource, l’autorité de confiance, le nom d’hôte et la validité du certificat, ainsi que la correspondance du certificat client et de sa clé privée. Ne désactivez pas la vérification pour masquer l’erreur.",
       "idle_disconnect": "The session was disconnected due to inactivity. Reconnect to continue.",
       "max_session_timeout": "The maximum session duration was reached. Reconnect to continue.",
       "admin_terminate": "An administrator terminated this session.",
