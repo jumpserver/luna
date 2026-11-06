@@ -4,6 +4,8 @@ import { createWebSessionLock } from "~/utils/webSessionLock";
 
 export interface WebLoginSession {
   scope: string;
+  state_version: number;
+  unlocked_at: string | null;
   locked: boolean;
   has_password: boolean;
   idle_lock_time: number;
