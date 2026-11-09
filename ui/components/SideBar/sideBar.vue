@@ -8,7 +8,14 @@ import { ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { collapse, sidebarSections, setSidebarSections, modernIsland } = useSettingManager();
+const {
+  collapse,
+  sidebarSections,
+  setSidebarSections,
+  sidebarAssetsOpen: assetTreeOpen,
+  setSidebarAssetsOpen,
+  modernIsland
+} = useSettingManager();
 const { hoverPreviewOpen } = useSidebarLayout();
 const visuallyCollapsed = computed(() => collapse.value && !hoverPreviewOpen.value);
 const { activeWorkspaceMode } = useWorkspaceMode();
@@ -36,7 +43,6 @@ const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
 const assetSearchInputRef = useTemplateRef("assetSearchInputRef");
-const assetTreeOpen = ref(true);
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
   currentCommand: workspaceUiCommand,
@@ -71,7 +77,7 @@ watch(
       return;
     }
 
-    assetTreeOpen.value = true;
+    setSidebarAssetsOpen(true);
     showAssetSearch.value = Boolean(query);
     if (sidebarSearch.value !== query) sidebarSearch.value = query;
     await nextTick();
@@ -295,7 +301,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           :open="assetTreeOpen"
           @select="handleAssetConnect"
           @contextmenu="handleAssetContextMenu"
-          @toggle="assetTreeOpen = !assetTreeOpen"
+          @toggle="setSidebarAssetsOpen(!assetTreeOpen)"
           @open-multiple="handleOpenMultipleAssets"
           @favorite-multiple="handleFavoriteMultipleAssets"
         />

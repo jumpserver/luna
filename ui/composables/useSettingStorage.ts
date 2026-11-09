@@ -54,6 +54,9 @@ export const normalizeFontSize = (size: unknown) => {
   return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
 };
 
+const normalizeSidebarOpenPanel = (value: unknown): UserSettingPersistedState["sidebarOpenPanel"] =>
+  value === "favorites" || value === "snippets" ? value : null;
+
 export interface UserSettingPersistedState {
   language: LanguagePreference;
   collapse: boolean;
@@ -86,6 +89,8 @@ export interface UserSettingPersistedState {
   recentSites: string[];
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
+  sidebarAssetsOpen: boolean;
+  sidebarOpenPanel: "favorites" | "snippets" | null;
   modernIsland: boolean;
   uiRadius: UiRadius;
   debugLog: boolean;
@@ -129,6 +134,8 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   recentSites: [],
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS,
+  sidebarAssetsOpen: true,
+  sidebarOpenPanel: null,
   modernIsland: false,
   uiRadius: "small",
   shortcutOverrides: {},
@@ -152,6 +159,8 @@ const loadWebState = () => {
       codeFontSize: normalizeFontSize(parsed.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(parsed.sidebarWidth),
       sidebarSections: normalizeSidebarSections(parsed.sidebarSections),
+      sidebarAssetsOpen: parsed.sidebarAssetsOpen !== false,
+      sidebarOpenPanel: normalizeSidebarOpenPanel(parsed.sidebarOpenPanel),
       shortcutOverrides: normalizeShortcutOverrides(parsed.shortcutOverrides),
       sessionDigitShortcuts: parsed.sessionDigitShortcuts !== false
     };
@@ -193,6 +202,8 @@ export const useSettingStorage = () => {
       codeFontSize: normalizeFontSize(saved.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(saved.sidebarWidth),
       sidebarSections: normalizeSidebarSections(saved.sidebarSections),
+      sidebarAssetsOpen: saved.sidebarAssetsOpen !== false,
+      sidebarOpenPanel: normalizeSidebarOpenPanel(saved.sidebarOpenPanel),
       shortcutOverrides: normalizeShortcutOverrides(saved.shortcutOverrides),
       sessionDigitShortcuts: saved.sessionDigitShortcuts !== false
     };
@@ -236,6 +247,8 @@ export const useSettingStorage = () => {
           codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
           sidebarSections: normalizeSidebarSections(next.sidebarSections),
+          sidebarAssetsOpen: next.sidebarAssetsOpen !== false,
+          sidebarOpenPanel: normalizeSidebarOpenPanel(next.sidebarOpenPanel),
           shortcutOverrides: normalizeShortcutOverrides(next.shortcutOverrides),
           sessionDigitShortcuts: next.sessionDigitShortcuts !== false
         });
@@ -264,6 +277,8 @@ export const useSettingStorage = () => {
           codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
           sidebarSections: normalizeSidebarSections(next.sidebarSections),
+          sidebarAssetsOpen: next.sidebarAssetsOpen !== false,
+          sidebarOpenPanel: normalizeSidebarOpenPanel(next.sidebarOpenPanel),
           shortcutOverrides: normalizeShortcutOverrides(next.shortcutOverrides),
           sessionDigitShortcuts: next.sessionDigitShortcuts !== false
         });
