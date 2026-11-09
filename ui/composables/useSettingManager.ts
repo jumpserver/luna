@@ -434,6 +434,14 @@ export const useSettingManager = () => {
     setModernIsland,
     setUiRadius,
     setDebugLog,
+    setSidebarAssetsOpen: (open: boolean) => {
+      state.sidebarAssetsOpen = open;
+      persist({ sidebarAssetsOpen: open });
+    },
+    setSidebarOpenPanel: (panel: UserSettingPersistedState["sidebarOpenPanel"]) => {
+      state.sidebarOpenPanel = panel;
+      persist({ sidebarOpenPanel: panel });
+    },
     setSidebarSections,
     resetSidebarSections
   };
