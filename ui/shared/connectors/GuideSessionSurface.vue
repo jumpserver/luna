@@ -157,6 +157,7 @@ const commands = computed(() => {
       username: loginUsername.value,
       account: token.value.account,
       inputUsername: token.value.input_username,
+      personalCredentialId: token.value.personal_credential_id,
       accounts: props.tab.permedAccounts || [],
       assetId: props.tab.assetId,
       host: host.value,
