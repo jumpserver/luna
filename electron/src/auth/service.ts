@@ -27,6 +27,7 @@ interface ClientSessionBindingState extends ClientSessionBinding {
   verifying?: Promise<unknown>;
   lockRequest?: Promise<void>;
   lockRevision?: number;
+  lockVersion?: string;
   logoutAt?: number;
 }
 
@@ -312,6 +313,7 @@ export class DesktopAuthService {
         return;
       // A successful refresh already validated this login on the server.
       if (this.tokens[session.sessionKey] !== stored) return;
+      const lockRevision = binding?.lockRevision || 0;
       const response = await this.requestApiResponse(session.origin, CLIENT_SESSION_STATUS, {
         bearerToken: bearer,
         clientLoginSessionReceipt: this.tokens[session.sessionKey]?.client_login_session_receipt,
@@ -325,10 +327,10 @@ export class DesktopAuthService {
           session.sessionKey,
           validateClientLoginPolicy(metadata.client_login_policy)
         );
-        this.recordClientLoginSession(session.sessionKey, bearer, response.data);
+        this.recordClientLoginSession(session.sessionKey, bearer, response.data, lockRevision);
         this.recordSessionValidation(session, bearer);
       }
-      await this.handleUnauthorized(session, bearer, response.status, response.data);
+      await this.handleUnauthorized(session, bearer, response.status, response.data, lockRevision);
     } catch (error) {
       if (
         error?.oauthError === "invalid_grant" &&
@@ -872,6 +874,7 @@ export class DesktopAuthService {
     const activeRefresh = this.refreshingTokens.get(sessionId);
     if (activeRefresh) return activeRefresh;
 
+    const lockRevision = this.sessionBindings?.get(stored)?.lockRevision || 0;
     const refresh = (async () => {
       try {
         const refreshed = await this.exchangeToken(site, {
@@ -890,6 +893,7 @@ export class DesktopAuthService {
         this.tokens[sessionId] = {
           ...stored,
           ...refreshed,
+          client_login_session: stored.client_login_session,
           client_locked: stored.client_locked,
           refresh_token: refreshed.refresh_token || stored.refresh_token,
           client_id: stored.client_id || ""
@@ -897,13 +901,13 @@ export class DesktopAuthService {
         // Rotation preserves the interactive login; a new OAuth login never inherits this identity.
         const binding = this.sessionBindings?.get(stored);
         if (binding) this.sessionBindings.set(this.tokens[sessionId], binding);
+        this.recordClientLoginSession(sessionId, refreshed.access_token, refreshed, lockRevision);
         if (refreshed.client_login_policy) {
           const changed = await this.applyClientLoginPolicy(site, sessionId, refreshed.client_login_policy);
           if (!changed) await this.persistTokens();
         } else {
           await this.persistTokens();
         }
-        this.recordClientLoginSession(sessionId, refreshed.access_token, refreshed);
         this.recordSessionValidation(this.sessions.get(sessionId), refreshed.access_token);
         return refreshed.access_token;
       } catch (error) {
@@ -921,21 +925,33 @@ export class DesktopAuthService {
     }
   }
 
-  recordClientLoginSession(sessionId, bearer, payload) {
+  recordClientLoginSession(sessionId, bearer, payload, expectedLockRevision?: number) {
     if (this.sessionBindings?.get(this.tokens[sessionId])?.logoutAt) return;
     const token = this.tokens[sessionId];
     if (!token || token.access_token !== bearer || !payload) return;
+    if (
+      expectedLockRevision !== undefined &&
+      expectedLockRevision !== (this.sessionBindings?.get(token)?.lockRevision || 0)
+    )
+      return;
     if (typeof payload === "object" && !payload.client_login_session) return;
     const info = parseClientLoginSession(payload);
     if (!info) return;
     const previous = token.client_login_session;
-    if (previous && Date.parse(previous.server_time) > Date.parse(info.server_time)) return;
+    if (previous) {
+      const milliseconds = Date.parse(previous.server_time) - Date.parse(info.server_time);
+      // Core timestamps include microseconds; Date.parse alone drops their ordering within one millisecond.
+      const fraction = (value: string) => (value.match(/\.(\d+)/)?.[1] || "").padEnd(9, "0");
+      if (milliseconds > 0 || (milliseconds === 0 && fraction(previous.server_time) > fraction(info.server_time)))
+        return;
+    }
     token.client_login_session = info;
     if (typeof info.locked === "boolean") {
       const locked = info.locked || token.client_lock_pending === true;
       if (token.client_locked !== locked) {
         token.client_locked = locked;
         const binding = this.sessionBinding(sessionId);
+        delete binding.lockVersion;
         binding.lockRevision = (binding.lockRevision || 0) + 1;
         this.lockRevision += 1;
         this.emitEvent("client-lock-changed");
@@ -948,6 +964,7 @@ export class DesktopAuthService {
     }
     // Broadcast the same server snapshot to settings and main windows without another request.
     this.emitEvent("client-login-session", { sessionId, session: info });
+    return true;
   }
 
   async expireSession(sessionId, reason = "unknown", sessionInfo?: ClientLoginSession) {
@@ -981,13 +998,13 @@ export class DesktopAuthService {
     }
   }
 
-  async handleUnauthorized(session, bearer, status, body = "") {
+  async handleUnauthorized(session, bearer, status, body = "", expectedLockRevision?: number) {
     let expired = status === 401;
     if (status === 403) {
       try {
         const payload = JSON.parse(body);
         if (payload?.code === "client_locked") {
-          this.recordClientLoginSession(session.sessionKey, bearer, payload);
+          this.recordClientLoginSession(session.sessionKey, bearer, payload, expectedLockRevision);
           return;
         }
         expired =
@@ -1023,6 +1040,7 @@ export class DesktopAuthService {
       }
       const bearer = await this.freshToken(site, sessionId);
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
+      const lockRevision = this.sessionBindings?.get(this.tokens[sessionId])?.lockRevision || 0;
       const payload = {
         ...(await this.buildLoginPayload(site, bearer, this.tokens[sessionId]?.client_login_session_receipt)),
         client_login_policy: config.client_login_policy,
@@ -1035,7 +1053,7 @@ export class DesktopAuthService {
           sessionId,
           validateClientLoginPolicy(parseJsonResponse(status.data).client_login_policy)
         );
-        this.recordClientLoginSession(sessionId, bearer, status.data);
+        this.recordClientLoginSession(sessionId, bearer, status.data, lockRevision);
       }
       payload.client_login_policy = this.tokens[sessionId]?.client_login_policy ?? config.client_login_policy;
       payload.client_login_session = this.tokens[sessionId]?.client_login_session;
@@ -1173,6 +1191,7 @@ export class DesktopAuthService {
     token.client_locked = true;
     token.client_lock_pending = true;
     const state = binding as ClientSessionBindingState;
+    delete state.lockVersion;
     state.lockRevision = (state.lockRevision || 0) + 1;
     this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
@@ -1187,6 +1206,7 @@ export class DesktopAuthService {
     if (!token?.client_lock_pending) return;
     const state = binding as ClientSessionBindingState;
     if (state.lockRequest) return state.lockRequest;
+    const revision = state.lockRevision;
     const pending = (async () => {
       const session = this.getBoundSession(binding);
       const result = await this.sendApiRequest(session, {
@@ -1195,9 +1215,11 @@ export class DesktopAuthService {
         timeoutMs: 10_000
       });
       const current = this.boundToken(binding);
-      if (!current) return;
+      if (!current || revision !== state.lockRevision) return;
+      if (result?.client_login_session?.locked !== true || !this.recordLockResponse(binding, result, revision)) {
+        throw new Error("Client lock changed before confirmation. Please try again.");
+      }
       current.client_lock_pending = false;
-      this.recordClientLoginSession(session.sessionKey, current.access_token, result);
       await this.persistTokens();
     })();
     state.lockRequest = pending;
@@ -1273,21 +1295,50 @@ export class DesktopAuthService {
     return session;
   }
 
+  recordLockResponse(binding: ClientSessionBinding, result, revision: number | undefined) {
+    const token = this.boundToken(binding);
+    const state = binding as ClientSessionBindingState;
+    if (!token || revision !== state.lockRevision) return false;
+    const info = parseClientLoginSession(result);
+    if (
+      typeof info?.locked !== "boolean" ||
+      (info.locked && (typeof result.lock_version !== "string" || !/^[a-f0-9]{32}$/.test(result.lock_version)))
+    ) {
+      throw new Error("Invalid client lock response");
+    }
+    const previousVersion = state.lockVersion;
+    if (!this.recordClientLoginSession(binding.sessionKey, token.access_token, result)) return false;
+    state.lockVersion = info.locked ? result.lock_version : undefined;
+    if (info.locked && previousVersion && previousVersion !== state.lockVersion) {
+      state.lockRevision = (state.lockRevision || 0) + 1;
+      this.lockRevision += 1;
+      this.emitEvent("client-lock-changed");
+    }
+    return true;
+  }
+
   async lockInfo(binding: ClientSessionBinding | null | undefined) {
     const session = this.requireLockedSession(binding);
+    const state = binding as ClientSessionBindingState;
+    const revision = state.lockRevision;
     await this.syncSessionLock(binding);
+    if (revision !== state.lockRevision || this.boundToken(binding)?.client_lock_pending) {
+      throw new Error("Client lock changed before confirmation. Please try again.");
+    }
     const result = await this.sendApiRequest(session, {
       method: "GET",
       path: CLIENT_SESSION_UNLOCK,
       timeoutMs: 10_000
     });
-    this.requireLockedSession(binding);
     if (typeof result?.has_password !== "boolean" || typeof result.settings_path !== "string") {
       throw new Error("Invalid client credential response");
     }
     const url = new URL(result.settings_path, session.origin);
     if (url.origin !== new URL(session.origin).origin || url.pathname !== "/ui/") {
       throw new Error("Invalid client credential settings URL");
+    }
+    if (!this.recordLockResponse(binding, result, revision)) {
+      throw new Error("Client lock changed while loading. Please try again.");
     }
     return {
       hasPassword: result.has_password,
@@ -1305,20 +1356,35 @@ export class DesktopAuthService {
     if (state.logoutAt) return this.lockState(binding);
     if (state.verifying) return state.verifying;
     const revision = state.lockRevision;
+    const requestedVersion = state.lockVersion;
     const verification = (async () => {
       const session = this.requireLockedSession(binding);
       await this.syncSessionLock(binding);
       this.requireLockedSession(binding);
+      if (!state.lockVersion) await this.lockInfo(binding);
+      const lockVersion = requestedVersion || state.lockVersion;
+      if (
+        revision !== state.lockRevision ||
+        !lockVersion ||
+        lockVersion !== state.lockVersion ||
+        this.boundToken(binding)?.client_lock_pending
+      ) {
+        throw new Error("Client lock changed during verification. Please try again.");
+      }
       let result;
       try {
         result = await this.sendApiRequest(session, {
           method: "POST",
           path: CLIENT_SESSION_UNLOCK,
-          body: { password },
+          body: { password, lock_version: lockVersion },
           timeoutMs: 15_000
         });
       } catch (cause) {
         const error = cause as Error & { data?: { code?: string; attempts_remaining?: number } };
+        if (error.data?.code === "client_lock_state_changed") {
+          this.recordLockResponse(binding, error.data, revision);
+          throw cause;
+        }
         if (error.data?.code === "client_lock_password_unset") {
           state.lockRevision = (state.lockRevision || 0) + 1;
           this.lockRevision += 1;
@@ -1347,14 +1413,17 @@ export class DesktopAuthService {
         throw cause;
       }
       this.requireLockedSession(binding);
-      if (revision !== state.lockRevision || result?.verified !== true) {
+      if (
+        revision !== state.lockRevision ||
+        lockVersion !== state.lockVersion ||
+        result?.verified !== true ||
+        result?.client_login_session?.locked !== false ||
+        !this.recordLockResponse(binding, result, revision) ||
+        this.lockState(binding).locked
+      ) {
         throw new Error("Client lock changed during verification. Please try again.");
       }
-      this.recordClientLoginSession(session.sessionKey, this.boundToken(binding).access_token, result);
-      this.boundToken(binding).client_locked = false;
       state.unlockedAt = performance.now();
-      this.lockRevision += 1;
-      this.emitEvent("client-lock-changed");
       await this.persistTokens();
       return this.lockState(binding);
     })();
@@ -1398,6 +1467,7 @@ export class DesktopAuthService {
     if (binding !== undefined && this.getRequestSession(binding) !== session)
       throw new Error("Client login changed during request");
     session.bearerToken = bearer;
+    const lockRevision = this.sessionBindings?.get(this.tokens?.[session.sessionKey])?.lockRevision || 0;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
       if (value === undefined || value === null) continue;
@@ -1429,7 +1499,8 @@ export class DesktopAuthService {
     });
     const text = await response.text();
     if (!responseSucceeded(response.status)) {
-      if (request.service !== "kael") await this.handleUnauthorized(session, bearer, response.status, text);
+      if (request.service !== "kael")
+        await this.handleUnauthorized(session, bearer, response.status, text, lockRevision);
       electronLog.warn(`api ${request.method} ${url.pathname} status=${response.status}`);
       const error = new Error(
         `api ${request.method} ${url.pathname}: api request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
@@ -1456,7 +1527,7 @@ export class DesktopAuthService {
         session.sessionKey,
         validateClientLoginPolicy(data.client_login_policy)
       );
-      this.recordClientLoginSession(session.sessionKey, bearer, data);
+      this.recordClientLoginSession(session.sessionKey, bearer, data, lockRevision);
     }
     return data;
   }
@@ -1471,6 +1542,7 @@ export class DesktopAuthService {
     if (binding !== undefined && this.getRequestSession(binding) !== session)
       throw new Error("Client login changed during request");
     session.bearerToken = bearer;
+    const lockRevision = this.sessionBindings?.get(this.tokens?.[session.sessionKey])?.lockRevision || 0;
     const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
       if (value === undefined || value === null) continue;
@@ -1500,7 +1572,8 @@ export class DesktopAuthService {
     });
     if (!response.ok) {
       const text = await response.text();
-      if (request.service !== "kael") await this.handleUnauthorized(session, bearer, response.status, text);
+      if (request.service !== "kael")
+        await this.handleUnauthorized(session, bearer, response.status, text, lockRevision);
       throw new Error(
         `api ${request.method} ${url.pathname}: api stream request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
       );
