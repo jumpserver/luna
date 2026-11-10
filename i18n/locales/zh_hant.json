@@ -3668,11 +3668,12 @@
     "ReturningToLogin": "{seconds} 秒後返回登入頁面",
     "ReturnToLoginCountdown": "返回登入（{seconds}）",
     "IdleWarningTitle": "即將鎖屏",
-    "IdleWarningCountdown": "{seconds} 秒後鎖屏。移動滑鼠或按鍵可繼續使用。",
+    "IdleWarningCountdown": "將在 {seconds} 秒後鎖定畫面，移動滑鼠或按鍵可繼續使用",
     "ExpiryWarningTitle": "登入即將到期",
-    "ExpiryWarningCountdown": "{minutes} 分 {seconds} 秒後登入到期。",
+    "ExpiryWarningCountdown": "登入將在 {minutes} 分 {seconds} 秒後到期",
+    "ExpiryWarningCountdownSeconds": "登入將在 {seconds} 秒後到期",
     "ExpiredTitle": "登入已到期",
-    "ExpiredDescription": "請重新登入。"
+    "ExpiredDescription": "請重新登入"
   },
   "IdleLock": {
     "Title": "閒置鎖屏",

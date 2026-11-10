@@ -3668,11 +3668,12 @@
     "ReturningToLogin": "Voltando ao login em {seconds} segundos",
     "ReturnToLoginCountdown": "Voltar ao login ({seconds})",
     "IdleWarningTitle": "A tela será bloqueada em breve",
-    "IdleWarningCountdown": "A tela será bloqueada em {seconds} segundos. Mova o mouse ou pressione uma tecla para continuar.",
+    "IdleWarningCountdown": "A tela será bloqueada em {seconds} segundos Mova o mouse ou pressione uma tecla para continuar",
     "ExpiryWarningTitle": "O login expira em breve",
-    "ExpiryWarningCountdown": "Sua sessão expira em {minutes} min {seconds} s.",
+    "ExpiryWarningCountdown": "Sua sessão expira em {minutes} min {seconds} s",
+    "ExpiryWarningCountdownSeconds": "Sua sessão expira em {seconds} s",
     "ExpiredTitle": "O login expirou",
-    "ExpiredDescription": "Entre novamente."
+    "ExpiredDescription": "Entre novamente"
   },
   "IdleLock": {
     "Title": "Bloqueio por inatividade",

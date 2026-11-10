@@ -108,11 +108,9 @@ onMounted(() => {
 
 <template>
   <div :inert="blocked || undefined" class="contents"><slot v-if="rendered" /></div>
-  <WebSessionCountdownNotices
-    v-if="!desktop && !state.locked"
-    :idle-remaining="state.idleRemaining"
-    :expiry-remaining="state.expiryRemaining"
-  />
+  <Teleport v-if="!desktop" :to="state.locked && dialog ? dialog : 'body'">
+    <WebSessionCountdownNotices :idle-remaining="state.idleRemaining" :expiry-remaining="state.expiryRemaining" />
+  </Teleport>
   <div
     v-if="!desktop && !state.ready"
     class="fixed inset-0 z-[700] grid place-items-center bg-[var(--app-surface-canvas)]"
@@ -130,11 +128,6 @@ onMounted(() => {
     :aria-label="t('ScreenLock.Title')"
     @cancel.prevent
   >
-    <WebSessionCountdownNotices
-      v-if="state.locked"
-      :idle-remaining="state.idleRemaining"
-      :expiry-remaining="state.expiryRemaining"
-    />
     <div class="screen-lock-surface">
       <div class="screen-lock-brand">
         <BrandLogo class="screen-lock-brand-mark" />

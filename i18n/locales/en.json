@@ -3668,11 +3668,12 @@
     "ReturningToLogin": "Returning to sign-in in {seconds} seconds",
     "ReturnToLoginCountdown": "Back to sign in ({seconds})",
     "IdleWarningTitle": "Screen will lock soon",
-    "IdleWarningCountdown": "Screen locks in {seconds} seconds. Move the mouse or press a key to continue.",
+    "IdleWarningCountdown": "Screen locks in {seconds} seconds Move the mouse or press a key to continue",
     "ExpiryWarningTitle": "Sign-in expires soon",
-    "ExpiryWarningCountdown": "Your sign-in expires in {minutes} min {seconds} sec.",
+    "ExpiryWarningCountdown": "Your sign-in expires in {minutes} min {seconds} sec",
+    "ExpiryWarningCountdownSeconds": "Your sign-in expires in {seconds} sec",
     "ExpiredTitle": "Sign-in expired",
-    "ExpiredDescription": "Please sign in again."
+    "ExpiredDescription": "Please sign in again"
   },
   "IdleLock": {
     "Title": "Idle screen lock",
