@@ -11,7 +11,7 @@ const error = ref("");
 const pendingAction = ref<"unlock" | "logout" | "retry" | null>(null);
 const busy = computed(() => pendingAction.value !== null);
 const blocked = computed(() => !desktop && (!state.value.ready || state.value.locked));
-const unconfirmed = computed(() => !state.value.session);
+const unconfirmed = computed(() => !state.value.session?.locked);
 const logoutAsText = computed(() => Boolean(state.value.error || state.value.session?.has_password));
 const displayedError = computed(() => {
   if (state.value.error) {
@@ -108,6 +108,9 @@ onMounted(() => {
 
 <template>
   <div :inert="blocked || undefined" class="contents"><slot v-if="rendered" /></div>
+  <Teleport v-if="!desktop" :to="state.locked && dialog ? dialog : 'body'">
+    <WebSessionCountdownNotices :idle-remaining="state.idleRemaining" :expiry-remaining="state.expiryRemaining" />
+  </Teleport>
   <div
     v-if="!desktop && !state.ready"
     class="fixed inset-0 z-[700] grid place-items-center bg-[var(--app-surface-canvas)]"
@@ -130,7 +133,9 @@ onMounted(() => {
         <BrandLogo class="screen-lock-brand-mark" />
         <span>JumpServer</span>
       </div>
-      <div v-if="!unconfirmed" class="screen-lock-security-indicator">{{ t("ScreenLock.SecureLabel") }}</div>
+      <div v-if="!unconfirmed && !state.error" class="screen-lock-security-indicator">
+        {{ t("ScreenLock.SecureLabel") }}
+      </div>
       <div class="screen-lock-content">
         <UCard :ui="{ root: 'screen-lock-form-card ring-0', body: 'p-7 sm:p-7' }">
           <div class="screen-lock-stack">
@@ -142,9 +147,11 @@ onMounted(() => {
                     t(
                       state.logoutAt
                         ? "ScreenLock.SignedOut"
-                        : unconfirmed || state.error
+                        : state.error
                           ? "ScreenLock.CheckFailed"
-                          : "ScreenLock.Title"
+                          : unconfirmed
+                            ? "ScreenLock.Checking"
+                            : "ScreenLock.Title"
                     )
                   }}
                 </h1>
@@ -172,7 +179,7 @@ onMounted(() => {
             </p>
             <ScreenLockCountdown v-if="state.logoutAt" :at="state.logoutAt" @return-to-login="redirectToWebLogin" />
             <form
-              v-else-if="!state.error && state.session?.has_password"
+              v-else-if="!state.error && !unconfirmed && state.session?.has_password"
               class="screen-lock-form"
               @submit.prevent="unlock"
             >
@@ -204,7 +211,11 @@ onMounted(() => {
                 {{ t("ScreenLock.Unlock") }}
               </UButton>
             </form>
-            <p v-else-if="!state.error && state.session" class="screen-lock-unset-message" role="status">
+            <p
+              v-else-if="!state.error && !unconfirmed && state.session"
+              class="screen-lock-unset-message"
+              role="status"
+            >
               {{ t("ScreenLock.Unset") }}
             </p>
             <p v-else-if="!state.error" class="text-sm text-muted">{{ t("ScreenLock.Checking") }}</p>
