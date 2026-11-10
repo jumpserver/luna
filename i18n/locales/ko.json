@@ -3666,7 +3666,13 @@
     "TooManyFailures": "잠금 비밀번호를 5회 연속 잘못 입력하여 로그아웃되었습니다.",
     "ReturnToLogin": "로그인으로 돌아가기",
     "ReturningToLogin": "{seconds}초 후 로그인 화면으로 돌아갑니다",
-    "ReturnToLoginCountdown": "로그인으로 돌아가기 ({seconds})"
+    "ReturnToLoginCountdown": "로그인으로 돌아가기 ({seconds})",
+    "IdleWarningTitle": "화면이 곧 잠깁니다",
+    "IdleWarningCountdown": "{seconds}초 후 화면이 잠깁니다. 마우스를 움직이거나 키를 누르면 계속 사용할 수 있습니다.",
+    "ExpiryWarningTitle": "로그인이 곧 만료됩니다",
+    "ExpiryWarningCountdown": "{minutes}분 {seconds}초 후 로그인이 만료됩니다.",
+    "ExpiredTitle": "로그인이 만료되었습니다",
+    "ExpiredDescription": "다시 로그인하세요."
   },
   "IdleLock": {
     "Title": "유휴 잠금",

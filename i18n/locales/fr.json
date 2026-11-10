@@ -3666,7 +3666,13 @@
     "TooManyFailures": "Cinq mots de passe de verrouillage incorrects consécutifs. Cette session a été fermée.",
     "ReturnToLogin": "Retour à la connexion",
     "ReturningToLogin": "Retour à la connexion dans {seconds} secondes",
-    "ReturnToLoginCountdown": "Retour à la connexion ({seconds})"
+    "ReturnToLoginCountdown": "Retour à la connexion ({seconds})",
+    "IdleWarningTitle": "L’écran va bientôt se verrouiller",
+    "IdleWarningCountdown": "Verrouillage dans {seconds} secondes. Déplacez la souris ou appuyez sur une touche pour continuer.",
+    "ExpiryWarningTitle": "La connexion expire bientôt",
+    "ExpiryWarningCountdown": "Votre session expire dans {minutes} min {seconds} s.",
+    "ExpiredTitle": "La connexion a expiré",
+    "ExpiredDescription": "Veuillez vous reconnecter."
   },
   "IdleLock": {
     "Title": "Verrouillage après inactivité",

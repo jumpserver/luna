@@ -3666,7 +3666,13 @@
     "TooManyFailures": "锁屏密码连续错误 5 次，本次登录已注销。",
     "ReturnToLogin": "返回登录",
     "ReturningToLogin": "{seconds} 秒后返回登录页面",
-    "ReturnToLoginCountdown": "返回登录（{seconds}）"
+    "ReturnToLoginCountdown": "返回登录（{seconds}）",
+    "IdleWarningTitle": "即将锁屏",
+    "IdleWarningCountdown": "{seconds} 秒后锁屏。移动鼠标或按键可继续使用。",
+    "ExpiryWarningTitle": "登录即将到期",
+    "ExpiryWarningCountdown": "{minutes} 分 {seconds} 秒后登录到期。",
+    "ExpiredTitle": "登录已到期",
+    "ExpiredDescription": "请重新登录。"
   },
   "IdleLock": {
     "Title": "空闲锁屏",

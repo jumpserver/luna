@@ -3666,7 +3666,13 @@
     "TooManyFailures": "Пять неверных паролей блокировки подряд. Этот сеанс завершён.",
     "ReturnToLogin": "Вернуться ко входу",
     "ReturningToLogin": "Возврат ко входу через {seconds} сек.",
-    "ReturnToLoginCountdown": "Вернуться ко входу ({seconds})"
+    "ReturnToLoginCountdown": "Вернуться ко входу ({seconds})",
+    "IdleWarningTitle": "Экран скоро заблокируется",
+    "IdleWarningCountdown": "Экран заблокируется через {seconds} сек. Чтобы продолжить, переместите мышь или нажмите клавишу.",
+    "ExpiryWarningTitle": "Срок входа скоро истечёт",
+    "ExpiryWarningCountdown": "Срок действия сеанса истекает через {minutes} мин {seconds} сек.",
+    "ExpiredTitle": "Срок входа истёк",
+    "ExpiredDescription": "Войдите снова."
   },
   "IdleLock": {
     "Title": "Блокировка при бездействии",

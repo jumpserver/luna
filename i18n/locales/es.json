@@ -3666,7 +3666,13 @@
     "TooManyFailures": "Cinco contraseñas de bloqueo incorrectas consecutivas. Se ha cerrado esta sesión.",
     "ReturnToLogin": "Volver a iniciar sesión",
     "ReturningToLogin": "Volviendo al inicio de sesión en {seconds} segundos",
-    "ReturnToLoginCountdown": "Volver a iniciar sesión ({seconds})"
+    "ReturnToLoginCountdown": "Volver a iniciar sesión ({seconds})",
+    "IdleWarningTitle": "La pantalla se bloqueará pronto",
+    "IdleWarningCountdown": "La pantalla se bloqueará en {seconds} segundos. Mueve el ratón o pulsa una tecla para continuar.",
+    "ExpiryWarningTitle": "La sesión caduca pronto",
+    "ExpiryWarningCountdown": "Su sesión caduca en {minutes} min {seconds} s.",
+    "ExpiredTitle": "La sesión ha caducado",
+    "ExpiredDescription": "Vuelve a iniciar sesión."
   },
   "IdleLock": {
     "Title": "Bloqueo por inactividad",
