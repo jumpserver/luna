@@ -3668,7 +3668,7 @@
     "ReturningToLogin": "Возврат ко входу через {seconds} сек.",
     "ReturnToLoginCountdown": "Вернуться ко входу ({seconds})",
     "IdleWarningTitle": "Экран скоро заблокируется",
-    "IdleWarningCountdown": "Экран заблокируется через {seconds} сек Чтобы продолжить переместите мышь или нажмите клавишу",
+    "IdleWarningCountdown": "Экран заблокируется через {seconds} с; чтобы продолжить, переместите мышь или нажмите клавишу",
     "ExpiryWarningTitle": "Срок входа скоро истечёт",
     "ExpiryWarningCountdown": "Срок действия сеанса истекает через {minutes} мин {seconds} сек",
     "ExpiryWarningCountdownSeconds": "Срок действия сеанса истекает через {seconds} сек",

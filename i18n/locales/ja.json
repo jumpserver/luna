@@ -3668,7 +3668,7 @@
     "ReturningToLogin": "{seconds} 秒後にログイン画面に戻ります",
     "ReturnToLoginCountdown": "ログインに戻る（{seconds}）",
     "IdleWarningTitle": "まもなく画面がロックされます",
-    "IdleWarningCountdown": "{seconds} 秒後に画面がロックされます マウスを動かすかキーを押すと続行できます",
+    "IdleWarningCountdown": "{seconds} 秒後に画面がロックされます。マウスを動かすかキーを押すと続行できます",
     "ExpiryWarningTitle": "まもなくログインの有効期限が切れます",
     "ExpiryWarningCountdown": "あと {minutes} 分 {seconds} 秒でログインの有効期限が切れます",
     "ExpiryWarningCountdownSeconds": "あと {seconds} 秒でログインの有効期限が切れます",

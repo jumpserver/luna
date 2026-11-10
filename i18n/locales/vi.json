@@ -3668,7 +3668,7 @@
     "ReturningToLogin": "Quay lại đăng nhập sau {seconds} giây",
     "ReturnToLoginCountdown": "Quay lại đăng nhập ({seconds})",
     "IdleWarningTitle": "Màn hình sắp khóa",
-    "IdleWarningCountdown": "Màn hình sẽ khóa sau {seconds} giây Di chuyển chuột hoặc nhấn phím để tiếp tục",
+    "IdleWarningCountdown": "Màn hình sẽ khóa sau {seconds} giây; di chuyển chuột hoặc nhấn phím để tiếp tục",
     "ExpiryWarningTitle": "Phiên đăng nhập sắp hết hạn",
     "ExpiryWarningCountdown": "Phiên đăng nhập sẽ hết hạn sau {minutes} phút {seconds} giây",
     "ExpiryWarningCountdownSeconds": "Phiên đăng nhập sẽ hết hạn sau {seconds} giây",

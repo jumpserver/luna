@@ -3668,7 +3668,7 @@
     "ReturningToLogin": "Retour à la connexion dans {seconds} secondes",
     "ReturnToLoginCountdown": "Retour à la connexion ({seconds})",
     "IdleWarningTitle": "L’écran va bientôt se verrouiller",
-    "IdleWarningCountdown": "Verrouillage dans {seconds} secondes Déplacez la souris ou appuyez sur une touche pour continuer",
+    "IdleWarningCountdown": "Verrouillage dans {seconds} secondes ; déplacez la souris ou appuyez sur une touche pour continuer",
     "ExpiryWarningTitle": "La connexion expire bientôt",
     "ExpiryWarningCountdown": "Votre session expire dans {minutes} min {seconds} s",
     "ExpiryWarningCountdownSeconds": "Votre session expire dans {seconds} s",

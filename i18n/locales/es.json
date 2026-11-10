@@ -3668,7 +3668,7 @@
     "ReturningToLogin": "Volviendo al inicio de sesión en {seconds} segundos",
     "ReturnToLoginCountdown": "Volver a iniciar sesión ({seconds})",
     "IdleWarningTitle": "La pantalla se bloqueará pronto",
-    "IdleWarningCountdown": "La pantalla se bloqueará en {seconds} segundos Mueve el ratón o pulsa una tecla para continuar",
+    "IdleWarningCountdown": "La pantalla se bloqueará en {seconds} segundos; mueve el ratón o pulsa una tecla para continuar",
     "ExpiryWarningTitle": "La sesión caduca pronto",
     "ExpiryWarningCountdown": "Su sesión caduca en {minutes} min {seconds} s",
     "ExpiryWarningCountdownSeconds": "Su sesión caduca en {seconds} s",
