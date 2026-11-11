@@ -663,7 +663,7 @@ describe("opening assets in local applications", () => {
         fetchConnectMethods: async () => ({ rdp: [rdpMethod] }),
         getMethodsForProtocol: async () => [rdpMethod]
       }));
-      vi.spyOn(document, "createElement").mockReturnValue(link as unknown as HTMLElement);
+      vi.spyOn(document, "createElement").mockReturnValue(link as unknown as ReturnType<typeof document.createElement>);
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:rdp-file");
       vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
       mocks.getRdpFile.mockResolvedValue(content);

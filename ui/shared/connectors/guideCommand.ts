@@ -4,6 +4,15 @@ export function getGuideClientProtocol(protocol: string) {
   return normalized === "mariadb" ? "mysql" : normalized;
 }
 
+function shellQuote(value: string) {
+  const escaped = value.replaceAll("'", String.raw`'\''`);
+  return `'${escaped}'`;
+}
+
+function uriComponent(value: string) {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.codePointAt(0)!.toString(16).toUpperCase()}`);
+}
+
 export function getGuideConnectCommand(input: {
   protocol: string;
   id: string;
@@ -31,6 +40,13 @@ export function getGuideConnectCommand(input: {
       return `sqlplus ${id}/${secret}@${host}:${port}/${id}${input.useSysDBA ? " as sysdba" : ""}`;
     case "dameng":
       return `disql ${id}/${secret}@${host}:${port}`;
+    case "db2": {
+      const address = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+      const uri = `db2://${uriComponent(id)}:${uriComponent(secret)}@${address}:${port}/${uriComponent(database)}?secmec=3&ssl=false`;
+      return `usql ${shellQuote(uri)}`;
+    }
+    case "clickhouse":
+      return `clickhouse-client --host=${shellQuote(host)} --port=${shellQuote(port)} --user=${shellQuote(id)} --password=${shellQuote(secret)} --database=${shellQuote(database)}`;
     case "sqlserver":
       return `sqlcmd -S ${host},${port} -U ${id} -P ${secret} -d ${database}`;
     case "mongodb":

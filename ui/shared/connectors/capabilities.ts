@@ -37,6 +37,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
       "winrm",
       "clickhouse",
       "dameng",
+      "db2",
       "mariadb",
       "mongodb",
       "mysql",

@@ -23,6 +23,25 @@ describe("connection guide client protocol", () => {
 });
 
 describe("connection guide CLI", () => {
+  it("uses usql DB2 USRIDPWD and encodes credentials, database and IPv6 safely", () => {
+    expect(
+      getGuideConnectCommand({
+        ...database,
+        protocol: "db2",
+        host: "2001:db8::1",
+        secret: "p@ss/'&$(id)",
+        database: "A B",
+        port: "15525"
+      })
+    ).toBe("usql 'db2://token-id:p%40ss%2F%27%26%24%28id%29@[2001:db8::1]:15525/A%20B?secmec=3&ssl=false'");
+  });
+
+  it("uses the ClickHouse Native client with shell-quoted values", () => {
+    expect(getGuideConnectCommand({ ...database, protocol: "clickhouse", port: "15525", secret: "a'b $(id)" })).toBe(
+      "clickhouse-client --host='gateway.example.com' --port='15525' --user='token-id' --password='a'\\''b $(id)' --database='app'"
+    );
+  });
+
   it.each(["mariadb", "MariaDB", " MARIADB "])(
     "uses the MySQL client for %s without changing connection details",
     (protocol) => {

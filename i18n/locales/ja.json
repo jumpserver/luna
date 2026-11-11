@@ -1244,6 +1244,8 @@
     "StartFaceVerify": "認証を開始"
   },
   "ConnectionGuide": {
+    "DB2NativeHelp": "DB2 は JCC securityMechanism=3 (USRIDPWD) を使用します。CLI には DB2 ドライバーを含む usql が必要です。クライアントと Magnus 間の SSL は無効にし、信頼できるネットワークまたは安全なトンネルを使用してください。",
+    "ClickHouseNativeHelp": "ClickHouse Native TCP を使用してください。HTTP/HTTPS JDBC ドライバーは使用できません。DBeaver は専用ワークスペースを使い、初回に JDBC ドライバーをダウンロードします。既存の接続やドライバーは変更しません。クライアントと Magnus 間の TLS は未対応です。",
     "ClientTransport": "クライアント → Magnus",
     "DatabaseTransport": "バックエンド TLS 設定",
     "TLSUnknown": "設定を取得できません",

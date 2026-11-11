@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -222,7 +222,6 @@ for (const platform of ["macos", "linux", "windows"]) {
       oracle: "oracle",
       sqlserver: "mssql",
       dameng: "dm",
-      clickhouse: "clickhouse",
       mongodb: "mongodb",
       redis: "redis"
     };
@@ -295,6 +294,85 @@ for (const platform of ["macos", "linux", "windows"]) {
 }
 
 for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} launches DB2 and ClickHouse through Native TCP without splitting credentials`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms native databases "));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    const config = await service.getConfig();
+    assert.ok(!config.databases.find((item) => item.name === "dbx").protocol.includes("clickhouse"));
+    for (const protocol of ["db2", "clickhouse"]) {
+      await service.updateSelection({
+        category: "databases",
+        protocol,
+        name: "dbeaver",
+        path: process.execPath,
+        makeDefault: true
+      });
+      const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+      const payload = {
+        protocol,
+        name: "Native test",
+        endpoint: { host: "gateway.example.com", port: 15525 },
+        token: { id: "selector-token", value: " secret ' &+=中文 " },
+        asset: { info: { db_name: "ANALYTICS" } }
+      };
+      let launched = 0;
+      launcher.launchExecutable = async (selected, args) => {
+        assert.equal(selected.name, "dbeaver");
+        const expected =
+          `name=Nativetest|driver=${
+            protocol === "db2" ? "db2" : "jumpserver-clickhouse-native"
+          }|user=selector-token|password= secret ' &+=中文 |database=ANALYTICS` +
+          `|host=gateway.example.com|port=15525|save=false|connect=true${
+            protocol === "db2" ? "|prop.securityMechanism=3" : ""
+          }`;
+        if (protocol === "db2") assert.deepEqual(args, ["-con", expected]);
+        else {
+          const workspace = path.join(service.configDir, "dbeaver-clickhouse-native");
+          assert.deepEqual(args, ["-data", workspace, "-con", expected]);
+          const definition = await readFile(path.join(workspace, ".metadata/.config/drivers.xml"), "utf8");
+          assert.match(definition, /com.github.housepower.jdbc.ClickHouseDriver/);
+          assert.match(definition, /clickhouse-native-jdbc-shaded:2.5.6/);
+          assert.ok(!definition.includes(payload.token.value));
+          assert.ok(!definition.includes(payload.token.id));
+        }
+        launched++;
+      };
+      const url = () => `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      await launcher.launch(url());
+      assert.equal(launched, 1);
+      payload.token.value = "secret|prop.securityMechanism=9";
+      await assert.rejects(launcher.launch(url()), /could not prepare/);
+      assert.equal(launched, 1);
+    }
+  });
+
+  test(`${platform} migrates only the incompatible built-in ClickHouse association`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-native-upgrade-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const service = new ApplicationConfigService({ getPath: () => appData }, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    for (const selected of [`${platform}.dbx`, "custom.clickhouse", ""]) {
+      const preferences = {
+        version: 1,
+        selections: { "databases:clickhouse": selected, "databases:mysql": `${platform}.dbx` },
+        enabled_selections: { "databases:clickhouse": selected ? [selected] : [] },
+        plugins: { [`${platform}.dbeaver`]: { enabled: false, path: "/saved/user/path" } }
+      };
+      await service.saveState(preferences);
+      const state = await service.loadState();
+      const expected = selected === `${platform}.dbx` ? `${platform}.dbeaver` : selected;
+      assert.equal(state.selections["databases:clickhouse"], expected);
+      assert.deepEqual(state.enabled_selections["databases:clickhouse"], expected ? [expected] : []);
+      assert.equal(state.selections["databases:mysql"], `${platform}.dbx`);
+      assert.deepEqual(state.plugins, preferences.plugins);
+    }
+  });
+
   test(`${platform} offers DBeaver for Dameng and launches its native driver`, async (context) => {
     const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dameng-dbeaver-"));
     context.after(() => rm(appData, { recursive: true, force: true }));
@@ -345,6 +423,66 @@ for (const platform of ["macos", "linux", "windows"]) {
     assert.equal(launched, true);
   });
 }
+
+test("packaged DBeaver resolves shared resources and initializes its Native workspace atomically", async (context) => {
+  const bundle = await mkdtemp(path.join(os.tmpdir(), "jms native packaged "));
+  context.after(() => rm(bundle, { recursive: true, force: true }));
+  const platformDir = path.join(bundle, "plugins", "macos");
+  await mkdir(platformDir, { recursive: true });
+  await cp(path.join(projectRoot, "plugins/macos/macos.dbeaver"), path.join(platformDir, "macos.dbeaver"), {
+    recursive: true
+  });
+  await cp(path.join(projectRoot, "plugins/shared"), path.join(bundle, "plugins/shared"), { recursive: true });
+  await writeFile(
+    path.join(platformDir, "index.json"),
+    JSON.stringify({
+      plugins: [{ id: "macos.dbeaver", name: "dbeaver", category: "databases" }]
+    })
+  );
+  await writeFile(
+    path.join(platformDir, "plugins-state.defaults.json"),
+    JSON.stringify({
+      version: 1,
+      selections: { "databases:clickhouse": "macos.dbeaver" },
+      plugins: {}
+    })
+  );
+  const app = { getPath: () => bundle, isPackaged: true };
+  const service = new ApplicationConfigService(app, bundle);
+  service.builtInDir = async () => platformDir;
+  await service.initialize();
+  await service.updateSelection({
+    category: "databases",
+    protocol: "clickhouse",
+    name: "dbeaver",
+    path: process.execPath,
+    makeDefault: true
+  });
+  const launcher = new LocalApplicationLauncher(app, bundle, service, null);
+  let launches = 0;
+  const directory = path.join(service.configDir, "dbeaver-clickhouse-native/.metadata/.config");
+  const target = path.join(directory, "drivers.xml");
+  const definition = await readFile(path.join(bundle, "plugins/shared/dbeaver/drivers-clickhouse.xml"), "utf8");
+  launcher.launchExecutable = async () => {
+    assert.equal(await readFile(target, "utf8"), definition);
+    launches++;
+  };
+  const payload = {
+    protocol: "clickhouse",
+    name: "Native",
+    endpoint: { host: "gateway.example.com", port: 15525 },
+    token: { id: "selector-token", value: "access-secret" },
+    asset: { info: { db_name: "app" } }
+  };
+  const url = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await Promise.all(Array.from({ length: 4 }, () => launcher.launch(url)));
+  assert.equal(launches, 4);
+  assert.deepEqual(await readdir(directory), ["drivers.xml"]);
+  const existing = "<drivers><!-- user driver changes --></drivers>";
+  await writeFile(target, existing);
+  launcher.launchExecutable = async () => assert.equal(await readFile(target, "utf8"), existing);
+  await launcher.launch(url);
+});
 
 for (const platform of ["macos", "linux"]) {
   test(`${platform} offers a shell-safe Dameng disql launch`, async (context) => {

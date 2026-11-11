@@ -10,7 +10,8 @@
     "databases:oracle": "windows.dbx",
     "databases:sqlserver": "windows.dbx",
     "databases:dameng": "windows.dbx",
-    "databases:clickhouse": "windows.dbx",
+    "databases:clickhouse": "windows.dbeaver",
+    "databases:db2": "windows.dbeaver",
     "databases:mongodb": "windows.dbx",
     "databases:redis": "windows.dbx"
   },

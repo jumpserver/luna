@@ -1244,6 +1244,8 @@
     "StartFaceVerify": "Start verification"
   },
   "ConnectionGuide": {
+    "DB2NativeHelp": "DB2 uses JCC securityMechanism=3 (USRIDPWD); the CLI command requires usql with its DB2 driver. Do not enable SSL on the client-to-Magnus connection. Use a trusted network or a secure tunnel.",
+    "ClickHouseNativeHelp": "Use ClickHouse Native TCP, not the HTTP/HTTPS JDBC driver. DBeaver uses a separate Native workspace and downloads its JDBC driver on first use; existing drivers and connections are not changed. Client-to-Magnus TLS is not supported.",
     "ClientTransport": "Client → Magnus",
     "DatabaseTransport": "Backend TLS configuration",
     "TLSUnknown": "Not available",

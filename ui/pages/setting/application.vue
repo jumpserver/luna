@@ -14,7 +14,7 @@ const localePath = useLocalePath();
 const { activeApplicationProtocol, activeApplicationView } = useSettingsWindow();
 const { pluginList, installPlugin, uninstallPlugin } = useApplicationConfig({ refreshOnMount: true });
 const { language } = useSettingManager();
-const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng"]);
+const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng", "db2", "clickhouse"]);
 const appName = getConfiguredAppName();
 const pluginModalOpen = ref(false);
 const installingPlugin = ref(false);
@@ -38,6 +38,8 @@ const protocolComponents = {
   pg: defineAsyncComponent(() => import("~/pages/setting/application/pg.vue")),
   oracle: defineAsyncComponent(() => import("~/pages/setting/application/oracle.vue")),
   dameng: defineAsyncComponent(() => import("~/pages/setting/application/dameng.vue")),
+  db2: defineAsyncComponent(() => import("~/pages/setting/application/db2.vue")),
+  clickhouse: defineAsyncComponent(() => import("~/pages/setting/application/clickhouse.vue")),
   sqlserver: defineAsyncComponent(() => import("~/pages/setting/application/sqlserver.vue"))
 } as const;
 
@@ -69,6 +71,8 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
     { label: "PostgreSQL", protocol: "pg" as const, routeName: "setting-application-pg" },
     { label: "Oracle", protocol: "oracle" as const, routeName: "setting-application-oracle" },
     { label: "Dameng", protocol: "dameng" as const, routeName: "setting-application-dameng" },
+    { label: "DB2", protocol: "db2" as const, routeName: "setting-application-db2" },
+    { label: "ClickHouse", protocol: "clickhouse" as const, routeName: "setting-application-clickhouse" },
     { label: "SQL Server", protocol: "sqlserver" as const, routeName: "setting-application-sqlserver" }
   ]
     .filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol))

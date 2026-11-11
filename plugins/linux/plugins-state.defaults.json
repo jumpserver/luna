@@ -12,7 +12,8 @@
     "databases:mongodb": "linux.dbx",
     "databases:sqlserver": "linux.dbx",
     "databases:dameng": "linux.dbx",
-    "databases:clickhouse": "linux.dbx"
+    "databases:clickhouse": "linux.dbeaver",
+    "databases:db2": "linux.dbeaver"
   },
   "plugins": {}
 }

@@ -1244,6 +1244,8 @@
     "StartFaceVerify": "開始核驗"
   },
   "ConnectionGuide": {
+    "DB2NativeHelp": "DB2 使用 JCC securityMechanism=3（USRIDPWD）；命令列需使用包含 DB2 驅動的 usql。用戶端到 Magnus 不啟用 SSL，請使用可信網路或安全通道。",
+    "ClickHouseNativeHelp": "請使用 ClickHouse Native TCP，不要使用 HTTP/HTTPS JDBC 驅動。DBeaver 使用獨立的 Native 工作區，首次使用需下載 JDBC 驅動，不修改原有驅動和連線。用戶端到 Magnus 暫不支援 TLS。",
     "ClientTransport": "用戶端 → Magnus",
     "DatabaseTransport": "後端 TLS 設定",
     "TLSUnknown": "未取得設定",
