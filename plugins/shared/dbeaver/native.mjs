@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, link, unlink } from "node:fs/promises";
 import path from "node:path";
+import { URL } from "node:url";
 
 // A separate workspace leaves the user's HTTP driver and existing connections untouched.
 // Only a driver definition is persisted; connection credentials remain in the launch plan.
