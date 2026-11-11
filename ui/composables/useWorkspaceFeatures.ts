@@ -3,11 +3,13 @@ import { useEventListener } from "@vueuse/core";
 import { computed, onScopeDispose, watch } from "vue";
 import { getPublicSettings } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useLocalCodex } from "~/composables/useLocalCodex";
 import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
 // Read once per authenticated context, then refresh when returning from system settings.
 // This runs in app.vue so web, desktop and standalone asset windows share the policy.
 export function useWorkspaceFeatures(authReady: Ref<boolean>) {
+  useLocalCodex(authReady);
   const userInfoStore = useUserInfoStore();
   const context = computed(() =>
     authReady.value && userInfoStore.loggedIn

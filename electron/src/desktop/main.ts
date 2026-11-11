@@ -74,6 +74,9 @@ import { certificateSiteOrigin, SiteCertificateService } from "../shared/site-ce
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
+import { createHash } from "node:crypto";
+import { LocalCodexService } from "../codex/service";
+import type { ClientSessionBinding } from "../auth/service";
 import { ClipboardHistoryService } from "./clipboard-history";
 import { ClientPolicyNoticeLayers } from "./client-policy-notices";
 
@@ -126,6 +129,7 @@ const lockedWindowCommands = new Set([
   "close_web_proxy_view",
   "cancel_transcode"
 ]);
+const codexHosts = new Map<ClientSessionBinding, LocalCodexService>();
 const subscriptions = new Map();
 const stores = new Map();
 let shortcutOverrides: ShortcutOverrides = {};
@@ -369,6 +373,7 @@ function closeAssetWindows() {
 }
 
 function disposeWindowSessions(webContentsId: number) {
+  for (const host of codexHosts.values()) host.closeOwner(webContentsId);
   for (const [sessionId, session] of localShellSessions) {
     if (session.webContentsId !== webContentsId) continue;
     localShellSessions.delete(sessionId);
@@ -390,6 +395,7 @@ function closeExpiredSessionWindows(sessionId: string) {
     const binding = windowSessionBindings.get(win.webContents);
     // Keep other accounts and a newer login of the same account untouched.
     if (binding?.sessionKey !== sessionId || authService.boundToken(binding)) continue;
+    for (const host of codexHosts.values()) host.closeOwner(win.webContents.id);
     webProxyManager.disposeHost(win.webContents.id);
     // Expiry is mandatory; a page's beforeunload guard cannot keep an asset usable.
     if (label.startsWith("asset-")) win.destroy();
@@ -429,6 +435,7 @@ function syncWindowLock(win) {
   const main = labelForWindow(win) === "main";
   const canUnlock = main || Boolean(authService.boundToken(binding));
   const state = { ...bound, locked: bound.locked && (!main || !bound.expired), canUnlock };
+  if (state.locked) for (const host of codexHosts.values()) host.closeOwner(win.webContents.id);
   webProxyManager.setHostLocked(win.webContents.id, state.locked);
   emitDesktopEvent("client-lock-state", state, labelForWindow(win));
   return state;
@@ -1382,6 +1389,74 @@ async function handleInvoke(event, request) {
     return authService.lockSession(binding, true);
   }
 
+  if (command.startsWith("local_codex_")) {
+    const label = labelForWindow(win);
+    if (label !== "main" && !label.startsWith("asset-") && !label.startsWith("settings"))
+      throw new Error("Local AI is unavailable in this window");
+    if (!binding) throw new Error("Local AI requires a current login");
+    const authenticated = authService.getBoundSession(binding);
+    if (windowSessionBindings.get(event.sender) !== binding) throw new Error("Local AI login changed");
+    let host = codexHosts.get(binding);
+    if (!host) {
+      const scope = createHash("sha256").update(`${binding.origin}\0${binding.sessionKey}`).digest("hex");
+      host = new LocalCodexService({
+        directory: path.join(app.getPath("userData"), "local-codex", scope),
+        assertOwner(ownerId, organizationId) {
+          const target = [...windows.values()].find(
+            (candidate) => candidate.webContents.id === ownerId && !candidate.isDestroyed()
+          );
+          if (
+            !target ||
+            windowSessionBindings.get(target.webContents) !== binding ||
+            (authService.getRequestSession(binding).orgId || "") !== organizationId
+          )
+            throw new Error("Local AI window, login or organization changed");
+        },
+        emit(ownerId, value) {
+          for (const [targetLabel, target] of windows) {
+            if (
+              !target.isDestroyed() &&
+              target.webContents.id === ownerId &&
+              windowSessionBindings.get(target.webContents) === binding
+            )
+              emitDesktopEvent("local-codex-event", value, targetLabel);
+          }
+        }
+      });
+      codexHosts.set(binding, host);
+    }
+    if (command === "local_codex_settings") return host.configuration();
+    if (command === "local_codex_configure") {
+      authService.getRequestSession(binding);
+      const settings = await host.configure(args.settings);
+      if (windowSessionBindings.get(event.sender) !== binding || !authService.boundToken(binding))
+        throw new Error("Local AI login changed");
+      for (const [targetLabel, target] of windows)
+        if (windowSessionBindings.get(target.webContents) === binding)
+          emitDesktopEvent("local-codex-settings", settings, targetLabel);
+      return settings;
+    }
+    if (command === "local_codex_probe") return host.probe(args.settings);
+    const organizationId = authenticated.orgId || "";
+    if (command === "local_codex_create") {
+      if (label !== "main" && !label.startsWith("asset-")) throw new Error("AI sessions require a workspace window");
+      return host.create(event.sender.id, organizationId, args.input);
+    }
+    const methods = {
+      local_codex_send: "send",
+      local_codex_context: "context",
+      local_codex_history: "history",
+      local_codex_approve: "approve",
+      local_codex_mode: "mode",
+      local_codex_result: "result",
+      local_codex_cancel: "cancel",
+      local_codex_delete: "delete"
+    } as const;
+    const method = methods[command as keyof typeof methods];
+    if (!method) throw new Error("Unknown local Codex action");
+    return host[method](event.sender.id, organizationId, args);
+  }
+
   if (command === "site_certificate_policy") return siteCertificates.policy(args.site);
   if (command === "site_certificate_info") return siteCertificates.certificateInfo(args.site);
   if (command === "set_site_certificate_policy") {
@@ -1411,6 +1486,8 @@ async function handleInvoke(event, request) {
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
     if (
       [
+        "local-codex-event",
+        "local-codex-settings",
         "client-lock-state",
         "client-lock-changed",
         "client-policy-notices",
@@ -1648,7 +1725,10 @@ async function handleInvoke(event, request) {
     }
     return result;
   }
-  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId, binding);
+  if (command === "set_api_org") {
+    if (binding && authService.getBoundSession(binding).orgId !== (args.orgId || "")) codexHosts.get(binding)?.close();
+    return authService.setCurrentOrg(args.orgId, binding);
+  }
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") {
@@ -2016,6 +2096,8 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("will-quit", () => {
+  for (const host of codexHosts.values()) host.close();
+  codexHosts.clear();
   clipboardHistory.stop();
   void faceEngine?.shutdown();
 });

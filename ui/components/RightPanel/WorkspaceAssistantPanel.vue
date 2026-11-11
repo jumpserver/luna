@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AiContextItem, AiTimelineAction } from "./ai/types";
 import { getKokoTerminalAiSession, terminalExecutionMode } from "#koko/composables/terminal/useTerminalAiSessions";
+import { localCodexSettings } from "~/composables/useLocalCodex";
 import { useWorkspaceAssistantPanelSession } from "~/composables/useWorkspaceAssistantPanelSession";
 import {
   assertWorkspaceTerminalTaskCurrent,
@@ -27,7 +28,7 @@ const { session, scopeId, newSession } = useWorkspaceAssistantPanelSession(assis
 const approvingScopes = reactive(new Set<string>());
 const approvalProcessing = computed(() => approvingScopes.has(scopeId.value));
 
-const assistantName = computed(() => t("RightPanel.LunaAiName"));
+const assistantName = computed(() => (localCodexSettings.value.enabled ? "Codex" : t("RightPanel.LunaAiName")));
 const localShellPane = computed(
   () => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value && pane.protocol === "local-shell") || null
 );

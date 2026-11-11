@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CharsetType } from "~/types";
+import LocalCodexSettings from "~/components/Settings/localCodex.vue";
 
 import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -292,6 +293,8 @@ async function clearCommandHistory() {
         <USwitch v-model="selectedRightClickQuickPaste" :aria-label="t('Setting.TerminalRightClickPaste')" />
       </SettingsRow>
     </SettingsGroup>
+
+    <LocalCodexSettings />
 
     <SettingsGroup :title="t('Setting.RemoteDesktop')">
       <SettingsRow :title="t('RightPanel.KeyboardLayout')">

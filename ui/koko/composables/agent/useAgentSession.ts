@@ -1,5 +1,4 @@
 import type { UIMessage } from "ai";
-import type { AgentClient } from "./agentClient";
 import type { AgentSseConnection } from "./agentSse";
 import type { AgentToolRelay, AgentToolRelayResult } from "./agentToolRelay";
 import type {
@@ -10,9 +9,12 @@ import type {
   AgentMcpManifest,
   AgentMessageRequest
 } from "./types";
-import type { EffectScope } from "vue";
+import type { EffectScope, Ref } from "vue";
 import { effectScope, reactive, watch } from "vue";
-import { workspaceAiEnabled } from "~/shared/aiAvailability";
+import { serverWorkspaceAiEnabled } from "~/shared/aiAvailability";
+import { isDesktopRuntime } from "~/utils/runtime";
+import { useDesktopCodexSession } from "./localCodexClient";
+import type { AgentSessionClient } from "./localCodexClient";
 import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
 import { agentClient, AgentHttpError } from "./agentClient";
 import {
@@ -38,7 +40,10 @@ export interface AgentSessionState {
   errorText: string;
 }
 
-interface AgentSessionOptions {
+export type AgentConnection = Pick<AgentSseConnection, "start" | "stop">;
+
+export interface AgentSessionOptions {
+  enabled?: Ref<boolean>;
   domain: AgentDomain;
   allowedApprovalModes?: readonly AgentApprovalMode[];
   relay: AgentToolRelay;
@@ -50,8 +55,8 @@ interface AgentSessionOptions {
   onInputLock?: (locked: boolean) => void;
   onHistoryReset?: () => void;
   onUnavailable?: (error: Error) => void;
-  client?: AgentClient;
-  createSse?: (options: ConstructorParameters<typeof DefaultAgentSseConnection>[0]) => AgentSseConnection;
+  client?: AgentSessionClient;
+  createSse?: (options: ConstructorParameters<typeof DefaultAgentSseConnection>[0]) => AgentConnection;
   toolResultRetry?: {
     maxAttempts?: number;
     baseDelayMs?: number;
@@ -629,6 +634,14 @@ export function agentEventToUiMessage(
 }
 
 export function useAgentSession(options: AgentSessionOptions): AgentSessionController {
+  if (!options.client && isDesktopRuntime() && ["workspace", "terminal"].includes(options.domain)) {
+    return useDesktopCodexSession(options, createAgentSession);
+  }
+  return createAgentSession(options);
+}
+
+function createAgentSession(options: AgentSessionOptions): AgentSessionController {
+  const enabled = options.enabled || serverWorkspaceAiEnabled;
   const client = options.client || agentClient;
   const createSse = options.createSse || ((sseOptions) => new DefaultAgentSseConnection(sseOptions));
   const toolResultMaxAttempts = Math.max(1, Math.floor(options.toolResultRetry?.maxAttempts || 4));
@@ -661,7 +674,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   let committedManifest: AgentMcpManifest | null = null;
   let latestManifest: AgentMcpManifest | null = null;
   let availabilityScope: EffectScope | null = null;
-  let sse: AgentSseConnection | null = null;
+  let sse: AgentConnection | null = null;
   let retainedResourceId = "";
   const pendingSessionDeletes: Array<{
     sessionId: string;
@@ -1135,7 +1148,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       availabilityScope = effectScope(true);
       availabilityScope.run(() =>
         watch(
-          workspaceAiEnabled,
+          enabled,
           (enabled) => {
             if (enabled) {
               if (latestManifest) void attachManifest(latestManifest).catch(() => undefined);
@@ -1148,7 +1161,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
         )
       );
     }
-    if (!workspaceAiEnabled.value) return;
+    if (!enabled.value) return;
     const key = agentManifestKey(manifest);
     if (attachFlight?.key === key) return attachFlight.promise;
     if (
@@ -1286,6 +1299,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
         return;
       }
       if (error.code !== "approval_terminal") throw error;
+      if (!client.getApproval) throw error;
       const approval = await client.getApproval(approvalId);
       if (!["approved", "consumed", "rejected", "expired", "cancelled"].includes(approval.state)) throw error;
       presentApprovalResolution(approvalId, approval.state === "consumed" ? "approved" : approval.state);
@@ -1513,7 +1527,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     availabilityScope?.stop();
     availabilityScope = null;
     latestManifest = null;
-    return closeSession(workspaceAiEnabled.value ? undefined : "ai_disabled");
+    return closeSession(enabled.value ? undefined : "ai_disabled");
   }
 
   function closeSession(reason?: "ai_disabled") {
