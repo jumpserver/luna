@@ -323,7 +323,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           <SideBarSearchInput ref="assetSearchInputRef" v-model="sidebarSearch" :placeholder="t('Operation.Search')" />
         </div>
 
-        <div v-if="sidebarSearch.trim()" class="min-h-0 flex-1">
+        <div v-if="sidebarSearch.trim()" class="flex min-h-0 flex-1 flex-col">
           <SideBarAssetTree
             :search="sidebarSearch"
             :open="true"
