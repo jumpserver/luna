@@ -1,4 +1,6 @@
-export default function (context) {
+import { prepareClickHouseWorkspace } from "./native.mjs";
+
+export default async function (context) {
   if (context.command) throw new Error("DBeaver does not accept terminal commands");
   const fields = {
     name: context.name,
@@ -15,12 +17,15 @@ export default function (context) {
     fields.auth = "oracle_native";
     fields["authProp.oracle.logon-as"] = "SYSDBA";
   }
+  if (context.protocol === "db2") fields["prop.securityMechanism"] = "3";
+  if (context.protocol === "clickhouse") fields.driver = "jumpserver-clickhouse-native";
   if (Object.values(fields).some((value) => /[|\0]/.test(String(value)))) {
     throw new Error("DBeaver connection values contain a reserved delimiter");
   }
   return {
     type: "args",
     args: [
+      ...(context.protocol === "clickhouse" ? ["-data", await prepareClickHouseWorkspace(context.config_dir)] : []),
       "-con",
       Object.entries(fields)
         .map(([key, value]) => `${key}=${value}`)

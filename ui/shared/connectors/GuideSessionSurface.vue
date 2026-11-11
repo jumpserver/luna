@@ -30,6 +30,8 @@ const defaultPorts: Record<string, number> = {
   redis: 6379,
   oracle: 1521,
   dameng: 5236,
+  db2: 50000,
+  clickhouse: 9000,
   sqlserver: 1433,
   mongodb: 27017
 };
@@ -52,6 +54,11 @@ const reusableUpdating = ref(false);
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
 const showDatabaseTLS = computed(() => ["mysql", "postgresql"].includes(clientProtocol.value));
+const nativeDatabaseHelp = computed(() => {
+  if (protocol.value === "db2") return t("ConnectionGuide.DB2NativeHelp");
+  if (protocol.value === "clickhouse") return t("ConnectionGuide.ClickHouseNativeHelp");
+  return "";
+});
 const showDirectCommand = computed(() => {
   const method = props.tab.payload?.connectMethod;
   return (
@@ -301,6 +308,14 @@ onMounted(async () => {
               class="mb-3"
               :title="t('ConnectionGuide.TLSBoundary')"
               :description="t('ConnectionGuide.TLSBoundaryHelp')"
+            />
+            <UAlert
+              v-if="nativeDatabaseHelp"
+              icon="i-lucide-info"
+              color="warning"
+              variant="subtle"
+              class="mb-3"
+              :description="nativeDatabaseHelp"
             />
             <div class="overflow-hidden rounded-lg border border-[var(--workspace-surface-border)]">
               <table class="w-full border-collapse text-sm">

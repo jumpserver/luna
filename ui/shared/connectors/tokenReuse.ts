@@ -7,6 +7,8 @@ export const DATABASE_GUIDE_PROTOCOLS = new Set([
   "redis",
   "oracle",
   "dameng",
+  "db2",
+  "clickhouse",
   "sqlserver",
   "mongodb"
 ]);

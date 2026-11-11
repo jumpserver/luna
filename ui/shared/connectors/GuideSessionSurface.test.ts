@@ -109,6 +109,16 @@ function mountGuide(
   return { state, token, getAssetDetailRequest, toast, writeText };
 }
 
+it.each(["db2", "clickhouse"])("uses the Magnus port and asset database for %s guides", async (protocol) => {
+  const { state } = mountGuide({ protocol, detail: { spec_info: { db_name: "ANALYTICS" } } });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.rows.value.find((row) => row.name === "port")?.value).toBe("5525");
+  expect(state.rows.value.find((row) => row.name === "database")?.value).toBe("ANALYTICS");
+  expect(state.rows.value.find((row) => row.name === "username")?.value).toBe("token-id");
+  expect(state.commands.value[0]?.value).toContain("5525");
+  expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+});
+
 it("loads MongoDB's default database from asset details for display, copy and mongosh", async () => {
   const { state, token, getAssetDetailRequest, writeText } = mountGuide({ orgId: "asset-org" });
   await vi.waitFor(() => expect(state.loading.value).toBe(false));
