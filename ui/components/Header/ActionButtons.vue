@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import Profile from "~/components/SideBar/profile.vue";
+import { localAgentMessages } from "~/shared/agents/messages";
 import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfile: true });
 
 const { t } = useI18n();
-const { loggedIn } = storeToRefs(useUserInfoStore());
+const { t: agentT } = useI18n({ useScope: "local", messages: localAgentMessages, fallbackLocale: "en" });
+const { loggedIn, currentAccountId, currentSite } = storeToRefs(useUserInfoStore());
+const localAgents = useLocalAgents();
+const { authReady } = useAuthSession();
+const toast = useToast();
+watch([authReady, loggedIn, currentAccountId, currentSite], () => void localAgents.refresh());
+async function openLocalAgents() {
+  try {
+    await localAgents.open();
+  } catch (cause) {
+    toast.add({
+      title: agentT("LocalAgents.Failed"),
+      description: cause instanceof Error ? cause.message : String(cause),
+      color: "error"
+    });
+  }
+}
 const { activeWorkspaceMode, isUtilityRoute } = useWorkspaceMode();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, toggleAi } = useAiPanel();
@@ -32,6 +49,18 @@ const handleToggleAi = () => {
 <template>
   <section class="flex items-center h-full">
     <div class="flex items-center gap-1.5 px-2">
+      <UTooltip v-if="loggedIn && localAgents.enabled.value" arrow :text="agentT('LocalAgents.Open')">
+        <UButton
+          icon="i-lucide-bot"
+          :aria-label="agentT('LocalAgents.Open')"
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          :class="headerIconButtonClass"
+          :ui="{ leadingIcon: 'm-0 size-4.5' }"
+          @click="openLocalAgents"
+        />
+      </UTooltip>
       <UTooltip v-if="showAiButton" arrow :text="aiButtonLabel">
         <UButton
           data-ai-context="preserve"

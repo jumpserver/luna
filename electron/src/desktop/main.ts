@@ -24,6 +24,7 @@ import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { createHash, randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import {
   app,
@@ -76,6 +77,9 @@ import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
 import { ClipboardHistoryService } from "./clipboard-history";
 import { ClientPolicyNoticeLayers } from "./client-policy-notices";
+import { LocalAgentService, validateAgentProfile } from "../agents/service";
+import { createAgentAdapter, probeAgent } from "../agents/adapters";
+import type { ClientSessionBinding } from "../auth/service";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -115,6 +119,8 @@ const lockedWindowCommands = new Set([
   "api_stream_cancel",
   "resize_local_shell",
   "close_local_shell",
+  "local_agents_stop",
+  "local_agents_close_session",
   "face_engine_status",
   "face_engine_process_frame",
   "face_engine_stop_session",
@@ -164,6 +170,8 @@ let ffmpegPlugin;
 let debugLogService;
 let faceEngine;
 let appIcon;
+const localAgentHosts = new Map<ClientSessionBinding, { service: LocalAgentService; label: string }>();
+let quitting = false;
 let allowCloseDuringTranscode = false;
 let closeConfirmationPending = false;
 
@@ -378,6 +386,12 @@ function disposeWindowSessions(webContentsId: number) {
 
 function closeExpiredSessionWindows(sessionId: string) {
   if (!sessionId) return;
+  for (const [binding, host] of localAgentHosts) {
+    if (binding.sessionKey !== sessionId || authService.boundToken(binding)) continue;
+    host.service.close();
+    windows.get(host.label)?.destroy();
+    localAgentHosts.delete(binding);
+  }
   for (const [label, win] of windows) {
     if (win.isDestroyed()) continue;
     const binding = windowSessionBindings.get(win.webContents);
@@ -404,6 +418,9 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
     return;
   }
   if (name === "client-lock-changed") {
+    for (const [binding, host] of localAgentHosts) {
+      if (authService.lockState(binding).locked) host.service.suspend();
+    }
     for (const win of windows.values()) syncWindowLock(win);
     return;
   }
@@ -413,6 +430,39 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
   if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
+}
+
+async function localAgentHost(binding: ClientSessionBinding, assertOwner: () => void) {
+  assertOwner();
+  authService.getRequestSession(binding);
+  let host = localAgentHosts.get(binding);
+  if (!host) {
+    const scope = createHash("sha256").update(`${binding.origin}\0${binding.sessionKey}`).digest("hex");
+    const directory = path.join(app.getPath("userData"), "local-agents", scope);
+    const label = `agents-${randomUUID()}`;
+    const service = new LocalAgentService({
+      directory,
+      site: binding.origin,
+      assertActive: () => {
+        authService.getRequestSession(binding);
+      },
+      adapter: createAgentAdapter,
+      changed: (snapshot) => {
+        for (const [target, win] of windows) {
+          if (!win.isDestroyed() && windowSessionBindings.get(win.webContents) === binding)
+            emitDesktopEvent("local-agents-changed", snapshot, target);
+        }
+      }
+    });
+    host = { service, label };
+    localAgentHosts.set(binding, host);
+  }
+  await host.service.initialize();
+  assertOwner();
+  authService.getRequestSession(binding);
+  if (localAgentHosts.get(binding) !== host) throw new Error("Agent window login changed");
+  host.service.enabled = true;
+  return host;
 }
 
 function syncWindowLock(win) {
@@ -781,6 +831,10 @@ function createWindow(
   win.on("leave-full-screen", () => emitDesktopEvent("desktop://fullscreen", false, label));
   win.on("close", (event) => {
     if (label === "main") preventCloseDuringTranscode(event, win, false);
+    if (label.startsWith("agents-") && !quitting) {
+      event.preventDefault();
+      win.hide();
+    }
   });
   windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
@@ -788,6 +842,14 @@ function createWindow(
   windowWebContents.on("did-finish-load", () => syncWindowLock(win));
   windowWebContents.on("render-process-gone", () => clearDesktopEventSubscriptions(windowWebContents));
   win.on("closed", () => {
+    if (label === "main") {
+      // Wait for beforeunload guards (unsaved SFTP/SQL edits) to accept the close.
+      for (const host of localAgentHosts.values()) {
+        host.service.close();
+        windows.get(host.label)?.destroy();
+      }
+      localAgentHosts.clear();
+    }
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
     authService.scheduleSessionCheck();
@@ -1328,6 +1390,42 @@ async function handleInvoke(event, request) {
     return authService.lockSession(binding, true);
   }
 
+  if (command.startsWith("local_agents_")) {
+    if (labelForWindow(win) !== "main" && !labelForWindow(win).startsWith("agents-"))
+      throw new Error("Local Agents are only available in the main and Agent windows");
+    if (command === "local_agents_status" && !binding) return { enabled: false, site: "", profiles: [], sessions: [] };
+    // Stopping local work must remain available when the server is unreachable or locked.
+    if (command === "local_agents_stop") return localAgentHosts.get(binding)?.service.stop(args.sessionId);
+    if (command === "local_agents_close_session")
+      return localAgentHosts.get(binding)?.service.closeSession(args.sessionId);
+    const assertOwner = () => {
+      if (
+        quitting ||
+        win.isDestroyed() ||
+        event.sender.isDestroyed() ||
+        windowSessionBindings.get(event.sender) !== binding
+      )
+        throw new Error("Agent window login changed");
+    };
+    const host = await localAgentHost(binding, assertOwner);
+    if (command === "local_agents_status") return host.service.snapshot();
+    if (command === "local_agents_open") {
+      createWindow(
+        host.label,
+        { url: "/luna/agents", title: "JumpServer Agent", width: 1100, height: 800, minWidth: 800 },
+        binding
+      );
+      return;
+    }
+    if (command === "local_agents_save_profile") return host.service.saveProfile(args.profile);
+    if (command === "local_agents_delete_profile") return host.service.deleteProfile(args.id);
+    if (command === "local_agents_probe") return probeAgent(validateAgentProfile(args.profile));
+    if (command === "local_agents_create") return host.service.create(args.profileId);
+    if (command === "local_agents_send") return host.service.send(args.sessionId, args.text);
+    if (command === "local_agents_approve") return host.service.approve(args.sessionId, args.requestId, args.allow);
+    throw new Error("Unknown local Agent command");
+  }
+
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
     const id = nextSubscriptionId++;
@@ -1347,7 +1445,8 @@ async function handleInvoke(event, request) {
         "client-lock-changed",
         "client-policy-notices",
         "client-policy-notice-dismiss",
-        "client-policy-notice-layer"
+        "client-policy-notice-layer",
+        "local-agents-changed"
       ].includes(args.event)
     )
       throw new Error("Client lock events are owned by the main process");
@@ -1546,6 +1645,7 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "set_api_session") {
+    if (labelForWindow(win).startsWith("agents-")) throw new Error("Agent windows use their existing login binding");
     if (
       labelForWindow(win) !== "main" &&
       (args.sessionKey !== binding?.sessionKey || args.origin !== binding?.origin || !authService.boundToken(binding))
@@ -1556,6 +1656,11 @@ async function handleInvoke(event, request) {
       () => {
         // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
         closeAssetWindows();
+        for (const host of localAgentHosts.values()) {
+          host.service.close();
+          windows.get(host.label)?.destroy();
+        }
+        localAgentHosts.clear();
         const main = windows.get("main");
         if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
         // Bind the new login below before publishing its lock state to the surviving windows.
@@ -1922,6 +2027,9 @@ app.on("before-quit", (event) => {
     confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
     return;
   }
+  quitting = true;
+  for (const host of localAgentHosts.values()) host.service.close();
+  localAgentHosts.clear();
   authService?.stopSessionMonitor();
   clearInterval(idleLockTimer);
   if (authExitFinished) return;

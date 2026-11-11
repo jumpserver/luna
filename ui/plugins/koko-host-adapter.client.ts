@@ -21,7 +21,7 @@ import {
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
-import { desktopFs, desktopInvoke } from "~/shared/desktop/bridge";
+import { desktopFs, desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 import {
   createHostCodeMirrorSyntaxTheme,
   createHostCodeMirrorTheme,
@@ -33,6 +33,7 @@ import { transformAssetDetail } from "~/utils";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
+  if (desktopWindow.label().startsWith("agents-")) return;
   const { createKokoTicket } = useWorkspaceConnectors();
   const {
     canSplitWorkspace,
