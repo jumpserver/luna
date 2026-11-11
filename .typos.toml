@@ -6,6 +6,19 @@ brin = "brin"
 ontext = "ontext"
 Ende = "Ende"
 Inser = "Inser"
+# PowerShell case-insensitive inequality, DOM media event and a truncated PNG fixture.
+ine = "ine"
+seeked = "seeked"
+PN = "PN"
 
 [files]
-extend-exclude = ["frontend/public", "go-client/go.mod", "i18n/locales/fr.json", "ui/utils/frenchComponents.test.ts"]
+# Do not rewrite translations or vendored upstream sources/license text as English.
+extend-exclude = [
+  "frontend/public",
+  "go-client/go.mod",
+  "**/locales/**/{es,fr,pt_br,vi}.{json,ts}",
+  "ui/utils/frenchComponents.test.ts",
+  "packages/guacamole/upstream",
+  "packages/guacamole/types",
+  "packages/guacamole/LICENSE",
+]

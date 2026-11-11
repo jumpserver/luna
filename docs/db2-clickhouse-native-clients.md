@@ -42,6 +42,11 @@ DBeaver connection fields as **one argument**, retaining spaces/quotes/Unicode
 and rejecting the reserved `|` and NUL delimiters. No connection token is
 written to the driver definition. DBeaver connections are temporary (`save=false`).
 
+Platform plugins share `plugins/shared/dbeaver`; Electron resource preparation
+copies this directory alongside the platform plugins. Regression tests exercise
+the copied bundle as well as concurrent workspace initialization and preservation
+of existing driver files.
+
 ## Boundaries and regression checks
 
 - Both proxy frontends currently use plaintext. Use a trusted network or a

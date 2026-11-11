@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -423,6 +423,66 @@ for (const platform of ["macos", "linux", "windows"]) {
     assert.equal(launched, true);
   });
 }
+
+test("packaged DBeaver resolves shared resources and initializes its Native workspace atomically", async (context) => {
+  const bundle = await mkdtemp(path.join(os.tmpdir(), "jms native packaged "));
+  context.after(() => rm(bundle, { recursive: true, force: true }));
+  const platformDir = path.join(bundle, "plugins", "macos");
+  await mkdir(platformDir, { recursive: true });
+  await cp(path.join(projectRoot, "plugins/macos/macos.dbeaver"), path.join(platformDir, "macos.dbeaver"), {
+    recursive: true
+  });
+  await cp(path.join(projectRoot, "plugins/shared"), path.join(bundle, "plugins/shared"), { recursive: true });
+  await writeFile(
+    path.join(platformDir, "index.json"),
+    JSON.stringify({
+      plugins: [{ id: "macos.dbeaver", name: "dbeaver", category: "databases" }]
+    })
+  );
+  await writeFile(
+    path.join(platformDir, "plugins-state.defaults.json"),
+    JSON.stringify({
+      version: 1,
+      selections: { "databases:clickhouse": "macos.dbeaver" },
+      plugins: {}
+    })
+  );
+  const app = { getPath: () => bundle, isPackaged: true };
+  const service = new ApplicationConfigService(app, bundle);
+  service.builtInDir = async () => platformDir;
+  await service.initialize();
+  await service.updateSelection({
+    category: "databases",
+    protocol: "clickhouse",
+    name: "dbeaver",
+    path: process.execPath,
+    makeDefault: true
+  });
+  const launcher = new LocalApplicationLauncher(app, bundle, service, null);
+  let launches = 0;
+  const directory = path.join(service.configDir, "dbeaver-clickhouse-native/.metadata/.config");
+  const target = path.join(directory, "drivers.xml");
+  const definition = await readFile(path.join(bundle, "plugins/shared/dbeaver/drivers-clickhouse.xml"), "utf8");
+  launcher.launchExecutable = async () => {
+    assert.equal(await readFile(target, "utf8"), definition);
+    launches++;
+  };
+  const payload = {
+    protocol: "clickhouse",
+    name: "Native",
+    endpoint: { host: "gateway.example.com", port: 15525 },
+    token: { id: "selector-token", value: "access-secret" },
+    asset: { info: { db_name: "app" } }
+  };
+  const url = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await Promise.all(Array.from({ length: 4 }, () => launcher.launch(url)));
+  assert.equal(launches, 4);
+  assert.deepEqual(await readdir(directory), ["drivers.xml"]);
+  const existing = "<drivers><!-- user driver changes --></drivers>";
+  await writeFile(target, existing);
+  launcher.launchExecutable = async () => assert.equal(await readFile(target, "utf8"), existing);
+  await launcher.launch(url);
+});
 
 for (const platform of ["macos", "linux"]) {
   test(`${platform} offers a shell-safe Dameng disql launch`, async (context) => {

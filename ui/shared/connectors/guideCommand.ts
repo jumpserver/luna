@@ -5,11 +5,12 @@ export function getGuideClientProtocol(protocol: string) {
 }
 
 function shellQuote(value: string) {
-  return `'${value.replaceAll("'", "'\\''")}'`;
+  const escaped = value.replaceAll("'", String.raw`'\''`);
+  return `'${escaped}'`;
 }
 
 function uriComponent(value: string) {
-  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.codePointAt(0)!.toString(16).toUpperCase()}`);
 }
 
 export function getGuideConnectCommand(input: {
@@ -41,7 +42,8 @@ export function getGuideConnectCommand(input: {
       return `disql ${id}/${secret}@${host}:${port}`;
     case "db2": {
       const address = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
-      return `usql ${shellQuote(`db2://${uriComponent(id)}:${uriComponent(secret)}@${address}:${port}/${uriComponent(database)}?secmec=3&ssl=false`)}`;
+      const uri = `db2://${uriComponent(id)}:${uriComponent(secret)}@${address}:${port}/${uriComponent(database)}?secmec=3&ssl=false`;
+      return `usql ${shellQuote(uri)}`;
     }
     case "clickhouse":
       return `clickhouse-client --host=${shellQuote(host)} --port=${shellQuote(port)} --user=${shellQuote(id)} --password=${shellQuote(secret)} --database=${shellQuote(database)}`;

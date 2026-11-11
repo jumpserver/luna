@@ -12,7 +12,7 @@ export async function prepareClickHouseWorkspace(configDir) {
   const target = path.join(directory, "drivers.xml");
   const temporary = `${target}.${randomUUID()}.tmp`;
   try {
-    const definition = await readFile(new URL("../drivers-clickhouse.xml", import.meta.url));
+    const definition = await readFile(new URL("./drivers-clickhouse.xml", import.meta.url));
     await writeFile(temporary, definition, { flag: "wx", mode: 0o600 });
     try {
       // Publish atomically; never replace a running workspace's driver definition.
