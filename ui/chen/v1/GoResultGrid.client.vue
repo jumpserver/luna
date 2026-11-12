@@ -3,7 +3,6 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   CellClassParams,
   CellContextMenuEvent,
-  CellDoubleClickedEvent,
   CellFocusedEvent,
   CellMouseOverEvent,
   ColDef,
@@ -27,7 +26,6 @@ import {
   extendChenGridSelection,
   finishChenGridSelection,
   getChenGridSelectionBounds,
-  isChenGridCellSelected,
   startChenGridSelection
 } from "~/chen/utils/dataGridSelection";
 import { writeClipboardText } from "~/utils/clipboard";
@@ -214,6 +212,9 @@ const bounds = computed(() => {
   void pinVersion.value;
   return getChenGridSelectionBounds(selection.value, columnIds());
 });
+const selectedColumns = computed(
+  () => new Set(bounds.value?.displayedColIds.slice(bounds.value.minCol, bounds.value.maxCol + 1))
+);
 const selectionLabel = computed(() =>
   bounds.value
     ? t("Chen.GoV1GridSelection", {
@@ -405,12 +406,13 @@ function columnIds() {
   );
 }
 function selectedClass(params: CellClassParams) {
+  const area = bounds.value;
   return (
+    !!area &&
     params.node.rowIndex != null &&
-    isChenGridCellSelected(selection.value, columnIds(), {
-      rowIndex: params.node.rowIndex,
-      colId: params.column.getColId()
-    })
+    params.node.rowIndex >= area.minRow &&
+    params.node.rowIndex <= area.maxRow &&
+    selectedColumns.value.has(params.column.getColId())
   );
 }
 const columns = computed<ColDef[]>(() => [
@@ -460,12 +462,11 @@ const columns = computed<ColDef[]>(() => [
           ? "DEFAULT"
           : resultValuePreview(value, 240, gridPreferences.value),
       tooltipValueGetter: ({ value, data }) => {
-        const preview = props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
+        return props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
           ? "DEFAULT"
           : value === ""
             ? t("Chen.GoV1GridEmptyString")
             : resultValuePreview(value, 1024);
-        return `${preview}\n\n${t(editableTarget(data, resultColumnId(ordinal)) ? "Chen.GoWriteEditCell" : "Chen.GoV1GridPreviewHint")}`;
       },
       comparator: (a, b) => compareResultValues(a, b, resultTypeBadge(column.data_type) === "123"),
       getQuickFilterText: ({ value }) => resultValueText(value),
@@ -488,14 +489,45 @@ const defaults: ColDef = {
   suppressMovable: true
 };
 
-function refreshSelection() {
-  gridApi.value?.refreshCells({ force: true });
-  emit(
-    "selection",
-    (selectedData()?.rows || []).map((row) => Number(row.__row) - props.rows.offset - 1)
-  );
+let paintedBounds: typeof bounds.value = null;
+let paintedColumns = new Set<string>();
+let selectedRows: number[] = [];
+function refreshSelection(refreshAll = false) {
+  const area = bounds.value;
+  const columns = selectedColumns.value;
+  if (refreshAll) {
+    // Sorting can move previously highlighted row nodes outside their old range.
+    gridApi.value?.refreshCells();
+  } else if (
+    area?.minRow !== paintedBounds?.minRow ||
+    area?.maxRow !== paintedBounds?.maxRow ||
+    columns.size !== paintedColumns.size ||
+    [...columns].some((column) => !paintedColumns.has(column))
+  ) {
+    // Refresh only visible cells in the old/new ranges. Class rules also run
+    // without force, so clearing a selection does not rebuild cell contents.
+    const rowNodes = gridApi.value
+      ?.getRenderedNodes()
+      .filter(
+        ({ rowIndex }) =>
+          rowIndex != null &&
+          [area, paintedBounds].some((range) => range && rowIndex >= range.minRow && rowIndex <= range.maxRow)
+      );
+    const changedColumns = [...new Set([...paintedColumns, ...columns])];
+    if (rowNodes?.length && changedColumns.length) {
+      gridApi.value?.refreshCells({ rowNodes, columns: changedColumns });
+    }
+  }
+  paintedBounds = area;
+  paintedColumns = columns;
+  const rows = (selectedData()?.rows || []).map((row) => Number(row.__row) - props.rows.offset - 1);
+  if (rows.length !== selectedRows.length || rows.some((row, index) => row !== selectedRows[index])) {
+    selectedRows = rows;
+    emit("selection", rows);
+  }
 }
 function finishSelection() {
+  if (!selection.value.dragging) return;
   selection.value = finishChenGridSelection(selection.value);
 }
 function resetSelection() {
@@ -504,11 +536,12 @@ function resetSelection() {
   contextCell.value = null;
   contextRowNumber.value = null;
   selection.value = emptyChenGridSelection();
-  refreshSelection();
+  refreshSelection(true);
 }
 function captureCellMouseDown(event: MouseEvent) {
   if (!(event.target instanceof Element) || (event.button !== 0 && event.button !== 2)) return;
   const element = event.target.closest(".ag-cell[col-id]");
+  if (element?.classList.contains("ag-cell-inline-editing")) return;
   const colId = element?.getAttribute("col-id");
   const row = element?.closest("[row-index]")?.getAttribute("row-index");
   if (!colId || row == null || !Number.isInteger(Number(row))) return;
@@ -658,6 +691,7 @@ function mouseOver(event: CellMouseOverEvent) {
   }
   const colId = event.column.getColId();
   if (colId === "__row") return;
+  if (selection.value.current?.rowIndex === event.node.rowIndex && selection.value.current.colId === colId) return;
   selection.value = extendChenGridSelection(selection.value, { rowIndex: event.node.rowIndex, colId });
   refreshSelection();
 }
@@ -767,9 +801,18 @@ function keydown(event: KeyboardEvent) {
 }
 function editableTarget(row: Record<string, unknown> | undefined, colId: string) {
   if (!row || row.__result !== props.rows.id || row.__offset !== props.rows.offset) return null;
-  const column = props.rows.columns.findIndex((_, index) => resultColumnId(index) === colId);
+  const column = Number(colId.slice("column_".length));
   const index = Number(row?.__row) - props.rows.offset - 1;
-  if (!Number.isInteger(index) || index < 0 || index >= props.rows.rows.length || column < 0) return null;
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= props.rows.rows.length ||
+    !Number.isInteger(column) ||
+    column < 0 ||
+    column >= props.rows.columns.length ||
+    resultColumnId(column) !== colId
+  )
+    return null;
   const allowed =
     index >= (props.originalRowCount ?? props.rows.rows.length) ? props.insertableColumns : props.editableColumns;
   return allowed?.includes(column) && !props.deletedRows?.includes(index) ? { row: index, column } : null;
@@ -789,11 +832,6 @@ function requestEdit() {
   if (props.active === false || !target) return false;
   emit("edit", target.row, target.column);
   return true;
-}
-function doubleClicked(event: CellDoubleClickedEvent) {
-  if (event.node.rowIndex != null && !editableTarget(event.data, event.column.getColId())) {
-    openValue({ rowIndex: event.node.rowIndex, colId: event.column.getColId() });
-  }
 }
 function setCurrentCellNull() {
   if (!canSetNull.value) return;
@@ -1090,7 +1128,6 @@ onBeforeUnmount(() => {
         @body-scroll-end="loadNearEnd"
         @cell-mouse-over="mouseOver"
         @cell-focused="focused"
-        @cell-double-clicked="doubleClicked"
         @cell-context-menu="contextMenu"
         @sort-changed="resetSelection"
         @model-updated="modelUpdated"
