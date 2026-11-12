@@ -1638,6 +1638,7 @@
       "failed": "Thất bại"
     },
     "ReviewPartialResult": "{approved} yêu cầu đã được duyệt, {declined} yêu cầu chưa được duyệt. Các tài sản trong yêu cầu chưa được duyệt sẽ bị bỏ qua.",
+    "Ticket": "Yêu cầu",
     "TicketNumber": "Yêu cầu {number}",
     "ApprovalTicket": "Yêu cầu phê duyệt",
     "ReviewersUnavailable": "Không có người phê duyệt khả dụng",

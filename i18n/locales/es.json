@@ -1638,6 +1638,7 @@
       "failed": "Error"
     },
     "ReviewPartialResult": "{approved} solicitudes aprobadas y {declined} no aprobadas. Se omitirán los activos de las solicitudes no aprobadas.",
+    "Ticket": "Solicitud",
     "TicketNumber": "Solicitud {number}",
     "ApprovalTicket": "Solicitud de aprobación",
     "ReviewersUnavailable": "No hay revisores disponibles",

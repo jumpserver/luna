@@ -1638,6 +1638,7 @@
       "failed": "Falha"
     },
     "ReviewPartialResult": "{approved} solicitações aprovadas e {declined} não aprovadas. Os ativos das solicitações não aprovadas serão ignorados.",
+    "Ticket": "Solicitação",
     "TicketNumber": "Solicitação {number}",
     "ApprovalTicket": "Solicitação de aprovação",
     "ReviewersUnavailable": "Nenhum aprovador disponível",

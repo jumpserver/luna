@@ -1638,6 +1638,7 @@
       "failed": "失敗"
     },
     "ReviewPartialResult": "{approved} 件が承認され、{declined} 件が未承認です。未承認の申請に含まれるアセットはスキップされます。",
+    "Ticket": "申請",
     "TicketNumber": "申請 {number}",
     "ApprovalTicket": "承認申請",
     "ReviewersUnavailable": "利用可能な承認者がいません",

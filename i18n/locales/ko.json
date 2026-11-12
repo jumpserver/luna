@@ -1638,6 +1638,7 @@
       "failed": "처리 실패"
     },
     "ReviewPartialResult": "{approved}건이 승인되었고 {declined}건은 승인되지 않았습니다. 승인되지 않은 요청의 자산은 건너뜁니다.",
+    "Ticket": "요청",
     "TicketNumber": "요청 {number}",
     "ApprovalTicket": "승인 요청",
     "ReviewersUnavailable": "사용 가능한 승인자가 없습니다",
