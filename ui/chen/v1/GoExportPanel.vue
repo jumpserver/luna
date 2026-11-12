@@ -94,7 +94,7 @@ function start() {
 async function download() {
   if (!job.value?.ready || job.value.status !== "succeeded" || downloading.value || !props.ready) return;
   const id = job.value.id;
-  const fileName = `chen-${id.replace(/[^\w-]/g, "_")}.${job.value.format}`;
+  const fileName = job.value.filename || `chen-${id.replace(/[^\w-]/g, "_")}.${job.value.format}`;
   downloading.value = true;
   notice.value = "";
   failure.value = "";

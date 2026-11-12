@@ -117,6 +117,7 @@ export interface GoExecution {
 export type GoExportFormat = "csv" | "xlsx";
 export interface GoExport {
   id: string;
+  filename?: string;
   execution_id?: string;
   console_id?: string;
   format: GoExportFormat;

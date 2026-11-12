@@ -136,7 +136,10 @@ async function load() {
     );
     if (!current.signal.aborted) data.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
+    if (!current.signal.aborted) {
+      data.value = undefined;
+      error.value = chenErrorText(cause, t);
+    }
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
@@ -180,7 +183,10 @@ async function loadStatistics() {
     } while (cursor);
     statisticsLoaded.value = true;
   } catch (cause) {
-    if (!current.signal.aborted) error.value = chenErrorText(cause, t);
+    if (!current.signal.aborted) {
+      statisticsLoaded.value = false;
+      error.value = chenErrorText(cause, t);
+    }
   } finally {
     if (!current.signal.aborted) busy.value = false;
   }
@@ -202,7 +208,10 @@ async function loadDdl() {
     );
     if (!current.signal.aborted) ddl.value = value;
   } catch (cause) {
-    if (!current.signal.aborted) ddlError.value = chenErrorText(cause, t);
+    if (!current.signal.aborted) {
+      ddl.value = undefined;
+      ddlError.value = chenErrorText(cause, t);
+    }
   } finally {
     if (!current.signal.aborted) ddlBusy.value = false;
   }
@@ -215,9 +224,11 @@ watch(
     busy.value = false;
     ddlBusy.value = false;
     if (!props.ready || props.visible === false) return;
-    if (active.value === "basic" && !statisticsLoaded.value && !error.value) void loadStatistics();
-    else if (active.value === "ddl" && !ddl.value && !ddlError.value) void loadDdl();
-    else if (active.value !== "ddl" && active.value !== "basic" && !data.value && !error.value) void load();
+    error.value = "";
+    ddlError.value = "";
+    if (active.value === "basic" && !statisticsLoaded.value) void loadStatistics();
+    else if (active.value === "ddl" && !ddl.value) void loadDdl();
+    else if (active.value !== "ddl" && active.value !== "basic" && !data.value) void load();
   },
   { immediate: true }
 );
