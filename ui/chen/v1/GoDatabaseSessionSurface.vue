@@ -159,6 +159,7 @@ const session = ref<GoSession | null>(null);
 const tabs = ref<ChenWorkspaceTab[]>([]);
 const activeId = ref("");
 const defaultContext = ref<QueryContext>({ database: "", schema: "" });
+const listsDatabases = computed(() => ["mysql", "mariadb", "oceanbase-mysql"].includes(session.value?.dialect || ""));
 const error = ref("");
 const busy = ref(true);
 const authenticationUnknown = ref(false);
@@ -816,7 +817,7 @@ async function connectQuery(query: QueryWorkspaceTab) {
     }
     query.console = console;
     query.context = { database: console.database, schema: console.schema };
-    if (!defaultContext.value.database) defaultContext.value = { ...query.context };
+    if (!listsDatabases.value && !defaultContext.value.database) defaultContext.value = { ...query.context };
   } catch (cause) {
     if (isCurrent(query)) query.error = failureText(cause);
   } finally {
@@ -1189,7 +1190,12 @@ function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "
   objectSection(tab, section);
 }
 function openOverview(context: QueryContext, section: "diagram" | "basic" = "basic") {
-  if (!sessionReady.value || context.database !== defaultContext.value.database) return;
+  if (
+    !sessionReady.value ||
+    !context.database ||
+    (!listsDatabases.value && context.database !== defaultContext.value.database)
+  )
+    return;
   const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
   if (!tabs.value.some((tab) => tab.id === id))
     tabs.value.push({
@@ -1828,7 +1834,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         :style="{ width: `${desktopTree ? sidebarWidth : 360}px` }"
       >
         <GoCatalogTree
-          v-if="defaultContext.database"
           :api="api"
           :session-id="session.id"
           :dialect="session.dialect"
@@ -1841,6 +1846,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :recent-objects="recentObjects"
           :active-object="activeTab?.kind === 'object' ? activeTab.object : undefined"
           :active-scope="activeTab ? tabContext(activeTab, defaultContext) : undefined"
+          @default-context="defaultContext = $event"
           @remove-recent="
             (object) =>
               (recentObjects = recentObjects.filter(
@@ -1856,7 +1862,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           @query="(context, object) => newQuery(context, object)"
           @preview="(object) => openObject(object)"
         />
-        <div v-else class="p-3 text-xs text-muted">{{ t("Chen.GoV1Connecting") }}</div>
       </aside>
       <div
         v-if="desktopTree"
