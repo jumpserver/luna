@@ -33,16 +33,19 @@ const emit = defineEmits<{
   createTable: [context: QueryContext];
   clearRecent: [];
   removeRecent: [object: GoCatalogObject];
+  defaultContext: [context: QueryContext];
 }>();
 const { t } = useI18n();
 const toast = useToast();
 const preferences = useChenWorkspacePreferences();
 const databaseNamespace = computed(() => chenSqlDialect(props.dialect).databaseNamespace);
+const listsDatabases = computed(() => ["mysql", "mariadb", "oceanbase-mysql"].includes(props.dialect));
 interface Node {
   id: string;
   label: string;
   type: "connection" | "database" | "schema" | "group" | "object" | "recent";
   schema: string;
+  database: string;
   kind?: "table" | "view";
   object?: GoCatalogObject;
   detail?: string;
@@ -66,6 +69,7 @@ function node(type: Node["type"], label: string, schema = "", extra: Partial<Nod
     label,
     type,
     schema,
+    database: props.database,
     children: [],
     expanded: false,
     loaded: false,
@@ -96,6 +100,7 @@ const search = ref("");
 const searchButton = useTemplateRef("searchButton");
 const searchInput = useTemplateRef("searchInput");
 const searchNode = ref<Node>(node("group", "search"));
+const searchScope = ref<QueryContext>({ database: "", schema: "" });
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let searchController: AbortController | undefined;
 const controllers = new Set<AbortController>();
@@ -111,6 +116,18 @@ async function toggleSearch() {
     if (tree.value) tree.value.scrollTop = browsingScroll;
     searchButton.value?.$el.focus();
   } else {
+    let current: Node | undefined;
+    function visit(candidate: Node) {
+      if (candidate.id === selected.value) current = candidate;
+      for (const child of candidate.children) visit(child);
+    }
+    visit(root.value);
+    visit(recent.value);
+    searchScope.value = current?.database
+      ? context(current)
+      : props.activeScope?.database
+        ? { ...props.activeScope }
+        : { database: props.database, schema: databaseNamespace.value ? props.database : "" };
     browsingSelection = selected.value;
     browsingScroll = tree.value?.scrollTop || 0;
     searchOpen.value = true;
@@ -127,7 +144,7 @@ function escapeSearch(event: KeyboardEvent) {
 function syncSelection() {
   const scope = props.activeScope;
   if (!scope || searchOpen.value) return;
-  const schema = scope.schema;
+  const { database, schema } = scope;
   let match: Node | undefined;
   function visit(current: Node) {
     if (props.activeObject && current.object && objectKey(current.object) === objectKey(props.activeObject))
@@ -135,7 +152,8 @@ function syncSelection() {
     else if (
       !props.activeObject &&
       current.type === (schema && !databaseNamespace.value ? "schema" : "database") &&
-      current.schema === schema
+      current.database === database &&
+      (databaseNamespace.value || current.schema === schema)
     )
       match = current;
     for (const child of current.children) visit(child);
@@ -166,12 +184,25 @@ const rows = computed(() => {
   return result;
 });
 const focusable = computed(() => rows.value.filter((row) => row.type === "node"));
-function groups(schema: string) {
-  return (["table", "view"] as const).map((kind) => node("group", kind, schema, { kind }));
+function groups(schema: string, database = props.database) {
+  return (["table", "view"] as const).map((kind) => node("group", kind, schema, { kind, database }));
+}
+function context(current: Node): QueryContext {
+  if (current.type === "connection")
+    return { database: props.database, schema: databaseNamespace.value ? props.database : "" };
+  return { database: current.database, schema: current.schema };
+}
+function databaseNode(database: string) {
+  return node("database", database, databaseNamespace.value ? database : "", {
+    database,
+    expanded: database === props.database,
+    ...(databaseNamespace.value ? { children: groups(database, database), loaded: true } : {})
+  });
 }
 function relation(object: GoCatalogObject): Node {
   return node("object", object.name, object.schema, {
     id: objectKey(object),
+    database: object.database,
     object,
     kind: object.kind,
     loaded: true,
@@ -180,7 +211,7 @@ function relation(object: GoCatalogObject): Node {
 }
 async function load(current: Node, append = false) {
   if (!props.ready || current.loading || !expandable(current)) return;
-  if (current.type === "connection" || current.type === "schema") return;
+  if ((current.type === "connection" && !listsDatabases.value) || current.type === "schema") return;
   if (current.type === "database" && databaseNamespace.value) return;
   const generation = ++current.generation;
   const controller = new AbortController();
@@ -190,15 +221,23 @@ async function load(current: Node, append = false) {
   try {
     let page: GoCatalogPage<unknown>;
     let items: Node[];
-    if (current.type === "database") {
+    if (current.type === "connection" || current.type === "database") {
       const schemas = await props.api.catalogSchemas(
         props.sessionId,
         append ? current.cursor : undefined,
         controller.signal
       );
       page = schemas;
+      if (current.type === "connection" && !controller.signal.aborted)
+        emit("defaultContext", { database: schemas.database || "", schema: schemas.database || "" });
       items = schemas.items.map((schema) =>
-        node("schema", schema.name, schema.name, { loaded: true, children: groups(schema.name) })
+        current.type === "connection"
+          ? databaseNode(schema.name)
+          : node("schema", schema.name, schema.name, {
+              database: current.database,
+              loaded: true,
+              children: groups(schema.name, current.database)
+            })
       );
     } else {
       const objects = await props.api.catalogObjects(
@@ -210,10 +249,13 @@ async function load(current: Node, append = false) {
       items = objects.items.map(relation);
     }
     if (generation !== current.generation || controller.signal.aborted) return;
+    if (current.type === "connection" && props.database && !items.some((item) => item.database === props.database))
+      items.unshift(current.children.find((item) => item.database === props.database) || databaseNode(props.database));
     current.children = mergeCatalogNodes(current.children, items, append);
     current.cursor = page.next_cursor;
     current.more = page.has_more;
     current.loaded = true;
+    if (current.type === "connection") selectDefaultDatabase();
   } catch (cause) {
     if (!controller.signal.aborted && generation === current.generation) current.error = chenErrorText(cause, t);
   } finally {
@@ -231,12 +273,14 @@ async function toggle(current: Node) {
 }
 function select(current: Node, event: MouseEvent) {
   selected.value = current.id;
+  if (searchOpen.value && listsDatabases.value && !searchScope.value.database && current.database)
+    searchScope.value = context(current);
   // A native double click produces two clicks. Expand once, never run a query here.
   if (event.detail <= 1 && expandable(current)) void toggle(current);
 }
 function activate(current: Node) {
   if (current.object) emit("object", current.object, "data");
-  else if (current.type === "schema") emit("overview", { database: props.database, schema: current.schema });
+  else if (current.type === "schema") emit("overview", context(current));
 }
 function icon(current: Node) {
   return {
@@ -267,7 +311,7 @@ async function copyName(current: Node, qualified = false) {
     toast.add({ title: t("Common.CopyFailed"), color: "error" });
   }
 }
-async function refresh(current = root.value.children[0]!) {
+async function refresh(current = listsDatabases.value ? root.value : root.value.children[0]!) {
   if (!current) return;
   if (!expandable(current)) {
     if (searching.value) return runSearch();
@@ -276,7 +320,7 @@ async function refresh(current = root.value.children[0]!) {
     else if (parent) await refresh(parent.node);
     return;
   }
-  if (current.type === "connection") return refresh(current.children[0]);
+  if (current.type === "connection" && !listsDatabases.value) return refresh(current.children[0]);
   if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) {
     current.expanded = true;
     await load(current);
@@ -284,7 +328,7 @@ async function refresh(current = root.value.children[0]!) {
   }
   for (const child of current.children) {
     if (!expandable(child)) continue;
-    if (child.expanded) await refresh(child);
+    if (child.expanded || (child.type === "database" && databaseNamespace.value)) await refresh(child);
     else if (child.type !== "schema") child.loaded = false;
   }
 }
@@ -302,7 +346,7 @@ function menu(current: Node) {
         onSelect: clearRecent
       }
     ];
-  const context = { database: props.database, schema: current.schema };
+  const scope = context(current);
   return [
     ...(current.id.startsWith("recent:") && current.object
       ? [
@@ -320,6 +364,7 @@ function menu(current: Node) {
             icon: "i-lucide-network",
             disabled:
               !props.ready ||
+              !scope.database ||
               ![
                 "postgresql",
                 "mysql",
@@ -333,31 +378,19 @@ function menu(current: Node) {
                 "clickhouse"
               ].includes(props.dialect),
             onSelect: () => {
-              if (props.ready)
-                emit(
-                  "overview",
-                  {
-                    database: props.database,
-                    schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
-                  },
-                  "diagram"
-                );
+              if (props.ready && scope.database) emit("overview", scope, "diagram");
             }
           }
         ]
       : []),
-    ...(current.type === "schema"
+    ...(current.type === "schema" || (current.type === "database" && listsDatabases.value)
       ? [
           {
             label: t("Chen.GoOverviewOpen"),
             icon: "i-lucide-list-tree",
             disabled: !props.ready,
             onSelect: () => {
-              if (props.ready)
-                emit("overview", {
-                  database: props.database,
-                  schema: current.type === "schema" ? current.schema : databaseNamespace.value ? props.database : ""
-                });
+              if (props.ready) emit("overview", scope);
             }
           }
         ]
@@ -407,7 +440,7 @@ function menu(current: Node) {
             label: t("Chen.GoV1GenerateSelect"),
             icon: "i-lucide-file-code-2",
             disabled: !props.ready || !props.canPaste,
-            onSelect: () => emit("query", context, current.object!)
+            onSelect: () => emit("query", scope, current.object!)
           }
         ]
       : []),
@@ -425,14 +458,14 @@ function menu(current: Node) {
     {
       label: t("Chen.CreateTable"),
       icon: "i-lucide-table-2",
-      disabled: !props.ready,
-      onSelect: () => emit("createTable", context)
+      disabled: !props.ready || !scope.database,
+      onSelect: () => emit("createTable", scope)
     },
     {
       label: t("Chen.GoV1NewQueryHere"),
       icon: "i-lucide-plus",
       disabled: !props.ready,
-      onSelect: () => emit("query", context)
+      onSelect: () => emit("query", scope)
     },
     {
       label: t("Chen.GoV1Refresh"),
@@ -494,6 +527,7 @@ async function keydown(event: KeyboardEvent, current: Node) {
 }
 async function runSearch(append = false) {
   if (!props.ready || !searching.value) return;
+  if (listsDatabases.value && !searchScope.value.database) return;
   searchController?.abort();
   const controller = new AbortController();
   searchController = controller;
@@ -507,7 +541,11 @@ async function runSearch(append = false) {
   try {
     const page = await props.api.catalogObjects(
       props.sessionId,
-      { q: search.value.trim(), cursor: append ? current.cursor : undefined },
+      {
+        ...(listsDatabases.value ? { schema: searchScope.value.database } : {}),
+        q: search.value.trim(),
+        cursor: append ? current.cursor : undefined
+      },
       controller.signal
     );
     if (controller.signal.aborted) return;
@@ -529,27 +567,46 @@ watch(search, () => {
   searchNode.value.more = false;
   searchNode.value.loading = false;
   searchNode.value.error = "";
-  if (searching.value && props.ready) {
+  if (searching.value && props.ready && (!listsDatabases.value || searchScope.value.database)) {
     searchNode.value.loading = true;
     searchTimer = setTimeout(runSearch, 250);
   }
 });
 function initialize() {
-  const database = node("database", props.database, databaseNamespace.value ? props.database : "", {
-    expanded: true
+  const children = props.database ? [databaseNode(props.database)] : [];
+  root.value = node("connection", props.asset, databaseNamespace.value ? props.database : "", {
+    expanded: true,
+    loaded: !listsDatabases.value,
+    children
   });
-  if (databaseNamespace.value) {
-    database.children = groups(props.database);
-    database.loaded = true;
+  selected.value = children[0]?.id || root.value.id;
+  if (listsDatabases.value) void load(root.value);
+  else if (children[0]) void load(children[0]);
+}
+function selectDefaultDatabase() {
+  if (!props.database) return;
+  let database = root.value.children.find((child) => child.database === props.database);
+  if (!database) {
+    database = databaseNode(props.database);
+    root.value.children.unshift(database);
   }
-  root.value = node("connection", props.asset, "", { expanded: true, loaded: true, children: [database] });
-  selected.value = database.id;
-  if (!databaseNamespace.value) void load(root.value.children[0]!);
+  if (selected.value === root.value.id) {
+    database.expanded = true;
+    selected.value = database.id;
+  }
+  syncSelection();
 }
 onMounted(() => {
   initialize();
   syncSelection();
 });
+watch(
+  () => props.database,
+  () => {
+    if (listsDatabases.value) selectDefaultDatabase();
+    else initialize();
+  }
+);
 watch(
   () => props.ready,
   (ready) => {
@@ -558,6 +615,7 @@ watch(
       searchController?.abort();
       searchNode.value.loading = false;
     } else if (searching.value) void runSearch();
+    else if (!root.value.loaded) void load(root.value);
     else if (root.value.children[0] && !root.value.children[0].loaded) void load(root.value.children[0]);
   }
 );
@@ -660,11 +718,18 @@ onBeforeUnmount(() => {
         v-model="search"
         :placeholder="t('Chen.GoV1FindTable')"
         :clear-label="t('Chen.GoV1ClearSearch')"
+        :disabled="listsDatabases && !searchScope.database"
         @keydown.down="focusSearchResults"
       />
     </div>
     <p
-      v-if="searchOpen && !searching"
+      v-if="searchOpen && listsDatabases && !searchScope.database"
+      class="shrink-0 px-4 py-3 text-center text-xs text-muted"
+    >
+      {{ t("Chen.SelectDatabaseAction") }}
+    </p>
+    <p
+      v-if="searchOpen && !searching && (!listsDatabases || searchScope.database)"
       class="grid min-h-0 flex-1 place-items-center px-4 text-center text-xs text-muted"
     >
       {{ t("Chen.GoV1FindTableHint") }}
