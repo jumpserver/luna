@@ -1,3 +1,4 @@
 dist
 node_modules
 .git
+vendor/guacamole/dist

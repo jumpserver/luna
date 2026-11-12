@@ -4,6 +4,7 @@
 /dist
 /tmp
 /out-tsc
+/vendor/guacamole/dist/
 
 # dependencies
 /node_modules

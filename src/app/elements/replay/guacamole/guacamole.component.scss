@@ -386,6 +386,17 @@ input[type="range"]:focus::-ms-fill-upper {
     max-height: 100%;
     overflow: hidden;
 
+    .recording-error {
+      position: absolute;
+      z-index: 100;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      padding: 12px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
     .seek-overlay {
       position: absolute;
       top: 0;
