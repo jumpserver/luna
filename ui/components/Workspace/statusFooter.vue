@@ -9,6 +9,7 @@ const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { authReady } = useAuthSession();
+const { openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const workspaceTabs = computed(() => tabs.value ?? []);
 
@@ -77,10 +78,18 @@ onBeforeUnmount(() => {
     <div class="flex min-w-0 items-center gap-3">
       <UBadge
         v-if="loginStatusText"
+        :as="loggedIn ? 'button' : 'span'"
+        :type="loggedIn ? 'button' : undefined"
         color="neutral"
         variant="soft"
         size="xs"
+        :class="
+          loggedIn
+            ? 'cursor-pointer hover:bg-(--app-hover-soft) focus-visible:outline-2 focus-visible:outline-(--app-focus-ring)'
+            : undefined
+        "
         :ui="{ base: 'max-w-full h-5 px-1.5 text-[11px]' }"
+        @click="loggedIn && openSettings('/setting/user')"
       >
         <template #leading>
           <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-(--app-muted)'" />

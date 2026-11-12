@@ -87,6 +87,7 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string;
   rdpSmartSize: string;
   recentSites: string[];
+  hiddenRecentSites: string[];
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
   sidebarAssetsOpen: boolean;
@@ -132,6 +133,7 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   rdpColorQuality: "32",
   rdpSmartSize: "0",
   recentSites: [],
+  hiddenRecentSites: [],
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS,
   sidebarAssetsOpen: true,

@@ -237,8 +237,8 @@ export const useUserInfoStore = defineStore(
      * @param accountId
      * @param userData
      */
-    const setUserData = (accountId: string, userData: UserData) => {
-      const previous = userMap.value[accountId];
+    const setUserData = (accountId: string, userData: UserData, previousAccountId = accountId) => {
+      const previous = userMap.value[previousAccountId];
       const next: SiteUserData = {
         ...previous,
         ...userData,
@@ -269,59 +269,87 @@ export const useUserInfoStore = defineStore(
      * @description 删除用户数据
      * @param accountId
      */
-    const deleteUserData = async (accountId: string, options: { alreadyLoggedOut?: boolean } = {}) => {
+    const deletingAccounts = shallowReactive(new Map<string, Promise<void>>());
+    const isLoggingOut = computed(() => deletingAccounts.size > 0);
+    const deleteUserData = (accountId: string, options: { alreadyLoggedOut?: boolean } = {}): Promise<void> => {
+      const pending = deletingAccounts.get(accountId);
+      if (pending) return pending;
       const userData = userMap.value[accountId];
+      if (!userData) return Promise.resolve();
 
-      // 主进程已完成注销时，只需复用本地账号清理和切换逻辑。
-      if (isDesktopRuntime() && userData && !options.alreadyLoggedOut) {
-        await desktopInvoke("logout", {
-          name: "main",
-          site: userData.site,
-          sessionId: accountId
-        });
-      }
-
-      if (!userData) {
-        return;
-      }
-
-      ++accountSwitchGeneration;
-      delete userMap.value[accountId];
-      if (accountId !== currentAccountId.value) return;
-
-      // 如果还有用户，则切换到下一个用户
-      if (hasUser.value) {
-        const nextEntry = Object.entries(userMap.value)[0] as [string, SiteUserData] | undefined;
-
-        if (nextEntry) {
-          if (isDesktopRuntime()) {
-            currentAccountId.value = "";
-            currentSite.value = "";
-            currentUser.value = null;
-            loggedIn.value = false;
-            currentOrganizations.value = [];
-            currentConnectionInfoMap.value = {};
-            currentConnectionPreferenceMap.value = {};
-            currentRdpClientOption.value = {};
+      // Both an explicit logout and a main-process expiry can finish the same removal.
+      // Join the whole operation, including activation of the replacement account.
+      const deleting = Promise.resolve()
+        .then(async () => {
+          if (userMap.value[accountId] !== userData) return;
+          const startingGeneration = accountSwitchGeneration;
+          if (isDesktopRuntime() && !options.alreadyLoggedOut) {
+            await desktopInvoke("logout", {
+              name: "main",
+              site: userData.site,
+              sessionId: accountId
+            });
           }
-          if (await setCurrentAccount(nextEntry[0])) loggedIn.value = true;
-        }
-      } else {
-        currentAccountId.value = "";
-        currentSite.value = "";
-        loggedIn.value = false;
-        currentUser.value = null;
 
-        userMap.value = {};
-        currentRdpClientOption.value = {};
-        currentConnectionInfoMap.value = {};
-        currentConnectionPreferenceMap.value = {};
-        currentOrganizations.value = [];
+          // Do not delete a newer login or invalidate a switch started by another removal.
+          if (userMap.value[accountId] !== userData) return;
+          delete userMap.value[accountId];
+          if (accountId !== currentAccountId.value) return;
 
-        nextTick(() => {
-          useEventBus().emit("clearAssets", undefined);
+          const newerSwitch = accountSwitchGeneration !== startingGeneration;
+          if (!newerSwitch) ++accountSwitchGeneration;
+          currentAccountId.value = "";
+          currentSite.value = "";
+          loggedIn.value = false;
+          currentUser.value = null;
+          currentRdpClientOption.value = {};
+          currentConnectionInfoMap.value = {};
+          currentConnectionPreferenceMap.value = {};
+          currentOrganizations.value = [];
+
+          if (!hasUser.value) {
+            nextTick(() => {
+              useEventBus().emit("clearAssets", undefined);
+            });
+            return;
+          }
+          if (newerSwitch) return;
+
+          const siteAddress = (site: string) => {
+            const value = site.trim().replace(/\/+$/, "");
+            try {
+              return new URL(value).href.replace(/\/+$/, "");
+            } catch {
+              return value;
+            }
+          };
+          const previousSite = siteAddress(userData.site);
+          const groups = new Map<string, string[]>([[previousSite, []]]);
+          for (const [id, account] of Object.entries(userMap.value)) {
+            if (account.sessionExpired) continue;
+            const address = siteAddress(account.site);
+            const group = groups.get(address) || [];
+            group.push(id);
+            groups.set(address, group);
+          }
+          for (const id of [...groups.values()].flat()) {
+            if (!userMap.value[id] || userMap.value[id].sessionExpired) continue;
+            const switching = setCurrentAccount(id).catch(() => false);
+            const generation = accountSwitchGeneration;
+            const switched = await switching;
+            if (switched) {
+              loggedIn.value = true;
+              return;
+            }
+            // A newer user-initiated switch owns the next selection. Cancellation also stops fallback.
+            if (generation !== accountSwitchGeneration || switched === undefined) return;
+          }
+        })
+        .finally(() => {
+          if (deletingAccounts.get(accountId) === deleting) deletingAccounts.delete(accountId);
         });
-      }
+      deletingAccounts.set(accountId, deleting);
+      return deleting;
     };
 
     /**
@@ -351,22 +379,23 @@ export const useUserInfoStore = defineStore(
       let nextUser = { ...userData };
       if (desktop) {
         useClientCompatibility().dismiss();
-        const result = await desktopInvoke<DesktopConnectionResult & { bearer?: string; profile?: { status: number } }>(
-          "bootstrap_auth_session",
-          {
-            site: userData.site,
-            sessionId: accountId,
-            compatibilityConfirmationId: options.compatibilityConfirmationId
-          }
-        );
-        if (generation !== accountSwitchGeneration || result?.status === "stale") return false;
+        const result = await desktopInvoke<
+          DesktopConnectionResult & { bearer?: string; profile?: { status: number; data?: string } }
+        >("bootstrap_auth_session", {
+          site: userData.site,
+          sessionId: accountId,
+          compatibilityConfirmationId: options.compatibilityConfirmationId
+        });
+        if (generation !== accountSwitchGeneration || getUserData(accountId) !== userData || result?.status === "stale")
+          return false;
         if (result?.status === "confirmation-required" && result.compatibility) {
           // Cancellation is distinct from a failed switch so the caller can finish quietly.
           if (!(await useClientCompatibility().show(result.compatibility))) return;
           if (generation !== accountSwitchGeneration) return false;
           return setCurrentAccount(accountId, {
             ...options,
-            compatibilityConfirmationId: result.compatibility_confirmation_id
+            compatibilityConfirmationId:
+              result.compatibility.reason === "tls" ? undefined : result.compatibility_confirmation_id
           });
         }
         if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
@@ -385,6 +414,14 @@ export const useUserInfoStore = defineStore(
           return false;
         }
         connectionId = result.connection_id;
+        if (result.profile.data) {
+          try {
+            const profile = JSON.parse(result.profile.data);
+            if (typeof profile.username === "string") nextUser.username = profile.username;
+          } catch {
+            // Keep saved display metadata when the optional profile body cannot be read.
+          }
+        }
         nextUser = {
           ...nextUser,
           bearerToken: result.bearer,
@@ -398,11 +435,13 @@ export const useUserInfoStore = defineStore(
       const activate = async () => {
         if (desktop && generation !== accountSwitchGeneration) return false;
         await options.beforeSwitch?.();
+        if (getUserData(accountId) !== userData) return false;
         if (
           desktop &&
           (generation !== accountSwitchGeneration || !(await syncApiSession(accountId, nextUser, connectionId)))
         )
           return false;
+        if (getUserData(accountId) !== userData) return false;
         // Once main accepts this session, publish it even if another preflight has started.
         // Its activation must wait for this publication, so a failed newer check keeps both sides aligned.
         userMap.value[accountId] = nextUser;
@@ -649,6 +688,7 @@ export const useUserInfoStore = defineStore(
       orgId,
       userMap,
       loggedIn,
+      isLoggingOut,
       currentAccountId,
       currentSite,
       currentUser,

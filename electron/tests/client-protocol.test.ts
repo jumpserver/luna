@@ -5,9 +5,9 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { PassThrough } from "node:stream";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
-import test from "node:test";
 import ts from "typescript";
 import { ApplicationConfigService } from "../src/apps/application-config.ts";
 import {
@@ -39,6 +39,12 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return { resolveMacBundleExecutable: async (value: string) => value };
     case "./shared/product-name":
       return require("./shared/product-name");
+    case "./shared/certificate-inspection":
+      return {
+        isCertificateInspectionWorker: () => false,
+        runCertificateInspectionWorker: () =>
+          assert.fail("Protocol tests must not start certificate inspection workers")
+      };
     case "node:child_process":
       return require("node:child_process");
     case "node:crypto":

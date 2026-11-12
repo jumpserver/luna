@@ -1,9 +1,24 @@
 <script setup lang="ts">
+import type { UserData } from "~/types";
 import { confirmLeaveCurrentSiteSessions, useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-const { disabled = false, selectedAccountId = "" } = defineProps<{ disabled?: boolean; selectedAccountId?: string }>();
+const {
+  disabled = false,
+  selectedAccountId = "",
+  accountIds,
+  accountOnly = false,
+  showSiteName = true,
+  showCurrent = true
+} = defineProps<{
+  disabled?: boolean;
+  selectedAccountId?: string;
+  accountIds?: string[];
+  accountOnly?: boolean;
+  showSiteName?: boolean;
+  showCurrent?: boolean;
+}>();
 const emit = defineEmits<{ select: []; switched: [] }>();
 const { t } = useI18n();
 const toast = useToast();
@@ -11,8 +26,19 @@ const user = useUserInfoStore();
 const { currentAccountId, loggedIn, userMap } = storeToRefs(user);
 const { switchAccount, switchingAccountId } = useSiteAccountSwitch();
 const { recentSites, setRecentSites } = useSettingManager();
-const accounts = computed(() => Object.entries(userMap.value));
+const accounts = computed(() =>
+  Object.entries(userMap.value).filter(([accountId]) => !accountIds || accountIds.includes(accountId))
+);
 const selectedId = computed(() => selectedAccountId || currentAccountId.value);
+const accountLabel = (account?: UserData) => {
+  if (!account) return "";
+  const name = account.name || account.username || "—";
+  return account.name && account.username ? `${name}（${account.username}）` : name;
+};
+const siteLabel = (account?: UserData) => {
+  if (!account) return "";
+  return account.siteName && account.siteName !== account.site ? `${account.site} · ${account.siteName}` : account.site;
+};
 const removingId = ref("");
 const removingAccount = computed(() => userMap.value[removingId.value]);
 const deleting = ref(false);
@@ -49,7 +75,7 @@ const deleteAccount = async () => {
 
 onMounted(async () => {
   if (!isDesktopRuntime()) return;
-  const savedAccounts = Object.entries(userMap.value);
+  const savedAccounts = accounts.value;
   try {
     // Read local token availability without exposing tokens or changing the active API session.
     const authenticated = new Set(await desktopInvoke<string[]>("list_authenticated_accounts"));
@@ -75,19 +101,34 @@ onMounted(async () => {
         variant="ghost"
         size="sm"
         class="min-w-0 flex-1 justify-start py-1 text-left"
-        :title="account.site"
+        :class="{ 'px-0': accountOnly }"
+        :title="
+          accountOnly ? accountLabel(account) : showSiteName ? siteLabel(account) : account.siteName || account.site
+        "
         :aria-current="accountId === selectedId ? 'true' : undefined"
         :loading="switchingAccountId === accountId"
         :disabled="disabled || Boolean(switchingAccountId) || deleting"
         @click="selectAccount(accountId)"
       >
-        <UIcon name="i-lucide-globe" class="size-4 shrink-0 text-muted" />
+        <UIcon :name="accountOnly ? 'i-lucide-user-round' : 'i-lucide-globe'" class="size-4 shrink-0 text-muted" />
         <span class="min-w-0 flex-1">
-          <span class="block truncate">{{ account.siteName || account.site }}</span>
-          <span class="flex min-w-0 items-center gap-1.5 text-xs font-normal text-muted">
+          <span v-if="accountOnly" class="block truncate">{{ accountLabel(account) }}</span>
+          <span v-else class="block min-w-0 truncate">
+            <SiteCertificateAddress
+              :site="account.site"
+              :name="showSiteName ? account.siteName : undefined"
+              :tooltip="showSiteName ? undefined : account.siteName || account.site"
+            />
+          </span>
+          <span
+            v-if="
+              account.sessionExpired || (accountId === currentAccountId && !loggedIn) || (!accountOnly && account.name)
+            "
+            class="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs font-normal text-muted"
+          >
             <span
               v-if="account.sessionExpired || (accountId === currentAccountId && !loggedIn)"
-              class="shrink-0"
+              class="max-w-full shrink-0 truncate"
               :class="{ 'text-warning': account.sessionExpired && account.sessionExpiredReason !== 'app_exit' }"
             >
               {{
@@ -98,10 +139,16 @@ onMounted(async () => {
                 )
               }}
             </span>
-            <span class="truncate">{{ account.name || account.site }}</span>
+            <span v-if="!accountOnly && account.name" class="truncate">{{ account.name }}</span>
           </span>
         </span>
-        <UBadge v-if="accountId === selectedId" color="neutral" variant="soft" size="sm">
+        <UBadge
+          v-if="showCurrent && accountId === selectedId"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="shrink-0"
+        >
           {{ t("UserProfile.Current") }}
         </UBadge>
       </UButton>
@@ -110,8 +157,16 @@ onMounted(async () => {
         color="neutral"
         variant="ghost"
         size="xs"
-        :aria-label="t('Login.DeleteSite', { name: account.siteName || account.site })"
-        :title="t('Login.DeleteSite', { name: account.siteName || account.site })"
+        :aria-label="
+          t(accountOnly ? 'Login.DeleteAccount' : 'Login.DeleteSite', {
+            name: accountOnly ? accountLabel(account) : siteLabel(account)
+          })
+        "
+        :title="
+          t(accountOnly ? 'Login.DeleteAccount' : 'Login.DeleteSite', {
+            name: accountOnly ? accountLabel(account) : siteLabel(account)
+          })
+        "
         :disabled="disabled || Boolean(switchingAccountId) || deleting"
         @click="removingId = accountId"
       />
@@ -120,9 +175,14 @@ onMounted(async () => {
 
   <UModal
     v-model:open="deleteOpen"
-    :title="t('Login.DeleteSite', { name: removingAccount?.siteName || removingAccount?.site || '' })"
-    :description="t('Login.DeleteSiteDescription')"
+    :title="
+      t(accountOnly ? 'Login.DeleteAccount' : 'Login.DeleteSite', {
+        name: accountOnly ? accountLabel(removingAccount) : siteLabel(removingAccount)
+      })
+    "
+    :description="t(accountOnly ? 'Login.DeleteAccountDescription' : 'Login.DeleteSiteDescription')"
     :dismissible="!deleting"
+    :ui="{ wrapper: 'min-w-0 pr-8', title: 'whitespace-normal break-all' }"
   >
     <template #body>
       <div data-profile-nested-popover class="flex justify-end gap-2">

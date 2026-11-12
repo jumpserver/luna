@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CharsetType, LangType } from "~/types";
+import type { CharsetType } from "~/types";
 
 import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -27,12 +27,7 @@ interface FfmpegPluginProgress {
   error?: string;
 }
 
-interface LangItem {
-  id: LangType;
-  label: string;
-}
-
-const { t, locales, locale } = useI18n();
+const { t, locale } = useI18n();
 const settingManager = useSettingManager();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
@@ -48,7 +43,6 @@ const commandHistoryConfirmOpen = ref(false);
 const clearingCommandHistory = ref(false);
 const toast = useToast();
 const {
-  setLang,
   charset,
   backspaceAsCtrlH,
   rightClickQuickPaste,
@@ -75,14 +69,6 @@ const logActionLabel = (feedback: typeof clearFeedback.value, idle: string, done
 const debugLogEnabled = computed({
   get: () => debugLog.value,
   set: (value: boolean) => setDebugLog(value)
-});
-
-const languageItems = computed<LangItem[]>(() => {
-  const arr = (locales.value as any[]) || [];
-  return arr.map((l: any) => ({
-    id: (l.code || l) as LangType,
-    label: l.name || l
-  }));
 });
 
 const charsetItems = computed(() => {
@@ -156,14 +142,6 @@ const keyboardHookItems = computed(() => [
 const keyboardLayoutItems = computed(() => {
   const messages = lionMessages[locale.value as keyof typeof lionMessages] || lionMessages.en;
   return keyboardLayoutOptions.map((option) => ({ value: String(option.value), label: messages[option.label] }));
-});
-
-const selectedLanguage = computed<LangType>({
-  get: () => (locale.value as LangType) || "zh",
-  set: (code: LangType) => {
-    if (!code) return;
-    setLang(code);
-  }
 });
 
 const selectedCharset = computed<CharsetType>({
@@ -289,14 +267,7 @@ async function clearCommandHistory() {
   <div class="flex flex-col gap-4">
     <SettingsGroup>
       <SettingsRow :title="t('Common.Language')">
-        <USelect
-          v-model="selectedLanguage"
-          :items="languageItems"
-          value-key="id"
-          :aria-label="t('Common.Language')"
-          size="sm"
-          class="w-48"
-        />
+        <LanguageSelect />
       </SettingsRow>
 
       <SettingsRow :title="t('Setting.Charset')" :description="t('Setting.CharsetDescription')">

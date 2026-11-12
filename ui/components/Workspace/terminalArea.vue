@@ -1,32 +1,22 @@
 <script setup lang="ts">
 import { isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
+const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
-const { loggedIn, userMap } = storeToRefs(userInfoStore);
-const currentUser = computed(() => userMap.value[userInfoStore.currentAccountId]);
+const { loggedIn } = storeToRefs(userInfoStore);
 const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
   () =>
     isDesktopRuntime() &&
     authReady.value &&
     !loggedIn.value &&
+    activeWorkspaceMode.value === "assets" &&
     activeTab.value?.protocol !== "local-shell" &&
     !activeTab.value?.panes.some((pane) => pane.mode === "session")
 );
-const { t, locale } = useI18n();
-const expiredLoginReason = computed(() => {
-  const account = currentUser.value;
-  const message = clientLoginExpiryMessage(
-    account?.sessionExpiredReason,
-    account?.clientLoginPolicy,
-    account?.clientLoginSession,
-    locale.value
-  );
-  return message ? t(message.key, message.params) : "";
-});
+const { t } = useI18n();
 const shortcuts = useAppShortcuts();
 const shortcutRows = computed(() => [
   {
@@ -63,10 +53,6 @@ const supportsTerminalAiCommand = computed(() => {
   if (!pane || pane.connectionProgress) return false;
   return isKokoTerminalAiAvailable(pane.id);
 });
-
-const openLogin = () => {
-  useEventBus().emit("login", undefined);
-};
 </script>
 
 <template>
@@ -76,40 +62,15 @@ const openLogin = () => {
     :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
   >
     <div class="flex-1 min-h-0">
-      <template v-if="showLoginPrompt">
-        <div class="flex h-full min-h-0 items-center justify-center p-4 text-sm" :style="{ color: 'var(--app-muted)' }">
-          <UCard
-            variant="outline"
-            :ui="{
-              root: 'rounded-2xl shadow-sm ring-[var(--app-border)] bg-[var(--app-card-bg-soft)]',
-              body: 'flex min-h-0 flex-col items-center gap-5 overflow-hidden px-6 py-8 sm:p-8'
-            }"
-            class="flex max-h-full w-full max-w-lg flex-col"
-          >
-            <UIcon name="i-lucide-log-in" class="size-10 shrink-0" :style="{ color: 'var(--app-muted)' }" />
-            <div class="shrink-0 font-medium" :style="{ color: 'var(--app-fg)' }">
-              {{ t("WorkspaceEmpty.LoginHint") }}
-            </div>
-            <p
-              v-if="currentUser?.sessionExpired && expiredLoginReason"
-              class="shrink-0 text-center text-warning"
-              role="status"
-            >
-              {{ expiredLoginReason }}
-            </p>
-            <UButton color="primary" variant="soft" class="shrink-0 rounded-xl px-4" @click="openLogin">
-              {{ t(currentUser?.sessionExpired && expiredLoginReason ? "Login.SignInAgain" : "Common.Login") }}
-            </UButton>
-            <div
-              v-if="Object.keys(userMap).length"
-              class="flex min-h-0 w-full flex-col gap-1 rounded-[length:var(--app-radius)] border border-(--app-border) p-1"
-            >
-              <p class="shrink-0 px-1 py-1 text-[11px] text-muted">{{ t("Login.SavedSites") }}</p>
-              <SiteAccounts />
-            </div>
-          </UCard>
+      <div v-if="showLoginPrompt" class="h-full min-h-0 overflow-y-auto">
+        <div class="screen-lock-surface desktop-login-surface">
+          <div class="screen-lock-brand">
+            <BrandLogo class="screen-lock-brand-mark" />
+            <span>JumpServer</span>
+          </div>
+          <DesktopLoginPanel inline :title="t('Common.Login')" />
         </div>
-      </template>
+      </div>
 
       <div v-if="activeTab" v-show="!showLoginPrompt" class="h-full min-h-0">
         <template v-for="tab in tabs" :key="tab.id">
@@ -144,3 +105,11 @@ const openLogin = () => {
     <WorkspaceTerminalAiCommandPopover v-if="supportsTerminalAiCommand && activePane" :pane="activePane" />
   </section>
 </template>
+
+<style scoped>
+.desktop-login-surface {
+  min-height: 100%;
+}
+</style>
+
+<style src="~/assets/css/screen-lock.css" />

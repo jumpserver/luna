@@ -15,7 +15,7 @@
   min-height: 100svh;
   width: 100%;
   box-sizing: border-box;
-  padding: 96px 24px calc(96px + 100svh / 3);
+  padding: 96px 24px;
   color: var(--screen-lock-text);
   background: linear-gradient(
     145deg,
@@ -62,7 +62,8 @@
 .screen-lock-content {
   width: min(100%, 420px);
 }
-.screen-lock-form-card {
+.screen-lock-form-card,
+.desktop-login-card {
   color: var(--screen-lock-text);
   background: color-mix(in srgb, var(--screen-lock-accent) 3%, var(--screen-lock-panel));
   border: 1px solid color-mix(in srgb, var(--screen-lock-accent) 18%, var(--screen-lock-border));
@@ -202,7 +203,7 @@
 }
 @media (max-width: 600px) {
   .screen-lock-surface {
-    padding: 88px 20px calc(88px + 100svh / 3);
+    padding: 88px 20px;
   }
   .screen-lock-brand {
     top: 28px;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { SettingsSection } from "~/composables/useSettingsWindow";
+import { TooltipProvider } from "reka-ui";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(
@@ -20,7 +21,9 @@ const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, isLoggingOut } = storeToRefs(userInfoStore);
+// Keep the user section mounted while logout validates the replacement account.
+const userSectionAvailable = computed(() => loggedIn.value || isLoggingOut.value);
 const hasNativeTitlebarInset = computed(() => isDesktopRuntime() && isMacOS.value);
 
 const sectionDefs = computed(() => {
@@ -42,15 +45,6 @@ const sectionDefs = computed(() => {
       routeName: "setting-general",
       desktopOnly: false,
       authenticatedOnly: false
-    },
-    {
-      key: "security" as const,
-      label: t("Setting.Security"),
-      description: t("Setting.SecurityDescription"),
-      icon: "i-lucide-shield-check",
-      routeName: "setting-security",
-      desktopOnly: true,
-      authenticatedOnly: true
     },
     {
       key: "appearance" as const,
@@ -91,7 +85,7 @@ const sectionDefs = computed(() => {
   ];
 
   return defs.filter(
-    (item) => (!item.desktopOnly || isDesktopRuntime()) && (!item.authenticatedOnly || loggedIn.value)
+    (item) => (!item.desktopOnly || isDesktopRuntime()) && (!item.authenticatedOnly || userSectionAvailable.value)
   );
 });
 
@@ -131,16 +125,16 @@ const sectionNavItems = computed<NavigationMenuItem[]>(() =>
 );
 
 watch(
-  loggedIn,
+  userSectionAvailable,
   (value) => {
     if (!import.meta.client || value) return;
 
-    if (props.mode === "inline" && ["user", "security"].includes(inlineActiveSection.value)) {
+    if (props.mode === "inline" && inlineActiveSection.value === "user") {
       inlineActiveSection.value = "general";
       return;
     }
 
-    if (props.mode === "route" && ["/setting/user", "/setting/security"].some((path) => route.path.startsWith(path))) {
+    if (props.mode === "route" && route.path.startsWith("/setting/user")) {
       void navigateTo(localePath({ name: "setting-general" }), { replace: true });
     }
   },
@@ -149,68 +143,70 @@ watch(
 </script>
 
 <template>
-  <div class="settings-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
-    <div class="flex min-h-0 flex-1 flex-col md:flex-row">
-      <aside
-        class="settings-panel__sidebar flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
-        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
-      >
-        <div class="px-3 pt-3">
-          <UButton
-            :label="t('Setting.BackToApp')"
-            icon="i-lucide-arrow-left"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            class="h-8 w-full justify-start text-xs text-muted"
-            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
-            @click="closeSettings"
-          />
-        </div>
-
-        <nav class="min-h-0 flex-1 overflow-x-auto px-3 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
-          <UNavigationMenu
-            orientation="vertical"
-            color="neutral"
-            variant="pill"
-            :items="sectionNavItems"
-            :ui="{
-              root: 'w-full',
-              list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
-              item: 'shrink-0 md:w-full',
-              link: 'rounded-[length:var(--app-radius)]',
-              linkLeadingIcon: 'size-4'
-            }"
-          />
-        </nav>
-      </aside>
-
-      <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
-
-      <main
-        class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"
-        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
-      >
-        <div class="px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
-          <div class="mx-auto w-full max-w-4xl">
-            <Transition name="settings-section" mode="out-in">
-              <UPageHeader
-                :key="activeSection?.key"
-                :title="activeSection?.label"
-                :description="activeSection?.description"
-                :ui="{
-                  root: 'relative mb-8 border-0 py-0',
-                  wrapper: 'flex flex-col gap-0',
-                  title: 'text-2xl sm:text-2xl font-semibold tracking-tight text-highlighted',
-                  description: 'mt-1.5 text-sm text-muted'
-                }"
-              />
-            </Transition>
-
-            <slot />
+  <TooltipProvider :content="{ side: 'top', align: 'center' }">
+    <div class="settings-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
+      <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+        <aside
+          class="settings-panel__sidebar flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
+          :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+        >
+          <div class="px-3 pt-3">
+            <UButton
+              :label="t('Setting.BackToApp')"
+              icon="i-lucide-arrow-left"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              class="h-8 w-full justify-start text-xs text-muted"
+              :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
+              @click="closeSettings"
+            />
           </div>
-        </div>
-      </main>
+
+          <nav class="min-h-0 flex-1 overflow-x-auto px-3 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
+            <UNavigationMenu
+              orientation="vertical"
+              color="neutral"
+              variant="pill"
+              :items="sectionNavItems"
+              :ui="{
+                root: 'w-full',
+                list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
+                item: 'shrink-0 md:w-full',
+                link: 'rounded-[length:var(--app-radius)]',
+                linkLeadingIcon: 'size-4'
+              }"
+            />
+          </nav>
+        </aside>
+
+        <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
+
+        <main
+          class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"
+          :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+        >
+          <div class="flex min-h-full flex-col px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
+            <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col">
+              <Transition name="settings-section" mode="out-in">
+                <UPageHeader
+                  :key="activeSection?.key"
+                  :title="activeSection?.label"
+                  :description="activeSection?.description"
+                  :ui="{
+                    root: 'relative mb-8 border-0 py-0',
+                    wrapper: 'flex flex-col gap-0',
+                    title: 'text-2xl sm:text-2xl font-semibold tracking-tight text-highlighted',
+                    description: 'mt-1.5 text-sm text-muted'
+                  }"
+                />
+              </Transition>
+
+              <slot />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
+  </TooltipProvider>
 </template>
