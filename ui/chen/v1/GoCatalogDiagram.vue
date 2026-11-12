@@ -128,7 +128,8 @@ async function load(refresh = false) {
           props.sessionId,
           table.object.schema,
           table.object.name,
-          abort.signal
+          abort.signal,
+          table.object.database
         );
         if (abort.signal.aborted || generation !== current) return;
         const inspected = inspectDiagram(props.sessionId, table.object, props.dialect, info);

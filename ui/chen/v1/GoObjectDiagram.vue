@@ -36,7 +36,7 @@ async function load() {
   stale.value = !!data.value;
   const { sessionId, object, dialect, api } = props;
   try {
-    const value = await api.catalogInspect(sessionId, object.schema, object.name, current.signal);
+    const value = await api.catalogInspect(sessionId, object.schema, object.name, current.signal, object.database);
     if (current.signal.aborted || controller !== current) return;
     data.value = inspectDiagram(sessionId, object, dialect, value);
     stale.value = false;

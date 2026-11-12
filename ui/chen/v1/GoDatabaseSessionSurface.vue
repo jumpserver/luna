@@ -159,7 +159,6 @@ const session = ref<GoSession | null>(null);
 const tabs = ref<ChenWorkspaceTab[]>([]);
 const activeId = ref("");
 const defaultContext = ref<QueryContext>({ database: "", schema: "" });
-const listsDatabases = computed(() => ["mysql", "mariadb", "oceanbase-mysql"].includes(session.value?.dialect || ""));
 const error = ref("");
 const busy = ref(true);
 const authenticationUnknown = ref(false);
@@ -268,32 +267,35 @@ const failureText = (cause: unknown) => chenErrorText(cause, t);
 const aiAvailable = computed(() => !!props.tab && !!getChenSqlAiSession(props.tab.id)?.enabled);
 let aiGeneration = 0;
 function sqlAiContext(): ChenSqlEditorContext | null {
-  const query = activeTab.value;
-  if (
-    !props.tab ||
-    !sessionReady.value ||
-    !session.value ||
-    !query ||
-    !["query", "console"].includes(query.kind) ||
-    !isQueryWorkspaceTab(query) ||
-    query.console?.state !== "ready"
-  )
-    return null;
-  const snapshot = queryPanes.get(query.id)?.snapshot();
-  if (!snapshot) return null;
+  const active = activeTab.value;
+  if (!props.tab || !sessionReady.value || !session.value) return null;
+  if (active?.kind === "preview") return null;
+  const query = active ? workspaceQuery(active) : null;
+  const editor = active && (active.kind === "query" || active.kind === "console");
+  if ((editor || active?.kind === "object") && query?.console?.state !== "ready") return null;
+  const snapshot = editor ? queryPanes.get(active.id)?.snapshot() : null;
+  if (editor && !snapshot) return null;
+  const context = tabContext(active, defaultContext.value);
+  const consoleId = query?.console?.id || "";
   return {
+    documentSql: "",
+    selectedSql: "",
+    selectionFrom: 0,
+    selectionTo: 0,
+    revision: 0,
     ...snapshot,
     dialect: session.value.dialect,
-    database: query.context.database,
-    schema: query.context.schema,
-    nodeKey: query.console.id,
-    consoleId: query.console.id,
+    database: context.database,
+    schema: context.schema,
+    nodeKey: consoleId || JSON.stringify([session.value.id, context.database, context.schema]),
+    consoleId,
     paneId: props.tab.id,
-    tabId: query.id,
-    workspaceTabId: query.id,
-    workspaceTabKind: query.kind === "console" ? "console" : "query",
-    currentContext: JSON.stringify(query.context),
-    lastError: goSqlExecutionError(query, snapshot)
+    tabId: editor ? active.id : "",
+    workspaceTabId: active?.id || "",
+    workspaceTabKind:
+      active?.kind === "object" ? "data-view" : active?.kind === "overview" ? "database" : active?.kind || "none",
+    currentContext: editor ? JSON.stringify(context) : "",
+    lastError: editor && query && snapshot ? goSqlExecutionError(query, snapshot) : null
   };
 }
 function applySqlProposal(proposal: ChenSqlProposal) {
@@ -371,7 +373,17 @@ watch(
       query?.kind,
       query && isQueryWorkspaceTab(query) && ["query", "console"].includes(query.kind)
         ? [query.console?.id, query.console?.state, query.context.database, query.context.schema, query.sql]
-        : null
+        : query?.kind === "object"
+          ? [
+              query.data?.console?.id,
+              query.data?.console?.state,
+              query.object.database,
+              query.object.schema,
+              query.object.name
+            ]
+          : query?.kind === "overview"
+            ? [query.context.database, query.context.schema]
+            : [defaultContext.value.database, defaultContext.value.schema]
     ];
   },
   () => {
@@ -385,9 +397,11 @@ function updateQuerySql(query: QueryWorkspaceTab, sql: string) {
   if (props.tab && activeId.value === query.id) invalidateChenSqlAiContext(props.tab.id);
 }
 function requestSqlAi(operation: ChenSqlAiOperation) {
-  if (!props.tab || !sqlAiContext()) return;
+  const context = sqlAiContext();
+  if (!props.tab || !context) return;
   const current = getChenSqlAiSession(props.tab.id);
-  current?.targetNextRequestToEditor();
+  if (context.workspaceTabKind === "query" || context.workspaceTabKind === "console")
+    current?.targetNextRequestToEditor();
   aiPanel?.openAi();
   if (operation === "generate" || !current?.enabled) return;
   const prompt = t(operation === "explain" ? "RightPanel.SQLAIExplainPrompt" : "RightPanel.SQLAIRepairPrompt");
@@ -494,8 +508,11 @@ async function loadRows(
   query: QueryWorkspaceTab,
   id: string,
   offset = 0,
-  execution = query.resultExecution || query.execution,
-  sql = execution?.id === query.execution?.id ? query.executionSql : query.resultSql,
+  execution = query.resultTabs.find((result) => result.id === id)?.execution ||
+    query.resultExecution ||
+    query.execution,
+  sql = query.resultTabs.find((result) => result.id === id)?.sql ||
+    (execution?.id === query.execution?.id ? query.executionSql : query.resultSql),
   append = false
 ) {
   if (!execution || editDirty(query.edit) || query.edit.busy) return;
@@ -505,9 +522,28 @@ async function loadRows(
   try {
     const settings = query.pendingLoading || query.loadingSettings;
     const limit = settings.batchSize;
-    const page = await api.rows(id, offset, limit);
+    let page = await api.rows(id, offset, limit);
+    const replacesSource =
+      execution.id === query.execution?.id &&
+      !query.resultTabs.some((result) => result.id === page.id) &&
+      !!(query.executionRefresh || query.executionBrowse || query.executionQueryPage);
+    const refreshing = replacesSource && !!query.executionRefresh;
+    if (
+      refreshing &&
+      !page.browse?.supported &&
+      page.query_page?.mode !== "database" &&
+      offset >= page.total_rows &&
+      offset > 0
+    ) {
+      offset = Math.floor(Math.max(0, page.total_rows - 1) / limit) * limit;
+      page = await api.rows(id, offset, limit);
+    }
     if (isCurrent(query) && generation === query.loadGeneration) {
-      const changedResult = query.rows?.id !== page.id;
+      const previousResultId = query.rows?.id;
+      const changedResult = previousResultId !== page.id;
+      const previousResults = [...query.resultTabs.map((result) => result.id), query.cachedResult?.id].filter(
+        (value): value is string => !!value
+      );
       const previousBrowse = query.rows?.browse;
       const browseCount = query.browseCount;
       const browseRequest = execution?.id === query.execution?.id ? query.executionBrowse : undefined;
@@ -521,7 +557,8 @@ async function loadRows(
         (browseRequest.page_size === undefined || browseRequest.page_size === page.browse?.page_size) &&
         ((browseRequest.offset !== undefined && browseRequest.offset !== previousBrowse?.offset) ||
           (browseRequest.page_size !== undefined && browseRequest.page_size !== previousBrowse?.page_size));
-      if (page.query_page?.mode !== "database" && page.id !== query.cachedResult?.id) query.cachedResult = undefined;
+      if (refreshing || (page.query_page?.mode !== "database" && page.id !== query.cachedResult?.id))
+        query.cachedResult = undefined;
       if (
         page.browse?.supported &&
         (!query.rows?.browse?.supported ||
@@ -558,6 +595,7 @@ async function loadRows(
         query.browseCount =
           page.browse?.supported && keepBrowseCount ? { ...browseCount, source_result_id: page.id } : null;
         query.queryCount =
+          !refreshing &&
           page.query_page?.mode === "database" &&
           page.query_page.scope_id &&
           query.queryCount?.scope_id === page.query_page.scope_id
@@ -567,8 +605,24 @@ async function loadRows(
       if (page.query_page?.mode === "database") {
         query.loadingSettings = { mode: "page", batchSize: page.query_page.page_size };
       }
-      if (changedResult) query.edit = createEditDraft();
+      if (changedResult) {
+        const refresh = refreshing ? query.executionRefresh : undefined;
+        query.resultViewId = refresh?.viewId || id;
+        query.edit = createEditDraft();
+        if (refresh) {
+          query.edit.status = refresh.status;
+          query.edit.saveError = refresh.saveError;
+          const currentOffset = page.browse?.supported
+            ? page.browse.offset
+            : page.query_page?.mode === "database"
+              ? page.query_page.offset
+              : 0;
+          const pageSize = page.browse?.page_size || page.query_page?.page_size || limit;
+          if (!page.rows.length && currentOffset > 0) refresh.retryOffset = Math.max(0, currentOffset - pageSize);
+        }
+      }
       query.resultId = id;
+      query.resultTransactionRevision = execution.transaction?.revision ?? query.console?.transaction?.revision;
       // Row loading may finish after more statements or audit updates arrive.
       // Retain the latest snapshot for this execution without changing its SQL source.
       query.resultExecution = {
@@ -579,6 +633,82 @@ async function loadRows(
             : execution)
       };
       query.resultSql = page.source_sql || sql;
+      if (execution.id === query.execution?.id) query.loadedExecutionId = execution.id;
+      const resultTab = { id: page.id, execution: query.resultExecution, sql: query.resultSql };
+      if (query.resultTabs.some((result) => result.id === page.id)) {
+        query.resultTabs = query.resultTabs.map((result) => (result.id === page.id ? resultTab : result));
+      } else if (previousResultId && replacesSource) {
+        query.replacedResultIds.push(previousResultId);
+        query.resultTabs = query.resultTabs.length
+          ? query.resultTabs.map((result) => (result.id === previousResultId ? resultTab : result))
+          : [resultTab];
+      } else {
+        query.replacedResultIds = [];
+        query.resultTabs = (query.pinnedSource ? [page.id] : query.resultExecution.result_ids).map((resultId) => ({
+          id: resultId,
+          execution: query.resultExecution!,
+          sql:
+            query.resultExecution!.statement_results.find((result) => result.result_id === resultId)?.source_sql ||
+            query.resultSql
+        }));
+      }
+      // Pinning retains the same data view until its owner runs another SQL result.
+      // A refreshed shared source must not reappear stale when the pin is removed.
+      if (changedResult && previousResultId && replacesSource) {
+        for (const peer of queries.value) {
+          if (
+            peer === query ||
+            peer.console?.id !== query.console?.id ||
+            !peer.resultTabs.some((result) => result.id === previousResultId)
+          )
+            continue;
+          if (
+            peer.rows?.id === previousResultId &&
+            (editDirty(peer.edit) || peer.edit.busy || executionActive(peer.execution))
+          ) {
+            peer.edit.refreshRequired = true;
+            continue;
+          }
+          peer.replacedResultIds.push(previousResultId);
+          peer.resultTabs = peer.resultTabs.map((result) => (result.id === previousResultId ? resultTab : result));
+          if (peer.rows?.id !== previousResultId) continue;
+          const previousExecution = peer.resultExecution;
+          peer.rows = query.rows;
+          peer.resultId = page.id;
+          peer.resultSql = query.resultSql;
+          peer.resultTransactionRevision = query.resultTransactionRevision;
+          peer.loadingSettings = { ...query.loadingSettings };
+          peer.browseDraft = JSON.parse(JSON.stringify(query.browseDraft));
+          peer.browseCount = query.browseCount;
+          peer.queryCount = query.queryCount;
+          peer.cachedResult = query.cachedResult;
+          peer.resultExecution = query.resultExecution;
+          if (peer.execution?.id === previousExecution?.id) {
+            peer.execution = query.execution;
+            peer.executionSql = query.executionSql;
+            peer.executionVersion = query.executionVersion;
+            peer.loadedExecutionId = query.loadedExecutionId;
+            peer.executionBrowse = query.executionBrowse;
+            peer.executionQueryPage = query.executionQueryPage;
+            peer.executionRefresh = undefined;
+            peer.executionEditPlan = undefined;
+            peer.executionPlanNumber = undefined;
+          }
+          peer.edit = { ...createEditDraft(), status: query.edit.status, saveError: query.edit.saveError };
+        }
+      }
+      if (query.kind !== "console") {
+        const retained = new Set(
+          queries.value.flatMap((item) => [
+            item.rows?.id,
+            item.cachedResult?.id,
+            ...item.resultTabs.map((result) => result.id)
+          ])
+        );
+        for (const previous of new Set(previousResults)) {
+          if (!retained.has(previous)) void api.releaseResult(previous).catch(() => {});
+        }
+      }
     }
   } catch (cause) {
     if (isCurrent(query) && generation === query.loadGeneration) {
@@ -596,6 +726,20 @@ function retryRows(query: QueryWorkspaceTab) {
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
   acceptEditExecution(query.edit, value);
+  if (!query.pinnedSource && query.resultTabs.some((result) => result.execution.id === value.id)) {
+    for (const id of value.result_ids) {
+      if (!query.replacedResultIds.includes(id) && !query.resultTabs.some((result) => result.id === id)) {
+        query.resultTabs.push({
+          id,
+          execution: value,
+          sql:
+            value.statement_results.find((result) => result.result_id === id)?.source_sql ||
+            value.sql ||
+            query.executionSql
+        });
+      }
+    }
+  }
   const logState = `${value.status}:${value.audit_status}`;
   const notExecuted = value.error?.code === "implicit_commit_confirmation_required";
   if (loggedExecutions.get(value.id) !== logState) {
@@ -642,14 +786,16 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     (!query.executionBrowse || value.status === "succeeded") &&
     (!query.executionQueryPage || value.status === "succeeded") &&
     value.result_ids?.length &&
-    query.resultExecution?.id !== value.id &&
+    query.loadedExecutionId !== value.id &&
     !query.loadingRows &&
     !query.resultLoadError
   )
     void loadRows(
       query,
       value.result_ids[0]!,
-      query.executionBrowse?.action === "append" ? query.executionBrowse.offset || 0 : 0,
+      query.executionBrowse?.action === "append"
+        ? query.executionBrowse.offset || 0
+        : query.executionRefresh?.offset || 0,
       query.execution,
       query.executionSql,
       query.executionBrowse?.action === "append"
@@ -682,6 +828,7 @@ function acceptConsole(query: QueryWorkspaceTab, value: GoConsole) {
   ) {
     query.edit.refreshRequired = true;
     query.edit.transactionStale = true;
+    if (query.edit.status === "staged") query.edit.status = value.transaction.notice.outcome;
   }
   query.console = value;
   query.context = { database: value.database, schema: value.schema };
@@ -693,8 +840,8 @@ function acceptEvent(event: GoEvent) {
     handleChenSqlAiWireMessage(props.tab.id, event.data);
   if (event.type === "execution.updated") {
     const value = event.data as GoExecution;
-    const query = queries.value.find((query) => query.console?.id === value.console_id);
-    if (query) acceptExecution(query, value);
+    for (const query of queries.value.filter((query) => query.console?.id === value.console_id))
+      acceptExecution(query, value);
   }
   if (event.type === "export.updated") {
     const value = event.data as GoExport;
@@ -704,8 +851,7 @@ function acceptEvent(event: GoEvent) {
   if (event.type === "session.updated") session.value = event.data as GoSession;
   if (event.type === "console.updated") {
     const value = event.data as GoConsole;
-    const query = queries.value.find((query) => query.console?.id === value.id);
-    if (query) {
+    for (const query of queries.value.filter((query) => query.console?.id === value.id)) {
       acceptConsole(query, value);
       if (value.state === "lost") loseConsole(query);
     }
@@ -817,7 +963,6 @@ async function connectQuery(query: QueryWorkspaceTab) {
     }
     query.console = console;
     query.context = { database: console.database, schema: console.schema };
-    if (!listsDatabases.value && !defaultContext.value.database) defaultContext.value = { ...query.context };
   } catch (cause) {
     if (isCurrent(query)) query.error = failureText(cause);
   } finally {
@@ -856,36 +1001,7 @@ async function newQuery(
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
 }
-const reexecutionDialog = ref<{ sql: string; finish: (confirmed: boolean) => void } | null>(null);
-function finishReexecution(confirmed: boolean) {
-  const dialog = reexecutionDialog.value;
-  reexecutionDialog.value = null;
-  dialog?.finish(confirmed);
-}
-async function confirmReexecution(query: QueryWorkspaceTab, sql: string) {
-  if (reexecutionDialog.value) return false;
-  const sessionId = session.value?.id;
-  const consoleId = query.console?.id;
-  const resultId = query.rows?.id;
-  const generation = query.loadGeneration;
-  const confirmed = await new Promise<boolean>((finish) => {
-    reexecutionDialog.value = { sql, finish };
-  });
-  return (
-    confirmed &&
-    isCurrent(query) &&
-    sessionReady.value &&
-    session.value?.id === sessionId &&
-    query.console?.id === consoleId &&
-    query.rows?.id === resultId &&
-    query.loadGeneration === generation &&
-    !resultLoadingLocked(query)
-  );
-}
-watch([() => session.value?.id, () => session.value?.state, activeId], () => finishReexecution(false));
-onBeforeUnmount(() => finishReexecution(false));
-
-async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest): Promise<void> {
+async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest, refresh = false): Promise<void> {
   if (
     !query.browseObject ||
     !sessionReady.value ||
@@ -907,40 +1023,29 @@ async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest):
           table: query.browseObject.name,
           page_size: query.loadingSettings.batchSize
         });
-  const needsConfirmation =
-    query.browseObject.kind === "view" ||
-    !!appliedRequest.where?.trim() ||
-    (!!appliedRequest.source_result_id && !!query.rows?.browse?.requires_reexecution_confirmation);
-  if (needsConfirmation && !appliedRequest.confirm_reexecution) {
-    const sql = appliedRequest.where?.trim()
-      ? `${objectSelect(query.browseObject, session.value!.dialect).replace(/;$/, "")} WHERE (\n${appliedRequest.where}\n);`
-      : query.rows?.browse?.full_sql || objectSelect(query.browseObject, session.value!.dialect);
-    if (!(await confirmReexecution(query, sql))) return;
-    return browseTable(query, { ...appliedRequest, confirm_reexecution: true });
-  }
-  if (needsConfirmation) query.loadingSettings.mode = "page";
+  // The user already requested this read, just as in the Java console.
+  // Source/context validation, ACL review and transaction guards remain server-side.
+  appliedRequest.confirm_reexecution = true;
   query.loadGeneration++;
   query.resultLoadError = null;
   query.pending = {
     sql: objectSelect(query.browseObject, session.value!.dialect, true),
     version: 1,
     id: newChenRequestId(),
-    browse: appliedRequest
+    browse: appliedRequest,
+    refresh
   };
   await recoverSubmission(query);
 }
-async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest): Promise<void> {
+async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest, refresh = false): Promise<void> {
   if (
     !isCurrent(query) ||
     !sessionReady.value ||
-    resultLoadingLocked(query) ||
+    resultLoadingLocked(query, refresh) ||
     request.source_result_id !== query.rows?.id
   )
     return;
-  if (query.rows?.query_page?.requires_reexecution_confirmation && !request.confirm_reexecution) {
-    if (!(await confirmReexecution(query, query.resultSql))) return;
-    return pageQuery(query, { ...request, confirm_reexecution: true });
-  }
+  request = { ...request, confirm_reexecution: true };
   if (request.action === "page" && query.rows?.query_page?.mode !== "database" && query.resultExecution) {
     query.cachedResult = {
       id: query.rows!.id,
@@ -952,7 +1057,13 @@ async function pageQuery(query: QueryWorkspaceTab, request: GoQueryPageRequest):
   }
   query.loadGeneration++;
   query.resultLoadError = null;
-  query.pending = { sql: query.resultSql, version: query.executionVersion, id: newChenRequestId(), queryPage: request };
+  query.pending = {
+    sql: query.resultSql,
+    version: query.executionVersion,
+    id: newChenRequestId(),
+    queryPage: request,
+    refresh
+  };
   await recoverSubmission(query);
 }
 async function restoreCachedResult(query: QueryWorkspaceTab) {
@@ -998,7 +1109,6 @@ async function changeLoading(query: QueryWorkspaceTab, input: GoResultLoadingSet
   }
 }
 async function loadMore(query: QueryWorkspaceTab, automatic = false) {
-  if (automatic && query.rows?.browse?.requires_reexecution_confirmation) return;
   if (
     !sessionReady.value ||
     resultLoadingLocked(query) ||
@@ -1033,18 +1143,82 @@ async function applyEdits(query: QueryWorkspaceTab, plan: GoEditPlan) {
   query.pending = { sql: plan.sql, version: 1, id: newChenRequestId(), editPlanId: plan.plan_id };
   await recoverSubmission(query);
 }
-async function refreshData(query: QueryWorkspaceTab) {
-  if (editDirty(query.edit) || query.edit.busy) return;
-  if (query.browseObject) await browseTable(query);
-  else if (query.rows?.query_page?.mode === "database")
-    await pageQuery(query, {
-      source_result_id: query.rows.id,
-      action: "page",
-      offset: query.rows.query_page.offset,
-      page_size: query.rows.query_page.page_size
-    });
-  else if (query.resultSql) await submit(query, query.resultSql, query.executionVersion);
+async function refreshData(query: QueryWorkspaceTab, targetOffset?: number, afterSave = false) {
+  if (!isCurrent(query) || !sessionReady.value || resultLoadingLocked(query, true) || !query.rows) return;
+  if (query.browseObject)
+    await browseTable(
+      query,
+      targetOffset === undefined
+        ? undefined
+        : {
+            source_result_id: query.rows.id,
+            offset: targetOffset
+          },
+      true
+    );
+  else if (!afterSave && !query.rows.query_page?.supported && !query.edit.metadata?.supported)
+    await submit(query, query.resultSql, query.executionVersion, false, true);
+  else
+    await pageQuery(
+      query,
+      {
+        source_result_id: query.rows.id,
+        action: query.rows.query_page?.mode === "database" ? "page" : "refresh",
+        offset:
+          targetOffset ??
+          (query.rows.query_page?.mode === "database" ? query.rows.query_page.offset : query.rows.offset),
+        page_size:
+          query.rows.query_page?.mode === "database" ? query.rows.query_page.page_size : query.loadingSettings.batchSize
+      },
+      true
+    );
 }
+// Refresh from the session lifecycle, including background tabs and manual transactions.
+// Failed/uncertain writes retain their draft and outcome until the user discards it.
+const refreshedEdits = new WeakMap<QueryWorkspaceTab, string>();
+watch(
+  () =>
+    queries.value.map((query) => [
+      query.execution?.id,
+      query.execution?.status,
+      query.busy,
+      query.pending,
+      query.loadingRows,
+      query.edit.status,
+      query.edit.busy,
+      query.executionRefresh?.retryOffset,
+      sessionReady.value
+    ]),
+  () => {
+    for (const query of queries.value) {
+      const execution = query.execution;
+      if (
+        execution?.status === "succeeded" &&
+        query.executionRefresh?.retryOffset !== undefined &&
+        sessionReady.value &&
+        !resultLoadingLocked(query, true)
+      ) {
+        const offset = query.executionRefresh.retryOffset;
+        query.executionRefresh.retryOffset = undefined;
+        void refreshData(query, offset, true);
+        continue;
+      }
+      if (
+        execution?.status !== "succeeded" ||
+        !execution.edit?.changes_applied ||
+        !["committed", "staged"].includes(query.edit.status) ||
+        refreshedEdits.get(query) === execution.id ||
+        !query.rows ||
+        !sessionReady.value ||
+        resultLoadingLocked(query, true)
+      )
+        continue;
+      refreshedEdits.set(query, execution.id);
+      void refreshData(query, undefined, true);
+    }
+  }
+);
+
 interface SchemaEdit {
   id: string;
   sessionId: string;
@@ -1133,7 +1307,12 @@ async function restoreQuery(context: QueryContext, sql: string, uploaded = false
 }
 function queryVisible(query: QueryWorkspaceTab) {
   const tab = activeTab.value;
-  return !!tab && workspaceQuery(tab) === query && (tab.kind !== "object" || tab.section === "data");
+  const owner = tab && workspaceQuery(tab);
+  return (
+    !!owner &&
+    (owner === query || owner.pinnedResultId === query.id) &&
+    (tab!.kind !== "object" || tab!.section === "data")
+  );
 }
 async function enterObjectData(tab: ObjectWorkspaceTab) {
   if (!sessionReady.value || tab.section !== "data") return;
@@ -1190,12 +1369,7 @@ function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "
   objectSection(tab, section);
 }
 function openOverview(context: QueryContext, section: "diagram" | "basic" = "basic") {
-  if (
-    !sessionReady.value ||
-    !context.database ||
-    (!listsDatabases.value && context.database !== defaultContext.value.database)
-  )
-    return;
+  if (!sessionReady.value || !context.database) return;
   const id = `overview:${JSON.stringify([session.value?.id, context.database, context.schema])}`;
   if (!tabs.value.some((tab) => tab.id === id))
     tabs.value.push({
@@ -1210,7 +1384,7 @@ function openOverview(context: QueryContext, section: "diagram" | "basic" = "bas
   activeId.value = id;
   drawer.value = false;
 }
-async function submit(query: QueryWorkspaceTab, sql: string, version: number, plan = false) {
+async function submit(query: QueryWorkspaceTab, sql: string, version: number, plan = false, refresh = false) {
   if (
     !isCurrent(query) ||
     !sessionReady.value ||
@@ -1227,7 +1401,13 @@ async function submit(query: QueryWorkspaceTab, sql: string, version: number, pl
   query.loadingRows = false;
   query.resultLoadError = null;
   if (!plan) query.resultPane = "results";
-  query.pending = { sql, version, id: newChenRequestId(), ...(plan ? { planNumber: openQueryPlan(query, sql) } : {}) };
+  query.pending = {
+    sql,
+    version,
+    id: newChenRequestId(),
+    refresh,
+    ...(plan ? { planNumber: openQueryPlan(query, sql) } : {})
+  };
   await recoverSubmission(query);
 }
 async function transactionAction(query: QueryWorkspaceTab, transaction: GoTransactionRequest) {
@@ -1343,7 +1523,8 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
                 pending.submitReview,
                 pending.confirmWarnings,
                 !!pending.planNumber,
-                pending.transaction
+                pending.transaction,
+                query.kind === "console" && !pending.planNumber && !pending.transaction?.action
               );
     if (!isCurrent(query)) return;
     query.pending = null;
@@ -1362,6 +1543,15 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     query.executionSubmitReview = !!pending.submitReview;
     query.executionExportFormat = pending.exportFormat;
     query.executionEditPlan = pending.editPlanId;
+    query.executionRefresh =
+      pending.refresh && query.rows
+        ? {
+            viewId: query.resultViewId || query.rows.id,
+            offset: query.rows.browse?.supported || query.rows.query_page?.mode === "database" ? 0 : query.rows.offset,
+            status: query.edit.status,
+            saveError: query.edit.saveError
+          }
+        : undefined;
     query.executionBrowse = pending.browse;
     query.executionQueryPage = pending.queryPage;
     if (value.export_id) query.exportJob = null;
@@ -1395,8 +1585,7 @@ async function startExport(
   query: QueryWorkspaceTab,
   mode: "query" | "cached",
   format: GoExportFormat,
-  snapshot: { sql: string; resultId: string; version: number; rows?: number },
-  confirmedReexecution = false
+  snapshot: { sql: string; resultId: string; version: number; rows?: number }
 ): Promise<void> {
   if (
     !isCurrent(query) ||
@@ -1414,13 +1603,6 @@ async function startExport(
     if (query.pendingCachedExport) return;
     if (query.console?.state !== "ready" || executionActive(query.execution) || !snapshot.sql.trim()) return;
     if (query.browseObject && !query.rows?.browse?.supported) return;
-    const needsConfirmation =
-      query.rows?.query_page?.requires_reexecution_confirmation ||
-      query.rows?.browse?.requires_reexecution_confirmation;
-    if (needsConfirmation && !confirmedReexecution) {
-      if (!(await confirmReexecution(query, snapshot.sql))) return;
-      return startExport(query, mode, format, snapshot, true);
-    }
     query.pending = {
       sql: snapshot.sql,
       version: snapshot.version,
@@ -1432,7 +1614,7 @@ async function startExport(
               source_result_id: snapshot.resultId,
               action: "export",
               format,
-              confirm_reexecution: confirmedReexecution
+              confirm_reexecution: true
             } as GoQueryPageRequest
           }
         : query.browseObject
@@ -1441,7 +1623,7 @@ async function startExport(
                 source_result_id: snapshot.resultId,
                 action: "export",
                 format,
-                confirm_reexecution: confirmedReexecution
+                confirm_reexecution: true
               } as GoBrowseRequest
             }
           : {})
@@ -1497,7 +1679,30 @@ async function deleteExport(query: QueryWorkspaceTab) {
     if (isCurrent(query)) query.exportBusy = false;
   }
 }
-async function requestReview(query: QueryWorkspaceTab) {
+async function confirmPolicy(query: QueryWorkspaceTab, executionId: string, confirmationId: string, accepted: boolean) {
+  if (
+    !isCurrent(query) ||
+    !sessionReady.value ||
+    query.busy ||
+    query.pending ||
+    query.execution?.id !== executionId ||
+    query.execution.confirmation?.id !== confirmationId
+  )
+    return;
+  query.busy = true;
+  query.error = "";
+  try {
+    acceptExecution(query, await api.confirmExecution(executionId, confirmationId, accepted));
+    await syncExecution(query);
+  } catch (cause) {
+    if (isCurrent(query)) query.error = failureText(cause);
+  } finally {
+    if (isCurrent(query)) query.busy = false;
+  }
+}
+async function requestReview(query: QueryWorkspaceTab, executionId: string, confirmationId?: string) {
+  if (query.execution?.id !== executionId) return;
+  if (confirmationId) return confirmPolicy(query, executionId, confirmationId, true);
   if (!isCurrent(query) || !sessionReady.value || query.console?.state !== "ready" || query.busy || query.pending)
     return;
   const pending = reviewSubmission(query);
@@ -1505,7 +1710,8 @@ async function requestReview(query: QueryWorkspaceTab) {
   query.pending = pending;
   await recoverSubmission(query);
 }
-async function confirmWarning(query: QueryWorkspaceTab, executionId: string) {
+async function confirmWarning(query: QueryWorkspaceTab, executionId: string, confirmationId?: string) {
+  if (confirmationId) return confirmPolicy(query, executionId, confirmationId, true);
   if (
     !isCurrent(query) ||
     !sessionReady.value ||
@@ -1529,9 +1735,9 @@ async function cancel(query: QueryWorkspaceTab) {
   }
 }
 
-const closeDialog = ref<ReturnType<typeof closeWarnings> | null>(null);
+const closeDialog = ref<(ReturnType<typeof closeWarnings> & { keepConnection?: boolean }) | null>(null);
 let closeResolver: ((value: boolean) => void) | undefined;
-function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false) {
+function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false, keepConnection = false) {
   if (session.value?.can_cancel === false) {
     const running = list.filter(
       (query) => executionActive(query.execution) && query.execution?.status !== "waiting_review"
@@ -1542,10 +1748,11 @@ function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false) {
     }
   }
   const warnings = closeWarnings(list);
+  if (keepConnection) warnings.transaction = false;
   if (preserveSqlDrafts) warnings.dirty = list.some((query) => editDirty(query.edit));
   if (!Object.values(warnings).some(Boolean)) return Promise.resolve(true);
   if (closeResolver) return Promise.resolve(false);
-  closeDialog.value = warnings;
+  closeDialog.value = { ...warnings, keepConnection };
   return new Promise<boolean>((resolve) => {
     closeResolver = resolve;
   });
@@ -1555,6 +1762,63 @@ function finishClose(value: boolean) {
   closeResolver?.(value);
   closeResolver = undefined;
 }
+function pinResult(source: QueryWorkspaceTab, sql: string, title: string, view?: QueryWorkspaceTab["gridView"]) {
+  if (!source.rows || editDirty(source.edit) || source.edit.busy || source.loadingRows) return;
+  const query = createQueryTab(title, source.context, sql);
+  query.kind = "preview";
+  query.console = source.console;
+  query.readOnly = source.readOnly;
+  query.browseObject = source.browseObject;
+  query.loadingSettings = { ...source.loadingSettings };
+  query.browseDraft = JSON.parse(JSON.stringify(source.browseDraft));
+  query.rows = source.rows;
+  query.resultId = source.resultId;
+  query.resultSql = sql;
+  query.resultViewId = source.resultViewId || source.rows.id;
+  query.resultTransactionRevision = source.resultTransactionRevision;
+  query.gridView = view;
+  query.edit.metadata = source.edit.metadata;
+  query.resultExecution = source.resultExecution;
+  query.resultTabs = source.resultExecution ? [{ id: source.rows.id, execution: source.resultExecution, sql }] : [];
+  query.pinnedSource = true;
+  query.loadedExecutionId = source.resultExecution?.id;
+  query.execution = query.resultExecution;
+  query.executionSql = query.resultSql;
+  query.executionVersion = source.executionVersion;
+  query.cachedResult = source.cachedResult;
+  source.pinnedResults.push(query);
+  source.pinnedResultId = query.id;
+}
+async function closePinned(owner: QueryWorkspaceTab, query: QueryWorkspaceTab) {
+  if (
+    !owner.pinnedResults.includes(query) ||
+    query.busy ||
+    query.exportBusy ||
+    !(await confirmClose([query], false, true))
+  )
+    return;
+  try {
+    if (executionActive(query.execution)) await api.cancel(query.execution!.id);
+    if (exportActive(query.exportJob)) await api.cancelExport(query.exportJob!.id);
+  } catch (cause) {
+    query.error = failureText(cause);
+    return;
+  }
+  query.closed = true;
+  query.loadGeneration++;
+  owner.pinnedResults = owner.pinnedResults.filter((item) => item !== query);
+  if (owner.pinnedResultId === query.id) owner.pinnedResultId = null;
+  const retained = new Set(
+    queries.value.flatMap((item) => [
+      item.rows?.id,
+      item.cachedResult?.id,
+      ...item.resultTabs.map((result) => result.id)
+    ])
+  );
+  for (const id of new Set([query.rows?.id, query.cachedResult?.id, ...query.resultTabs.map((result) => result.id)])) {
+    if (id && !retained.has(id)) void api.releaseResult(id).catch(() => {});
+  }
+}
 async function closeTabs(list: ChenWorkspaceTab[]) {
   const queries = workspaceQueries(list);
   if (queries.some((query) => query.busy) || !(await confirmClose(queries))) return;
@@ -1563,7 +1827,12 @@ async function closeTabs(list: ChenWorkspaceTab[]) {
 async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
   const query = workspaceQuery(tab);
   if (query) {
-    if (query.busy || query.exportBusy || (!confirmed && !(await confirmClose([query]))) || !isCurrent(query)) return;
+    if (
+      [query, ...query.pinnedResults].some((item) => item.busy || item.exportBusy) ||
+      (!confirmed && !(await confirmClose([query, ...query.pinnedResults]))) ||
+      !isCurrent(query)
+    )
+      return;
     if (
       session.value?.can_cancel === false &&
       executionActive(query.execution) &&
@@ -1575,8 +1844,10 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
     query.busy = true;
     const queryApi = api;
     try {
-      if (query.execution && executionActive(query.execution)) await queryApi.cancel(query.execution.id);
-      if (exportActive(query.exportJob)) await queryApi.cancelExport(query.exportJob!.id);
+      for (const item of [query, ...query.pinnedResults]) {
+        if (item.execution && executionActive(item.execution)) await queryApi.cancel(item.execution.id);
+        if (exportActive(item.exportJob)) await queryApi.cancelExport(item.exportJob!.id);
+      }
       if (query.console && query.console.state !== "closed" && session.value?.state !== "closed")
         await queryApi.closeConsole(query.console.id);
     } catch (cause) {
@@ -1585,16 +1856,21 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
       return;
     }
     if (!isCurrent(query)) return;
-    query.closed = true;
-    query.loadGeneration++;
+    for (const item of [query, ...query.pinnedResults]) {
+      item.closed = true;
+      item.loadGeneration++;
+    }
   }
   const index = tabs.value.indexOf(tab);
   if (index < 0) return;
   tabs.value.splice(index, 1);
   if (activeId.value === tab.id) activeId.value = tabs.value[Math.max(0, index - 1)]?.id || "";
 }
-async function reconnect(query: QueryWorkspaceTab) {
-  if (!sessionReady.value || query.busy || !(await confirmClose([query])) || !isCurrent(query)) return;
+async function reconnect(query: QueryWorkspaceTab): Promise<void> {
+  const owner = queries.value.find((item) => item.pinnedResults.includes(query));
+  if (owner) return reconnect(owner);
+  if (!sessionReady.value || query.busy || !(await confirmClose([query, ...query.pinnedResults])) || !isCurrent(query))
+    return;
   try {
     if (query.console) await api.closeConsole(query.console.id);
   } catch (cause) {
@@ -1605,12 +1881,18 @@ async function reconnect(query: QueryWorkspaceTab) {
   }
   if (!isCurrent(query)) return;
   if (query.execution && executionActive(query.execution)) query.execution = { ...query.execution, status: "unknown" };
+  for (const pinned of query.pinnedResults) pinned.closed = true;
+  query.pinnedResults = [];
+  query.pinnedResultId = null;
   query.pending = null;
   query.edit = createEditDraft();
   query.rows = null;
   query.cachedResult = undefined;
   query.resultId = "";
   query.resultExecution = null;
+  query.resultTabs = [];
+  query.replacedResultIds = [];
+  query.loadedExecutionId = undefined;
   query.resultSql = "";
   query.loadGeneration++;
   query.planRuns = [];
@@ -1838,6 +2120,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :session-id="session.id"
           :dialect="session.dialect"
           :database="defaultContext.database"
+          :schema="defaultContext.schema"
           :asset="session.asset || selector || ''"
           :ready="sessionReady"
           :can-paste="session.permissions.can_paste"
@@ -1922,6 +2205,17 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               </UDropdownMenu>
             </template>
             <template #trailing>
+              <UButton
+                v-if="aiAvailable && (!activeTab || activeTab.kind === 'overview' || activeTab.kind === 'object')"
+                icon="i-lucide-sparkles"
+                :aria-label="t('RightPanel.SQLAIGenerate')"
+                :title="t('RightPanel.SQLAIGenerate')"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="!sqlAiContext()"
+                @click="requestSqlAi('generate')"
+              />
               <UButton
                 v-if="!desktopTree"
                 :icon="drawer ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
@@ -2027,37 +2321,42 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               :ai-available="aiAvailable"
               :sql-keyword-case="workspacePreferences.sqlKeywordCase"
               @ai="requestSqlAi"
-              @apply-edits="applyEdits(query, $event)"
-              @upload-sql="restoreQuery(query.context, $event, true)"
-              @refresh-data="refreshData(query)"
-              @browse="(request) => browseTable(query, request)"
-              @query-page="(request) => pageQuery(query, request)"
-              @cached-result="restoreCachedResult(query)"
-              @loading-settings="(settings) => changeLoading(query, settings)"
-              @load-more="(automatic) => loadMore(query, automatic)"
+              @apply-edits="(plan, target) => applyEdits(target || query, plan)"
+              @refresh-data="(target) => refreshData(target || query)"
+              @browse="(request, target) => browseTable(target || query, request)"
+              @query-page="(request, target) => pageQuery(target || query, request)"
+              @cached-result="(target) => restoreCachedResult(target || query)"
+              @loading-settings="(settings, target) => changeLoading(target || query, settings)"
+              @load-more="(automatic, target) => loadMore(target || query, automatic)"
               @sql="updateQuerySql(query, $event)"
               @restore="(sql: string) => restoreQuery(query.context, sql)"
+              @upload-sql="restoreQuery(query.context, $event, true)"
               @run="(sql, version) => submit(query, sql, version)"
               @explain="(sql, version) => explainQuery(query, sql, version)"
-              @cancel="cancel(query)"
-              @review="requestReview(query)"
-              @confirm-warning="(id) => confirmWarning(query, id)"
-              @transaction="(request) => transactionAction(query, request)"
-              @confirm-implicit="(id) => confirmImplicitCommit(query, id)"
-              @export="(mode, format, snapshot) => startExport(query, mode, format, snapshot)"
+              @cancel="(target) => cancel(target || query)"
+              @review="(id, confirmationId, target) => requestReview(target || query, id, confirmationId)"
+              @confirm-warning="(id, confirmationId, target) => confirmWarning(target || query, id, confirmationId)"
+              @policy-cancel="(id, confirmationId, target) => confirmPolicy(target || query, id, confirmationId, false)"
+              @transaction="(request, target) => transactionAction(target || query, request)"
+              @confirm-implicit="(id, target) => confirmImplicitCommit(target || query, id)"
+              @export="(mode, format, snapshot, target) => startExport(target || query, mode, format, snapshot)"
               @export-sync="
-                syncExport(query).catch((cause) => {
-                  query.error = failureText(cause);
-                })
+                (target) =>
+                  syncExport(target || query).catch((cause) => {
+                    (target || query).error = failureText(cause);
+                  })
               "
-              @export-cancel="cancelExport(query)"
-              @export-delete="deleteExport(query)"
-              @recover="recoverSubmission(query)"
-              @reconnect="reconnect(query)"
-              @rows="(id, offset) => loadRows(query, id, offset)"
-              @retry-rows="retryRows(query)"
-              @close-plan="closeQueryPlan(query, $event)"
-              @pane="(pane) => (query.resultPane = pane)"
+              @export-cancel="(target) => cancelExport(target || query)"
+              @export-delete="(target) => deleteExport(target || query)"
+              @recover="(target) => recoverSubmission(target || query)"
+              @reconnect="(target) => reconnect(target || query)"
+              @rows="(id, offset, target) => loadRows(target || query, id, offset)"
+              @retry-rows="(target) => retryRows(target || query)"
+              @close-plan="(number, target) => closeQueryPlan(target || query, number)"
+              @pane="(pane, target) => ((target || query).resultPane = pane)"
+              @close-pinned="(target) => closePinned(query, target)"
+              @pin="(sql, title, view) => pinResult(query, sql, title, view)"
+              @select-pinned="(id) => (query.pinnedResultId = id)"
             />
           </template>
         </div>
@@ -2085,30 +2384,6 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
       @close="schemaEdit.close"
     />
     <UModal
-      :open="Boolean(reexecutionDialog)"
-      :title="t('Chen.GoQueryReexecuteTitle')"
-      :description="t('Chen.GoQueryReexecuteHint')"
-      :portal="false"
-      @update:open="
-        (open) => {
-          if (!open) finishReexecution(false);
-        }
-      "
-    >
-      <template #body>
-        <pre
-          class="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded bg-elevated p-3 font-ui-mono text-xs"
-          @copy.capture="preventCopy"
-          >{{ reexecutionDialog?.sql }}</pre>
-      </template>
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="finishReexecution(false)" />
-          <UButton :label="t('Chen.GoQueryReexecuteConfirm')" @click="finishReexecution(true)" />
-        </div>
-      </template>
-    </UModal>
-    <UModal
       :open="!!renameTarget"
       :title="t('Chen.GoV1RenameTab')"
       @update:open="
@@ -2131,7 +2406,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     </UModal>
     <UModal
       :open="!!closeDialog"
-      :title="t('Chen.GoV1ConfirmClose')"
+      :title="t(closeDialog?.keepConnection ? 'Chen.UnpinResult' : 'Chen.GoV1ConfirmClose')"
       :ui="{
         content: 'sm:max-w-sm',
         header: 'px-4 py-3 sm:px-4',

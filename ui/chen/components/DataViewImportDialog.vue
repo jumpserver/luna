@@ -73,7 +73,7 @@ async function selectFile(event: Event) {
   }
 
   try {
-    const result = parseChenCsv(new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()));
+    const result = parseChenCsv(await file.text());
     if (result.rows.length > props.maxRows) {
       throw new Error(t("Chen.CsvRowLimit", { count: result.rows.length, limit: props.maxRows }));
     }

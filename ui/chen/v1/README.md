@@ -37,25 +37,6 @@ remain in the workspace closure. Separate tabs use separate request IDs and inde
 retrying one creation attempt retains its request ID in memory. Managed and single authentication do
 not fall back to one another.
 
-To repeat the production-browser verification, start the opt-in Go `TestSingleBrowserFixture` with
-`CHEN_SINGLE_BROWSER_FIXTURE=1 CHEN_BROWSER_DIALECT=mysql` (or `postgresql`) and
-`CHEN_BROWSER_FIXTURE_FILE=/tmp/chen-single-browser-fixture.json`. Its private `config_path` and
-`state_dir` can be passed to the actual Go CLI:
-
-```sh
-# Use the paths emitted by that isolated fixture, not a production database.
-data/bin/chen-go single --listen 127.0.0.1:3030 --backends "$fixture_config" \
-  --state-dir "$fixture_state" --web-dir ../luna/.output/public
-
-# Luna, in a second terminal
-CHEN_SINGLE_BASE_URL=http://127.0.0.1:3030 node scripts/chen-single-browser-smoke.mjs
-```
-
-This check opens the real generated route through the real CLI, without temporary pages or a Nuxt
-development server. It checks mode discovery, two independent tabs, live completion, precise results,
-cancellation and close, and asserts zero Core/Wisp requests and zero WebSockets. Reports and screenshots
-are written to `output/chen-single-browser/mysql/` or `output/chen-single-browser/postgresql/`.
-
 ## Managed mode
 
 The full Luna database workbench uses the Go backend for all supported SQL protocols.
@@ -75,8 +56,8 @@ MySQL mode use a database-to-objects hierarchy; PostgreSQL, Oracle, SQL Server, 
 OceanBase Oracle mode include a schema level. Missing schemas are not replaced with a database
 name in schema-qualified SQL.
 
-Explicit previews generate at most 200 rows using `TOP (200)` for SQL Server, `FETCH FIRST 200 ROWS
-ONLY` for Db2, `WHERE ROWNUM <= 200` for Oracle/OceanBase Oracle mode, and `LIMIT 200` for the other
+Explicit previews generate at most 50 rows using `TOP (50)` for SQL Server, `FETCH FIRST 50 ROWS
+ONLY` for Db2, `WHERE ROWNUM <= 50` for Oracle/OceanBase Oracle mode, and `LIMIT 50` for the other
 dialects. Oracle-family consoles start with `SELECT 1 FROM DUAL`; Db2 uses `SYSIBM.SYSDUMMY1`.
 Names containing dots, quotes, closing brackets, whitespace, or Unicode remain single quoted identifiers.
 SQL Server bracket-delimited completion uses complete-token replacement and preserves doubled `]` escapes.
@@ -90,23 +71,15 @@ The result viewer recognizes CLOB/NCLOB/DBCLOB, NVARCHAR(MAX), RAW/LONG RAW/IMAG
 Nullable/LowCardinality/Array/Map/Tuple types. Binary display requires both a binary database type
 and the API's `0x` hex encoding; text beginning with `0x` remains text. Nested integers and decimals
 must arrive as exact strings from the backend. JavaScript cannot recover precision already lost in
-an API number. The existing bounded previews, paged read-only viewer, JSON token preservation,
+an API number. The existing bounded previews, paged viewer, JSON token preservation,
 copy permissions, and null/empty distinctions apply to every dialect.
-
-`v1/dialects.test.ts`, `completion.test.ts`, and `resultGrid.test.ts` cover generated SQL, quoting,
-namespace contracts, SQL Server completion filtering, LOB types, and nested numeric strings. Go
-`internal/sqlservice/dialects_test.go` covers catalog-fixture completion, folding, JOIN/CTE scope,
-quoted identifiers, and lexical read-query boundaries. These are unit/contract checks, **not live
-compatibility evidence for the additional database servers**. MySQL/PostgreSQL browser fixtures
-described above remain separate; each additional engine still requires a running server, matching
-driver and permissions, and retained end-to-end evidence for connection, catalog, completion,
-query results, cancellation, large values, and audit.
 
 The extended-dialect command scanner preserves lexical statement spans and rejects incomplete
 quotes/comments and unbalanced parentheses. It is not a complete vendor grammar or proof that
 functions have no side effects. Server validation and database permissions remain necessary.
-The analysis response's `may_write` flag requests an explicit, frozen SQL confirmation before
-ordinary mutations or transaction statements. It is advisory and never replaces server ACL checks.
+Editor SQL retains the legacy confirmation for unrestricted UPDATE/DELETE statements. Ordinary
+execution does not wait for a duplicate analysis request. Server ACL, audit, and transaction guards
+still apply. The independent console sends `console_mode: true` for its raw statement scanner.
 
 The optional session capability `can_cancel: false` disables the cancel control and its action
 handler with an explanation. An older server that omits the field retains the existing behavior.
@@ -154,14 +127,13 @@ against the server's idempotency contract. Database `unknown` and `cancel_reques
 successful cancellation. SQL outcome and local audit persistence are displayed separately. `recorded`
 means local audit persistence completed. In managed mode the backend queues Core delivery and retries
 it separately; this status does not claim Core delivery. In single mode audit remains local.
-Command-review policy failures (`command_review_required`) show an explicit **Request review** action.
-Only that action sets `submit_review: true`, with a fresh request ID and the failed execution's immutable
-SQL/version snapshot. A lost response retains this exact request for idempotent recovery. The resulting
-`waiting_review` execution remains active and can be canceled through the existing cancel endpoint.
-Its `review` metadata displays pending, approved, rejected, canceled, timed_out or failed, reviewers and
-a safe HTTP(S) ticket link. The UI never approves a ticket. After approval, the backend executes the
-original submitted SQL; later editor changes do not alter it. Existing SSE events and HTTP snapshots
-carry all state changes, without an additional WebSocket.
+Command review pauses the current statement with an immutable `confirmation` ID and SQL snapshot.
+The user explicitly submits or cancels it through `/executions/{id}/confirm`; acceptance continues
+that execution without replaying successful earlier statements. `waiting_review` remains active
+and cancelable. Actual `review` metadata displays pending, approved, rejected, canceled, timed_out
+or failed, reviewers, and a safe HTTP(S) ticket link. The UI never approves an administrator ticket.
+SSE and HTTP snapshots include an execution revision so older responses cannot revive a prior
+confirmation. Older servers' failed-policy responses retain their explicit resubmission fallback.
 
 An administrator pause preserves drafts and results while disabling execution and online completion.
 The optional `state_reason` distinguishes an administrator lock from a control-stream outage; the
@@ -183,40 +155,20 @@ are applied to editor keyboard, DOM clipboard/drop operations and the result sur
 Checks:
 
 ```sh
-pnpm exec vitest run --config vitest.config.ts --browser.enabled=false ui/chen/v1/v1.test.ts ui/chen/v1/standalone.test.ts ui/chen/api/client.test.ts
-node scripts/chen-v1-editor-smoke.mjs
-node scripts/chen-v1-controls-smoke.mjs
+pnpm lint:check
 pnpm typecheck
 pnpm exec nuxt build
 ```
 
-For the full real-workspace browser check, first run the Go engine's opt-in `TestBrowserFixture`
-to create an isolated database and fake Core/Wisp boundaries (`CHEN_BROWSER_DIALECT=mysql` or
-`CHEN_BROWSER_DIALECT=postgresql`), then run
-`CHEN_BROWSER_FIXTURE_FILE=/tmp/chen-go-browser-fixture.json node scripts/chen-v1-workspace-smoke.mjs`.
-It starts Nuxt on port 3019, uses the actual workspace and Go HTTP APIs, and removes its temporary
-test route on exit. Results and a synthetic-data screenshot are written under
-`output/chen-v1-browser/mysql/` or `output/chen-v1-browser/postgresql/`.
+Validate database flows against a dedicated local database and record browser, backend, and
+Core-policy validation separately. Static checks and builds do not establish live database compatibility.
 
-The isolated Monaco Chromium fixture exercises table, column, alias, JOIN and quoted-name suggestions,
-current-statement execution, disabled online actions, clipboard restrictions, Unicode value chunks,
-exact JSON tokens, binary display, Find and model disposal. Its API replies are synthetic; it does not
-prove database completion semantics or a live Core connection. `chen-v1-controls-smoke.mjs` starts
-Nuxt on localhost port 3021 and a synthetic HTTP/SSE server. It checks explicit command review, immutable
-SQL/version snapshots, recovery using the same request ID, review cancellation/rejection/approval,
-unsupported database cancellation, pause/unlock and administrator close. Reports go to
-`output/chen-v1-controls/`. Run these scripts with the supported Node LTS runtime and keep the controls
-fixture separate from a concurrent Nuxt build. Go integration tests and
-real Core/database acceptance remain separate validation steps. The production build validates
-the same-origin worker and Web/Electron assets; desktop main-process end-to-end acceptance is still required.
-
-NotifyWarning policy failures (`command_warning_confirmation_required`) require a separate confirmation
-of the failed execution's immutable SQL. Canceling the dialog sends nothing. Explicit confirmation uses
-`confirm_warnings: true` with a new stable request ID; a subsequent request for administrator review
-retains that consent. Ordinary warning-only notifications do not show this confirmation.
+NotifyWarning pauses the current statement for a separate SQL confirmation. The dialog binds both
+the execution and confirmation IDs; Submit resumes in place, and Cancel stops the execution without
+replaying its prefix. Ordinary warning notifications do not request confirmation.
 
 Exports use bounded server-side jobs. The default is all cached rows (with an explicit count and truncation
-warning). Full export requires confirmation of the result's frozen SQL, executes one read-only SELECT on
+warning). Full export uses the result's frozen SQL, executes one read-only SELECT on
 the same console, and retains its database/schema/temporary-table context. Existing SQL LIMIT clauses are
 preserved. Warning/review retries bind the same SQL, document version, export format and explicit consent;
 the editor's later changes do not change the export. CSV and XLSX share progress, cancellation and expiry.
@@ -231,12 +183,6 @@ list owns completion reporting. Electron selects the destination before obtainin
 the registered connector and fixed download route, streams to a private temporary file, and only renames
 it to the selected destination after completion. Interrupted streams remove partial files.
 
-`CHEN_UI_URL=http://127.0.0.1:3000/luna/chen/?selector=export-fixture node scripts/chen-v1-export-smoke.mjs`
-uses an already running Nuxt dev server, isolated synthetic API routes, and a real Chromium native download.
-It checks cached counts/truncation, a large Unicode/BIGINT CSV body, full-query warning/review binding, and
-cancelled-task download gating. It does not validate database execution or XLSX encoding; those require the
-Go integration suite and live service acceptance. Electron stream tests are in `electron/tests/chen-export.test.ts`.
-
 ## Staged writes
 
 `GoWritePanel` only enables changes described by `/consoles/{id}/results/{id}/edit`.
@@ -248,13 +194,19 @@ unknown commits require database verification and refresh, never an automatic re
 
 UTF-8 CSV imports are limited to 10 MiB and the remaining 500-operation budget. CSV uses a separate
 insert batch; existing updates/deletes must be saved or discarded first. The 2 MiB encoded-save limit
-is checked before preview, with explicit manual batching rather than automatic partial commits. Empty rows are retained;
-read-only/generated columns are rejected explicitly. Numbers remain strings, and NULL, empty strings
-and omitted INSERT defaults remain distinct. SQL file loading requires `can_upload`, accepts UTF-8
-files up to 1 MiB, and opens a new query without running it. Both use browser File APIs on web and Electron.
+is checked before preview, with explicit manual batching rather than automatic partial commits. Empty rows and mapped non-insertable columns are skipped, matching the previous import flow. Numbers remain strings, and NULL, empty strings
+and omitted INSERT defaults remain distinct. SQL file upload requires `can_upload`, accepts nonempty
+`.sql` files up to 1 MiB and 1,048,576 decoded UTF-16 code units, and opens a new query draft without executing it.
+This file-opening flow is explicitly retained alongside transactions, context menus, and selectable
+result loading modes. Text decoding replaces malformed UTF-8, as in Java. The file limit protects the editor model independently of execution transport; files are never split,
+truncated, or executed while opening. Ordinary SQL execution retains its separate transport limits.
+Both file flows use browser File APIs on web and Electron.
 
 Schema dialogs generate quoted SQL for user review before the ordinary policy/audit path.
-MySQL column-definition changes open native DDL as commented reference in a SQL editor to avoid
-silently dropping defaults, identity and comments. The server and database still validate actual DDL.
-`dataEditing.test.ts`, `schemaSql.test.ts` and CSV tests cover protocol and data-loss boundaries;
-live backend and browser write verification are separate evidence.
+MySQL column-definition changes preserve the remaining native column attributes from SHOW CREATE,
+including defaults, identity and comments. The original DDL remains available as a SQL reference.
+The server and database still validate actual DDL.
+
+Pinned results retain their source and console for refresh, permitted edits, copy, and export.
+There is no additional three-result or 2 MiB pin limit. New SQL keeps pinned sources alive;
+unpinning releases only otherwise-unused result caches and never closes the shared console.

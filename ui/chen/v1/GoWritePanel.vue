@@ -35,7 +35,10 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const error = ref("");
 const selected = ref<number[]>([]);
-const grid = ref<{ stopEditing: (cancel?: boolean) => void } | null>(null);
+const grid = ref<{
+  stopEditing: (cancel?: boolean) => void;
+  snapshotView: () => NonNullable<QueryWorkspaceTab["gridView"]>;
+} | null>(null);
 const metadataBusy = ref(false);
 const previewOpen = ref(false);
 const csvOpen = ref(false);
@@ -52,28 +55,6 @@ const policyPending = computed(
 );
 const cannotDiscard = computed(
   () => props.query.busy || !!props.query.pending || draft.value.busy || executionActive(props.query.execution)
-);
-let refreshedExecution = "";
-watch(
-  () => [draft.value.status, cannotDiscard.value, props.query.loadingRows],
-  () => {
-    const execution = props.query.execution;
-    if (
-      props.query.browseObject &&
-      draft.value.status === "committed" &&
-      execution?.status === "succeeded" &&
-      execution.edit?.changes_applied &&
-      !cannotDiscard.value &&
-      !props.query.loadingRows &&
-      !dirty.value &&
-      props.session.state === "ready" &&
-      props.query.console?.state === "ready" &&
-      execution.id !== refreshedExecution
-    ) {
-      refreshedExecution = execution.id;
-      emit("refresh");
-    }
-  }
 );
 const locked = computed(
   () =>
@@ -154,6 +135,16 @@ let controller: AbortController | undefined;
 async function loadMetadata() {
   if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
   controller?.abort();
+  const metadata = draft.value.metadata;
+  if (
+    metadata?.supported &&
+    metadata.version === props.query.rows.id &&
+    metadata.offset === props.query.rows.offset &&
+    metadata.row_refs.length >= props.query.rows.rows.length
+  ) {
+    metadataBusy.value = false;
+    return;
+  }
   if (draft.value.transactionStale) {
     metadataBusy.value = false;
     return;
@@ -376,6 +367,7 @@ function discard() {
   clearEditDraft(draft.value);
   error.value = "";
 }
+defineExpose({ snapshotView: () => grid.value?.snapshotView() });
 </script>
 
 <template>
@@ -398,12 +390,23 @@ function discard() {
       {{ t("Chen.Transaction.ResultStale") }}
     </p>
     <p v-else-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
+    <p v-if="draft.saveError && !query.execution?.edit" role="alert" class="px-3 py-2 text-xs text-error">
+      {{ chenErrorText(draft.saveError, t) }}
+    </p>
     <p v-if="draft.status && draft.status !== 'committed'" role="status" class="px-3 py-2 text-xs text-warning">
-      {{ t(`Chen.GoWriteOutcome_${draft.status}`) }}
+      {{
+        t(
+          draft.status === "rolled_back" && !dirty
+            ? "Chen.Transaction.RolledBack"
+            : `Chen.GoWriteOutcome_${draft.status}`
+        )
+      }}
     </p>
     <GoResultGrid
       ref="grid"
       :rows="rows"
+      :view-id="query.resultViewId"
+      :initial-view="query.gridView"
       :read-result-page="!query.browseObject && query.rows?.query_page?.mode !== 'database' ? api.rows : undefined"
       :row-actions="rowActions"
       :display-mode="query.browseObject ? 'table' : 'query'"

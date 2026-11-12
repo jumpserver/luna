@@ -83,7 +83,8 @@ async function load(more = false) {
       props.object.schema,
       props.object.name,
       more ? cursor.value : undefined,
-      current.signal
+      current.signal,
+      props.object.database
     );
     if (current.signal.aborted) return;
     columns.value = more ? [...columns.value, ...page.items] : page.items;

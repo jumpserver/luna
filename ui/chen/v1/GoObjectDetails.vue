@@ -70,7 +70,11 @@ const sections = computed(() =>
       label: t("Chen.ForeignKeys"),
       columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
     },
-    { key: "indexes" as const, label: t("Chen.Indexes"), columns: ["name", "column", "ordinal", "unique"] },
+    {
+      key: "indexes" as const,
+      label: t("Chen.Indexes"),
+      columns: ["name", "column", "ordinal", "unique", "method", "sort_order", "included", "expression", "definition"]
+    },
     { key: "constraints" as const, label: t("Chen.Constraints"), columns: ["name", "type", "definition"] },
     {
       key: "defaults" as const,
@@ -103,6 +107,9 @@ const labels: Record<string, string> = {
   column: "Chen.Column",
   ordinal: "Chen.GoV1Position",
   unique: "Chen.Unique",
+  method: "Chen.Method",
+  sort_order: "Chen.GoOverviewDirection",
+  included: "Chen.GoOverviewIncluded",
   referenced_schema: "Chen.Schema",
   referenced_table: "Chen.References",
   referenced_column: "Chen.GoV1ReferencedColumn",
@@ -124,7 +131,8 @@ async function load() {
       props.sessionId,
       props.object.schema,
       props.object.name,
-      current.signal
+      current.signal,
+      props.object.database
     );
     if (!current.signal.aborted) data.value = value;
   } catch (cause) {
@@ -185,7 +193,13 @@ async function loadDdl() {
   ddlBusy.value = true;
   ddlError.value = "";
   try {
-    const value = await props.api.catalogDdl(props.sessionId, props.object.schema, props.object.name, current.signal);
+    const value = await props.api.catalogDdl(
+      props.sessionId,
+      props.object.schema,
+      props.object.name,
+      current.signal,
+      props.object.database
+    );
     if (!current.signal.aborted) ddl.value = value;
   } catch (cause) {
     if (!current.signal.aborted) ddlError.value = chenErrorText(cause, t);
@@ -327,8 +341,12 @@ onBeforeUnmount(() => {
                 class="border-b border-r border-default px-3 py-2 font-ui-mono whitespace-pre-wrap break-words"
               >
                 {{
-                  typeof row[column] === "boolean"
-                    ? t(row[column] ? "Chen.GoV1Yes" : "Chen.GoV1No")
+                  typeof row[column] === "boolean" || (["unique", "included"].includes(column) && row[column] != null)
+                    ? t(
+                        row[column] === true || row[column] === 1 || row[column] === "1"
+                          ? "Chen.GoV1Yes"
+                          : "Chen.GoV1No"
+                      )
                     : (row[column] ?? "—")
                 }}
               </td>

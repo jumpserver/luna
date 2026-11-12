@@ -1,4 +1,5 @@
 import type { GoEditChange, GoEditMetadata, GoEditPlan, GoExecution, GoRows } from "./api";
+import { executionActive } from "./api";
 
 export const GO_EDIT_LIMIT = 500;
 export const GO_EDIT_MAX_BYTES = 2 * 1024 * 1024;
@@ -14,6 +15,7 @@ export interface GoEditDraft {
   busy: boolean;
   refreshRequired: boolean;
   transactionStale?: boolean;
+  saveError?: GoExecution["error"];
   status: "" | "committed" | "staged" | "rolled_back" | "unknown";
 }
 export function createEditDraft(): GoEditDraft {
@@ -87,6 +89,7 @@ export function stageEditCell(
   }
   draft.plan = null;
   draft.status = "";
+  draft.saveError = undefined;
   return true;
 }
 export function stageDeleteRows(draft: GoEditDraft, rows: GoRows, indexes: number[]) {
@@ -115,8 +118,10 @@ export function clearEditDraft(draft: GoEditDraft) {
 }
 export function acceptEditExecution(draft: GoEditDraft, execution: GoExecution) {
   const result = execution.edit;
-  if (!result || result.plan_id !== draft.plan?.plan_id) return;
+  if (!result || result.plan_id !== draft.plan?.plan_id || result.outcome === "pending" || executionActive(execution))
+    return;
   draft.status = result.outcome;
+  draft.saveError = execution.error;
   draft.refreshRequired ||= result.refresh_required || result.outcome === "unknown";
   if (result.changes_applied) clearEditDraft(draft);
 }

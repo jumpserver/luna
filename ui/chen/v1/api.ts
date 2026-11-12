@@ -77,7 +77,7 @@ export interface GoExecution {
     plan_id: string;
     changes_applied: boolean;
     database_committed: boolean;
-    outcome: "committed" | "staged" | "rolled_back" | "unknown";
+    outcome: "pending" | "committed" | "staged" | "rolled_back" | "unknown";
     affected_rows: number;
     refresh_required: boolean;
   };
@@ -91,7 +91,15 @@ export interface GoExecution {
     | "failed"
     | "canceled"
     | "unknown";
+  revision?: number;
+  confirmation?: {
+    id: string;
+    kind: "review" | "warning";
+    sql: string;
+    expires_at: string;
+  };
   review?: {
+    sql?: string;
     state: "pending" | "approved" | "rejected" | "canceled" | "timed_out" | "failed";
     ticket_url?: string;
     reviewers?: string[];
@@ -180,7 +188,7 @@ export interface GoBrowseDraft {
 export interface GoQueryPageRequest {
   confirm_reexecution?: boolean;
   source_result_id: string;
-  action: "page" | "count" | "export";
+  action: "page" | "count" | "export" | "refresh";
   offset?: number;
   page_size?: number;
   format?: GoExportFormat;
@@ -326,6 +334,7 @@ export interface GoCatalogInspect {
 }
 export interface GoCatalogPage<T> {
   database?: string;
+  schema?: string;
   items: T[];
   next_cursor?: string;
   has_more: boolean;
@@ -448,7 +457,8 @@ export function createChenGoApi(
       submitReview = false,
       confirmWarnings = false,
       estimatedPlan = false,
-      transaction?: GoTransactionRequest
+      transaction?: GoTransactionRequest,
+      consoleMode = false
     ) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/executions`, "POST", {
         ...(transaction?.action
@@ -457,6 +467,7 @@ export function createChenGoApi(
         ...(transaction?.revision ? { transaction_revision: transaction.revision } : {}),
         ...(transaction?.confirmImplicit ? { confirm_implicit_commit: true } : {}),
         ...(estimatedPlan ? { plan_mode: "ESTIMATED" } : {}),
+        ...(consoleMode ? { console_mode: true } : {}),
         document_version: documentVersion,
         request_id: requestId,
         ...(submitReview ? { submit_review: true } : {}),
@@ -521,6 +532,11 @@ export function createChenGoApi(
         ...(submitReview ? { submit_review: true } : {}),
         ...(confirmWarnings ? { confirm_warnings: true } : {})
       }),
+    confirmExecution: (executionId: string, confirmationId: string, accepted: boolean) =>
+      request<GoExecution>(`/executions/${id(executionId)}/confirm`, "POST", {
+        confirmation_id: confirmationId,
+        accepted
+      }),
     plan: (executionId: string) => request<GoPlan>(`/executions/${id(executionId)}/plan`),
     explain: (consoleId: string, sql: string) =>
       request<{ sql: string }>(`/consoles/${id(consoleId)}/explain`, "POST", { sql }),
@@ -559,7 +575,8 @@ export function createChenGoApi(
     },
     execution: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}`),
     cancel: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}/cancel`, "POST"),
-    rows: (resultId: string, offset = 0, limit = 200, signal?: AbortSignal) =>
+    releaseResult: (resultId: string) => request<void>(`/results/${id(resultId)}`, "DELETE"),
+    rows: (resultId: string, offset = 0, limit = 50, signal?: AbortSignal) =>
       request<GoRows>(`/results/${id(resultId)}/rows?offset=${offset}&limit=${limit}`, "GET", undefined, signal),
     consoleContexts: (consoleId: string, after?: string, signal?: AbortSignal) =>
       request<GoCatalogPage<string>>(
@@ -589,30 +606,37 @@ export function createChenGoApi(
           signal
         )
       ),
-    catalogDdl: (sessionId: string, schema: string, table: string, signal?: AbortSignal) =>
+    catalogDdl: (sessionId: string, schema: string, table: string, signal?: AbortSignal, database?: string) =>
       request<GoCatalogSection>(
-        `/sessions/${id(sessionId)}/catalog/ddl?${catalogQuery({ schema, table })}`,
+        `/sessions/${id(sessionId)}/catalog/ddl?${catalogQuery({ database, schema, table })}`,
         "GET",
         undefined,
         signal
       ),
-    catalogInspect: (sessionId: string, schema: string, table: string, signal?: AbortSignal) =>
+    catalogInspect: (sessionId: string, schema: string, table: string, signal?: AbortSignal, database?: string) =>
       request<GoCatalogInspect>(
-        `/sessions/${id(sessionId)}/catalog/inspect?${catalogQuery({ schema, table })}`,
+        `/sessions/${id(sessionId)}/catalog/inspect?${catalogQuery({ database, schema, table })}`,
         "GET",
         undefined,
         signal
       ),
-    catalogSchemas: (sessionId: string, cursor?: string, signal?: AbortSignal) =>
+    catalogDatabases: (sessionId: string, cursor?: string, signal?: AbortSignal) =>
       request<GoCatalogPage<{ name: string }>>(
-        `/sessions/${id(sessionId)}/catalog/schemas?${catalogQuery({ cursor, limit: 100 })}`,
+        `/sessions/${id(sessionId)}/catalog/databases?${catalogQuery({ cursor, limit: 100 })}`,
+        "GET",
+        undefined,
+        signal
+      ),
+    catalogSchemas: (sessionId: string, cursor?: string, signal?: AbortSignal, database?: string) =>
+      request<GoCatalogPage<{ name: string }>>(
+        `/sessions/${id(sessionId)}/catalog/schemas?${catalogQuery({ database, cursor, limit: 100 })}`,
         "GET",
         undefined,
         signal
       ),
     catalogObjects: (
       sessionId: string,
-      options: { schema?: string; kind?: string; q?: string; cursor?: string } = {},
+      options: { database?: string; schema?: string; kind?: string; q?: string; cursor?: string } = {},
       signal?: AbortSignal
     ) =>
       request<GoCatalogPage<GoCatalogObject>>(
@@ -621,9 +645,16 @@ export function createChenGoApi(
         undefined,
         signal
       ),
-    catalogColumns: (sessionId: string, schema: string, table: string, cursor?: string, signal?: AbortSignal) =>
+    catalogColumns: (
+      sessionId: string,
+      schema: string,
+      table: string,
+      cursor?: string,
+      signal?: AbortSignal,
+      database?: string
+    ) =>
       request<GoCatalogPage<GoCatalogColumn>>(
-        `/sessions/${id(sessionId)}/catalog/columns?${catalogQuery({ schema, table, cursor, limit: 100 })}`,
+        `/sessions/${id(sessionId)}/catalog/columns?${catalogQuery({ database, schema, table, cursor, limit: 100 })}`,
         "GET",
         undefined,
         signal
@@ -675,9 +706,11 @@ export function executionCanCancel(execution: GoExecution | null | undefined, ca
 // An earlier HTTP response may arrive after a terminal SSE event.
 export function reconcileExecution(current: GoExecution | null, next: GoExecution) {
   if (!current || current.id !== next.id) return next;
+  if (current.revision !== undefined && next.revision !== undefined)
+    return next.revision < current.revision ? current : next;
   if (!executionActive(current) && executionActive(next)) return current;
   if (current.status === "cancel_requested" && executionActive(next)) return current;
-  if (current.status === "running" && ["queued", "waiting_review"].includes(next.status)) return current;
+  if (current.status === "running" && next.status === "queued") return current;
   if (current.status === "waiting_review" && next.status === "queued") return current;
   if (current.audit_status === "recorded" && next.audit_status !== "recorded") {
     return { ...next, audit_status: current.audit_status };
