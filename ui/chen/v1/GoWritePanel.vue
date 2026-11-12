@@ -87,7 +87,7 @@ const changedCells = computed(() =>
 const defaultCells = computed(() =>
   draft.value.inserts.flatMap((row, index) =>
     props.query.rows!.columns.flatMap((_, column) =>
-      Object.hasOwn(row.values, column) ? [] : [`${index + props.query.rows!.rows.length}:${column}`]
+      row.values[column] === undefined ? [`${index + props.query.rows!.rows.length}:${column}`] : []
     )
   )
 );

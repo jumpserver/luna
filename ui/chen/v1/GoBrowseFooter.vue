@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GoBrowseRequest, GoSession } from "./api";
 import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { executionActive } from "./api";
 import { editDirty } from "./dataEditing";
@@ -61,6 +61,8 @@ const next = computed(() =>
     ? browse.value?.has_more === true && offset.value + size.value <= browse.value.max_offset
     : props.query.rows?.next_offset !== undefined
 );
+const countForLastPage = computed(() => server.value && total.value === undefined && next.value);
+const lastPageSource = ref<string>();
 function navigate(target: number) {
   if (locked.value || !props.query.rows || !Number.isSafeInteger(target) || target < 0) return;
   if (server.value) {
@@ -72,6 +74,27 @@ function count() {
   if (!locked.value && server.value && props.query.rows)
     emit("submit", { source_result_id: props.query.rows.id, action: "count" });
 }
+function goToLastPage() {
+  if (last.value !== null) navigate(last.value);
+  else if (countForLastPage.value && !locked.value) {
+    lastPageSource.value = props.query.rows?.id;
+    count();
+  }
+}
+// A count may arrive on SSE before its HTTP submission releases the controls.
+watch(
+  [() => props.query.rows?.id, total, locked, paged, () => props.query.error, () => props.session.state],
+  ([id, count, busy, isPaged, error, state]) => {
+    if (!lastPageSource.value) return;
+    if (lastPageSource.value !== id || !isPaged || error || state !== "ready") {
+      lastPageSource.value = undefined;
+      return;
+    }
+    if (busy) return;
+    lastPageSource.value = undefined;
+    if (count !== undefined && last.value !== null && last.value !== offset.value) navigate(last.value);
+  }
+);
 function changeSize(value: unknown) {
   if (!locked.value && typeof value === "number" && sizes.value.includes(value))
     emit("loadingSettings", { ...props.query.loadingSettings, batchSize: value });
@@ -189,9 +212,9 @@ function changeSize(value: unknown) {
           variant="ghost"
           icon="i-lucide-chevrons-right"
           :aria-label="t('Chen.LastPage')"
-          :title="t('Chen.GoBrowseLastHint')"
-          :disabled="locked || !server || last === null || last === offset"
-          @click="last !== null && navigate(last)"
+          :title="t('Chen.LastPage')"
+          :disabled="locked || !server || (last === null ? !countForLastPage : last === offset)"
+          @click="goToLastPage"
         />
       </template>
     </div>

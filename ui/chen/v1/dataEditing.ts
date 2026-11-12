@@ -51,11 +51,10 @@ export function editDraftRows(draft: GoEditDraft, rows: GoRows): GoRows {
       ...rows.rows.map((row, index) => {
         const ref = editRowRef(draft, rows, index);
         const values = ref && draft.changes[ref]?.values;
-        return values ? row.map((value, column) => (Object.hasOwn(values, column) ? values[column] : value)) : row;
+        return values ? row.map((value, column) => (values[column] === undefined ? value : values[column])) : row;
       }),
-      ...draft.inserts.map(({ values }) =>
-        rows.columns.map((_, index) => (Object.hasOwn(values, index) ? values[index] : undefined))
-      )
+      // Reading missing keys tracks newly staged values; undefined alone means DEFAULT.
+      ...draft.inserts.map(({ values }) => rows.columns.map((_, index) => values[index]))
     ]
   };
 }
