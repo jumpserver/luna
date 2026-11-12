@@ -1,6 +1,9 @@
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+const i18nRequire = createRequire(createRequire(import.meta.url).resolve("vue-i18n/package.json"));
+const i18nCoreRequire = createRequire(i18nRequire.resolve("@intlify/core-base/package.json"));
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
@@ -286,6 +289,22 @@ export default defineNuxtConfig({
     }
   },
   hooks: {
+    "vite:extendConfig": function(config, { isClient }) {
+      if (!isClient || !config.resolve) return;
+      // Keep browser translations on vue-i18n's dependency tree without replacing Nuxt's aliases.
+      const existing = config.resolve.alias;
+      config.resolve.alias = [
+        { find: "@intlify/core-base", replacement: i18nRequire.resolve("@intlify/core-base/dist/core-base.mjs") },
+        { find: "@intlify/shared", replacement: i18nRequire.resolve("@intlify/shared/dist/shared.mjs") },
+        {
+          find: "@intlify/message-compiler",
+          replacement: i18nCoreRequire.resolve("@intlify/message-compiler/dist/message-compiler.mjs")
+        },
+        ...(Array.isArray(existing)
+          ? existing
+          : Object.entries(existing || {}).map(([find, replacement]) => ({ find, replacement })))
+      ];
+    },
     ready() {
       execFileSync(
         process.execPath,

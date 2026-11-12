@@ -2,6 +2,7 @@ import type { Ref } from "vue";
 import { useEventListener } from "@vueuse/core";
 import { computed, onScopeDispose, watch } from "vue";
 import { getPublicSettings } from "~/composables/useApiRequest";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
@@ -9,6 +10,7 @@ import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 // This runs in app.vue so web, desktop and standalone asset windows share the policy.
 export function useWorkspaceFeatures(authReady: Ref<boolean>) {
   const userInfoStore = useUserInfoStore();
+  const sessionReady = useClientSessionReady(() => userInfoStore.currentAccountId);
   const context = computed(() =>
     authReady.value && userInfoStore.loggedIn
       ? JSON.stringify([userInfoStore.currentSite, userInfoStore.currentAccountId, userInfoStore.orgId])
@@ -18,7 +20,7 @@ export function useWorkspaceFeatures(authReady: Ref<boolean>) {
   let pending: Promise<void> | null = null;
 
   function refresh() {
-    if (!context.value) return Promise.resolve();
+    if (!context.value || !sessionReady.value) return Promise.resolve();
     if (pending) return pending;
     const currentGeneration = generation;
     const request = getPublicSettings()
@@ -40,11 +42,11 @@ export function useWorkspaceFeatures(authReady: Ref<boolean>) {
   }
 
   watch(
-    context,
-    () => {
+    [context, sessionReady],
+    ([currentContext], previous) => {
       generation += 1;
       pending = null;
-      setWorkspaceAiEnabled(false);
+      if (currentContext !== previous?.[0]) setWorkspaceAiEnabled(false);
       void refresh();
     },
     { immediate: true, flush: "sync" }

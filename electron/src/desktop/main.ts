@@ -86,9 +86,8 @@ const macDockIconSize = 512;
 const macDockIconInset = 48;
 const trayIconSize = process.platform === "darwin" ? 20 : 16;
 const defaultProductName = "JumpServer";
-const productName = String(runtimePackage.productName || defaultProductName);
+const productName = app.getName();
 const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, String(runtimePackage.version || ""));
-app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
 const windowSessionBindings = new WeakMap<WebContents, ReturnType<DesktopAuthService["captureSessionBinding"]>>();
@@ -160,7 +159,6 @@ let trayQuickConnectEnabled = false;
 let applicationConfig;
 let authService;
 let siteCertificates: SiteCertificateService;
-const httpConfirmations = new Map<string, Promise<boolean>>();
 let localApplicationLauncher;
 let offlineRecordings;
 let replayTranscoder;
@@ -428,10 +426,44 @@ function syncWindowLock(win) {
   const bound = authService.lockState(binding);
   const main = labelForWindow(win) === "main";
   const canUnlock = main || Boolean(authService.boundToken(binding));
-  const state = { ...bound, locked: bound.locked && (!main || !bound.expired), canUnlock };
+  const state = {
+    ...bound,
+    locked: bound.locked && (!main || !bound.expired),
+    canUnlock,
+    ...(main ? { accountLocks: authService.listAccountLockStates() } : {})
+  };
   webProxyManager.setHostLocked(win.webContents.id, state.locked);
   emitDesktopEvent("client-lock-state", state, labelForWindow(win));
   return state;
+}
+
+function activateApiSession(args, lockedSwitchSource?: ReturnType<DesktopAuthService["captureSessionBinding"]>) {
+  const beforeSwitch = () => {
+    // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
+    closeAssetWindows();
+    const main = windows.get("main");
+    if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
+    // Bind the new login below before publishing its lock state to the surviving windows.
+    for (const target of windows.values()) windowSessionBindings.delete(target.webContents);
+  };
+  const result = lockedSwitchSource
+    ? authService.setLockedAccountSession(args, lockedSwitchSource, beforeSwitch)
+    : authService.setSession(args, beforeSwitch);
+  if (result.status === "success") {
+    const binding = authService.captureSessionBinding();
+    for (const [label, target] of windows) {
+      const previous = windowSessionBindings.get(target.webContents);
+      // Existing asset windows belong to this same login; a real account change closes them above.
+      if (!label.startsWith("asset-") || previous === binding) {
+        windowSessionBindings.set(target.webContents, binding);
+        syncWindowLock(target);
+        emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
+      }
+    }
+    void authService.checkSessions(true);
+    checkIdleLocks();
+  }
+  return result;
 }
 
 function checkIdleLocks() {
@@ -445,6 +477,7 @@ function notifyClientLoginExpired(payload: {
   policy?: ClientLoginPolicy;
   session?: ClientLoginSession;
 }) {
+  if (payload?.reason === "lock_logout") return;
   const win = windows.get("main");
   if (!win || win.isDestroyed() || win.isFocused() || !Notification.isSupported()) return;
   const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
@@ -745,7 +778,7 @@ function createWindow(
       )
     ) {
       event.preventDefault();
-      authService.lockSession(windowSessionBindings.get(windowWebContents), true);
+      authService.lockAllSessions();
       return;
     }
     const applicationShortcut = shortcutDefinitions.some(({ id }) =>
@@ -1020,11 +1053,7 @@ function buildMenu() {
     {
       label: prefersZh() ? "锁定客户端" : "Lock Client",
       accelerator: shortcutAccelerator("lockClient", shortcutOverrides, shortcutEnvironment),
-      click: (_item, focusedWindow) =>
-        authService.lockSession(
-          windowSessionBindings.get((focusedWindow || windows.get("main"))?.webContents) ?? null,
-          true
-        )
+      click: () => authService.lockAllSessions()
     },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
@@ -1262,51 +1291,13 @@ async function withIpcErrorLog(command, work) {
   }
 }
 
-function certificateMessages() {
-  const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
-  return (
-    {
-      en: enMessages,
-      es: esMessages,
-      fr: frMessages,
-      ja: jaMessages,
-      ko: koMessages,
-      pt_br: ptBrMessages,
-      ru: ruMessages,
-      vi: viMessages,
-      zh: zhMessages,
-      zh_hant: zhHantMessages
-    }[language] || enMessages
-  );
-}
-
-async function confirmHttpConnection(site: string, win: BrowserWindow) {
+async function confirmHttpConnection(site: string, win: BrowserWindow, riskAccepted?: unknown) {
   const origin = certificateSiteOrigin(site);
   if (!siteCertificates.needsHttpConfirmation(origin)) return true;
-  const pending = httpConfirmations.get(origin);
-  if (pending) return pending;
-  const confirmation = (async () => {
-    const messages = certificateMessages();
-    const result = await dialog.showMessageBox(win, {
-      type: "warning",
-      title: messages.SiteCertificate.HttpTitle,
-      message: messages.SiteCertificate.HttpTitle,
-      detail: messages.SiteCertificate.HttpDescription.replace("{site}", origin),
-      buttons: [messages.Common.Cancel, messages.SiteCertificate.HttpContinue],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true
-    });
-    if (result.response !== 1) return false;
-    await siteCertificates.acknowledgeHttp(origin);
-    return true;
-  })();
-  httpConfirmations.set(origin, confirmation);
-  try {
-    return await confirmation;
-  } finally {
-    httpConfirmations.delete(origin);
-  }
+  if (riskAccepted !== true) return false;
+  if (windows.get("main") !== win) throw new Error("HTTP risk acceptance requires the main window");
+  await siteCertificates.acknowledgeHttp(origin);
+  return true;
 }
 
 async function handleInvoke(event, request) {
@@ -1347,6 +1338,12 @@ async function handleInvoke(event, request) {
     );
   }
   if (command === "client_lock_show_main") return void showMainWindow();
+  if (["client_lock_switch_prepare", "client_lock_switch_activate"].includes(command)) {
+    if (windows.get("main") !== win) throw new Error("Account switching requires the main window");
+    authService.requireLockedCurrentSession(binding);
+    if (command === "client_lock_switch_prepare") return authService.prepareLockedAccountSwitch(args, binding);
+    return activateApiSession(args, binding);
+  }
   if (
     [
       "client_lock_info",
@@ -1363,6 +1360,8 @@ async function handleInvoke(event, request) {
       if (command === "client_lock_copy_settings") return clipboard.writeText(info.settingsUrl);
       return shell.openExternal(info.settingsUrl);
     }
+    if (!authService.boundToken(binding) && windows.get("main") !== win)
+      throw new Error("Expired account logout requires the main window");
     const result = authService.logoutLockedSession(binding);
     closeExpiredSessionWindows(binding?.sessionKey || "");
     return result;
@@ -1379,7 +1378,25 @@ async function handleInvoke(event, request) {
 
   if (command === "client_lock") {
     authService.getBoundSession(binding);
-    return authService.lockSession(binding, true);
+    return authService.lockAllSessions();
+  }
+
+  if (["client_account_lock_info", "client_account_unlock", "client_account_lock_settings"].includes(command)) {
+    if (windows.get("main") !== win) throw new Error("Account switching requires the main window");
+    const target = authService.pendingAccountBinding(args, binding);
+    const validateAccess = () => {
+      if (authService.pendingAccountBinding(args, binding) !== target)
+        throw new Error("Client account preflight changed");
+    };
+    if (command === "client_account_unlock") {
+      const result = await authService.unlockSession(target, args, validateAccess);
+      validateAccess();
+      return result;
+    }
+    const info = await authService.lockInfo(target, validateAccess);
+    validateAccess();
+    if (command === "client_account_lock_settings") return shell.openExternal(info.settingsUrl);
+    return info;
   }
 
   if (command === "site_certificate_policy") return siteCertificates.policy(args.site);
@@ -1620,45 +1637,21 @@ async function handleInvoke(event, request) {
       (args.sessionKey !== binding?.sessionKey || args.origin !== binding?.origin || !authService.boundToken(binding))
     )
       throw new Error("Account switching requires the main window");
-    const result = authService.setSession(
-      args,
-      () => {
-        // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
-        closeAssetWindows();
-        const main = windows.get("main");
-        if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
-        // Bind the new login below before publishing its lock state to the surviving windows.
-        for (const target of windows.values()) windowSessionBindings.delete(target.webContents);
-      },
-      powerMonitor.getSystemIdleTime()
-    );
-    if (result.status === "success") {
-      const binding = authService.captureSessionBinding();
-      for (const [label, target] of windows) {
-        const previous = windowSessionBindings.get(target.webContents);
-        // Existing asset windows belong to this same login; a real account change closes them above.
-        if (!label.startsWith("asset-") || previous === binding) {
-          windowSessionBindings.set(target.webContents, binding);
-          syncWindowLock(target);
-          emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
-        }
-      }
-      void authService.checkSessions(true);
-      checkIdleLocks();
-    }
-    return result;
+    return activateApiSession(args);
   }
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId, binding);
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") {
-    if (!(await confirmHttpConnection(args.site, win))) return { status: "stale" };
+    if (!(await confirmHttpConnection(args.site, win, args.httpRiskAccepted)))
+      return { status: "http-confirmation-required", origin: certificateSiteOrigin(args.site) };
     return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   }
   if (command === "auth_cancel") return authService.cancelAuth();
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
   if (command === "bootstrap_auth_session") {
-    if (!(await confirmHttpConnection(args.site, win))) return { status: "stale" };
+    if (!(await confirmHttpConnection(args.site, win, args.httpRiskAccepted)))
+      return { status: "http-confirmation-required", origin: certificateSiteOrigin(args.site) };
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   }
   if (command === "api_request") return authService.apiRequest(args.request, binding);
@@ -1740,6 +1733,8 @@ async function handleInvoke(event, request) {
     return withIpcErrorLog("logout", () => {
       const result = authService.logout(args);
       closeExpiredSessionWindows(args.sessionId);
+      const main = windows.get("main");
+      if (main) syncWindowLock(main);
       return result;
     });
   if (command === "open_settings_window") {

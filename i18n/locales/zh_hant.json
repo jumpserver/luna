@@ -1166,6 +1166,7 @@
     "ScrollToLoadMore": "向下滾動載入更多"
   },
   "Login": {
+    "ReauthenticateConfirm": "登入已失效，是否重新登入？",
     "Title": "輸入登入站點",
     "Description": "請輸入完整站點地址，如 https://example.com 或 http://192.168.1.1",
     "SiteName": "站點名稱",
@@ -1334,6 +1335,7 @@
     "SiteAccountsDescription": "目前使用中的站點，以及用戶端中已登入的 JumpServer 站點",
     "Current": "當前",
     "CurrentActive": "目前使用中",
+    "Locked": "已鎖定",
     "CurrentActiveUser": "目前使用中的使用者",
     "Switch": "切換",
     "SwitchToThisUser": "切換為此使用者",
@@ -1365,7 +1367,7 @@
     "ClientLoginActivityLimits": "切回時依最新設定檢查有效期與閒置時間；閒置逾時需解鎖，登入到期需重新登入。外部軟體視窗不受保護。",
     "ClientLoginIdleLock": "閒置鎖定",
     "ClientLoginPolicyExpiry": "已超過新設定的最長登入有效期，寬限結束後登出",
-    "ClientLockShortcut": "隨時可按 {shortcut} 鎖定目前帳號；停用自動鎖定仍可手動鎖定。"
+    "ClientLockShortcut": "隨時可按 {shortcut} 鎖定此客戶端的所有帳號；關閉自動鎖定後也可手動鎖定。"
   },
   "Setting": {
     "BackToApp": "返回應用",
@@ -3660,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "暫時無法連線至其他帳號，請檢查網路後重試",
+    "ExpiredAccountRemoved": "登入已失效，帳號已移除",
+    "SwitchAccount": "切換帳號",
+    "SwitchUnset": "請點擊「{setPassword}」，在瀏覽器中登入以上站點的同一帳號並設定密碼，或{copyLink}在瀏覽器中手動開啟。設定完成後，點擊{refresh}。",
+    "UnlockAccount": "解鎖目標帳號",
     "Title": "用戶端已鎖定",
     "Description": "輸入目前帳號的鎖屏密碼以繼續使用，現有連線保持執行。",
     "MainOnly": "本次登入已結束，請返回主頁面重新登入。",
@@ -3671,6 +3678,7 @@
     "Reset": "重設鎖定密碼",
     "Refresh": "重新整理",
     "Logout": "登出帳號",
+    "LogoutConfirm": "確認登出目前帳號？",
     "GoToMain": "前往主頁面",
     "LoadFailed": "載入失敗，請檢查網路後重試。",
     "UnlockFailed": "解鎖失敗，請檢查密碼與網路後重試。",
@@ -3746,7 +3754,7 @@
     "ReauthHelp": "啟用後，退出並重新啟動須重新登入，最小化或隱藏不受影響。",
     "ReauthRequired": "管理員已啟用，無法停用。最小化或隱藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空後恢復預設值。",
-    "IdleHelp": "閒置逾時後鎖定，切換帳號不會重設原帳號的閒置時間。輸入鎖定密碼解鎖，外部軟體視窗不受保護。",
+    "IdleHelp": "所有帳號共用活動時間，各自依閒置時長鎖定；目前帳號鎖定時，其他帳號一併鎖定，需分別解鎖。外部軟體視窗不受保護。",
     "WebIdleHelp": "閒置達到設定時間後鎖定控制台與 Web 終端，輸入鎖屏密碼解鎖。 開啟閒置鎖屏後，關閉全部頁面 10 秒後也會鎖定；開啟關閉頁面登出則優先登出，重新整理或 10 秒內重開可取消。",
     "LifetimeHelp": "從登入時間起計算，到期須重新登入，操作不會延長。"
   },

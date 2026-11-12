@@ -25,6 +25,7 @@ const { desktopInvoke, runtime, storage } = vi.hoisted(() => {
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
 vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => runtime.desktop }));
+vi.mock("~/composables/useClientLockState", () => ({ useClientLockState: () => ({ value: null }) }));
 
 const org = {
   id: "00000000-0000-0000-0000-000000000002",

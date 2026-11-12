@@ -51,6 +51,8 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("node:crypto");
     case "node:events":
       return require("node:events");
+    case "node:fs":
+      return { mkdirSync() {} };
     case "node:fs/promises":
       return require("node:fs/promises");
     case "node:http":
@@ -76,6 +78,7 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
     require: (name: string) =>
       Object.hasOwn(replacements, name) ? replacements[name] : loadTestDependency(require, name),
     process: runtime,
+    performance,
     console,
     Buffer,
     URLSearchParams,
@@ -467,6 +470,7 @@ for (const primary of [false, true]) {
     const events: string[] = [];
     let forwarded: unknown;
     const app = Object.assign(new EventEmitter(), {
+      isPackaged: true,
       setName: () => events.push("name"),
       requestSingleInstanceLock: (data: unknown) => {
         events.push("lock");
@@ -475,7 +479,7 @@ for (const primary of [false, true]) {
       },
       quit: () => events.push("quit")
     });
-    const runtime = { argv: ["jumpserver.exe", url], platform: "win32" } as NodeJS.Process;
+    const runtime = { argv: ["jumpserver.exe", url], platform: "win32", env: {} } as NodeJS.Process;
     const replacements = {
       electron: { app },
       "./shared/client-protocol": {
@@ -499,6 +503,7 @@ test("protocol events arriving while the desktop loads are forwarded after initi
   const asset = "jms2://AbC+/DeF==";
   const delivered: unknown[][] = [];
   const app = Object.assign(new EventEmitter(), {
+    isPackaged: true,
     setName() {},
     requestSingleInstanceLock: () => true
   });

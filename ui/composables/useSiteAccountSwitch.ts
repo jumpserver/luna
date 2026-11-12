@@ -1,3 +1,4 @@
+import { useAccountSwitchPrompt } from "~/composables/useAccountSwitchPrompt";
 import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
 import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
@@ -104,18 +105,44 @@ export const useSiteAccountSwitch = () => {
     if (switchingAccountId.value || (accountId === user.currentAccountId && user.loggedIn)) return false;
     const { $i18n } = useNuxtApp();
     const bus = useEventBus();
+    const prompt = useAccountSwitchPrompt();
+    const sourceAccountId = user.currentAccountId;
+    const target = user.userMap[accountId];
+    if (!target) return false;
+    const stillCurrent = () => user.currentAccountId === sourceAccountId && user.loggedIn;
+    const offerLogin = async () => {
+      if ((await prompt.confirmLogin(target)) && stillCurrent()) {
+        bus.emit("login", {
+          accountId,
+          ...(!user.userMap[accountId] ? { prefill: { site: target.site, siteName: target.siteName } } : {})
+        });
+      }
+    };
+    let cancelled = false;
     switchingAccountId.value = accountId;
     try {
       if (user.userMap[accountId]?.sessionExpired) {
-        bus.emit("login", { accountId });
+        await offerLogin();
         return false;
       }
-      if (!(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) return false;
       const switched = await user.setCurrentAccount(accountId, {
-        beforeSwitch: closeCurrentSiteWorkspace,
-        onAuthRequired: () => bus.emit("login", { accountId })
+        requireUnlocked: true,
+        prepareTarget: async (result) => {
+          if (!stillCurrent()) return false;
+          if (result.client_locked && !(await prompt.unlock(target, result.connection_id!))) return false;
+          return stillCurrent();
+        },
+        beforeSwitch: async () => {
+          if (!stillCurrent() || !(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) {
+            cancelled = true;
+            return false;
+          }
+          if (!stillCurrent()) return false;
+          await closeCurrentSiteWorkspace();
+        },
+        onAuthRequired: offerLogin
       });
-      if (switched === false && !user.userMap[accountId]?.sessionExpired) {
+      if (switched === false && !cancelled && !user.userMap[accountId]?.sessionExpired) {
         toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
       }
       return switched === true;

@@ -7,6 +7,7 @@ import {
   getFavoriteFolders,
   updateFavoriteFolder
 } from "~/composables/useApiRequest";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName, isItemNameTooLong, ITEM_NAME_MAX_LENGTH, uniqueItemName } from "~/utils/itemName";
 
@@ -169,7 +170,10 @@ const folderIdFromRaw = (raw: any): string | null => {
 
 export const useFavoriteFolders = () => {
   const userInfoStore = useUserInfoStore();
-  const { loggedIn, currentAccountId } = storeToRefs(userInfoStore);
+  const { loggedIn, currentAccountId, currentSite } = storeToRefs(userInfoStore);
+  const sessionReady = useClientSessionReady(() => currentAccountId.value);
+  const canLoad = computed(() => loggedIn.value && sessionReady.value);
+  const context = computed(() => (loggedIn.value ? JSON.stringify([currentSite.value, currentAccountId.value]) : ""));
   const folders = useState<FavoriteFolder[]>("favorite-folders", () => []);
   const rootAssets = useState<AssetItem[]>("favorite-root-assets", () => []);
   const loading = useState<boolean>("favorite-folders-loading", () => false);
@@ -177,9 +181,11 @@ export const useFavoriteFolders = () => {
   const activeRequestId = useState<number>("favorite-folders-active-request-id", () => 0);
   const nextRequestId = useState<number>("favorite-folders-next-request-id", () => 0);
   const pendingReload = useState<boolean>("favorite-folders-pending-reload", () => false);
+  const loaded = useState("favorite-folders-loaded", () => false);
+  const loadedContext = useState("favorite-folders-context", () => "");
 
   const load = async () => {
-    if (!loggedIn.value) return;
+    if (!canLoad.value) return;
     if (loading.value) {
       pendingReload.value = true;
       return;
@@ -192,7 +198,7 @@ export const useFavoriteFolders = () => {
     activeRequestId.value = requestId;
     try {
       const [folderData, assetData] = await Promise.all([getFavoriteFolders(), getFavoriteAssets().catch(() => [])]);
-      if (requestVersion !== stateVersion.value || requestAccountId !== currentAccountId.value || !loggedIn.value)
+      if (requestVersion !== stateVersion.value || requestAccountId !== currentAccountId.value || !canLoad.value)
         return;
       const openFolderIds = new Set(
         flattenFolders(folders.value)
@@ -217,17 +223,25 @@ export const useFavoriteFolders = () => {
 
       folders.value = normalizedFolders;
       rootAssets.value = nextRootAssets;
+      loaded.value = true;
+    } catch (error) {
+      if (requestVersion === stateVersion.value && requestAccountId === currentAccountId.value && canLoad.value)
+        throw error;
     } finally {
       if (activeRequestId.value === requestId) {
         activeRequestId.value = 0;
         loading.value = false;
-      }
-      if (pendingReload.value && !loading.value) {
-        pendingReload.value = false;
-        void load();
+        if (pendingReload.value && canLoad.value) {
+          pendingReload.value = false;
+          void loadAutomatically();
+        }
       }
     }
   };
+
+  function loadAutomatically() {
+    return load().catch((error) => console.warn("Failed to load favorite folders", error));
+  }
 
   const createFolder = async (name: string, parent: string | null = null) => {
     if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
@@ -283,20 +297,36 @@ export const useFavoriteFolders = () => {
     }
   };
 
-  watch([loggedIn, currentAccountId], ([isLoggedIn]) => {
-    stateVersion.value += 1;
-    folders.value = [];
-    rootAssets.value = [];
-    if (!isLoggedIn) {
-      pendingReload.value = false;
-      return;
-    }
-    if (loading.value) {
-      pendingReload.value = true;
-      return;
-    }
-    void load();
-  });
+  watch(
+    [context, canLoad],
+    ([nextContext, ready]) => {
+      // Multiple consumers share one snapshot and one request per account context.
+      if (loadedContext.value !== nextContext) {
+        loadedContext.value = nextContext;
+        stateVersion.value += 1;
+        activeRequestId.value = 0;
+        loading.value = false;
+        pendingReload.value = false;
+        loaded.value = false;
+        folders.value = [];
+        rootAssets.value = [];
+      }
+      if (!ready) {
+        if (loading.value) {
+          stateVersion.value += 1;
+          activeRequestId.value = 0;
+          loading.value = false;
+          pendingReload.value = true;
+        }
+        return;
+      }
+      if ((!loaded.value || pendingReload.value) && !loading.value) {
+        pendingReload.value = false;
+        void loadAutomatically();
+      }
+    },
+    { immediate: true }
+  );
   return {
     folders,
     rootAssets,

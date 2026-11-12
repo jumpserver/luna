@@ -1161,6 +1161,7 @@
     "OldestToNewest": "按时间升序（最早优先）"
   },
   "Login": {
+    "ReauthenticateConfirm": "登录已失效，是否重新登录？",
     "Title": "输入登录站点",
     "Description": "请输入完整站点地址，如 https://example.com 或 http://192.168.1.1",
     "SiteName": "站点名称",
@@ -1334,6 +1335,7 @@
     "SiteAccountsDescription": "当前激活的站点，以及客户端中已登录的 JumpServer 站点",
     "Current": "当前",
     "CurrentActive": "当前激活",
+    "Locked": "已锁定",
     "CurrentActiveUser": "当前激活的用户",
     "Switch": "切换",
     "SwitchToThisUser": "切换为此用户",
@@ -1365,7 +1367,7 @@
     "ClientLoginActivityLimits": "切回时按最新配置检查有效期和空闲时间；空闲超时需解锁，登录到期需重新登录。外部软件窗口不受保护。",
     "ClientLoginIdleLock": "空闲锁屏",
     "ClientLoginPolicyExpiry": "已超过新配置的最长登录有效期，宽限结束后退出",
-    "ClientLockShortcut": "随时可按 {shortcut} 锁定当前账号；关闭自动锁屏也可手动锁定。"
+    "ClientLockShortcut": "随时可按 {shortcut} 锁定本客户端的所有账号；关闭自动锁屏也可手动锁定。"
   },
   "Setting": {
     "BackToApp": "返回应用",
@@ -3660,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "暂时无法连接其他账号，请检查网络后重试",
+    "ExpiredAccountRemoved": "登录已失效，账号已移除",
+    "SwitchAccount": "切换账号",
+    "SwitchUnset": "请点击“{setPassword}”，在浏览器中登录以上站点的同一账号并设置密码，或{copyLink}在浏览器中手动打开。设置完成后，点击{refresh}。",
+    "UnlockAccount": "解锁目标账号",
     "Title": "客户端已锁定",
     "Description": "输入当前账号的锁屏密码继续使用，已有连接保持运行。",
     "MainOnly": "本次登录已结束，请返回主页面重新登录。",
@@ -3671,6 +3678,7 @@
     "Reset": "重设锁屏密码",
     "Refresh": "刷新",
     "Logout": "退出账号",
+    "LogoutConfirm": "确认退出当前账号？",
     "GoToMain": "前往主页面",
     "LoadFailed": "加载失败，请检查网络后重试。",
     "UnlockFailed": "解锁失败，请检查锁屏密码和网络后重试。",
@@ -3746,7 +3754,7 @@
     "ReauthHelp": "开启后，退出并重新启动需重新登录，最小化或隐藏不受影响。",
     "ReauthRequired": "管理员已开启，不能关闭。最小化或隐藏不算退出。",
     "UnlimitedHelp": "0 表示不限制，清空后恢复默认值。",
-    "IdleHelp": "空闲超时后锁定，切换账号不会重置原账号的空闲时间。输入锁屏密码解锁，外部软件窗口不受保护。",
+    "IdleHelp": "所有账号共享活动时间，各自按空闲时长锁定；当前账号锁定时，其他账号一并锁定，需分别解锁。外部软件窗口不受保护。",
     "WebIdleHelp": "空闲达到设定时间后锁定控制台和 Web 终端，输入锁屏密码解锁。 开启空闲锁屏后，关闭全部页面 10 秒后也会锁定；开启关闭页面退出则优先注销，刷新或 10 秒内重开可取消。",
     "LifetimeHelp": "从登录时间起计算，到期需重新登录，操作不会延长。"
   },

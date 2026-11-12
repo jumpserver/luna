@@ -1,5 +1,3 @@
-import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
-import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
 import type { ClientNoticeSnapshot } from "~/types";
 import type {
   FaceEngineConfig,
@@ -10,6 +8,9 @@ import type {
   FaceSessionStart,
   FaceSessionStarted
 } from "~/types/face";
+import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
+import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import { cancelHttpLoginConfirmation, requestHttpConnectionConfirmation } from "./httpConfirmation";
 
 export interface DesktopEvent<T> {
   event?: string;
@@ -105,8 +106,25 @@ const requireElectron = () => {
 export const desktopRuntime = getDesktopRuntime;
 export const hasDesktopBridge = isElectronRuntime;
 
+let loginGeneration = 0;
+
 export async function desktopInvoke<T>(command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return requireElectron().invoke<T>(command, args);
+  if (command === "auth_cancel") {
+    loginGeneration += 1;
+    cancelHttpLoginConfirmation();
+  }
+  const generation = loginGeneration;
+  const requestArgs = { ...args };
+  const result = await requireElectron().invoke<T>(command, requestArgs);
+  if (command !== "auth_login" && command !== "bootstrap_auth_session") return result;
+  const response = result as { status?: string; origin?: string } | null;
+  if (response?.status !== "http-confirmation-required") return result;
+  if (command === "auth_login" && generation !== loginGeneration) return { status: "stale" } as T;
+  const origin = new URL(String(requestArgs.site)).origin;
+  if (!origin.startsWith("http://") || response.origin !== origin) throw new Error("Invalid HTTP confirmation origin");
+  const accepted = await requestHttpConnectionConfirmation(origin, command);
+  if (!accepted || (command === "auth_login" && generation !== loginGeneration)) return { status: "stale" } as T;
+  return requireElectron().invoke<T>(command, { ...requestArgs, httpRiskAccepted: true });
 }
 
 export async function desktopListen<T>(

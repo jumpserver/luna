@@ -24,11 +24,12 @@ export interface SiteCompatibility {
 }
 
 export interface DesktopConnectionResult {
-  status: "success" | "confirmation-required" | "stale" | "failure" | "auth-required";
+  status: "success" | "confirmation-required" | "stale" | "failure" | "auth-required" | "locked";
   compatibility?: SiteCompatibility;
   compatibility_confirmation_id?: number;
   connection_id?: number;
   client_login_policy?: ClientLoginPolicy;
   client_login_session?: ClientLoginSession;
   client_login_reason?: ClientLoginReason;
+  client_locked?: boolean;
 }

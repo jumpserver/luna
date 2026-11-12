@@ -1166,6 +1166,7 @@
     "ScrollToLoadMore": "Role para carregar mais"
   },
   "Login": {
+    "ReauthenticateConfirm": "A sessão expirou. Entrar novamente?",
     "Title": "Insira o site de login",
     "Description": "Insira o endereço completo do site, como https://example.com ou http://192.168.1.1",
     "SiteName": "Nome do site",
@@ -1334,6 +1335,7 @@
     "SiteAccountsDescription": "O site ativo no momento e os sites do JumpServer conectados neste cliente",
     "Current": "Atual",
     "CurrentActive": "Ativo no momento",
+    "Locked": "Bloqueada",
     "CurrentActiveUser": "Usuário ativo no momento",
     "Switch": "Alternar",
     "SwitchToThisUser": "Alternar para este usuário",
@@ -1365,7 +1367,7 @@
     "ClientLoginActivityLimits": "Ao voltar, a expiração e a inatividade são verificadas com as configurações mais recentes. Desbloqueie se o tempo de inatividade foi excedido; entre novamente se o login expirou. Aplicativos externos não são protegidos.",
     "ClientLoginIdleLock": "Bloqueio por inatividade",
     "ClientLoginPolicyExpiry": "A nova duração máxima foi excedida; saída ao terminar o prazo de tolerância",
-    "ClientLockShortcut": "Pressione {shortcut} para bloquear a conta atual a qualquer momento, mesmo com o bloqueio automático desativado."
+    "ClientLockShortcut": "Pressione {shortcut} para bloquear todas as contas deste cliente a qualquer momento, mesmo quando o bloqueio automático estiver desativado."
   },
   "Setting": {
     "BackToApp": "Voltar ao aplicativo",
@@ -3660,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "Não foi possível conectar às outras contas. Verifique a conexão e tente novamente.",
+    "ExpiredAccountRemoved": "A sessão expirou. A conta foi removida.",
+    "SwitchAccount": "Alternar conta",
+    "SwitchUnset": "Clique em “{setPassword}” e entre no site acima com esta conta no navegador para definir uma senha, ou {copyLink} e abra manualmente. Depois, clique em {refresh}.",
+    "UnlockAccount": "Desbloquear conta",
     "Title": "Cliente bloqueado",
     "Description": "Digite a senha de bloqueio desta conta. As conexões permanecem ativas.",
     "MainOnly": "Este login foi encerrado. Volte à página principal para entrar novamente.",
@@ -3671,6 +3678,7 @@
     "Reset": "Redefinir senha",
     "Refresh": "Atualizar",
     "Logout": "Sair",
+    "LogoutConfirm": "Sair da conta atual?",
     "GoToMain": "Ir à página principal",
     "LoadFailed": "Não foi possível carregar. Verifique a conexão e tente novamente.",
     "UnlockFailed": "Falha ao desbloquear. Verifique a senha e a conexão.",
@@ -3746,7 +3754,7 @@
     "ReauthHelp": "Exige novo login após sair e reiniciar. Minimizar ou ocultar o cliente não conta como sair.",
     "ReauthRequired": "Exigido pelo administrador; não pode ser desativado. Minimizar ou ocultar não conta como sair.",
     "UnlimitedHelp": "0 significa ilimitado. Deixe em branco para restaurar o padrão.",
-    "IdleHelp": "Bloqueia após o tempo de inatividade. Trocar de conta não reinicia a inatividade da conta anterior. Digite a senha de bloqueio para desbloquear. Aplicativos externos não são protegidos.",
+    "IdleHelp": "Todas as contas compartilham o horário da última atividade, mas são bloqueadas conforme seu próprio limite de inatividade. Quando a conta ativa é bloqueada, as demais também são. Cada conta precisa ser desbloqueada separadamente. As janelas de aplicativos externos não são protegidas.",
     "WebIdleHelp": "Bloqueia o console e o terminal Web após o tempo de inatividade definido. Digite a senha de bloqueio para desbloquear. Com o bloqueio por inatividade ativado, fechar todas as páginas também bloqueia esta sessão após 10 segundos. A saída ao fechar as páginas tem prioridade. Atualizar ou reabrir em até 10 segundos cancela a ação.",
     "LifetimeHelp": "Contado desde o login. Ao expirar, entre novamente; a atividade não prolonga o prazo."
   },

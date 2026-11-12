@@ -488,8 +488,10 @@ onBeforeUnmount(() => {
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
         <ConnectionFormModal />
+        <SiteHttpConfirmationDialog v-if="isDesktopRuntime()" />
         <ClipboardHistory v-if="isDesktopRuntime()" />
         <ClientCompatibilityDialog v-if="isDesktopRuntime()" />
+        <AccountSwitchDialog v-if="isDesktopRuntime()" />
         <AclDialog />
         <FaceOnlineMonitorHost />
         <UModal
