@@ -515,7 +515,11 @@ export const chenErrorCatalog: Record<string, readonly string[]> = {
   ],
   edit_conflict: [
     "A row changed or disappeared since it was loaded. This entire save was rolled back; refresh the table",
-    "A row was changed or deleted by another operation. This entire save was rolled back. Refresh the table."
+    "A row was changed or deleted by another operation. This entire save was rolled back. Refresh the table.",
+    "The primary-key row was not found, or the operation did not affect exactly one row. This save was rolled back; refresh the data and try again."
+  ],
+  edit_nontransactional_failed: [
+    "The save failed on a nontransactional table. Some changes may already be saved; refresh and verify the data before saving again."
   ],
   edit_database_error: [
     "The database rejected a change. Field values are omitted from this diagnostic.",

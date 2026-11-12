@@ -41,6 +41,8 @@ export function editRowRef(draft: GoEditDraft, rows: GoRows, index: number) {
   return draft.metadata?.row_refs[index + rows.offset - (draft.metadata.offset || 0)];
 }
 export function editDraftRows(draft: GoEditDraft, rows: GoRows): GoRows {
+  // Loading edit metadata must not rebuild unchanged results and reload the grid.
+  if (!editDirty(draft)) return rows;
   return {
     ...rows,
     rows: [
