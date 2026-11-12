@@ -1,16 +1,8 @@
 import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
-import type { DesktopConnectionResult } from "~/types/clientCompatibility";
-import { useClientCompatibility } from "~/composables/useClientCompatibility";
-import {
-  closeCurrentSiteWorkspace,
-  confirmLeaveCurrentSiteSessions,
-  hasActiveSiteSessions,
-  hasActiveWorkspaceSessions
-} from "~/composables/useSiteAccountSwitch";
 import type {
-  ConnectionInfo,
   ClientLoginSession,
+  ConnectionInfo,
   ConnectionPreferenceInfo,
   CurrentOrg,
   PermissionOrgs,
@@ -19,9 +11,18 @@ import type {
   UserData,
   UserIntiInfo
 } from "~/types";
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import { ApiRequestError, getUserPermissions, getWebSessionProfile } from "~/composables/useApiRequest";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import {
+  closeCurrentSiteWorkspace,
+  confirmLeaveCurrentSiteSessions,
+  hasActiveSiteSessions,
+  hasActiveWorkspaceSessions
+} from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 import {
   recordedOrganizationForBootstrap,
   resolveOrganizationSelection,
@@ -35,7 +36,6 @@ import {
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
 import { pageLocation } from "~/utils/runtime";
-import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
 
 interface BootstrapResponse {
   data: string;
@@ -126,12 +126,31 @@ export const useAuthSession = () => {
     const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
     const resolvedSite = resolved_site || "";
     const accountId = options.accountId || currentAccountId.value || resolvedSite;
-    const existingUser = userMap.value[accountId];
-    const siteName = options.siteName || existingUser?.siteName || resolvedSite;
 
     if (!profileData || !resolvedSite || !accountId) return false;
 
     const authenticatedUserId = typeof profileData.id === "string" ? profileData.id.trim() : "";
+    const siteAddress = (site: string) => {
+      try {
+        return new URL(site.trim()).href.replace(/\/+$/, "");
+      } catch {
+        return site.trim().replace(/\/+$/, "");
+      }
+    };
+    // A login attempt has its own session key; the account identity comes from the verified profile.
+    const duplicateAccounts = authenticatedUserId
+      ? Object.entries(userMap.value).filter(
+          ([id, user]) =>
+            id !== accountId &&
+            user.userId === authenticatedUserId &&
+            siteAddress(user.site) === siteAddress(resolvedSite)
+        )
+      : [];
+    const previousAccountId = userMap.value[accountId]
+      ? accountId
+      : (duplicateAccounts.find(([id]) => id === currentAccountId.value) || duplicateAccounts.at(-1))?.[0];
+    const existingUser = previousAccountId ? userMap.value[previousAccountId] : undefined;
+    const siteName = options.siteName || existingUser?.siteName || resolvedSite;
     const userId = authenticatedUserId || existingUser?.userId || "";
     const currentUser = userInfoStore.currentUser;
     const keepingWorkspace = isDesktopRuntime() && Boolean(currentUser) && (await hasActiveSiteSessions());
@@ -160,6 +179,7 @@ export const useAuthSession = () => {
       userId,
       siteName,
       name: profileData.name,
+      username: typeof profileData.username === "string" ? profileData.username : undefined,
       bearerToken: bearer,
       clientLoginPolicy: payload.client_login_policy,
       clientLoginSession: payload.client_login_session,
@@ -183,7 +203,7 @@ export const useAuthSession = () => {
     };
 
     const publishSession = () => {
-      userInfoStore.setUserData(accountId, userData);
+      userInfoStore.setUserData(accountId, userData, previousAccountId);
       if (expiredSessionNotice.value === accountId) expiredSessionNotice.value = null;
 
       userInfoStore.setOrganizations(availableOrgs);
@@ -210,6 +230,18 @@ export const useAuthSession = () => {
     } else {
       publishSession();
     }
+
+    // Only retire old sessions after the new one is active; logout also clears the main-process tokens.
+    await Promise.all(
+      duplicateAccounts.map(async ([id, user]) => {
+        if (userMap.value[id] !== user) return;
+        try {
+          await userInfoStore.deleteUserData(id);
+        } catch (error) {
+          console.error("remove duplicate login failed", error);
+        }
+      })
+    );
 
     if (options.showToast !== false) {
       toast.add({
@@ -387,6 +419,7 @@ export const useAuthSession = () => {
       userId,
       siteName: site,
       name: profileData.name || profileData.username || profileData.display_name || "",
+      username: typeof profileData.username === "string" ? profileData.username : undefined,
       bearerToken: "",
       site,
       org: currentOrg,
@@ -462,7 +495,9 @@ export const useAuthSession = () => {
         if (payload?.status === "stale") return false;
         if (payload?.status === "confirmation-required" && payload.compatibility) {
           useClientCompatibility().show(payload.compatibility, () =>
-            bootstrapPersistedSession(payload.compatibility_confirmation_id)
+            bootstrapPersistedSession(
+              payload.compatibility?.reason === "tls" ? undefined : payload.compatibility_confirmation_id
+            )
           );
           return false;
         }
@@ -516,12 +551,14 @@ export const useAuthSession = () => {
   };
 
   function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
-    if (!bootstrapPromise) {
-      bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
-        authReady.value = true;
-        bootstrapPromise = null;
-      });
-    }
+    if (bootstrapPromise) return bootstrapPromise;
+    // Route changes must not restore a snapshot over an already validated desktop login.
+    if (isDesktopRuntime() && authReady.value && userInfoStore.loggedIn) return Promise.resolve(true);
+
+    bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
+      authReady.value = true;
+      bootstrapPromise = null;
+    });
 
     return bootstrapPromise;
   }

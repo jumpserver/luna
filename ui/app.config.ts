@@ -37,6 +37,11 @@ export default defineAppConfig({
       compoundVariants: [
         {
           color: "neutral",
+          variant: ["outline", "subtle"],
+          class: "in-data-[focus-input=pointer]:focus-visible:ring-accented"
+        },
+        {
+          color: "neutral",
           variant: "ghost",
           class:
             "bg-transparent text-(--app-fg) hover:bg-(--app-surface-canvas) active:bg-(--app-surface-canvas) focus-visible:bg-(--app-surface-canvas)"
@@ -51,6 +56,12 @@ export default defineAppConfig({
     switch: {
       slots: {
         base: "cursor-pointer disabled:cursor-not-allowed"
+      }
+    },
+    checkbox: {
+      slots: {
+        base: "cursor-pointer",
+        label: "cursor-pointer"
       }
     },
     kbd: {

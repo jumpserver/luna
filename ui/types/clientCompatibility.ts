@@ -6,6 +6,7 @@ export type CompatibilityUnknownReason =
   | "timeout"
   | "tls"
   | "network"
+  | "redirect"
   | "http"
   | "invalid-response"
   | "invalid-site"

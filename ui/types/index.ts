@@ -233,6 +233,7 @@ export interface UserData {
   siteName: string;
   site: string;
   name: string;
+  username?: string;
   language?: string;
   bearerToken: string;
   clientLoginPolicy?: ClientLoginPolicy;
@@ -651,6 +652,7 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string;
   rdpSmartSize: string;
   recentSites: string[];
+  hiddenRecentSites: string[];
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
 }

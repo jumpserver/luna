@@ -7,7 +7,7 @@ import path from "node:path";
 import { app, net, safeStorage } from "electron";
 import { CLIENT_AUTH_CALLBACK } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
+import { parseUrl } from "../shared/url";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
 import { checkSiteCompatibility, normalizeCompatibilitySite } from "./compatibility";
 import type { ClientLoginSession } from "../../../ui/types/index";
@@ -219,8 +219,9 @@ export class DesktopAuthService {
   // ponytail: migration keeps legacy dynamic state; replace with explicit auth/session types when strict mode is enabled.
   [key: string]: any;
 
-  constructor(emitEvent) {
+  constructor(emitEvent, fetchResponse = (url, init) => net.fetch(url, init)) {
     this.emitEvent = emitEvent;
+    this.fetchResponse = fetchResponse;
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
@@ -232,7 +233,6 @@ export class DesktopAuthService {
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
-    this.trustedHosts = new Set();
     this.connectionGeneration = 0;
     this.pendingConnection = null;
     this.pendingCompatibility = null;
@@ -361,22 +361,8 @@ export class DesktopAuthService {
     }
   }
 
-  trustSite(site) {
-    try {
-      const host = siteHostname(site);
-      if (host) this.trustedHosts.add(host);
-    } catch {
-      // Invalid URLs stay untrusted; parse/fetch still fail on the caller path.
-    }
-  }
-
-  isTrustedSiteHost(hostname) {
-    return isTrustedCertificateHost(this.trustedHosts, hostname);
-  }
-
   fetchSite(url, init) {
-    this.trustSite(url);
-    return net.fetch(url, init);
+    return this.fetchResponse(url, init);
   }
 
   async initialize() {
@@ -667,7 +653,10 @@ export class DesktopAuthService {
     const compatibility = await this.checkCompatibility({ site });
     if (generation !== this.connectionGeneration) return { status: "stale" };
     if (compatibility.status !== "compatible") {
-      this.pendingCompatibility = { generation, site, sessionId };
+      // A version confirmation cannot bypass TLS or redirect restrictions.
+      this.pendingCompatibility = ["tls", "redirect"].includes(compatibility.reason)
+        ? null
+        : { generation, site, sessionId };
       return { status: "confirmation-required", compatibility, compatibility_confirmation_id: generation };
     }
     return { status: "ready", generation, site: compatibility.site };

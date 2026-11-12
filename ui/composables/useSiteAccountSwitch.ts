@@ -91,6 +91,7 @@ export const confirmLeaveCurrentSiteSessions = async (
 };
 
 export const useSiteAccountSwitch = () => {
+  const toast = useToast();
   const confirmOpen = computed({
     get: () => leaveConfirm.value !== null,
     set: (open) => {
@@ -101,7 +102,6 @@ export const useSiteAccountSwitch = () => {
   const switchAccount = async (accountId: string) => {
     const user = useUserInfoStore();
     if (switchingAccountId.value || (accountId === user.currentAccountId && user.loggedIn)) return false;
-    const toast = useToast();
     const { $i18n } = useNuxtApp();
     const bus = useEventBus();
     switchingAccountId.value = accountId;

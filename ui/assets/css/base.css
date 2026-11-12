@@ -157,6 +157,11 @@ body.runtime-macos-vibrancy .settings-panel__sidebar {
 }
 
 /* 全局按钮样式 */
+/* Restoring focus after a pointer-operated dialog must not leave a keyboard outline. */
+html[data-focus-input="pointer"] :is(button, a[href], [role="button"]):not([contenteditable]):focus {
+  outline: none;
+}
+
 .btn-common {
   @apply rounded-lg transition-colors duration-200;
 }

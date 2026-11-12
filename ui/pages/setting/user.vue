@@ -1,31 +1,187 @@
 <script setup lang="ts">
+import type { SiteUserData } from "~/store/modules/userInfo";
 import type { LabeledValue, UserData, UserProfile } from "~/types";
 import { getUserProfile } from "~/composables/useApiRequest";
-import { useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
+import { confirmLeaveCurrentSiteSessions, useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface DetailRow {
   label: string;
   value: string;
+  hint?: string;
 }
 
 const { t, locale } = useI18n();
+const toast = useToast();
+const localePath = useLocalePath();
+const { closeSettings } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
-const { switchAccount: switchSiteAccount } = useSiteAccountSwitch();
-const { loggedIn, currentAccountId, currentUser, userMap } = storeToRefs(userInfoStore);
+const { switchAccount: switchSiteAccount, switchingAccountId } = useSiteAccountSwitch();
+const { loggedIn, currentAccountId, currentUser, userMap, isLoggingOut } = storeToRefs(userInfoStore);
 const profile = ref<UserProfile | null>(null);
 const loading = ref(false);
-const switchingAccount = ref(false);
+const clientLoginReady = ref(false);
+const pageLoading = computed(
+  () =>
+    loading.value ||
+    Boolean(switchingAccountId.value) ||
+    (!loggedIn.value && isLoggingOut.value) ||
+    (isDesktopRuntime() && loggedIn.value && profile.value !== null && !clientLoginReady.value)
+);
 const loadError = ref("");
 const avatarFailed = ref(false);
+const sitesExpanded = ref(false);
+const sitesContentId = useId();
 let requestSequence = 0;
 
-const accounts = computed(() => {
-  const entries = Object.entries(userMap.value) as [string, UserData][];
-  return entries.sort(
-    ([leftId], [rightId]) => Number(rightId === currentAccountId.value) - Number(leftId === currentAccountId.value)
-  );
+const sites = computed(() => {
+  const entries = Object.entries(userMap.value);
+  const groups = new Map<string, { address: string; name: string; accounts: [string, SiteUserData][] }>();
+  for (const entry of entries) {
+    const [, account] = entry;
+    let address = account.site.trim().replace(/\/+$/, "");
+    try {
+      // Keep deployment paths: the same host can contain separate JumpServer sites.
+      address = new URL(address).href.replace(/\/+$/, "");
+    } catch {
+      // Keep saved addresses visible so their accounts can still be used to log in.
+    }
+    let group = groups.get(address);
+    if (!group) {
+      group = { address, name: account.siteName === account.site ? "" : account.siteName, accounts: [] };
+      groups.set(address, group);
+    }
+    group.accounts.push(entry);
+  }
+  return [...groups.values()];
 });
+
+const activeSite = computed(() =>
+  sites.value.find((site) => site.accounts.some(([accountId]) => accountId === currentAccountId.value))
+);
+
+const logoutAccountId = ref("");
+const logoutOpen = ref(false);
+const loggingOutAccountId = ref("");
+const logoutAccountData = computed(() => userMap.value[logoutAccountId.value]);
+const removingAccount = computed(() => logoutAccountId.value !== currentAccountId.value);
+const logoutSite = computed(() =>
+  sites.value.find((site) => site.accounts.some(([accountId]) => accountId === logoutAccountId.value))
+);
+
+function requestLogout(accountId: string) {
+  if (switchingAccountId.value || loggingOutAccountId.value) return;
+  logoutAccountId.value = accountId;
+  logoutOpen.value = true;
+}
+
+async function logoutAccount() {
+  const accountId = logoutAccountId.value;
+  if (!logoutAccountData.value || switchingAccountId.value || loggingOutAccountId.value) return;
+  loggingOutAccountId.value = accountId;
+  logoutOpen.value = false;
+  const wasCurrent = accountId === currentAccountId.value;
+  try {
+    if (wasCurrent && !(await confirmLeaveCurrentSiteSessions("logout"))) return;
+    await userInfoStore.deleteUserData(accountId);
+    if (wasCurrent && !loggedIn.value) {
+      await closeSettings();
+      await navigateTo(localePath({ path: "/" }));
+    }
+  } catch {
+    toast.add({
+      title: t(wasCurrent ? "UserProfile.LogoutAccountFailed" : "UserProfile.RemoveAccountFailed"),
+      color: "error"
+    });
+  } finally {
+    loggingOutAccountId.value = "";
+  }
+}
+
+const editingSiteAddress = ref("");
+const siteNameDraft = ref("");
+const siteNameError = ref("");
+const savingSite = ref(false);
+const siteCertificateEditor = ref<{
+  saveChanges: () => Promise<boolean>;
+  hasChanges: boolean;
+  busy: boolean;
+} | null>(null);
+const editingSite = computed(() => sites.value.find((site) => site.address === editingSiteAddress.value));
+const siteEditorBusy = computed(() =>
+  Boolean(
+    savingSite.value || siteCertificateEditor.value?.busy || switchingAccountId.value || loggingOutAccountId.value
+  )
+);
+const hasSiteChanges = computed(() =>
+  Boolean(
+    editingSite.value?.accounts.some(([, account]) => account.siteName !== siteNameDraft.value.trim()) ||
+    siteCertificateEditor.value?.hasChanges
+  )
+);
+const siteEditOpen = computed({
+  get: () => Boolean(editingSiteAddress.value),
+  set: (open) => {
+    if (!open && !savingSite.value) cancelSiteEdit();
+  }
+});
+
+function editSite(address: string) {
+  if (savingSite.value || switchingAccountId.value || loggingOutAccountId.value) return;
+  const site = sites.value.find((item) => item.address === address);
+  if (!site) return;
+  siteNameDraft.value = site.accounts[0]?.[1].siteName || site.name;
+  siteNameError.value = "";
+  editingSiteAddress.value = address;
+}
+
+function cancelSiteEdit() {
+  editingSiteAddress.value = "";
+  siteNameError.value = "";
+}
+
+async function saveSite(event?: KeyboardEvent) {
+  if (event?.isComposing || event?.keyCode === 229) return;
+  event?.preventDefault();
+  if (siteEditorBusy.value || !hasSiteChanges.value) return;
+  const site = editingSite.value;
+  if (!site) return;
+  const name = siteNameDraft.value.trim();
+  if (!name) {
+    siteNameError.value = t("Login.EmptySiteNameError");
+    return;
+  }
+  if (
+    sites.value.some(
+      (item) =>
+        item.address !== site.address &&
+        item.accounts.some(([, account]) => account.siteName.trim().toLowerCase() === name.toLowerCase())
+    )
+  ) {
+    siteNameError.value = t("Login.DuplicateSiteNameError");
+    return;
+  }
+  savingSite.value = true;
+  try {
+    if (!(await siteCertificateEditor.value?.saveChanges()) || editingSiteAddress.value !== site.address) return;
+    // Update only display metadata; replacing account objects would reactivate their API sessions.
+    userInfoStore.$patch((state) => {
+      for (const [accountId] of site.accounts) {
+        if (!state.userMap[accountId]) continue;
+        state.userMap[accountId].siteName = name;
+        if (state.currentAccountId === accountId && state.currentUser) state.currentUser.siteName = name;
+      }
+    });
+    cancelSiteEdit();
+  } finally {
+    savingSite.value = false;
+  }
+}
+
+watch(currentAccountId, cancelSiteEdit);
+
+const accountLabel = (account: UserData) =>
+  account.name && account.username ? `${account.name} (${account.username})` : account.name || account.username || "—";
 
 const avatarUrl = computed(() => {
   const value = profile.value?.avatar_url;
@@ -58,14 +214,14 @@ const formatPhone = (value: UserProfile["phone"]) => {
   return code ? `${code} ${phone}` : phone;
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "—";
+const formatDate = (value?: string | null, fallback = "—") => {
+  if (!value) return fallback;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return fallback;
 
   return new Intl.DateTimeFormat(toIntlLocale(locale.value), {
     dateStyle: "medium",
-    timeStyle: "short"
+    timeStyle: "medium"
   }).format(date);
 };
 
@@ -83,21 +239,33 @@ const basicRows = computed<DetailRow[]>(() => {
   if (profile.value.wechat !== undefined) {
     rows.push({ label: t("UserProfile.Wechat"), value: profile.value.wechat || "—" });
   }
+  rows.push(
+    { label: t("UserProfile.Source"), value: choiceLabel(profile.value.source) },
+    { label: t("UserProfile.CurrentOrganization"), value: currentUser.value?.org?.name || "—" }
+  );
 
   return rows;
 });
 
-const accountRows = computed<DetailRow[]>(() => [
-  { label: t("UserProfile.Source"), value: choiceLabel(profile.value?.source) },
-  { label: t("UserProfile.CurrentSite"), value: currentUser.value?.siteName || currentUser.value?.site || "—" },
-  { label: t("UserProfile.CurrentOrganization"), value: currentUser.value?.org?.name || "—" }
-]);
+const loginRows = computed<DetailRow[]>(() => {
+  if (!isDesktopRuntime()) return [];
 
-const loginRows = computed<DetailRow[]>(() => [
-  { label: t("UserProfile.LastLogin"), value: formatDate(profile.value?.last_login) },
-  { label: t("UserProfile.JoinedAt"), value: formatDate(profile.value?.date_joined) },
-  { label: t("UserProfile.ExpiresAt"), value: formatDate(profile.value?.date_expired) }
-]);
+  const policy = currentUser.value?.clientLoginPolicy;
+  const session = currentUser.value?.clientLoginSession;
+  const unknown = t("UserProfile.ClientLoginUnknown");
+  const timestamp = (value?: string | null) => formatDate(value, unknown);
+  const deadline = session?.effective_expires_at ?? session?.expires_at;
+  const effectiveExpiry =
+    session && policy ? (deadline ? timestamp(deadline) : t("UserProfile.ClientLoginUnlimited")) : unknown;
+  return [
+    { label: t("UserProfile.ClientLoginStartedAt"), value: timestamp(session?.authenticated_at) },
+    {
+      label: t("UserProfile.ClientLoginEffectiveExpiry"),
+      hint: session?.expiry_reason === "policy_changed" ? t("UserProfile.ClientLoginPolicyExpiry") : undefined,
+      value: effectiveExpiry
+    }
+  ];
+});
 
 const systemRoles = computed(() => (profile.value?.system_roles || []).map(roleLabel));
 const organizationRoles = computed(() => (profile.value?.org_roles || []).map(roleLabel));
@@ -115,20 +283,24 @@ const mfaStatus = computed(() => ({
 }));
 
 async function loadProfile() {
-  if (!import.meta.client || !loggedIn.value) {
-    profile.value = null;
-    loadError.value = "";
-    return;
-  }
-
   const sequence = ++requestSequence;
-  loading.value = true;
+  profile.value = null;
+  clientLoginReady.value = false;
   loadError.value = "";
+  loading.value = false;
+  if (!import.meta.client || !loggedIn.value) return;
+
+  loading.value = true;
 
   try {
     const value = await getUserProfile();
     if (sequence !== requestSequence) return;
     profile.value = value;
+    for (const account of [currentUser.value, userMap.value[currentAccountId.value]]) {
+      if (!account) continue;
+      account.name = value.name;
+      account.username = value.username;
+    }
     avatarFailed.value = false;
   } catch (error) {
     if (sequence !== requestSequence) return;
@@ -139,208 +311,402 @@ async function loadProfile() {
   }
 }
 
-async function switchAccount(accountId: string) {
-  if (accountId === currentAccountId.value || switchingAccount.value) return;
-  switchingAccount.value = true;
-  try {
-    if (await switchSiteAccount(accountId)) await loadProfile();
-  } finally {
-    switchingAccount.value = false;
-  }
-}
-
 function addAccount() {
-  useEventBus().emit("login", undefined);
+  useEventBus().emit("login", { accountId: "" });
 }
 
 watch(
   [loggedIn, currentAccountId],
   () => {
-    if (!switchingAccount.value) void loadProfile();
+    void loadProfile();
   },
   { immediate: true }
 );
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div v-if="!loggedIn" class="py-8">
-      <UAlert
-        color="neutral"
-        variant="subtle"
-        icon="i-lucide-user-round-x"
-        :title="t('UserProfile.NoUser')"
-        :description="t('UserProfile.NoUserDescription')"
-      >
-        <template v-if="isDesktopRuntime()" #actions>
-          <UButton size="sm" color="neutral" variant="outline" @click="addAccount">
-            {{ t("Login.AddAccount") }}
-          </UButton>
-        </template>
-      </UAlert>
+  <div class="relative min-h-0 flex-1" :aria-busy="pageLoading">
+    <div
+      v-if="pageLoading"
+      role="status"
+      :aria-label="t('Loading.Loading')"
+      class="absolute inset-0 flex items-center justify-center"
+    >
+      <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-muted" aria-hidden="true" />
     </div>
-
-    <template v-else>
-      <div v-if="loading" class="space-y-6">
-        <div class="flex items-center gap-3">
-          <USkeleton class="size-12 rounded-full" />
-          <div class="flex-1 space-y-2">
-            <USkeleton class="h-4 w-40" />
-            <USkeleton class="h-3 w-56" />
-          </div>
-        </div>
-        <div v-for="index in 6" :key="index" class="flex items-center justify-between gap-6">
-          <USkeleton class="h-3 w-28" />
-          <USkeleton class="h-3 w-48" />
-        </div>
+    <div v-show="!pageLoading" class="space-y-8">
+      <div v-if="!loggedIn" class="py-8">
+        <UAlert
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-user-round-x"
+          :title="t('UserProfile.NoUser')"
+          :description="t('UserProfile.NoUserDescription')"
+        >
+          <template v-if="isDesktopRuntime()" #actions>
+            <UButton
+              size="sm"
+              color="neutral"
+              variant="outline"
+              class="hover:text-primary hover:ring-primary focus-visible:text-primary focus-visible:ring-primary"
+              :disabled="Boolean(loggingOutAccountId)"
+              @click="addAccount"
+            >
+              {{ t("Login.LoginOtherAccount") }}
+            </UButton>
+          </template>
+        </UAlert>
       </div>
 
-      <UAlert
-        v-else-if="loadError"
-        color="error"
-        variant="subtle"
-        icon="i-lucide-circle-alert"
-        :title="t('UserProfile.LoadFailed')"
-        :description="loadError"
-      >
-        <template #actions>
-          <UButton size="sm" color="error" variant="outline" @click="loadProfile">
-            {{ t("UserProfile.Retry") }}
-          </UButton>
-        </template>
-      </UAlert>
+      <template v-else>
+        <UAlert
+          v-if="loadError"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-circle-alert"
+          :title="t('UserProfile.LoadFailed')"
+          :description="loadError"
+        >
+          <template #actions>
+            <UButton size="sm" color="error" variant="outline" @click="loadProfile">
+              {{ t("UserProfile.Retry") }}
+            </UButton>
+          </template>
+        </UAlert>
 
-      <SettingsGroup v-else-if="profile" :divided="false">
-        <div class="flex items-center gap-4 px-4 py-3">
-          <UAvatar
-            :src="avatarUrl"
-            :alt="profile.name || profile.username"
-            color="primary"
-            size="xl"
-            class="shrink-0"
-            @error="avatarFailed = true"
-          />
-          <div class="min-w-0">
-            <h2 class="truncate font-sans text-sm font-medium text-highlighted">
-              {{ profile.name || profile.username }}
-            </h2>
-            <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
-          </div>
-        </div>
-      </SettingsGroup>
-
-      <SettingsSection
-        v-if="isDesktopRuntime()"
-        :title="t('UserProfile.SiteAccounts')"
-        :description="t('UserProfile.SiteAccountsDescription')"
-      >
-        <template #actions>
-          <UButton
-            :label="t('Login.AddAccount')"
-            icon="i-lucide-user-round-plus"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            @click="addAccount"
-          />
-        </template>
-
-        <SettingsGroup>
-          <div v-for="[accountId, account] in accounts" :key="accountId" class="flex items-center gap-3 px-4 py-3">
-            <UAvatar :alt="account.name" color="neutral" size="sm" class="shrink-0" />
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-highlighted">{{ account.name }}</p>
-              <p class="truncate text-xs text-muted">{{ account.siteName || account.site }} · {{ account.site }}</p>
+        <SettingsSection v-if="!loading && !loadError && profile" :title="t('UserProfile.CurrentAccount')">
+          <SettingsGroup>
+            <div class="flex items-center gap-4 px-4 py-4">
+              <UAvatar
+                :src="avatarUrl"
+                :alt="profile.name || profile.username"
+                color="primary"
+                size="xl"
+                class="shrink-0"
+                @error="avatarFailed = true"
+              />
+              <div class="flex min-w-0 flex-1 items-center gap-3">
+                <h3 class="min-w-0 max-w-[40%] shrink-0 truncate font-sans text-sm font-medium text-highlighted">
+                  {{
+                    profile.name && profile.username
+                      ? `${profile.name} (${profile.username})`
+                      : profile.name || profile.username
+                  }}
+                </h3>
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <UBadge color="neutral" variant="subtle" size="sm" class="min-w-0 text-xs font-normal text-muted">
+                    <SiteCertificateAddress :site="activeSite?.address || currentUser?.site || ''" />
+                  </UBadge>
+                  <UBadge
+                    v-if="isDesktopRuntime() && activeSite?.name"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    class="min-w-0 max-w-[40%] shrink-0 text-xs font-normal text-muted"
+                  >
+                    <span class="truncate">{{ activeSite.name }}</span>
+                  </UBadge>
+                </div>
+              </div>
+              <UTooltip v-if="isDesktopRuntime()" :text="t('UserProfile.LogoutAccount')">
+                <UButton
+                  :label="t('UserProfile.Logout')"
+                  :aria-label="t('UserProfile.LogoutAccount')"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  class="shrink-0"
+                  :loading="loggingOutAccountId === currentAccountId"
+                  :disabled="!currentAccountId || Boolean(switchingAccountId || loggingOutAccountId)"
+                  @click="requestLogout(currentAccountId)"
+                />
+              </UTooltip>
             </div>
-            <UBadge v-if="accountId === currentAccountId" color="primary" variant="subtle" size="sm">
-              {{ t("UserProfile.Current") }}
-            </UBadge>
+          </SettingsGroup>
+        </SettingsSection>
+
+        <SettingsSection v-if="isDesktopRuntime()" :title="t('UserProfile.SiteManagement')">
+          <template #title>
             <UButton
-              v-else
-              :label="t('UserProfile.Switch')"
               color="neutral"
-              variant="ghost"
+              variant="link"
               size="sm"
-              :loading="switchingAccount"
-              @click="switchAccount(accountId)"
+              class="gap-1.5 p-0 text-sm font-semibold text-muted hover:text-highlighted focus-visible:text-highlighted"
+              :aria-expanded="sitesExpanded"
+              :aria-controls="sitesContentId"
+              @click="sitesExpanded = !sitesExpanded"
+            >
+              {{ t("UserProfile.SiteManagement") }} ({{ sites.length }})
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5 transition-transform"
+                :class="{ 'rotate-90': sitesExpanded }"
+                aria-hidden="true"
+              />
+            </UButton>
+          </template>
+          <template #actions>
+            <UButton
+              :label="t('Login.LoginOtherAccount')"
+              color="neutral"
+              variant="link"
+              size="sm"
+              class="p-0 text-muted hover:text-highlighted focus-visible:text-highlighted"
+              :disabled="Boolean(switchingAccountId || loggingOutAccountId)"
+              @click="addAccount"
             />
+          </template>
+          <div v-show="sitesExpanded" :id="sitesContentId" class="space-y-3">
+            <SettingsGroup v-for="site in sites" :key="site.address" class="group/site min-w-0">
+              <div class="flex items-center gap-3 px-4 py-4">
+                <UIcon name="i-lucide-globe" class="size-3.5 shrink-0 text-highlighted" aria-hidden="true" />
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                  <span class="inline-flex min-w-0 text-sm font-medium text-highlighted">
+                    <SiteCertificateAddress :site="site.address" icon-tooltip-only />
+                  </span>
+                  <h3 v-if="site.name" class="min-w-0 max-w-[40%] shrink-0 truncate text-sm font-normal text-muted">
+                    {{ site.name }}
+                  </h3>
+                </div>
+                <UButton
+                  :label="t('ContextMenu.Edit')"
+                  :aria-label="`${t('UserProfile.EditSite')} ${site.name || site.address}`"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  class="shrink-0"
+                  :disabled="Boolean(switchingAccountId || loggingOutAccountId)"
+                  @click="editSite(site.address)"
+                />
+              </div>
+              <div class="divide-y divide-[var(--app-border)] pr-4 pl-10.5">
+                <div
+                  v-for="[accountId, account] in site.accounts"
+                  :key="accountId"
+                  class="flex min-h-10 items-center gap-3 py-2 text-muted"
+                >
+                  <UIcon name="i-lucide-user-round" class="size-3.5 shrink-0 text-highlighted" aria-hidden="true" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <p class="truncate text-sm font-medium text-highlighted" :title="accountLabel(account)">
+                        {{ accountLabel(account) }}
+                      </p>
+                      <UTooltip
+                        v-if="accountId === currentAccountId && loggedIn"
+                        :text="t('UserProfile.CurrentActiveUser')"
+                      >
+                        <UBadge
+                          color="primary"
+                          variant="subtle"
+                          size="sm"
+                          :aria-label="t('UserProfile.CurrentActiveUser')"
+                          class="shrink-0 whitespace-nowrap"
+                        >
+                          {{ t("UserProfile.CurrentActive") }}
+                        </UBadge>
+                      </UTooltip>
+                    </div>
+                    <p v-if="account.sessionExpired" class="text-xs text-warning">
+                      {{ t("Login.SessionExpired") }}
+                    </p>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-2">
+                    <UTooltip
+                      v-if="accountId !== currentAccountId || !loggedIn"
+                      :text="t('UserProfile.SwitchToThisUser')"
+                    >
+                      <UButton
+                        :label="t('UserProfile.Switch')"
+                        :aria-label="`${t('UserProfile.Switch')} ${accountLabel(account)}`"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                        class="shrink-0"
+                        :loading="switchingAccountId === accountId"
+                        :disabled="Boolean(switchingAccountId || loggingOutAccountId)"
+                        @click="switchSiteAccount(accountId)"
+                      />
+                    </UTooltip>
+                    <UTooltip
+                      :text="
+                        t(accountId === currentAccountId ? 'UserProfile.LogoutAccount' : 'UserProfile.RemoveAccount')
+                      "
+                    >
+                      <UButton
+                        :label="t(accountId === currentAccountId ? 'UserProfile.Logout' : 'UserProfile.Remove')"
+                        :aria-label="`${t(accountId === currentAccountId ? 'UserProfile.LogoutAccount' : 'UserProfile.RemoveAccount')} ${accountLabel(account)}`"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                        class="shrink-0"
+                        :loading="loggingOutAccountId === accountId"
+                        :disabled="Boolean(switchingAccountId || loggingOutAccountId)"
+                        @click="requestLogout(accountId)"
+                      />
+                    </UTooltip>
+                  </div>
+                </div>
+              </div>
+            </SettingsGroup>
           </div>
-        </SettingsGroup>
-      </SettingsSection>
-
-      <template v-if="!loading && !loadError && profile">
-        <SettingsSection :title="t('UserProfile.BasicInfo')">
-          <SettingsGroup>
-            <div
-              v-for="row in basicRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
-            </div>
-          </SettingsGroup>
         </SettingsSection>
 
-        <SettingsSection :title="t('UserProfile.AccountAndRoles')">
-          <SettingsGroup>
-            <div
-              v-for="row in accountRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
-            </div>
-            <div class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
-              <span class="shrink-0 text-muted">{{ t("UserProfile.SystemRoles") }}</span>
-              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
-                <UBadge v-for="role in systemRoles" :key="role" color="neutral" variant="subtle" size="sm">
-                  {{ role }}
-                </UBadge>
-                <span v-if="systemRoles.length === 0" class="text-highlighted">—</span>
+        <template v-if="!loading && !loadError && profile">
+          <SettingsSection :title="t('UserProfile.BasicInfo')">
+            <SettingsGroup>
+              <div
+                v-for="row in basicRows"
+                :key="row.label"
+                class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
+              >
+                <span class="shrink-0 text-sm font-medium text-highlighted">{{ row.label }}</span>
+                <span class="min-w-0 break-all text-right text-muted">{{ row.value }}</span>
               </div>
-            </div>
-            <div v-if="organizationRoles.length" class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
-              <span class="shrink-0 text-muted">{{ t("UserProfile.OrganizationRoles") }}</span>
-              <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
-                <UBadge v-for="role in organizationRoles" :key="role" color="neutral" variant="subtle" size="sm">
-                  {{ role }}
-                </UBadge>
+              <div class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
+                <span class="shrink-0 text-sm font-medium text-highlighted">{{ t("UserProfile.SystemRoles") }}</span>
+                <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
+                  <UBadge
+                    v-for="role in systemRoles"
+                    :key="role"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    class="text-muted"
+                  >
+                    {{ role }}
+                  </UBadge>
+                  <span v-if="systemRoles.length === 0" class="text-muted">—</span>
+                </div>
               </div>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
+              <div v-if="organizationRoles.length" class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
+                <span class="shrink-0 text-sm font-medium text-highlighted">
+                  {{ t("UserProfile.OrganizationRoles") }}
+                </span>
+                <div class="flex min-w-0 flex-wrap justify-end gap-1.5">
+                  <UBadge
+                    v-for="role in organizationRoles"
+                    :key="role"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    class="text-muted"
+                  >
+                    {{ role }}
+                  </UBadge>
+                </div>
+              </div>
+              <div class="flex items-start justify-between gap-8 px-4 py-3 text-sm">
+                <span class="shrink-0 text-sm font-medium text-highlighted">{{ t("UserProfile.ExpiresAt") }}</span>
+                <span class="min-w-0 break-all text-right text-muted">
+                  {{ formatDate(profile.date_expired) }}
+                </span>
+              </div>
+            </SettingsGroup>
+          </SettingsSection>
 
-        <SettingsSection :title="t('UserProfile.SecurityStatus')">
-          <SettingsGroup>
-            <div class="flex items-center justify-between gap-8 px-4 py-3">
-              <span class="text-sm text-muted">{{ t("UserProfile.AccountStatus") }}</span>
-              <UBadge :color="accountStatus.color" variant="subtle">{{ accountStatus.label }}</UBadge>
-            </div>
-            <div class="flex items-center justify-between gap-8 px-4 py-3">
-              <span class="text-sm text-muted">{{ t("UserProfile.MFA") }}</span>
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-muted">{{ choiceLabel(profile.mfa_level) }}</span>
+          <SettingsSection :title="t('UserProfile.SecurityStatus')">
+            <SettingsGroup>
+              <div class="flex items-center justify-between gap-8 px-4 py-3">
+                <span class="text-sm font-medium text-highlighted">{{ t("UserProfile.AccountStatus") }}</span>
+                <UBadge :color="accountStatus.color" variant="subtle">{{ accountStatus.label }}</UBadge>
+              </div>
+              <div class="flex items-center justify-between gap-8 px-4 py-3">
+                <span class="text-sm font-medium text-highlighted">{{ t("UserProfile.MFA") }}</span>
                 <UBadge :color="mfaStatus.color" variant="subtle">{{ mfaStatus.label }}</UBadge>
               </div>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
+            </SettingsGroup>
+          </SettingsSection>
 
-        <SettingsSection :title="t('UserProfile.LoginInfo')">
-          <SettingsGroup>
-            <div
-              v-for="row in loginRows"
-              :key="row.label"
-              class="flex items-start justify-between gap-8 px-4 py-3 text-sm"
-            >
-              <span class="shrink-0 text-muted">{{ row.label }}</span>
-              <span class="min-w-0 text-right text-highlighted">{{ row.value }}</span>
-            </div>
-          </SettingsGroup>
-        </SettingsSection>
+          <SettingsSection
+            v-if="isDesktopRuntime()"
+            :title="t('UserProfile.LoginInfo')"
+            :description="t('UserProfile.ClientLoginExpiryHint')"
+          >
+            <SettingsGroup>
+              <div v-for="row in loginRows" :key="row.label" class="px-4 py-3 text-sm">
+                <div class="flex flex-wrap items-start justify-between gap-x-8 gap-y-1">
+                  <span class="text-sm font-medium text-highlighted">{{ row.label }}</span>
+                  <span class="min-w-0 break-words text-right text-muted">{{ row.value }}</span>
+                </div>
+                <p v-if="row.hint" class="mt-1 max-w-[70%] text-xs text-muted">{{ row.hint }}</p>
+              </div>
+            </SettingsGroup>
+          </SettingsSection>
+          <SettingsClientLogin v-if="isDesktopRuntime()" :key="currentAccountId" @ready="clientLoginReady = true" />
+        </template>
       </template>
-    </template>
+    </div>
+    <ModalMessageDialog
+      v-if="isDesktopRuntime()"
+      v-model:open="siteEditOpen"
+      :title="t('UserProfile.EditSite')"
+      :description="editingSiteAddress"
+      :busy="savingSite"
+    >
+      <template #body>
+        <div class="space-y-5">
+          <UFormField :label="t('Login.SiteName')" :error="siteNameError || undefined">
+            <UInput
+              v-model="siteNameDraft"
+              :aria-label="t('Login.SiteName')"
+              :disabled="Boolean(savingSite || switchingAccountId || loggingOutAccountId)"
+              class="w-full"
+              @update:model-value="siteNameError = ''"
+              @keydown.enter="saveSite($event)"
+            />
+          </UFormField>
+          <SiteCertificateSettings
+            :key="editingSiteAddress"
+            ref="siteCertificateEditor"
+            :site="editingSiteAddress"
+            :disabled="savingSite"
+            checkbox
+            show-certificate-link
+            deferred
+          />
+        </div>
+      </template>
+      <template #footer>
+        <UButton :loading="savingSite" :disabled="siteEditorBusy || !hasSiteChanges" @click="saveSite()">
+          {{ t("Common.Save") }}
+        </UButton>
+      </template>
+    </ModalMessageDialog>
+    <ModalMessageDialog
+      v-if="isDesktopRuntime()"
+      v-model:open="logoutOpen"
+      :title="t(removingAccount ? 'UserProfile.RemoveAccount' : 'UserProfile.LogoutAccount')"
+      :busy="Boolean(loggingOutAccountId)"
+    >
+      <template #body>
+        <div v-if="logoutAccountData" class="space-y-4 text-sm">
+          <div class="space-y-1">
+            <p class="break-words text-highlighted">{{ accountLabel(logoutAccountData) }}</p>
+            <p class="break-all text-muted">{{ logoutSite?.address || logoutAccountData.site }}</p>
+          </div>
+          <p class="text-muted">
+            {{
+              t(
+                removingAccount
+                  ? logoutSite?.accounts.length === 1
+                    ? "UserProfile.RemoveLastAccountDescription"
+                    : "UserProfile.RemoveAccountDescription"
+                  : logoutSite?.accounts.length === 1
+                    ? "UserProfile.LogoutLastAccountDescription"
+                    : "UserProfile.LogoutAccountDescription"
+              )
+            }}
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <UButton color="neutral" variant="outline" :label="t('Common.Cancel')" @click="logoutOpen = false" />
+        <UButton
+          color="error"
+          :label="t(removingAccount ? 'UserProfile.Remove' : 'UserProfile.Logout')"
+          @click="logoutAccount"
+        />
+      </template>
+    </ModalMessageDialog>
   </div>
 </template>

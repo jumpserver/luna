@@ -345,9 +345,10 @@ export const useSettingManager = () => {
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
 
-  const setRecentSites = (sites: string[]) => {
+  const setRecentSites = (sites: string[], hiddenSites = state.hiddenRecentSites) => {
     state.recentSites = Array.isArray(sites) ? [...sites] : [];
-    persist({ recentSites: state.recentSites });
+    state.hiddenRecentSites = Array.isArray(hiddenSites) ? [...hiddenSites] : [];
+    persist({ recentSites: state.recentSites, hiddenRecentSites: state.hiddenRecentSites });
   };
 
   const setSidebarWidth = (width: number) => {

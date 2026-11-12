@@ -1,8 +1,13 @@
 import { app } from "electron";
 import runtimePackage from "../package.json";
+import { isCertificateInspectionWorker, runCertificateInspectionWorker } from "./shared/certificate-inspection";
 import { findClientProtocolUrl, registerClientProtocol } from "./shared/client-protocol";
 
 async function start() {
+  if (isCertificateInspectionWorker()) {
+    await runCertificateInspectionWorker();
+    return;
+  }
   app.setName(runtimePackage.productName || "JumpServer");
   const protocolUrl = findClientProtocolUrl(process.argv);
   if (!app.requestSingleInstanceLock({ protocolUrl: protocolUrl || "" })) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ClientPolicyNotice } from "~/types";
+import { Translation as I18nT } from "vue-i18n";
 import { deferAuthFailureUntil } from "~/composables/useApiRequest";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -22,12 +23,24 @@ const desktop = isElectronRuntime();
 const ready = useState("auth-bootstrap-ready", () => false);
 const state = shallowRef<LockState | null>(null);
 const userInfo = useUserInfoStore();
-const userName = computed(() => userInfo.userMap[state.value?.sessionId || ""]?.name || state.value?.username || "");
+const userName = computed(() => {
+  const account = userInfo.userMap[state.value?.sessionId || ""];
+  const name = account?.name;
+  const username = account?.username || state.value?.username;
+  return name && username ? `${name} (${username})` : name || username || "";
+});
 const shield = useTemplateRef<HTMLDialogElement>("shield");
 const password = ref("");
 const hasPassword = ref<boolean | null>(null);
 const settingsUrl = ref("");
 const linkCopied = ref(false);
+const { start: resetCopyFeedback, stop: stopCopyFeedback } = useTimeoutFn(
+  () => {
+    linkCopied.value = false;
+  },
+  3000,
+  { immediate: false }
+);
 const pendingAction = ref<"unlock" | "logout" | null>(null);
 const busy = computed(() => pendingAction.value !== null);
 const confirmLogout = ref(false);
@@ -84,6 +97,7 @@ function applyState(next: LockState) {
     password.value = "";
     hasPassword.value = null;
     settingsUrl.value = "";
+    stopCopyFeedback();
     linkCopied.value = false;
     error.value = "";
     confirmLogout.value = false;
@@ -135,6 +149,7 @@ async function copySettingsUrl() {
   try {
     await desktopInvoke("client_lock_copy_settings");
     linkCopied.value = true;
+    resetCopyFeedback();
   } catch {
     error.value = t("Common.CopyFailed");
   }
@@ -262,9 +277,38 @@ onBeforeUnmount(() => {
               </template>
             </UAlert>
             <template v-if="state?.locked && state.canUnlock && !state.logoutAt">
-              <p v-if="hasPassword === false" class="screen-lock-unset-message" role="status">
-                {{ t("ClientLock.Unset") }}
-              </p>
+              <div v-if="hasPassword === false" class="space-y-1" role="status">
+                <p class="screen-lock-unset-message">{{ t("ClientLock.UnsetTitle") }}</p>
+                <I18nT keypath="ClientLock.Unset" tag="p" scope="global" class="screen-lock-description">
+                  <template #setPassword>{{ t("ClientLock.SetPassword") }}</template>
+                  <template #copyLink>
+                    {{ " " }}
+                    <UButton
+                      color="primary"
+                      variant="link"
+                      class="p-0 align-baseline underline decoration-current underline-offset-2"
+                      :disabled="busy || !settingsUrl"
+                      @click="copySettingsUrl"
+                    >
+                      {{ t(linkCopied ? "Auth.CopySuccess" : "RightPanel.CopyLink") }}
+                    </UButton>
+                    {{ " " }}
+                  </template>
+                  <template #refresh>
+                    {{ " " }}
+                    <UButton
+                      color="primary"
+                      variant="link"
+                      class="p-0 align-baseline underline decoration-current underline-offset-2"
+                      :disabled="busy"
+                      @click="loadInfo"
+                    >
+                      {{ t("ClientLock.Refresh") }}
+                    </UButton>
+                    {{ " " }}
+                  </template>
+                </I18nT>
+              </div>
               <form v-if="hasPassword === true" class="screen-lock-form" @submit.prevent="unlock">
                 <UFormField :label="t('ClientLock.Password')" :error="error" :ui="{ label: 'screen-lock-label' }">
                   <UInput
@@ -290,33 +334,21 @@ onBeforeUnmount(() => {
                   {{ t("ClientLock.Unlock") }}
                 </UButton>
               </form>
-              <div v-if="hasPassword === false" class="flex flex-wrap items-center gap-3">
-                <UButton color="neutral" variant="outline" :disabled="busy" @click="openSettings">
-                  {{ t("ClientLock.SetPassword") }}
-                </UButton>
+              <UButton
+                v-if="hasPassword === false"
+                block
+                size="md"
+                class="screen-lock-unlock-button client-lock-setup-button"
+                :disabled="busy"
+                @click="openSettings"
+              >
+                {{ t("ClientLock.SetPassword") }}
+              </UButton>
+              <div class="screen-lock-actions">
                 <UButton
                   color="neutral"
                   variant="link"
-                  :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-copy'"
-                  :disabled="busy || !settingsUrl"
-                  @click="copySettingsUrl"
-                >
-                  {{ t(linkCopied ? "Common.CopySuccess" : "RightPanel.CopyLink") }}
-                </UButton>
-                <UButton color="neutral" variant="ghost" :disabled="busy" @click="loadInfo">
-                  {{ t("ClientLock.Refresh") }}
-                </UButton>
-              </div>
-              <div class="screen-lock-actions">
-                <UButton
-                  :color="hasPassword === true ? 'neutral' : 'primary'"
-                  :variant="hasPassword === true ? 'link' : 'solid'"
-                  :block="hasPassword !== true"
-                  :class="
-                    hasPassword === true
-                      ? 'screen-lock-logout-button cursor-pointer text-muted hover:text-primary'
-                      : 'screen-lock-unlock-button'
-                  "
+                  class="screen-lock-logout-button cursor-pointer text-muted hover:text-highlighted"
                   :disabled="busy"
                   @click="confirmLogout = true"
                 >
@@ -376,6 +408,13 @@ onBeforeUnmount(() => {
 }
 .client-lock-shield::backdrop {
   background: var(--app-surface-canvas);
+}
+.screen-lock-form-card .client-lock-setup-button {
+  height: 36px;
+  min-height: 36px;
+}
+.screen-lock-form-card .client-lock-setup-button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--screen-lock-accent) 88%, var(--screen-lock-text));
 }
 </style>
 

@@ -1,17 +1,18 @@
 import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
+import { ref } from "vue";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import source from "~/composables/useDesktopLogin.ts?raw";
 import messages from "../../../i18n/locales/zh.json";
-import source from "./profile.vue?raw";
 
-const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]!;
-const file = ts.createSourceFile("profile.ts", script, ts.ScriptTarget.Latest, true);
-const declaration = file.statements
-  .filter(ts.isVariableStatement)
-  .flatMap((statement) => [...statement.declarationList.declarations])
-  .find((item) => item.name.getText(file) === "handleConfirm")!;
-// Run the real submit handler without mounting the unrelated profile menus and theme controls.
+const file = ts.createSourceFile("useDesktopLogin.ts", source, ts.ScriptTarget.Latest, true);
+const findHandler = (node: ts.Node): ts.VariableDeclaration | undefined => {
+  if (ts.isVariableDeclaration(node) && node.name.getText(file) === "handleConfirm") return node;
+  return ts.forEachChild(node, findHandler);
+};
+const declaration = findHandler(file);
+if (!declaration) throw new Error("Desktop login submit handler was not found");
+// Run the real submit handler inside createSharedComposable without mounting either login panel.
 const { outputText } = ts.transpileModule(`const ${declaration.getText(file)};`, {
   compilerOptions: { module: ts.ModuleKind.CommonJS }
 });
@@ -34,13 +35,14 @@ function createLogin(desktop = true) {
     currentAccountId: ref(""),
     loggedIn: ref(false),
     openModal: ref(true),
-    inputRef: ref(null),
-    siteNameInputRef: ref(null),
+    inlineVisible: ref(false),
+    browserAuthUrl: ref(""),
+    focusInput: vi.fn(),
     t: (key: string) => (key === "Login.InvalidSiteError" ? messages.Login.InvalidSiteError : key),
-    nextTick,
     isDesktopRuntime: () => desktop,
     redirectToWebLogin: vi.fn(),
-    clearLoginBtnUnlockTimer: vi.fn(),
+    listenForLogin: vi.fn(async () => true),
+    stopLoginListeners: vi.fn(),
     useClientCompatibility: () => compatibility,
     desktopInvoke,
     applyLoginPayload: vi.fn(async () => true),
@@ -95,7 +97,7 @@ it.each(["failure", "success"])("shows an error if the login cannot be applied (
   expect(login.errorMessage.value).toBe("Login.LoginFailed");
   expect(login.addErrorToast).toHaveBeenCalled();
   expect(login.loginBtn.value).toBe(false);
-  expect(login.saveRecentSite).not.toHaveBeenCalled();
+  expect(login.saveRecentSite).toHaveBeenCalledExactlyOnceWith("http://localhost:8888");
 });
 
 it.each([null, { status: "stale" }])("keeps cancelled or obsolete requests quiet: %j", async (payload) => {

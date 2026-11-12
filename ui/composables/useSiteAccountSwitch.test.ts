@@ -29,6 +29,7 @@ const asset: AssetItem = {
   isActive: true
 };
 
+vi.stubGlobal("useToast", () => ({ add: accountMocks.toast }));
 const tabs = useWorkspaceTabs();
 const { confirmOpen, confirmLeave } = useSiteAccountSwitch();
 const batchPanel = useBatchCommandPanel();

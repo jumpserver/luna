@@ -31,7 +31,6 @@ import {
   clipboard,
   ClipboardItem,
   dialog,
-  session as electronSession,
   ipcMain,
   Menu,
   nativeImage,
@@ -71,6 +70,7 @@ import {
 import { editCopyAccelerator, menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
+import { certificateSiteOrigin, SiteCertificateService } from "../shared/site-certificates";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
@@ -110,6 +110,8 @@ const lockedWindowCommands = new Set([
   "plugin:os|locale",
   "set_api_org",
   "get_config",
+  "site_certificate_policy",
+  "site_certificate_info",
   "get_ffmpeg_plugin_status",
   "list_system_fonts",
   "api_stream_cancel",
@@ -157,6 +159,8 @@ let trayRecentConnections = [];
 let trayQuickConnectEnabled = false;
 let applicationConfig;
 let authService;
+let siteCertificates: SiteCertificateService;
+const httpConfirmations = new Map<string, Promise<boolean>>();
 let localApplicationLauncher;
 let offlineRecordings;
 let replayTranscoder;
@@ -219,19 +223,29 @@ function installConnectorSessionHooks(targetSession) {
     const requestHeaders = { ...details.requestHeaders };
     void (async () => {
       let isFaceSocket = false;
+      let isConnectorSocket = false;
       try {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
         // Lion is hosted by Koko and needs the same desktop WebSocket origin handling.
+        const isChenSocket = allowedChenOrigins.has(httpOrigin);
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
           allowedKokoOrigins.has(httpOrigin);
         isFaceSocket = isFaceLiveWebSocket(details.url, httpOrigin);
-        if (isKokoSocket || isFaceSocket) {
+        isConnectorSocket = isKokoSocket || isFaceSocket || isChenSocket;
+        if (isConnectorSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
-          // Chromium may omit the target HTTP session for FaceLive's cross-site handshake.
+          // Connector HTTP uses an isolated site session. Supply its cookies to
+          // renderer WebSockets without copying them into the shared default session.
+          const cookies = await siteCertificates.cookiesForUrl(`${httpOrigin}${target.pathname}`);
+          const cookieHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
+          delete requestHeaders[cookieHeader];
+          if (cookies.length) {
+            requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+          }
           if (isFaceSocket) {
             const source = [...windows.values()].find(
               (win) => !win.isDestroyed() && win.webContents.id === details.webContentsId
@@ -240,12 +254,6 @@ function installConnectorSessionHooks(targetSession) {
             const sourceSession = authService.getRequestSession(binding);
             if (normalizedHttpOrigin(sourceSession.origin, "JumpServer site") !== httpOrigin)
               throw new Error("FaceLive endpoint does not match this window's login");
-            const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
-            if (cookies.length) {
-              const cookieHeader =
-                Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
-              requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
-            }
             const bearer = await authService.freshToken(
               sourceSession.origin,
               sourceSession.sessionKey,
@@ -259,7 +267,7 @@ function installConnectorSessionHooks(targetSession) {
           }
         }
       } catch {
-        if (isFaceSocket) {
+        if (isConnectorSocket) {
           callback({ cancel: true });
           return;
         }
@@ -315,8 +323,7 @@ async function proxyChenRequest(request, url) {
     credentials: "include",
     redirect: "manual"
   });
-  // Keep authenticated HTTP and SSE requests on the renderer's shared session.
-  const response = await electronSession.defaultSession.fetch(proxied);
+  const response = await siteCertificates.fetch(proxied);
   const responseHeaders = new Headers(response.headers);
   corsHeaders.forEach((value, name) => responseHeaders.set(name, value));
   return new Response(response.body, {
@@ -1255,6 +1262,53 @@ async function withIpcErrorLog(command, work) {
   }
 }
 
+function certificateMessages() {
+  const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
+  return (
+    {
+      en: enMessages,
+      es: esMessages,
+      fr: frMessages,
+      ja: jaMessages,
+      ko: koMessages,
+      pt_br: ptBrMessages,
+      ru: ruMessages,
+      vi: viMessages,
+      zh: zhMessages,
+      zh_hant: zhHantMessages
+    }[language] || enMessages
+  );
+}
+
+async function confirmHttpConnection(site: string, win: BrowserWindow) {
+  const origin = certificateSiteOrigin(site);
+  if (!siteCertificates.needsHttpConfirmation(origin)) return true;
+  const pending = httpConfirmations.get(origin);
+  if (pending) return pending;
+  const confirmation = (async () => {
+    const messages = certificateMessages();
+    const result = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: messages.SiteCertificate.HttpTitle,
+      message: messages.SiteCertificate.HttpTitle,
+      detail: messages.SiteCertificate.HttpDescription.replace("{site}", origin),
+      buttons: [messages.Common.Cancel, messages.SiteCertificate.HttpContinue],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    });
+    if (result.response !== 1) return false;
+    await siteCertificates.acknowledgeHttp(origin);
+    return true;
+  })();
+  httpConfirmations.set(origin, confirmation);
+  try {
+    return await confirmation;
+  } finally {
+    httpConfirmations.delete(origin);
+  }
+}
+
 async function handleInvoke(event, request) {
   if (!isAllowedSender(event.senderFrame)) {
     electronLog.warn("rejected desktop IPC sender");
@@ -1328,6 +1382,20 @@ async function handleInvoke(event, request) {
     return authService.lockSession(binding, true);
   }
 
+  if (command === "site_certificate_policy") return siteCertificates.policy(args.site);
+  if (command === "site_certificate_info") return siteCertificates.certificateInfo(args.site);
+  if (command === "set_site_certificate_policy") {
+    if (windows.get("main") !== win) throw new Error("Certificate settings require the main window");
+    if (typeof args.verifyCertificate !== "boolean") throw new Error("Invalid certificate verification setting");
+    const policy = siteCertificates.policy(args.site);
+    if (!policy.origin.startsWith("https://")) throw new Error("Certificate verification applies to HTTPS sites only");
+    if (!args.verifyCertificate && args.riskAccepted !== true)
+      throw new Error("Disabling certificate verification requires risk acceptance");
+    const updated = await siteCertificates.setVerification(policy.origin, args.verifyCertificate);
+    emitDesktopEvent("site-certificate-policy-changed", updated);
+    return updated;
+  }
+
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
     const id = nextSubscriptionId++;
@@ -1347,7 +1415,8 @@ async function handleInvoke(event, request) {
         "client-lock-changed",
         "client-policy-notices",
         "client-policy-notice-dismiss",
-        "client-policy-notice-layer"
+        "client-policy-notice-layer",
+        "site-certificate-policy-changed"
       ].includes(args.event)
     )
       throw new Error("Client lock events are owned by the main process");
@@ -1582,11 +1651,16 @@ async function handleInvoke(event, request) {
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId, binding);
   if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
-  if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
+  if (command === "auth_login") {
+    if (!(await confirmHttpConnection(args.site, win))) return { status: "stale" };
+    return withIpcErrorLog("auth_login", () => authService.authLogin(args));
+  }
   if (command === "auth_cancel") return authService.cancelAuth();
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
-  if (command === "bootstrap_auth_session")
+  if (command === "bootstrap_auth_session") {
+    if (!(await confirmHttpConnection(args.site, win))) return { status: "stale" };
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
+  }
   if (command === "api_request") return authService.apiRequest(args.request, binding);
   if (command === "api_stream_start") return startApiStream(event, win, args, binding);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
@@ -1606,7 +1680,7 @@ async function handleInvoke(event, request) {
     if (!ticket || ticket.length > 1024) throw new Error("Invalid export download ticket");
     if (!args.filePath) throw new Error("Export destination is required");
     const filePath = normalizePath(args.filePath);
-    const response = await electronSession.defaultSession.fetch(target, {
+    const response = await siteCertificates.fetch(target, {
       method: "POST",
       redirect: "error",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -1968,12 +2042,21 @@ app.whenReady().then(async () => {
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
-  authService = new DesktopAuthService(emitDesktopEvent);
+  siteCertificates = new SiteCertificateService(
+    path.join(app.getPath("userData"), "site-certificates.json"),
+    (policy) => emitDesktopEvent("site-certificate-policy-changed", policy)
+  );
+  await siteCertificates.initialize();
+  authService = new DesktopAuthService(emitDesktopEvent, (url, init) => siteCertificates.fetch(url, init));
   await authService.initialize();
-  electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
-    // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat
-    // Other hosts (including plugin downloads) must use Chromium's certificate verification.
-    callback(authService.isTrustedSiteHost(request.hostname) ? 0 : -3);
+  // Keep main-process downloads strict. Only our renderer windows can opt into
+  // a user-confirmed exception, scoped to the full request origin (including port).
+  app.on("certificate-error", (event, webContents, url, error, certificate, callback) => {
+    const ownWindow = [...windows.values()].some((win) => !win.isDestroyed() && win.webContents === webContents);
+    if (!ownWindow) return;
+    siteCertificates.rememberCertificate(url, certificate, error);
+    event.preventDefault();
+    callback(siteCertificates.rendererCertificateAllowed(url));
   });
   const quitAfterProtocolLaunch = await drainPendingProtocolUrls();
   if (quitAfterProtocolLaunch) {
