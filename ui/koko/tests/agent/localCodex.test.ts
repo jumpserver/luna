@@ -185,6 +185,75 @@ it("merges events received during catch-up once and filters other sessions", asy
   connection.stop();
   expect(native.listeners.size).toBe(0);
 });
+it("catches up beyond the former event and page limits without buffering or cancelling the turn", async () => {
+  let finish!: (value: unknown) => void;
+  let late = false;
+  const page = (after: number) => {
+    const head = seq;
+    const end = Math.min(after + 128, head);
+    const events = Array.from(
+      { length: end - after },
+      (_, index): AgentEvent => ({
+        seq: after + index + 1,
+        type: "message.delta",
+        session_id: "native-session",
+        resource_session_id: manifest.resourceSessionId,
+        payload: { delta: String(after + index + 1) }
+      })
+    );
+    if (end === head && !late) {
+      late = true;
+      emit("message.delta", { delta: String(seq + 1) });
+    }
+    return { events, next_cursor: end, has_more: end < head };
+  };
+  native.invoke.mockImplementation((command, args) => {
+    if (command !== "local_codex_history") return undefined;
+    if (!finish)
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    return page(args.after);
+  });
+  const events = vi.fn();
+  const unavailable = vi.fn();
+  const connection = new LocalCodexConnection({
+    sessionId: "native-session",
+    resourceSessionId: manifest.resourceSessionId,
+    onEvent: events,
+    onUnavailable: unavailable
+  });
+  const started = connection.start();
+  await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
+  for (let index = 0; index < 4500; index++) emit("message.delta", { delta: String(seq + 1) });
+  finish(page(0));
+  await started;
+  expect(events.mock.calls.map(([event]) => event.seq)).toEqual(Array.from({ length: 4501 }, (_, index) => index + 1));
+  expect(native.invoke.mock.calls.filter(([command]) => command === "local_codex_history").length).toBeGreaterThan(32);
+  expect(unavailable).not.toHaveBeenCalled();
+  expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_cancel")).toBe(false);
+  emit("run.completed");
+  expect(events).toHaveBeenCalledTimes(4502);
+  connection.stop();
+  expect(native.listeners.size).toBe(0);
+});
+
+it("rejects a non-advancing replay cursor instead of polling indefinitely", async () => {
+  native.invoke.mockResolvedValue({ events: [], next_cursor: 0, has_more: true });
+  const unavailable = vi.fn();
+  const connection = new LocalCodexConnection({
+    sessionId: "native-session",
+    resourceSessionId: manifest.resourceSessionId,
+    onEvent: vi.fn(),
+    onUnavailable: unavailable
+  });
+  await connection.start();
+  expect(unavailable).toHaveBeenCalledWith(
+    expect.objectContaining({ message: "Local Codex history cursor did not advance" })
+  );
+  expect(native.listeners.size).toBe(0);
+});
+
 it("changing the selected backend disposes the previous controller and rebinds its manifest", async () => {
   const created: Array<{ options: AgentSessionOptions; controller: AgentSessionController }> = [];
   const factory = (options: AgentSessionOptions): AgentSessionController => {

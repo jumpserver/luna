@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { codexCommand, CodexProcess, probeCodex } from "./process";
+import { CodexEventHistory } from "./history";
 import { DEFAULT_CODEX_SETTINGS } from "../../../ui/shared/codex/types";
 import type {
   CodexCommand,
@@ -59,8 +60,7 @@ interface Session {
   runId: string;
   messageId: string;
   context: Record<string, unknown>;
-  events: AgentEvent[];
-  bytes: number;
+  history: CodexEventHistory;
   seq: number;
   calls: Map<string, ToolCall>;
   messages: Map<string, { fingerprint: string; runId: string }>;
@@ -531,13 +531,7 @@ export class LocalCodexService {
       payload,
       ...extra
     };
-    const bytes = Buffer.byteLength(serialized(event));
-    session.events.push(event);
-    session.bytes += bytes;
-    // ponytail: UI history is in memory, capped at 4096 events / 4 MiB per thread.
-    // Codex owns model context; durable application history can be added separately.
-    while (session.events.length > 4096 || session.bytes > 4 * 1024 * 1024)
-      session.bytes -= Buffer.byteLength(JSON.stringify(session.events.shift()));
+    session.history.append(event, serialized(event));
     this.options.emit(session.ownerId, event);
   }
   async create(ownerId: number, organizationId: string, input: CodexSessionRequest) {
@@ -569,7 +563,6 @@ export class LocalCodexService {
       names.add(tool.name);
     }
     this.options.assertOwner(ownerId, organizationId);
-    if (this.sessions.size >= 12) throw new Error("Close an AI conversation before opening another");
     const session: Session = {
       id: randomUUID(),
       ownerId,
@@ -583,8 +576,7 @@ export class LocalCodexService {
       runId: "",
       messageId: "",
       context: manifest.context || {},
-      events: [],
-      bytes: 0,
+      history: new CodexEventHistory(),
       seq: 0,
       calls: new Map(),
       messages: new Map(),
@@ -640,14 +632,7 @@ export class LocalCodexService {
     const session = this.session(ownerId, organizationId, args);
     const after = args.after ?? 0;
     if (!Number.isSafeInteger(after) || after < 0) throw new Error("Invalid Codex history cursor");
-    if (after && session.events[0] && after < session.events[0].seq - 1)
-      throw new Error("Local Codex history expired; start a new conversation");
-    const events = session.events.filter((event) => event.seq > after).slice(0, 256);
-    return {
-      events,
-      next_cursor: events.at(-1)?.seq ?? after,
-      has_more: events.length > 0 && events.at(-1)!.seq < session.seq
-    };
+    return session.history.read(after);
   }
   context(ownerId: number, organizationId: string, args: CodexCommand) {
     const session = this.session(ownerId, organizationId, args);
@@ -679,8 +664,6 @@ export class LocalCodexService {
       return { message_id: message.message_id, run_id: previous.runId, duplicate: true, cursor: session.seq };
     }
     if (session.runId) throw new Error("Wait for the active Codex turn");
-    if ([...this.sessions.values()].filter((item) => item.runId).length >= 4)
-      throw new Error("Too many active local AI tasks");
     const context = {
       ...session.context,
       ...(message.metadata?.context as Record<string, unknown>),
@@ -1019,6 +1002,7 @@ export class LocalCodexService {
   private remove(session: Session) {
     this.sessions.delete(session.id);
     this.threads.delete(session.threadId);
+    session.history.close();
     if (session.threadId && this.process)
       void this.request("thread/unsubscribe", { threadId: session.threadId }).catch(() => {});
   }
@@ -1055,6 +1039,7 @@ export class LocalCodexService {
     for (const session of this.sessions.values()) {
       this.finish(session, "run.cancelled", "runtime_closed");
       this.push(session, "session.closed");
+      session.history.close();
     }
     this.sessions.clear();
     this.threads.clear();

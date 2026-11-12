@@ -101,8 +101,7 @@ export class LocalCodexConnection implements AgentConnection {
   }
   async start() {
     let catchingUp = true;
-    const buffered: AgentEvent[] = [];
-    let bufferedBytes = 0;
+    let latestSeq = this.cursor;
     const fail = (error: Error) => {
       if (this.stopped) return;
       this.stop();
@@ -117,8 +116,8 @@ export class LocalCodexConnection implements AgentConnection {
         event.seq <= this.cursor
       )
         return;
-      this.cursor = event.seq;
       this.options.onEvent(event);
+      this.cursor = event.seq;
     };
     try {
       const stop = await desktopListen<AgentEvent>("local-codex-event", ({ payload }) => {
@@ -129,12 +128,8 @@ export class LocalCodexConnection implements AgentConnection {
         )
           return;
         try {
-          if (catchingUp) {
-            bufferedBytes += JSON.stringify(payload).length * 2;
-            if (buffered.length >= 4096 || bufferedBytes > 4 * 1024 * 1024)
-              throw new Error("Local Codex event buffer exceeded its limit");
-            buffered.push(payload);
-          } else accept(payload);
+          if (catchingUp) latestSeq = Math.max(latestSeq, payload.seq);
+          else accept(payload);
         } catch (error) {
           fail(error as Error);
         }
@@ -142,14 +137,15 @@ export class LocalCodexConnection implements AgentConnection {
       if (this.stopped) return stop();
       this.unlisten = stop;
       this.options.onState?.("connecting");
-      for (let pages = 0; !this.stopped; pages++) {
-        if (pages >= 32) throw new Error("Local Codex event recovery exceeded its limit");
+      while (!this.stopped) {
+        const after = this.cursor;
         const history = await this.client.history(this.options.sessionId, this.options.resourceSessionId, this.cursor);
+        if (this.stopped) return;
         for (const event of history.events) accept(event);
-        if (!history.has_more) break;
+        if (!history.has_more && this.cursor >= latestSeq) break;
+        if (this.cursor <= after) throw new Error("Local Codex history cursor did not advance");
       }
       catchingUp = false;
-      for (const event of buffered) accept(event);
       if (!this.stopped) this.options.onState?.("connected");
     } catch (error) {
       fail(error as Error);

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { CodexEventHistory } from "../src/codex/history";
 import {
   codexMcpOverrides,
   codexModelConfiguration,
@@ -129,6 +130,82 @@ async function runtime(t: test.TestContext) {
     counts: () => ({ launches, closed })
   };
 }
+
+test("one native process supports more than twelve conversations and four active turns", async (t) => {
+  const r = await runtime(t);
+  const sessions = [];
+  for (let index = 0; index < 13; index++) sessions.push(await r.create());
+  for (const session of sessions) await r.send(session);
+  assert.equal(r.counts().launches, 1);
+  assert.equal(new Set(sessions.map((session) => session.threadId)).size, 13);
+  assert.equal(r.events.filter((item) => item.event.type === "run.started").length, 13);
+  await assert.rejects(r.send(sessions[0], 1, "overlapping-message"), /Wait for the active Codex turn/);
+});
+
+test("history pages old events after cache eviction without an event-count ceiling", (t) => {
+  const history = new CodexEventHistory(1024);
+  t.after(() => history.close());
+  for (let seq = 1; seq <= 4200; seq++) {
+    const event: AgentEvent = { seq, type: "message.delta", payload: { delta: `event-${seq}` } };
+    history.append(event, JSON.stringify(event));
+  }
+  let cursor = 0;
+  let count = 0;
+  for (;;) {
+    const page = history.read(cursor);
+    assert.equal(page.events[0].seq, cursor + 1);
+    count += page.events.length;
+    cursor = page.next_cursor;
+    if (!page.has_more) break;
+  }
+  assert.equal(count, 4200);
+  assert.equal(cursor, 4200);
+  assert.equal(history.read(4199).events[0].payload?.delta, "event-4200");
+});
+
+test("history pages bound response bytes and clean up session-scoped storage", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-history-cleanup-"));
+  const history = new CodexEventHistory(1024, directory);
+  t.after(async () => {
+    history.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+  for (let seq = 1; seq <= 5; seq++) {
+    const event: AgentEvent = { seq, type: "message.delta", payload: { delta: "x".repeat(200 * 1024) } };
+    history.append(event, JSON.stringify(event));
+  }
+  const page = history.read(0);
+  assert.equal(page.events.length, 2);
+  assert.ok(Buffer.byteLength(JSON.stringify(page.events)) < 512 * 1024);
+  assert.equal(page.next_cursor, 2);
+  assert.equal(page.has_more, true);
+  history.close();
+  assert.throws(() => history.read(0), /history is closed/);
+  assert.deepEqual(await readdir(directory), []);
+});
+
+test("evicting recent events does not interrupt the native turn or expire its replay cursor", async (t) => {
+  const r = await runtime(t);
+  const session = await r.create();
+  const run = await r.send(session);
+  for (let index = 0; index < 24; index++)
+    r.receive({
+      method: "item/agentMessage/delta",
+      params: { threadId: session.threadId, itemId: "answer", delta: "x".repeat(200 * 1024) }
+    });
+  const page = r.service.history(1, "org-a", { ...session, after: 1 });
+  assert.equal(page.events[0].seq, 2);
+  assert.equal(page.has_more, true);
+  assert.equal(r.counts().closed, 0);
+  assert.ok(!r.events.some((item) => ["run.failed", "run.cancelled", "session.closed"].includes(item.event.type)));
+  r.call(session.threadId);
+  assert.ok(r.events.some((item) => item.event.type === "tool.call" && item.event.run_id === run.run_id));
+  r.receive({
+    method: "turn/completed",
+    params: { threadId: session.threadId, turn: { id: "turn-1", status: "completed" } }
+  });
+  assert.ok(r.events.some((item) => item.event.type === "run.completed" && item.event.run_id === run.run_id));
+});
 
 test("native threads reuse one process and round-trip only registered workspace tools", async (t) => {
   const r = await runtime(t);
