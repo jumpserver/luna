@@ -8,6 +8,7 @@ import {
   SettingsAppearancePage,
   SettingsApplicationPage,
   SettingsGeneralPage,
+  SettingsLocalAiPage,
   SettingsShortcutsPage,
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
@@ -52,6 +53,7 @@ const { recentConnections } = useRecentConnections();
 const settingsSectionPages = {
   user: SettingsUserPage,
   general: SettingsGeneralPage,
+  "local-ai": SettingsLocalAiPage,
   shortcuts: SettingsShortcutsPage,
   appearance: SettingsAppearancePage,
   application: SettingsApplicationPage,

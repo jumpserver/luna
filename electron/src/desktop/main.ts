@@ -39,6 +39,7 @@ import {
   Notification,
   powerMonitor,
   protocol,
+  safeStorage,
   shell,
   Tray
 } from "electron";
@@ -76,6 +77,7 @@ import { resolveExecutablePath } from "./executable-path";
 import { chenExportTarget, saveChenDownload } from "./chen-export";
 import { createHash } from "node:crypto";
 import { LocalCodexService } from "../codex/service";
+import { CodexInstallation } from "../codex/installation";
 import type { ClientSessionBinding } from "../auth/service";
 import { ClipboardHistoryService } from "./clipboard-history";
 import { ClientPolicyNoticeLayers } from "./client-policy-notices";
@@ -130,6 +132,18 @@ const lockedWindowCommands = new Set([
   "cancel_transcode"
 ]);
 const codexHosts = new Map<ClientSessionBinding, LocalCodexService>();
+const codexInstallation = new CodexInstallation(
+  path.join(app.getPath("userData"), "codex-runtime"),
+  (url, init) => net.fetch(url, init),
+  (status) => emitDesktopEvent("local-codex-runtime", status)
+);
+function requireCodexKeyStorage() {
+  if (
+    !safeStorage.isEncryptionAvailable() ||
+    (process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text")
+  )
+    throw new Error("OS encrypted credential storage is unavailable; use your existing Codex configuration");
+}
 const subscriptions = new Map();
 const stores = new Map();
 let shortcutOverrides: ShortcutOverrides = {};
@@ -1396,11 +1410,29 @@ async function handleInvoke(event, request) {
     if (!binding) throw new Error("Local AI requires a current login");
     const authenticated = authService.getBoundSession(binding);
     if (windowSessionBindings.get(event.sender) !== binding) throw new Error("Local AI login changed");
+    if (command === "local_codex_runtime_status") return codexInstallation.status();
+    if (command === "local_codex_install") {
+      if (label !== "main" && !label.startsWith("settings"))
+        throw new Error("Install the AI engine from the settings window");
+      return codexInstallation.install();
+    }
     let host = codexHosts.get(binding);
     if (!host) {
       const scope = createHash("sha256").update(`${binding.origin}\0${binding.sessionKey}`).digest("hex");
       host = new LocalCodexService({
         directory: path.join(app.getPath("userData"), "local-codex", scope),
+        runtime: codexInstallation,
+        fetch: (url, init) => net.fetch(url, init),
+        secrets: {
+          encrypt(value) {
+            requireCodexKeyStorage();
+            return safeStorage.encryptString(value).toString("base64");
+          },
+          decrypt(value) {
+            requireCodexKeyStorage();
+            return safeStorage.decryptString(Buffer.from(value, "base64"));
+          }
+        },
         assertOwner(ownerId, organizationId) {
           const target = [...windows.values()].find(
             (candidate) => candidate.webContents.id === ownerId && !candidate.isDestroyed()
@@ -1438,6 +1470,11 @@ async function handleInvoke(event, request) {
     }
     if (command === "local_codex_probe") return host.probe(args.settings);
     const organizationId = authenticated.orgId || "";
+    if (command === "local_codex_models") return host.models(event.sender.id, organizationId, args.settings);
+    if (command === "local_codex_test") {
+      authService.getRequestSession(binding);
+      return host.testConnection(event.sender.id, organizationId, args.settings);
+    }
     if (command === "local_codex_create") {
       if (label !== "main" && !label.startsWith("asset-")) throw new Error("AI sessions require a workspace window");
       return host.create(event.sender.id, organizationId, args.input);
@@ -1488,6 +1525,7 @@ async function handleInvoke(event, request) {
       [
         "local-codex-event",
         "local-codex-settings",
+        "local-codex-runtime",
         "client-lock-state",
         "client-lock-changed",
         "client-policy-notices",
@@ -2096,6 +2134,7 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("will-quit", () => {
+  codexInstallation.cancel();
   for (const host of codexHosts.values()) host.close();
   codexHosts.clear();
   clipboardHistory.stop();

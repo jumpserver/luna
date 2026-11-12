@@ -18,6 +18,7 @@ const props = withDefaults(
 const route = useRoute();
 const localePath = useLocalePath();
 const { t } = useI18n();
+const { t: localAiText } = useLocalAiMessages();
 const { isMacOS } = usePlatform();
 const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
@@ -45,6 +46,15 @@ const sectionDefs = computed(() => {
       routeName: "setting-general",
       desktopOnly: false,
       authenticatedOnly: false
+    },
+    {
+      key: "local-ai" as const,
+      label: localAiText("title"),
+      description: localAiText("hint"),
+      icon: "i-lucide-bot",
+      routeName: "setting-local-ai",
+      desktopOnly: true,
+      authenticatedOnly: true
     },
     {
       key: "appearance" as const,
@@ -129,12 +139,12 @@ watch(
   (value) => {
     if (!import.meta.client || value) return;
 
-    if (props.mode === "inline" && inlineActiveSection.value === "user") {
+    if (props.mode === "inline" && ["user", "local-ai"].includes(inlineActiveSection.value)) {
       inlineActiveSection.value = "general";
       return;
     }
 
-    if (props.mode === "route" && route.path.startsWith("/setting/user")) {
+    if (props.mode === "route" && /^\/setting\/(?:user|local-ai)(?:\/|$)/.test(route.path)) {
       void navigateTo(localePath({ name: "setting-general" }), { replace: true });
     }
   },

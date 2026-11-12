@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { LocalCodexService, validateCodexSettings } from "../src/codex/service";
+import {
+  codexMcpOverrides,
+  codexModelConfiguration,
+  LocalCodexService,
+  validateCodexSettings
+} from "../src/codex/service";
+import { DEFAULT_CODEX_SETTINGS } from "../../ui/shared/codex/types";
 import type { AgentEvent, AgentMcpManifest } from "../../ui/koko/composables/agent/types";
 
 async function runtime(t: test.TestContext) {
@@ -38,6 +44,19 @@ async function runtime(t: test.TestContext) {
           else if (message.method === "thread/start") {
             const id = `thread-${++thread}`;
             queueMicrotask(() => receive({ id: message.id, result: { thread: { id } } }));
+          } else if (message.method === "model/list") {
+            const first = !message.params.cursor;
+            queueMicrotask(() =>
+              receive({
+                id: message.id,
+                result: {
+                  data: first
+                    ? [{ id: "catalog-id", model: "native-model", displayName: "Native", isDefault: true }]
+                    : [{ id: "another-model", model: "another-model" }],
+                  nextCursor: first ? "next-model-page" : null
+                }
+              })
+            );
           } else if (message.method === "turn/start")
             queueMicrotask(() => {
               const turnId = `turn-${++turn}`;
@@ -359,4 +378,203 @@ test("database metadata still requires consent when the tool advertises read-onl
   r.call("thread-1", "database_schema");
   assert.ok(r.events.some((item) => item.event.type === "approval.requested"));
   assert.ok(!r.events.some((item) => item.event.type === "tool.call"));
+});
+
+test("legacy settings retain the user's CLI, while API credentials remain encrypted and never enter arguments", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-settings-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const legacy = validateCodexSettings({ enabled: true, executable: "codex", model: "" });
+  assert.equal(legacy.runtime, "system");
+  assert.equal(legacy.connection, "existing");
+  const service = new LocalCodexService({
+    directory,
+    assertOwner() {},
+    emit() {},
+    secrets: {
+      encrypt: (value) => Buffer.from(value).toString("base64"),
+      decrypt: (value) => Buffer.from(value, "base64").toString()
+    }
+  });
+  const secret = "private-test-api-key";
+  const input = { ...DEFAULT_CODEX_SETTINGS, runtime: "system" as const, model: "configured-model", apiKey: secret };
+  const saved = await service.configure(input);
+  assert.equal(saved.hasApiKey, true);
+  assert.ok(!JSON.stringify(saved).includes(secret));
+  assert.ok(!(await readFile(path.join(directory, "settings.json"), "utf8")).includes(secret));
+  const launch = codexModelConfiguration(saved, directory, secret);
+  assert.equal(launch.env.LUNA_CODEX_API_KEY, secret);
+  assert.equal(launch.env.OPENAI_API_KEY, undefined);
+  assert.equal(launch.env.CODEX_HOME, path.join(directory, "codex-home"));
+  assert.ok(!launch.overrides.join(" ").includes(secret));
+  assert.equal((await service.configure({ ...saved, apiKey: "" })).hasApiKey, true);
+  await assert.rejects(
+    service.configure({ ...saved, enabled: true, baseUrl: "https://another-service.test/v1" }),
+    /API key/
+  );
+  assert.equal((await service.configure({ ...saved, clearApiKey: true })).hasApiKey, false);
+  assert.throws(() => validateCodexSettings({ ...input, baseUrl: "https://user:secret@model.test/v1" }));
+});
+
+test("connection tests use an ephemeral thread with no workspace tools and preserve the current conversation", async (t) => {
+  const r = await runtime(t);
+  await r.create();
+  const events = r.events.length;
+  const checking = r.service.testConnection(1, "org-a", { enabled: false, executable: "codex", model: "" });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(r.writes.filter((item) => item.method === "thread/start").at(-1).params.dynamicTools, []);
+  r.receive({
+    method: "turn/completed",
+    params: { threadId: "thread-2", turn: { id: "turn-1", status: "completed" } }
+  });
+  assert.deepEqual(await checking, { connected: true });
+  assert.equal(r.events.length, events);
+  assert.equal(r.counts().closed, 1);
+});
+
+test("provider startup errors cannot return the stored API key", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-key-error-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const secret = "private-provider-key";
+  const service = new LocalCodexService({
+    directory,
+    assertOwner() {},
+    emit() {},
+    secrets: {
+      encrypt: (value) => Buffer.from(value).toString("base64"),
+      decrypt: (value) => Buffer.from(value, "base64").toString()
+    },
+    async launch() {
+      throw new Error(`Provider rejected ${secret}`);
+    }
+  });
+  await service.configure({
+    ...DEFAULT_CODEX_SETTINGS,
+    enabled: true,
+    runtime: "system",
+    model: "configured-model",
+    apiKey: secret
+  });
+  await assert.rejects(
+    service.create(1, "org", {
+      manifest: { profile: "workspace", resourceSessionId: "key-test", revision: 1, tools: [] },
+      approvalMode: "always"
+    }),
+    (error: Error) => error.message.includes("[redacted]") && !error.message.includes(secret)
+  );
+});
+
+test("MCP isolation disables complete transports without copying their credentials into arguments", () => {
+  const secret = "private-mcp-credential";
+  const overrides = codexMcpOverrides([
+    { name: "codex_app", transport: { command: "private-server", env: { TOKEN: secret } } },
+    { name: "server.with-dots", transport: { url: `https://private.test/${secret}` } }
+  ]);
+  assert.equal(overrides.length, 1);
+  assert.ok(overrides[0].includes('"codex_app"={command="luna-disabled-mcp",enabled=false}'));
+  assert.ok(overrides[0].includes('"server.with-dots"={command="luna-disabled-mcp",enabled=false}'));
+  assert.ok(!overrides[0].includes(secret));
+  assert.ok(!overrides[0].includes("private-server"));
+});
+
+test("connection tests preserve the original process failure while initialization is pending", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-startup-error-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const service = new LocalCodexService({
+    directory,
+    assertOwner() {},
+    emit() {},
+    async launch(_settings, _receive, failed) {
+      return {
+        async write(message) {
+          if ((message as { method?: string }).method === "initialize")
+            failed(new Error("Native Codex configuration failed"));
+        },
+        close() {}
+      };
+    }
+  });
+  t.after(() => service.close());
+  await assert.rejects(
+    service.testConnection(1, "org", { enabled: false, executable: "codex", model: "" }),
+    /Native Codex configuration failed/
+  );
+});
+
+test("API model discovery uses draft credentials without an installed runtime or selected model", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-models-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const key = "private-model-list-key";
+  const service = new LocalCodexService({
+    directory,
+    assertOwner() {},
+    emit() {},
+    secrets: {
+      encrypt: (value) => Buffer.from(value).toString("base64"),
+      decrypt: (value) => Buffer.from(value, "base64").toString()
+    },
+    async fetch(url, init) {
+      assert.equal(url, "https://models.test/v1/models");
+      assert.equal(new Headers(init.headers).get("Authorization"), `Bearer ${key}`);
+      assert.equal(init.redirect, "error");
+      return Response.json({ data: [{ id: "service-model" }, { id: "service-model" }, { id: "another-model" }] });
+    }
+  });
+  t.after(() => service.close());
+  const draft = { ...DEFAULT_CODEX_SETTINGS, enabled: true, baseUrl: "https://models.test/v1/", apiKey: key };
+  assert.deepEqual(await service.models(1, "org", draft), [
+    { id: "service-model", name: "service-model", isDefault: false },
+    { id: "another-model", name: "another-model", isDefault: false }
+  ]);
+  assert.equal((await service.configuration()).hasApiKey, false);
+  await assert.rejects(readFile(path.join(directory, "settings.json")), { code: "ENOENT" });
+});
+
+test("model discovery does not forward a saved key to a different endpoint and redacts failures", async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-model-key-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const key = "saved-model-list-key";
+  let requests = 0;
+  const service = new LocalCodexService({
+    directory,
+    assertOwner() {},
+    emit() {},
+    secrets: {
+      encrypt: (value) => Buffer.from(value).toString("base64"),
+      decrypt: (value) => Buffer.from(value, "base64").toString()
+    },
+    async fetch() {
+      requests++;
+      throw new Error(`Request failed: ${key}`);
+    }
+  });
+  t.after(() => service.close());
+  const settings = { ...DEFAULT_CODEX_SETTINGS, baseUrl: "https://models.test/v1", apiKey: key };
+  await service.configure(settings);
+  await assert.rejects(
+    service.models(1, "org", { ...settings, baseUrl: "https://another.test/v1", apiKey: "" }),
+    /Enter an API key/
+  );
+  assert.equal(requests, 0);
+  await assert.rejects(
+    service.models(1, "org", { ...settings, apiKey: "" }),
+    (error: Error) => error.message.includes("[redacted]") && !error.message.includes(key)
+  );
+});
+
+test("existing configuration discovers paginated native models without creating a conversation", async (t) => {
+  const r = await runtime(t);
+  const settings = await r.service.configuration();
+  assert.deepEqual(await r.service.models(1, "org-a", settings), [
+    { id: "native-model", name: "Native", isDefault: true },
+    { id: "another-model", name: "another-model", isDefault: false }
+  ]);
+  assert.equal(r.writes.filter((write) => write.method === "model/list").length, 2);
+  assert.equal(
+    r.writes.some((write) => write.method === "thread/start"),
+    false
+  );
+  assert.deepEqual(await r.service.configuration(), settings);
+  assert.deepEqual(r.counts(), { launches: 1, closed: 1 });
+  const session = await r.create();
+  await r.send(session);
 });
