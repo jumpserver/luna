@@ -2,21 +2,23 @@ import {
   Component,
   Input,
   OnChanges,
-  OnInit,
   AfterViewInit,
   SimpleChanges,
   ViewEncapsulation,
   OnDestroy,
   Output,
-  EventEmitter
+  EventEmitter,
+  ElementRef,
+  NgZone
 } from '@angular/core';
-import Guacamole from 'guacamole-common-js';
+import Guacamole from '@guacamole';
 import { Command, Replay } from '@app/model';
 import { HttpService } from '@app/services';
 import { formatTime } from '@app/utils/common';
 import { TranslateService } from '@ngx-translate/core';
 import { fromEvent, Observable, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { createRecordingSource } from './recording-source';
 
 @Component({
   standalone: false,
@@ -25,16 +27,15 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   styleUrls: ['guacamole.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class ElementReplayGuacamoleComponent
-  implements OnInit, OnChanges, AfterViewInit, OnDestroy
-{
+export class ElementReplayGuacamoleComponent implements OnChanges, AfterViewInit, OnDestroy {
   isPlaying = false;
   isSeeking = false;
-  recording: any;
+  recording: Guacamole.SessionRecording;
   playerRef: any;
   displayRef: any;
   screenRef: any;
-  recordingDisplay: any;
+  recordingDisplay: Guacamole.Display;
+  recordingError = '';
   resizeObserver: any;
   max = 100;
   percent = 0;
@@ -48,43 +49,56 @@ export class ElementReplayGuacamoleComponent
   leftInfo = null;
   winSizeChange$: Observable<any>;
   winSizeSub: Subscription;
-  firstLoad = true;
   rangeHideClass = 'hideCursor';
-  lastDuration: number = 0;
-  interval: number;
   initializedCommand: boolean = false;
   commandsCollapsed: boolean = false;
+  private subscriptions = new Subscription();
+  private playbackIntent = true;
+  private recordingLoaded = false;
+  private pendingSeek: number = null;
+  private seekSequence = 0;
+  private durationUpdatedAt = 0;
+  private positionUpdatedAt = 0;
+  private viewInitialized = false;
+  private destroyed = false;
+  private initializeTimer: ReturnType<typeof setTimeout>;
+  private scaleTimers = new Set<ReturnType<typeof setTimeout>>();
 
   @Output() ready = new EventEmitter<void>();
 
   constructor(
     private _http: HttpService,
-    private _translate: TranslateService
+    private _translate: TranslateService,
+    private _zone: NgZone,
+    private _element: ElementRef<HTMLElement>
   ) {}
 
-  ngOnInit() {
-    this.initialize();
-  }
-
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['replay'] && changes['replay'].currentValue) {
+    if (this.viewInitialized && !this.destroyed && changes['replay']) {
       this.destroy();
 
-      setTimeout(() => {
+      this.initializeTimer = setTimeout(() => {
+        this.initializeTimer = null;
         this.initialize();
       }, 50);
     }
   }
 
   ngAfterViewInit() {
+    this.viewInitialized = true;
+    this.initialize();
     this.applyScaleWithRetry(500);
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     this.destroy();
   }
 
   initialize() {
+    if (this.destroyed || this.recording) {
+      return;
+    }
     if (!this.replay || !this.replay.src) {
       return alert('Not found replay');
     }
@@ -95,44 +109,46 @@ export class ElementReplayGuacamoleComponent
     this.startTime = this.toSafeLocalDateStr(date);
     this.startTimeStamp = Date.parse(this.replay.date_start);
 
-    this.playerRef = document.getElementById('player');
-    this.displayRef = document.getElementById('display');
-    this.screenRef = document.getElementById('screen');
+    this.playerRef = this._element.nativeElement.querySelector('#player');
+    this.displayRef = this._element.nativeElement.querySelector('.display');
+    this.screenRef = this._element.nativeElement.querySelector('#screen');
 
     if (!this.screenRef) {
       return;
     }
 
+    this.playbackIntent = true;
     try {
-      const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
-      this.recording = new Guacamole.SessionRecording(tunnel);
-      this.recordingDisplay = this.recording.getDisplay();
-      const recordingElement = this.recordingDisplay.getElement();
-
-      recordingElement.style.margin = '0 auto';
-
-      this.screenRef.appendChild(recordingElement);
-
-      this.initRecording();
+      this._zone.runOutsideAngular(() => {
+        this.recording = new Guacamole.SessionRecording(createRecordingSource(this.replay.src));
+        this.recordingDisplay = this.recording.getDisplay();
+        const recordingElement = this.recordingDisplay.getElement();
+        recordingElement.style.margin = '0 auto';
+        this.screenRef.appendChild(recordingElement);
+        this.initRecording();
+      });
 
       if (!this.initializedCommand) {
         this.getCommands(this.page);
         this.initializedCommand = true;
       }
 
-      this._translate.get('LeftInfo').subscribe((res: string) => {
-        this.leftInfo = res;
-      });
+      this.subscriptions.add(
+        this._translate.get('LeftInfo').subscribe((res: string) => {
+          this.leftInfo = res;
+        })
+      );
 
       this.winSizeChange$ = fromEvent(window, 'resize').pipe(
         debounceTime(300),
         distinctUntilChanged()
       );
       this.winSizeSub = this.winSizeChange$.subscribe(() => {
-        if (this.recordingDisplay && this.screenRef) {
+        if (this.recordingDisplay && this.screenRef && !this.recordingError) {
           this.applyScaleWithRetry(300);
         }
       });
+      this.subscriptions.add(this.winSizeSub);
 
       // 监听容器尺寸变化，避免侧栏展开/收起或布局变化时未触发 window.resize 的情况
       if ('ResizeObserver' in window && this.screenRef) {
@@ -150,43 +166,46 @@ export class ElementReplayGuacamoleComponent
         this.initTouchEvents();
       }
     } catch (error) {
-      throw new Error(error);
+      this.onRecordingError(error.message || String(error));
     }
   }
 
   initRecording() {
     this.recording.onload = () => {
+      this.recordingLoaded = true;
+      this.updateDuration(this.recording.getDuration(), true);
+      this._zone.run(() => (this.rangeHideClass = ''));
+      this.flushPendingSeek();
+      this.tryPlay();
       this.applyScaleWithRetry(200);
     };
 
     this.recording.onplay = () => {
-      this.isPlaying = true;
-      try {
+      this._zone.run(() => {
+        this.isPlaying = true;
         this.ready.emit();
-      } catch (e) {}
+      });
       this.applyScaleWithRetry(100);
     };
 
     this.recording.onseek = millis => {
-      this.position = formatTime(millis);
-      this.percent = millis;
+      this.updatePosition(millis);
     };
 
     this.recording.onprogress = millis => {
-      if (millis >= this.max) {
-        this.duration = formatTime(millis);
-        this.max = millis;
-      }
-      if (this.firstLoad) {
-        this.recording.play();
-        this.firstLoad = false;
-        this.applyScaleWithRetry(300);
-      }
+      this.updateDuration(millis);
+      this.flushPendingSeek();
+      this.tryPlay();
     };
 
     this.recording.onpause = () => {
-      this.isPlaying = false;
+      this._zone.run(() => (this.isPlaying = false));
+      if (!this.isSeeking) {
+        this.updatePosition(this.recording.getPosition(), true);
+      }
     };
+
+    this.recording.onerror = message => this.onRecordingError(message);
 
     this.recordingDisplay.onresize = (width, height) => {
       // Do not scale if displayRef has no width
@@ -195,45 +214,88 @@ export class ElementReplayGuacamoleComponent
       }
       this.applyScaleWithRetry(100);
     };
-
-    clearInterval(this.interval);
-
-    // @ts-ignore
-    this.interval = setInterval(() => {
-      if (this.lastDuration === this.max) {
-        clearInterval(this.interval);
-        this.rangeHideClass = '';
-      } else {
-        this.lastDuration = this.max;
-      }
-    }, 1000);
-
-    this.recording.connect('');
-    this.safeAutoplayWithRetry();
   }
 
-  private safeAutoplayWithRetry(maxRetry: number = 5, delayMs: number = 500) {
-    let attempts = 0;
+  private updateDuration(millis: number, force = false) {
+    const now = Date.now();
+    if (!force && now - this.durationUpdatedAt < 100) {
+      return;
+    }
+    this.durationUpdatedAt = now;
+    this._zone.run(() => {
+      this.duration = formatTime(millis);
+      this.max = millis;
+    });
+  }
 
-    const tryPlay = () => {
-      if (!this.recording) return;
+  private updatePosition(millis: number, force = false) {
+    const now = Date.now();
+    if (!force && now - this.positionUpdatedAt < 100) {
+      return;
+    }
+    this.positionUpdatedAt = now;
+    this._zone.run(() => {
+      this.position = formatTime(millis);
+      this.percent = millis;
+    });
+  }
 
-      try {
-        if (!this.recording.isPlaying()) {
-          this.recording.play();
-        }
-      } catch (e) {
-        console.error(e);
+  private tryPlay() {
+    if (
+      this.recording &&
+      !this.recordingError &&
+      this.playbackIntent &&
+      !this.isSeeking &&
+      !this.recording.isPlaying()
+    ) {
+      this._zone.runOutsideAngular(() => this.recording.play());
+    }
+  }
+
+  private flushPendingSeek() {
+    if (this.pendingSeek === null || !this.recording || this.recordingError) {
+      return;
+    }
+    const duration = this.recording.getDuration();
+    if (!this.recordingLoaded && duration < this.pendingSeek) {
+      return;
+    }
+    const target = Math.min(this.pendingSeek, duration);
+    const sequence = this.seekSequence;
+    this.pendingSeek = null;
+    const complete = () => {
+      if (!this.recording || sequence !== this.seekSequence) {
+        return;
       }
-
-      if (this.recording && !this.recording.isPlaying() && attempts < maxRetry) {
-        attempts++;
-        setTimeout(tryPlay, delayMs);
-      } else if (this.recording && this.recording.isPlaying()) {
-      }
+      this.finishSeek();
+      this.updatePosition(this.recording.getPosition(), true);
+      this.tryPlay();
     };
+    if (duration <= 0) {
+      complete();
+    } else {
+      this._zone.runOutsideAngular(() => this.recording.seek(target, complete));
+    }
+  }
 
-    tryPlay();
+  private finishSeek() {
+    this.pendingSeek = null;
+    this._zone.run(() => (this.isSeeking = false));
+    if (this.playerRef) {
+      this.playerRef.classList.remove('seeking');
+    }
+  }
+
+  private onRecordingError(message: string) {
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
+    this._zone.run(() => {
+      this.recordingError = message || 'Failed to load recording.';
+      this.isPlaying = false;
+      this.rangeHideClass = '';
+      this.ready.emit();
+    });
   }
 
   private applyScaleWithRetry(delay: number = 100, maxRetries: number = 5) {
@@ -250,7 +312,7 @@ export class ElementReplayGuacamoleComponent
           return true;
         } else if (retryCount < maxRetries) {
           retryCount++;
-          setTimeout(tryApplyScale, delay);
+          this.scheduleScale(tryApplyScale, delay);
           return false;
         } else {
           return false;
@@ -259,17 +321,39 @@ export class ElementReplayGuacamoleComponent
       return false;
     };
 
-    setTimeout(tryApplyScale, delay);
+    this.scheduleScale(tryApplyScale, delay);
+  }
+
+  private scheduleScale(callback: () => void, delay: number) {
+    if (this.destroyed || this.recordingError) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      this.scaleTimers.delete(timer);
+      callback();
+    }, delay);
+    this.scaleTimers.add(timer);
   }
 
   destroy() {
+    clearTimeout(this.initializeTimer);
+    this.initializeTimer = null;
+    this.scaleTimers.forEach(timer => clearTimeout(timer));
+    this.scaleTimers.clear();
+    this.subscriptions.unsubscribe();
+    this.subscriptions = new Subscription();
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
     if (this.recording) {
+      this.recording.onload = null;
       this.recording.onplay = null;
       this.recording.onseek = null;
       this.recording.onprogress = null;
       this.recording.onpause = null;
+      this.recording.onerror = null;
       this.recordingDisplay.onresize = null;
-      this.recording.disconnect();
+      this.recording.dispose();
       this.recording = null;
     }
 
@@ -285,11 +369,6 @@ export class ElementReplayGuacamoleComponent
       this.winSizeSub.unsubscribe();
       this.winSizeSub = null;
     }
-    if (this.interval) {
-      clearInterval(this.interval);
-    }
-    this.interval = null;
-
     if (this.resizeObserver) {
       try {
         this.resizeObserver.disconnect();
@@ -311,9 +390,11 @@ export class ElementReplayGuacamoleComponent
     this.commands = [];
     this.page = 0;
     this.leftInfo = null;
-    this.firstLoad = true;
+    this.recordingError = '';
+    this.recordingLoaded = false;
     this.rangeHideClass = 'hideCursor';
-    this.lastDuration = 0;
+    this.durationUpdatedAt = 0;
+    this.positionUpdatedAt = 0;
     this.initializedCommand = false;
   }
 
@@ -362,51 +443,49 @@ export class ElementReplayGuacamoleComponent
     return date_s.split('/').join('-');
   }
 
-  setDisableStatusSiderElement(disable: boolean) {
-    const sliderElement = document.getElementById('position-slider') as HTMLInputElement;
-    sliderElement.disabled = disable;
-  }
-
   runFrom() {
-    this.setDisableStatusSiderElement(true);
+    if (!this.recording || this.recordingError) {
+      return;
+    }
+    this.seekSequence++;
+    const target = Math.max(0, Number(this.percent) || 0);
     this.isSeeking = true;
-
-    this.recording.seek(this.percent, () => {
-      this.playerRef.classList.remove('seeking');
-      this.isSeeking = false;
-      this.setDisableStatusSiderElement(false);
-    });
-
-    // Seek is in progress
+    this.recording.pause();
+    this.pendingSeek = target;
     this.playerRef.classList.add('seeking');
+    this.flushPendingSeek();
   }
 
   cancelSeek(e) {
-    this.recording.play();
-    this.playerRef.classList.remove('seeking');
-    this.isSeeking = false;
+    this.seekSequence++;
+    if (this.recording && !this.recordingError) {
+      this.recording.cancel();
+      this.updatePosition(this.recording.getPosition(), true);
+    }
+    this.finishSeek();
+    this.tryPlay();
     e.stopPropagation();
-    this.setDisableStatusSiderElement(false);
   }
 
   play() {
-    if (!this.recording.isPlaying()) {
-      this.recording.play();
-      this.isPlaying = true;
-      // 延迟应用缩放，确保播放状态已更新
-      this.applyScaleWithRetry(100);
-    }
+    this.playbackIntent = true;
+    this.tryPlay();
   }
 
   pause() {
-    if (this.recording.isPlaying()) {
+    this.playbackIntent = false;
+    this.seekSequence++;
+    this.finishSeek();
+    if (this.recording && !this.recordingError) {
       this.recording.pause();
-      this.isPlaying = false;
     }
   }
 
   toggle() {
-    if (!this.recording.isPlaying()) {
+    if (!this.recording || this.recordingError) {
+      return;
+    }
+    if (!this.playbackIntent) {
       this.play();
     } else {
       this.pause();
@@ -418,19 +497,21 @@ export class ElementReplayGuacamoleComponent
       return;
     }
 
-    this._http.getCommandsData(this.replay.id, page).subscribe(
-      data => {
-        const results = data.results;
+    this.subscriptions.add(
+      this._http.getCommandsData(this.replay.id, page).subscribe(
+        data => {
+          const results = data.results;
 
-        results.forEach((element: any) => {
-          element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
-        });
+          results.forEach((element: any) => {
+            element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
+          });
 
-        this.commands = this.commands.concat(results);
-      },
-      err => {
-        alert('没找到命令记录');
-      }
+          this.commands = this.commands.concat(results);
+        },
+        err => {
+          alert('没找到命令记录');
+        }
+      )
     );
   }
 
@@ -453,7 +534,7 @@ export class ElementReplayGuacamoleComponent
   }
 
   private initTouchEvents() {
-    const screen = document.getElementById('screen');
+    const screen = this.screenRef;
 
     if (!screen) {
       return;
@@ -463,20 +544,20 @@ export class ElementReplayGuacamoleComponent
     let touchStartY = 0;
     let touchStartTime = 0;
 
-    screen.addEventListener('touchstart', (e: TouchEvent) => {
+    const touchStart = (e: TouchEvent) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchStartTime = Date.now();
-    });
+    };
 
-    screen.addEventListener('touchmove', (e: TouchEvent) => {
+    const touchMove = (e: TouchEvent) => {
       // 防止页面滚动
       if (Math.abs(e.touches[0].clientY - touchStartY) > 10) {
         e.preventDefault();
       }
-    });
+    };
 
-    screen.addEventListener('touchend', (e: TouchEvent) => {
+    const touchEnd = (e: TouchEvent) => {
       const touchEndX = e.changedTouches[0].clientX;
       const touchEndY = e.changedTouches[0].clientY;
       const touchEndTime = Date.now();
@@ -487,7 +568,8 @@ export class ElementReplayGuacamoleComponent
 
       // 点击判定
       if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && deltaTime < 200) {
-        this.toggle();
+        // The screen's click handler handles taps, including synthetic mobile clicks.
+        return;
       }
 
       // 左右滑动判定
@@ -502,6 +584,14 @@ export class ElementReplayGuacamoleComponent
         }
         this.runFrom();
       }
+    };
+    screen.addEventListener('touchstart', touchStart);
+    screen.addEventListener('touchmove', touchMove, { passive: false });
+    screen.addEventListener('touchend', touchEnd);
+    this.subscriptions.add(() => {
+      screen.removeEventListener('touchstart', touchStart);
+      screen.removeEventListener('touchmove', touchMove);
+      screen.removeEventListener('touchend', touchEnd);
     });
   }
 

@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../out-tsc/guacamole-spec",
+    "target": "ES2022",
+    "types": ["jasmine"]
+  },
+  "files": ["test-guacamole.ts"],
+  "include": ["app/elements/replay/guacamole/**/*.spec.ts", "**/*.d.ts"]
+}

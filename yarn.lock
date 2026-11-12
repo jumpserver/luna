@@ -8295,13 +8295,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"guacamole-common-js@npm:^1.5.0":
-  version: 1.5.0
-  resolution: "guacamole-common-js@npm:1.5.0"
-  checksum: 10c0/680c8c6edfe7141899c77de1b3d26de1bdc7f19f221ba00acbc48bd8271773066ec2d235fbc53abf23ce5276fc0f4b65fad51111a6baa3f40c2373f77d3a1a3a
-  languageName: node
-  linkType: hard
-
 "handle-thing@npm:^2.0.0":
   version: 2.0.1
   resolution: "handle-thing@npm:2.0.1"
@@ -9723,7 +9716,6 @@ __metadata:
     eslint: "npm:^9.27.0"
     file-input-accessor: "npm:^19.0.0"
     font-awesome: "npm:^4.7.0"
-    guacamole-common-js: "npm:^1.5.0"
     jasmine-core: "npm:^5.1.1"
     jasmine-spec-reporter: "npm:^7.0.0"
     jquery: "npm:^3.7.1"

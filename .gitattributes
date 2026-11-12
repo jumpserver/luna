@@ -1,0 +1,5 @@
+vendor/guacamole/** text eol=lf
+# Preserve pinned upstream bytes and unified-diff context whitespace.
+vendor/guacamole/upstream/** -whitespace
+vendor/guacamole/patches/** -whitespace
+vendor/guacamole/LICENSE -whitespace

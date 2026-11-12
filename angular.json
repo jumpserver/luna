@@ -120,6 +120,18 @@
             "buildTarget": "Luna:build"
           }
         },
+        "test-guacamole": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "src/test-guacamole.ts",
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "src/tsconfig.guacamole-spec.json",
+            "karmaConfig": "karma.guacamole.conf.cjs",
+            "include": ["src/app/elements/replay/guacamole/**/*.spec.ts"],
+            "watch": false,
+            "browsers": "ChromeHeadless"
+          }
+        },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {

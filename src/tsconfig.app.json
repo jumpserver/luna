@@ -7,5 +7,5 @@
     "target": "ES2022",
     "types": []
   },
-  "exclude": ["test.ts", "**/*.spec.ts"]
+  "exclude": ["test.ts", "test-guacamole.ts", "**/*.spec.ts"]
 }
