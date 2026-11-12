@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { AssetTreeKind, AssetTreeNode } from "~/types";
+import type { AssetTreeCheckState } from "~/composables/useAssetTree";
+import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
+import { assetTreeAssetId, canCheckAssetTreeNode, isAssetTreeBranch } from "~/composables/useAssetTree";
 import { resolveAssetIconFromCandidates } from "~/utils/assetIcon";
 
 defineOptions({ name: "AssetTreeNode" });
@@ -9,7 +11,9 @@ const props = defineProps<{
   treeKind: Exclude<AssetTreeKind, "search">;
   searchMode?: boolean;
   batchMode?: boolean;
-  checkedAssetIds?: string[];
+  checkedAssets?: ReadonlyMap<string, AssetItem>;
+  branchCheckStates?: ReadonlyMap<AssetTreeNode, AssetTreeCheckState>;
+  batchCheckPending?: boolean;
   focusedAssetId?: string;
 }>();
 
@@ -22,16 +26,16 @@ const emit = defineEmits<{
 }>();
 const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
-const rowRef = useTemplateRef<HTMLButtonElement>("row");
+const rowRef = useTemplateRef<HTMLElement>("row");
+const checkboxId = useId();
 
-const isParent = computed(() =>
-  Boolean(props.node.meta?.type === "node" || props.node.isParent || props.node.children?.length)
-);
+const isParent = computed(() => isAssetTreeBranch(props.node));
 const isOpen = computed(() => Boolean(props.node.open));
-const isChecked = computed(() => props.checkedAssetIds?.includes(props.node.id) || false);
-const nodeAssetId = computed(() =>
-  String(props.node.meta?.data?.id || props.node.key || (props.node.isParent ? "" : props.node.id))
-);
+const nodeAssetId = computed(() => assetTreeAssetId(props.node));
+const isChecked = computed(() => props.checkedAssets?.has(nodeAssetId.value) || false);
+const canCheck = computed(() => canCheckAssetTreeNode(props.node));
+const batchLeaf = computed(() => props.batchMode && !isParent.value);
+const rowPadding = computed(() => `${10 + (props.node.level || 0) * 14}px`);
 const isAutomationFocused = computed(
   () => Boolean(props.focusedAssetId) && !isParent.value && nodeAssetId.value === props.focusedAssetId
 );
@@ -99,8 +103,6 @@ const assetCountTitle = computed(() =>
 const activate = () => {
   if (isParent.value && !props.searchMode) {
     emit("toggle", props.node, props.treeKind);
-  } else if (props.batchMode) {
-    emit("check", props.node);
   } else {
     emit("select", props.node);
   }
@@ -157,40 +159,56 @@ watch(
 
 <template>
   <div role="treeitem" :aria-expanded="isParent ? isOpen : undefined">
-    <div class="group relative">
+    <div
+      ref="row"
+      class="app-tree-row sidebar-row group relative flex w-full items-center gap-1 pr-1"
+      :class="[
+        node.chkDisabled ? 'opacity-40' : '',
+        node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
+        isAutomationFocused ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''
+      ]"
+      :style="{ paddingLeft: rowPadding }"
+      @contextmenu.prevent="emit('contextmenu', node, $event)"
+    >
       <button
-        ref="row"
+        v-if="isParent && !searchMode"
         type="button"
-        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
-        :class="[
-          node.chkDisabled ? 'opacity-40' : '',
-          node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
-          isAutomationFocused ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''
-        ]"
-        :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
+        tabindex="-1"
+        class="app-tree-icon-slot grid shrink-0 cursor-pointer place-items-center"
+        :aria-label="t(isOpen ? 'Tree.Collapse' : 'Tree.Expand')"
+        :aria-expanded="isOpen"
+        @click="activate"
+      >
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="app-tree-toggle-icon sidebar-icon-sm transition-transform duration-200 ease-out motion-reduce:transition-none"
+          :class="isOpen ? 'rotate-90' : ''"
+        />
+      </button>
+      <span v-else class="app-tree-icon-slot shrink-0" aria-hidden="true" />
+      <UCheckbox
+        v-if="batchMode && canCheck"
+        :id="checkboxId"
+        size="xs"
+        class="app-tree-icon-slot grid shrink-0 place-items-center"
+        :model-value="isParent ? (branchCheckStates?.get(node) ?? false) : isChecked"
+        :disabled="batchCheckPending"
+        :aria-label="isParent ? node.name : undefined"
+        @update:model-value="emit('check', node)"
+      />
+      <span v-else-if="batchMode" class="app-tree-icon-slot shrink-0" aria-hidden="true" />
+      <component
+        :is="batchLeaf ? 'label' : 'button'"
+        :for="batchLeaf && canCheck ? checkboxId : undefined"
+        :type="batchLeaf ? undefined : 'button'"
+        class="flex h-full min-w-min flex-1 items-center gap-1 rounded-(--app-radius) text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--app-focus-ring)"
+        :class="{ 'cursor-pointer': !batchLeaf || (canCheck && !batchCheckPending) }"
         :title="node.title || node.name"
         :aria-current="isAutomationFocused ? 'true' : undefined"
+        :aria-expanded="isParent && !searchMode ? isOpen : undefined"
         :data-workspace-tour="workspaceTourTarget"
-        @click="activate"
-        @contextmenu.prevent="emit('contextmenu', node, $event)"
+        @click="!batchLeaf && activate()"
       >
-        <span class="app-tree-icon-slot grid shrink-0 place-items-center">
-          <UIcon
-            v-if="isParent"
-            name="i-lucide-chevron-right"
-            class="app-tree-toggle-icon sidebar-icon-sm transition-transform duration-200 ease-out motion-reduce:transition-none"
-            :class="isOpen ? 'rotate-90' : ''"
-          />
-        </span>
-        <span
-          v-if="batchMode && !isParent"
-          class="app-tree-icon-slot sidebar-icon-muted grid shrink-0 place-items-center"
-        >
-          <UIcon
-            :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'"
-            class="app-tree-icon sidebar-icon"
-          />
-        </span>
         <UIcon v-if="node.loading" name="i-lucide-loader-circle" class="app-tree-icon sidebar-icon animate-spin" />
         <AppTreeFolderIcon
           v-else-if="isFolderIcon"
@@ -212,7 +230,7 @@ watch(
             ({{ node.assetCount }})
           </span>
         </span>
-      </button>
+      </component>
       <button
         v-if="node.meta?.type === 'recent-connections' && node.children?.length"
         type="button"
@@ -234,7 +252,9 @@ watch(
           :tree-kind="treeKind"
           :search-mode="searchMode"
           :batch-mode="batchMode"
-          :checked-asset-ids="checkedAssetIds"
+          :checked-assets="checkedAssets"
+          :branch-check-states="branchCheckStates"
+          :batch-check-pending="batchCheckPending"
           :focused-asset-id="focusedAssetId"
           @select="emit('select', $event)"
           @toggle="(target, kind) => emit('toggle', target, kind)"

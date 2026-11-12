@@ -11,6 +11,7 @@ import { useKokoHostAdapter } from "#koko/host";
 const showSearchInput = ref(false);
 const searchInputRef = useTemplateRef<InstanceType<typeof KokoSearchInput>>("searchInput");
 const { t } = useI18n();
+const shortcuts = useAppShortcuts();
 const host = useKokoHostAdapter();
 const sessionContext = inject(connectorSessionKey, null);
 const { onMittEvent } = useKokoTerminalEvents();
@@ -26,7 +27,7 @@ const {
   searchAddon,
   selectionText,
   zmodem
-} = useKokoTerminalSocket();
+} = useKokoTerminalSocket((event) => !shortcuts.blocked(event) && shortcuts.matches("terminalSearch", event));
 const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = zmodem;
 const tabId = computed(() => unref(sessionContext)?.tabId || "");
 const suggestionListRef = shallowRef<HTMLElement | null>(null);
@@ -41,6 +42,11 @@ watch(commandSuggestions.selectedIndex, (index) => {
 
 function closeContextMenu() {
   contextMenuVisible.value = false;
+}
+
+function openSearch() {
+  showSearchInput.value = true;
+  nextTick(() => searchInputRef.value?.focus());
 }
 
 const contextMenuItems = computed<DropdownMenuItem[]>(() => [
@@ -64,6 +70,16 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => [
   },
   { type: "separator" as const },
   {
+    label: t("Operation.Search"),
+    icon: "i-lucide-search",
+    kbds: shortcuts.kbds("terminalSearch"),
+    disabled: !searchAddon.value,
+    onSelect: () => {
+      closeContextMenu();
+      openSearch();
+    }
+  },
+  {
     label: t("koko.terminal.splitVertically"),
     icon: "i-lucide-columns-2",
     disabled: !tabId.value || !host.canSplitSession(tabId.value, "vertical"),
@@ -83,10 +99,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => [
   }
 ]);
 
-onMittEvent(TerminalMittEvent.OpenSearch, () => {
-  showSearchInput.value = true;
-  nextTick(() => searchInputRef.value?.focus());
-});
+onMittEvent(TerminalMittEvent.OpenSearch, openSearch);
 
 const onUploadChange = (event: Event) => {
   const input = event.target as HTMLInputElement;

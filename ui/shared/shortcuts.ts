@@ -12,6 +12,7 @@ export const shortcutDefinitions = [
   { id: "clipboardHistory", default: "Mod+Shift+KeyH", scope: "application", desktopOnly: true },
   { id: "lockClient", default: "Mod+KeyL", scope: "client", desktopOnly: true },
   { id: "terminalAi", default: "Mod+KeyK", scope: "terminal" },
+  { id: "terminalSearch", default: "Mod+Alt+KeyF", macDefault: "Mod+KeyF", scope: "terminal" },
   { id: "newSession", default: "Mod+KeyT", scope: "application", desktopOnly: true }
 ] as const;
 
@@ -129,7 +130,6 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     `${primary}+KeyA`,
     `${primary}+KeyZ`,
     `${primary}+Shift+KeyZ`,
-    `${primary}+KeyF`,
     `${primary}+KeyS`,
     `${primary}+Shift+KeyS`,
     `${primary}+KeyP`,
@@ -144,7 +144,6 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     `${primary}+KeyR`,
     `${primary}+Shift+KeyR`,
     `${primary}+Shift+KeyW`,
-    "Ctrl+KeyF",
     "Ctrl+Enter",
     "Ctrl+Shift+Enter",
     "Ctrl+KeyR",
@@ -160,6 +159,7 @@ export function isReservedShortcut(binding: string, id: ShortcutId, environment:
     `${primary}+KeyB`
   ];
   if (reserved.includes(key)) return true;
+  if (key === "Ctrl+KeyF" || key === "Meta+KeyF") return id !== "terminalSearch";
   if (key === `${primary}+KeyD`) return !environment.mac || id !== "splitVertical";
   if (key === `${primary}+KeyL`) return !environment.desktop || id !== "lockClient";
   if (key === `${primary}+KeyW`) return !environment.desktop || id !== "closeTab";

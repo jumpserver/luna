@@ -66,7 +66,7 @@ const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN
 const isXtermAddonDisposeError = (error: unknown) =>
   error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
 
-export const useKokoTerminalSocket = () => {
+export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEvent) => boolean) => {
   const isMobile = useMobile();
   let stopRendererWatch: (() => void) | undefined;
   const toast = useToast();
@@ -258,6 +258,7 @@ export const useKokoTerminalSocket = () => {
     sendToHost,
     sendMittEvent,
     validateClipboardText,
+    matchesSearchShortcut,
     onData: commandSuggestions.handleData,
     onExternalData: commandSuggestions.invalidate,
     onKeyEvent: commandSuggestions.handleKeyEvent,

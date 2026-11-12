@@ -1,4 +1,9 @@
-import type { AssetItem, PermedAccount, PersonalAssetCredential } from "~/types";
+import type { AssetItem, PermedAccount, PermedProtocol, PersonalAssetCredential } from "~/types";
+
+export const getVisibleConnectionProtocols = (protocols?: PermedProtocol[] | null) =>
+  (protocols || []).filter(
+    (protocol) => typeof protocol?.name === "string" && protocol.name.trim() && protocol.public !== false
+  );
 
 export const resolvePersonalCredentialSecretType = (protocol: string, fallback = "password") => {
   const normalizedProtocol = protocol.trim().toLowerCase();

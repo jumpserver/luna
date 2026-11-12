@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "授權資產數量：包含當前節點及其子級節點",
     "UngroupedAssetCount": "授權資產數量：未分組的授權資產",
     "BatchActions": "批次操作",
-    "OpenMultiple": "開啟多個",
+    "OpenMultiple": "批次連線",
     "OpenSelected": "開啟已選",
-    "FavoriteMultiple": "收藏多個",
+    "FavoriteMultiple": "批次收藏",
     "FavoriteSelected": "收藏已選",
     "SelectedCount": "已選 {count} 個",
-    "MultiOpenNoConnectable": "所選資產不支援 SSH 連線",
-    "MultiOpenSkipped": "已跳過 {count} 個不支援 SSH 或載入失敗的資產",
+    "BatchConnectionLimit": "每次最多連線至 {limit} 個資產，請至少取消勾選 {excess} 個後再試。",
+    "MultiOpenNoConnectable": "所選資產沒有可用的連線協定",
+    "MultiOpenSkipped": "已略過 {count} 個無可用連線協定或載入失敗的資產",
     "MultiFavoriteSuccess": "已收藏 {count} 個資產",
     "MultiFavoritePartial": "收藏成功 {success} 個，失敗 {failed} 個",
     "MultiFavoriteFailed": "批次收藏失敗"
@@ -3607,6 +3608,7 @@
       "fullscreen": "切換全螢幕",
       "rightPanel": "顯示或隱藏右側面板",
       "terminalAi": "開啟終端機 AI",
+      "terminalSearch": "搜尋終端機輸出",
       "newSession": "新建連線",
       "localShell": "新增本機終端機",
       "clipboardHistory": "剪貼簿歷史",
@@ -3615,7 +3617,7 @@
     "Scopes": {
       "workspace": "工作區 · 有作用中工作階段時",
       "application": "應用程式 · 設定和對話框以外",
-      "terminal": "終端機 · 聚焦且終端機 AI 可用時",
+      "terminal": "終端機 · 聚焦時",
       "client": "用戶端 · 主視窗及資產視窗"
     }
   },

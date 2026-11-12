@@ -4,8 +4,13 @@ import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAuto
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import {
   applyAssetRename,
+  assetTreeAssetId,
+  assetTreeCheckStates,
   authorizationTreeMetricId,
+  canCheckAssetTreeNode,
+  collectAssetTreeBranch,
   hasAssetName,
+  isAssetTreeBranch as isBranchNode,
   registerAssetNameLookup,
   unwrapTypeTreeRoot,
   useAssetTree,
@@ -39,8 +44,10 @@ type PanelKind = Exclude<AssetTreeKind, "search">;
 type BatchAction = "open" | "favorite";
 
 const RECENT_NODE_ID = "__recent_connections__";
+const BATCH_CONNECTION_LIMIT = 20;
 
 const { t } = useI18n();
+const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { currentAccountId, currentSite, currentUser, loggedIn, orgId } = storeToRefs(userInfoStore);
@@ -75,8 +82,10 @@ const tourDemoNodes = ref<AssetTreeNode[]>([]);
 const batchMode = ref(false);
 const batchAction = ref<BatchAction>("open");
 const batchFavoriteMenuOpen = ref(false);
-const checkedAssets = ref<Record<string, AssetItem>>({});
-const checkedNodeIds = ref<string[]>([]);
+const checkedAssets = shallowRef(new Map<string, AssetItem>());
+const batchCheckPending = ref(false);
+let batchSelectionEpoch = 0;
+const pendingNodePages = new WeakMap<AssetTreeNode, Promise<void>>();
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
@@ -169,7 +178,10 @@ function buildRecentConnectionsNode(): AssetTreeNode {
 const treeSwitchLabel = computed(() =>
   activeTreeKind.value === "authorization" ? t("Tree.SwitchToType") : t("Tree.SwitchToAuthorization")
 );
-const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
+const checkedCount = computed(() => checkedAssets.value.size);
+const branchCheckStates = computed(() =>
+  batchMode.value ? assetTreeCheckStates(activeTree.value.nodes, checkedAssets.value) : undefined
+);
 const { folders: favoriteFolders, rootAssets: favoriteRootAssets, load: loadFavoriteFolders } = useFavoriteFolders();
 const favoriteRootAssetCount = computed(() =>
   getFavoriteRootAssetCount(favoriteFolders.value, favoriteRootAssets.value)
@@ -192,9 +204,20 @@ const startBatchMode = (action: BatchAction) => {
   batchAction.value = action;
   batchMode.value = true;
   batchFavoriteMenuOpen.value = false;
-  checkedAssets.value = {};
-  checkedNodeIds.value = [];
+  resetBatchSelection();
 };
+
+function resetBatchSelection() {
+  batchSelectionEpoch += 1;
+  batchCheckPending.value = false;
+  checkedAssets.value = new Map();
+}
+
+function closeBatchMode() {
+  batchMode.value = false;
+  batchFavoriteMenuOpen.value = false;
+  resetBatchSelection();
+}
 const batchMenuItems = computed(() => [
   [
     {
@@ -314,8 +337,7 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
 const refresh = async () => {
   treeRequestEpoch += 1;
   const requestEpoch = treeRequestEpoch;
-  checkedAssets.value = {};
-  checkedNodeIds.value = [];
+  resetBatchSelection();
   loadRecentConnections();
   await Promise.all([loadRoot("authorization", requestEpoch), loadRoot("type", requestEpoch)]);
 };
@@ -327,9 +349,7 @@ const reloadRoot = (kind: PanelKind) => {
 
 const switchTreeKind = () => {
   activeTreeKind.value = activeTreeKind.value === "authorization" ? "type" : "authorization";
-  checkedAssets.value = {};
-  checkedNodeIds.value = [];
-  batchMode.value = false;
+  closeBatchMode();
 };
 
 async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
@@ -350,29 +370,16 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
   }
 
   if (!node.loaded) {
-    if (node.loading) return;
-    node.loading = true;
     try {
-      if (kind === "authorization") {
-        const page = await fetchAuthorizationTreePage(node);
-        node.children = removeFavoriteNodes(page.nodes);
-        updateNodePagination(node, page.nextPage, node.children.length);
-        void loadAuthorizationNodeCounts(node.children);
-      } else {
-        const page = await fetchTypeTreePage(node);
-        node.children = page.nodes;
-        updateNodePagination(node, page.nextPage, node.children.length);
-      }
-      node.loaded = true;
+      await loadNodePage(node, kind);
     } catch (error) {
       reportError(error);
       return;
-    } finally {
-      node.loading = false;
     }
   }
 
   node.open = true;
+  if (kind === "authorization") void loadAuthorizationNodeCounts(node.children || []);
   await nextTick();
   scheduleAutoPageLoad();
 }
@@ -388,35 +395,52 @@ function updateNodePagination(node: AssetTreeNode, nextPage: AssetTreeNode["next
   node.nextPageTriggerIndex = Math.max(1, total - Math.floor(appendedCount / 2));
 }
 
+function loadNodePage(node: AssetTreeNode, kind: PanelKind) {
+  const pending = pendingNodePages.get(node);
+  if (pending) return pending;
+
+  const nextPage = node.nextPage || undefined;
+  node.loading = !node.loaded;
+  node.loadingMore = Boolean(nextPage);
+  const request = (async () => {
+    try {
+      const page = await (kind === "authorization" ? fetchAuthorizationTreePage : fetchTypeTreePage)(node, nextPage);
+      if (
+        nextPage &&
+        page.nextPage?.phase === nextPage.phase &&
+        page.nextPage.nodeCursor === nextPage.nodeCursor &&
+        page.nextPage.assetOffset === nextPage.assetOffset
+      ) {
+        throw new Error("Asset tree pagination did not advance");
+      }
+      const existing = nextPage ? node.children || [] : [];
+      const knownIds = new Set(existing.map((child) => child.id));
+      const pageNodes = kind === "authorization" ? removeFavoriteNodes(page.nodes) : page.nodes;
+      const appended = pageNodes.filter((child) => !knownIds.has(child.id));
+      node.children = [...existing, ...appended];
+      node.loaded = true;
+      updateNodePagination(node, page.nextPage, appended.length);
+      if (kind === "authorization" && node.open) {
+        void loadAuthorizationNodeCounts(node.children.slice(existing.length));
+      }
+    } finally {
+      node.loading = false;
+      node.loadingMore = false;
+      pendingNodePages.delete(node);
+    }
+  })();
+  pendingNodePages.set(node, request);
+  return request;
+}
+
 async function loadMoreNode(node: AssetTreeNode, kind: PanelKind) {
   if (!node.nextPage || node.loadingMore) return;
-  node.loadingMore = true;
-  let loaded = false;
   try {
-    const page =
-      kind === "authorization"
-        ? await fetchAuthorizationTreePage(node, node.nextPage)
-        : await fetchTypeTreePage(node, node.nextPage);
-    const knownIds = new Set((node.children || []).map((child) => child.id));
-    const pageNodes = kind === "authorization" ? removeFavoriteNodes(page.nodes) : page.nodes;
-    const appended = pageNodes.filter((child) => !knownIds.has(child.id));
-    const previousLength = node.children?.length || 0;
-    node.children = [...(node.children || []), ...appended];
-    updateNodePagination(node, page.nextPage, appended.length);
-    if (kind === "authorization") {
-      // Read the inserted rows back through Vue's reactive array before
-      // writing metrics. Mutating the raw response objects would not repaint.
-      void loadAuthorizationNodeCounts((node.children || []).slice(previousLength));
-    }
-    loaded = true;
-  } catch (error) {
-    reportError(error);
-  } finally {
-    node.loadingMore = false;
-  }
-  if (loaded) {
+    await loadNodePage(node, kind);
     await nextTick();
     scheduleAutoPageLoad();
+  } catch (error) {
+    reportError(error);
   }
 }
 
@@ -466,14 +490,9 @@ const handleTreeScroll = (event: Event) => {
   scheduleAutoPageLoad(event.currentTarget as HTMLElement);
 };
 
-const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
-
-const assetIdForNode = (node: AssetTreeNode) =>
-  String(node.meta?.data?.id || node.key || (isRecentRootNode(node) ? "" : node.id));
-
 const findAssetNode = (nodes: AssetTreeNode[], assetId: string): AssetTreeNode | null => {
   for (const node of nodes) {
-    if (!isBranchNode(node) && assetIdForNode(node) === assetId) return node;
+    if (!isBranchNode(node) && assetTreeAssetId(node) === assetId) return node;
     const child = findAssetNode(node.children || [], assetId);
     if (child) return child;
   }
@@ -555,35 +574,47 @@ const selectNode = (node: AssetTreeNode) => {
   if (!selectionOnly) emit("select", asset);
 };
 
-const toggleCheckedNode = (node: AssetTreeNode) => {
-  if (node.chkDisabled || node.isParent || isWorkspaceTourDemoNode(node.id)) return;
+const toggleCheckedNode = async (node: AssetTreeNode) => {
+  if (!batchMode.value || batchCheckPending.value || !canCheckAssetTreeNode(node)) return;
+  const kind = activeTreeKind.value;
+  const epoch = batchSelectionEpoch;
+  const isCurrent = () => epoch === batchSelectionEpoch;
+  const isBranch = isBranchNode(node);
+  batchCheckPending.value = isBranch;
+  try {
+    const assets = isBranch
+      ? await collectAssetTreeBranch(node, (branch) => loadNodePage(branch, kind), isCurrent)
+      : new Map([[assetTreeAssetId(node), node]]);
+    if (!assets || !isCurrent()) return;
 
-  const asset = treeNodeToAsset(node);
-  const next = { ...checkedAssets.value };
-  const nextNodeIds = new Set(checkedNodeIds.value);
-
-  if (next[asset.id]) delete next[asset.id];
-  else next[asset.id] = asset;
-
-  if (nextNodeIds.has(node.id)) nextNodeIds.delete(node.id);
-  else nextNodeIds.add(node.id);
-
-  checkedAssets.value = next;
-  checkedNodeIds.value = [...nextNodeIds];
-};
-
-const closeBatchMode = () => {
-  batchMode.value = false;
-  batchFavoriteMenuOpen.value = false;
-  checkedAssets.value = {};
-  checkedNodeIds.value = [];
+    const selected = checkedAssets.value;
+    const uncheck = [...assets.keys()].every((id) => selected.has(id));
+    const next = new Map(selected);
+    for (const [id, assetNode] of assets) {
+      if (uncheck) next.delete(id);
+      else if (!next.has(id)) next.set(id, treeNodeToAsset(assetNode));
+    }
+    checkedAssets.value = next;
+  } catch (error) {
+    if (isCurrent()) reportError(error);
+  } finally {
+    if (isCurrent()) batchCheckPending.value = false;
+  }
 };
 
 const submitCheckedAssets = () => {
-  const assets = Object.values(checkedAssets.value);
-  if (assets.length === 0 || batchAction.value === "favorite") return;
+  if (batchCheckPending.value || checkedCount.value === 0 || batchAction.value === "favorite") return;
+  const excess = checkedCount.value - BATCH_CONNECTION_LIMIT;
+  if (excess > 0) {
+    toast.add({
+      title: t("Tree.BatchConnectionLimit", { limit: BATCH_CONNECTION_LIMIT, excess }),
+      color: "warning",
+      icon: "i-lucide-circle-alert"
+    });
+    return;
+  }
 
-  emit("openMultiple", assets);
+  emit("openMultiple", [...checkedAssets.value.values()]);
   closeBatchMode();
 };
 
@@ -593,8 +624,8 @@ const updateBatchFavoriteMenuOpen = (open: boolean) => {
 };
 
 const submitCheckedFavoriteAssets = (folderId: string | null) => {
-  const assets = Object.values(checkedAssets.value);
-  if (assets.length === 0) return;
+  if (batchCheckPending.value || checkedCount.value === 0) return;
+  const assets = [...checkedAssets.value.values()];
 
   emit("favoriteMultiple", assets, folderId);
   closeBatchMode();
@@ -758,6 +789,7 @@ watch(
 watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
 
 onBeforeUnmount(() => {
+  batchSelectionEpoch += 1;
   if (autoPageLoadFrame != null) window.cancelAnimationFrame(autoPageLoadFrame);
 });
 
@@ -766,8 +798,8 @@ useEventBus().on("assetRenamed", ({ assetId, name }) => {
   applyAssetRename(typeNodes.value, assetId, name);
   applyAssetRename(searchNodes.value, assetId, name);
   renameRecentConnection(assetId, name);
-  const checked = checkedAssets.value[assetId];
-  if (checked) checkedAssets.value[assetId] = { ...checked, name };
+  const checked = checkedAssets.value.get(assetId);
+  if (checked) checkedAssets.value.set(assetId, { ...checked, name });
 });
 
 defineExpose({
@@ -848,7 +880,10 @@ defineExpose({
           </button>
           <div v-else class="min-w-0 flex-1" />
           <div v-if="batchMode" class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-            <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
+            <UIcon v-if="batchCheckPending" name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+            <span class="hidden sm:inline" aria-live="polite">
+              {{ t("Tree.SelectedCount", { count: checkedCount }) }}
+            </span>
             <UDropdownMenu
               v-if="batchAction === 'favorite'"
               :open="batchFavoriteMenuOpen"
@@ -863,7 +898,7 @@ defineExpose({
                 variant="soft"
                 size="xs"
                 icon="i-lucide-star"
-                :disabled="checkedCount === 0"
+                :disabled="checkedCount === 0 || batchCheckPending"
                 class="h-6 rounded-sm px-2"
                 :ui="{ leadingIcon: 'sidebar-icon' }"
                 :label="t('Tree.FavoriteSelected')"
@@ -884,7 +919,7 @@ defineExpose({
               variant="soft"
               size="xs"
               icon="i-lucide-play"
-              :disabled="checkedCount === 0"
+              :disabled="checkedCount === 0 || batchCheckPending"
               class="h-6 rounded-sm px-2"
               :ui="{ leadingIcon: 'sidebar-icon' }"
               :label="t('Tree.OpenSelected')"
@@ -967,7 +1002,9 @@ defineExpose({
                   :tree-kind="activeTreeKind"
                   :focused-asset-id="workspaceFocusedAsset?.id"
                   :batch-mode="batchMode"
-                  :checked-asset-ids="checkedNodeIds"
+                  :checked-assets="checkedAssets"
+                  :branch-check-states="branchCheckStates"
+                  :batch-check-pending="batchCheckPending"
                   @select="selectNode"
                   @toggle="toggleNode"
                   @contextmenu="openContextMenu"

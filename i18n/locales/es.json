@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "Activos autorizados, incluidos los nodos descendientes",
     "UngroupedAssetCount": "Activos autorizados sin nodo",
     "BatchActions": "Acciones por lotes",
-    "OpenMultiple": "Abrir varios",
+    "OpenMultiple": "Conectar en lote",
     "OpenSelected": "Abrir seleccionados",
-    "FavoriteMultiple": "Añadir varios a favoritos",
+    "FavoriteMultiple": "Añadir a favoritos en lote",
     "FavoriteSelected": "Añadir seleccionados a favoritos",
     "SelectedCount": "{count} seleccionados",
-    "MultiOpenNoConnectable": "Los activos seleccionados no admiten conexiones SSH",
-    "MultiOpenSkipped": "Se omitieron {count} activos que no admiten SSH o no se pudieron cargar",
+    "BatchConnectionLimit": "Puedes conectarte a un máximo de {limit} activos a la vez. Desmarca al menos {excess} e inténtalo de nuevo.",
+    "MultiOpenNoConnectable": "Ningún activo seleccionado tiene un protocolo de conexión disponible",
+    "MultiOpenSkipped": "Se omitieron {count} activos sin un protocolo de conexión disponible o que no se pudieron cargar",
     "MultiFavoriteSuccess": "Se añadieron {count} activos a favoritos",
     "MultiFavoritePartial": "{success} activos añadidos a favoritos; {failed} con error",
     "MultiFavoriteFailed": "Error al añadir los activos seleccionados a favoritos"
@@ -3607,6 +3608,7 @@
       "fullscreen": "Alternar pantalla completa",
       "rightPanel": "Mostrar u ocultar panel derecho",
       "terminalAi": "Abrir IA del terminal",
+      "terminalSearch": "Buscar en la salida del terminal",
       "newSession": "Nueva conexión",
       "localShell": "Nuevo terminal local",
       "clipboardHistory": "Historial del portapapeles",
@@ -3615,7 +3617,7 @@
     "Scopes": {
       "workspace": "Espacio de trabajo · cuando hay una sesión activa",
       "application": "Aplicación · fuera de los ajustes y diálogos",
-      "terminal": "Terminal · cuando la IA del terminal está disponible y el terminal tiene el foco",
+      "terminal": "Terminal · cuando tiene el foco",
       "client": "Cliente · ventana principal y ventanas de activos"
     }
   },

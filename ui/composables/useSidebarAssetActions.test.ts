@@ -9,6 +9,9 @@ const getAssetDetailRequest = vi.fn();
 const getConnectionInfoForAsset = vi.fn();
 const confirmConnection = vi.fn();
 const openSession = vi.fn();
+const configure = vi.fn();
+const launchWithInfo = vi.fn();
+const addToast = vi.fn();
 
 vi.mock("~/composables/useApiRequest", () => ({
   favoriteAssetsToFolder: vi.fn(),
@@ -72,23 +75,26 @@ const savedWebConnection = {
   connectOptions: { resolution: "1920x1080" }
 };
 
-describe("workspaceConnectAsset bus", () => {
+describe("sidebar asset actions", () => {
   beforeEach(() => {
     openSetupSession.mockReset();
     getConnectionInfoForAsset.mockReset();
     confirmConnection.mockReset();
+    configure.mockReset();
+    launchWithInfo.mockReset().mockResolvedValue(true);
+    addToast.mockReset();
     openSession.mockReset().mockReturnValue({ id: "session-1" });
     vi.stubGlobal("isDesktopRuntime", () => false);
     getAssetDetailRequest.mockReset();
     getAssetDetailRequest.mockResolvedValue({ permed_accounts: [], permed_protocols: [] });
     vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
-    vi.stubGlobal("useToast", () => ({ add: vi.fn() }));
+    vi.stubGlobal("useToast", () => ({ add: addToast }));
     vi.stubGlobal("useMediaQuery", () => ref(false));
     vi.stubGlobal("useErrorToast", () => ({ addErrorToast: vi.fn() }));
     vi.stubGlobal("useSettingManager", () => ({ appConfig: ref(null), setCollapse: vi.fn() }));
     vi.stubGlobal("useSidebarLayout", () => ({ closeHoverPreview: vi.fn() }));
     vi.stubGlobal("useAssetConnection", () => ({ confirmConnection }));
-    vi.stubGlobal("useConnectionLauncher", () => ({ configure: vi.fn(), launchWithInfo: vi.fn() }));
+    vi.stubGlobal("useConnectionLauncher", () => ({ configure, launchWithInfo }));
     vi.stubGlobal("useWorkspaceTabs", () => ({
       activeTab: ref(null),
       canSplitWorkspace: () => false,
@@ -127,6 +133,34 @@ describe("workspaceConnectAsset bus", () => {
     expect(openSetupSession).toHaveBeenCalledTimes(1);
     expect(openSetupSession).toHaveBeenCalledWith(asset);
     expect(getAssetDetailRequest).not.toHaveBeenCalled();
+  });
+
+  it("configures and launches a batch of non-SSH assets with their authorized protocols", async () => {
+    const rdpAsset = { ...asset, id: "windows", type: "windows" };
+    const hiddenAsset = { ...asset, id: "hidden" };
+    const failedAsset = { ...asset, id: "unavailable" };
+    const rdp = { name: "rdp", port: 3389, public: true };
+    const https = { name: "https", port: 443, public: true };
+    getAssetDetailRequest
+      .mockResolvedValueOnce({ permed_protocols: [rdp] })
+      .mockResolvedValueOnce({ permed_protocols: [https] })
+      .mockResolvedValueOnce({ permed_protocols: [{ name: "ssh", port: 22, public: false }] })
+      .mockRejectedValueOnce(new Error("Asset details unavailable"));
+    configure.mockResolvedValueOnce({ protocol: "rdp" }).mockResolvedValueOnce({ protocol: "https" });
+
+    await useSidebarAssetActions().handleOpenMultipleAssets([rdpAsset, webAsset, hiddenAsset, failedAsset]);
+
+    expect(configure.mock.calls).toEqual([
+      [expect.objectContaining({ id: rdpAsset.id, permedProtocols: [rdp] }), { position: 1, total: 2 }],
+      [expect.objectContaining({ id: webAsset.id, permedProtocols: [https] }), { position: 2, total: 2 }]
+    ]);
+    const batch = launchWithInfo.mock.calls[0]?.[2];
+    expect(batch?.aclBatchId).toEqual(expect.any(String));
+    expect(launchWithInfo.mock.calls).toEqual([
+      [expect.objectContaining({ id: rdpAsset.id }), { protocol: "rdp" }, batch],
+      [expect.objectContaining({ id: webAsset.id }), { protocol: "https" }, batch]
+    ]);
+    expect(addToast).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ title: "Tree.MultiOpenSkipped" }));
   });
 
   describe.each([false, true])("Web asset connections (desktop=%s)", (desktop) => {

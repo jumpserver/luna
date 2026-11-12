@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "Ativos autorizados, incluindo nós descendentes",
     "UngroupedAssetCount": "Ativos autorizados sem nó",
     "BatchActions": "Ações em lote",
-    "OpenMultiple": "Abrir vários",
+    "OpenMultiple": "Conectar em lote",
     "OpenSelected": "Abrir selecionados",
-    "FavoriteMultiple": "Adicionar vários aos favoritos",
+    "FavoriteMultiple": "Adicionar aos favoritos em lote",
     "FavoriteSelected": "Adicionar selecionados aos favoritos",
     "SelectedCount": "{count} selecionados",
-    "MultiOpenNoConnectable": "Os ativos selecionados não aceitam conexões SSH",
-    "MultiOpenSkipped": "{count} ativos que não aceitam SSH ou que não puderam ser carregados foram ignorados",
+    "BatchConnectionLimit": "Você pode se conectar a até {limit} ativos por vez. Desmarque pelo menos {excess} e tente novamente.",
+    "MultiOpenNoConnectable": "Nenhum dos ativos selecionados tem um protocolo de conexão disponível",
+    "MultiOpenSkipped": "Foram ignorados {count} ativos sem protocolo de conexão disponível ou que não puderam ser carregados",
     "MultiFavoriteSuccess": "{count} ativos adicionados aos favoritos",
     "MultiFavoritePartial": "{success} ativos adicionados aos favoritos; {failed} falharam",
     "MultiFavoriteFailed": "Falha ao adicionar os ativos selecionados aos favoritos"
@@ -3607,6 +3608,7 @@
       "fullscreen": "Alternar tela cheia",
       "rightPanel": "Mostrar ou ocultar painel direito",
       "terminalAi": "Abrir IA do terminal",
+      "terminalSearch": "Pesquisar na saída do terminal",
       "newSession": "Nova conexão",
       "localShell": "Novo terminal local",
       "clipboardHistory": "Histórico da área de transferência",
@@ -3615,7 +3617,7 @@
     "Scopes": {
       "workspace": "Área de trabalho · quando há uma sessão ativa",
       "application": "Aplicativo · fora das configurações e caixas de diálogo",
-      "terminal": "Terminal · quando a IA do terminal está disponível e o terminal está em foco",
+      "terminal": "Terminal · quando está em foco",
       "client": "Cliente · janela principal e janelas de ativos"
     }
   },

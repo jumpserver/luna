@@ -13,6 +13,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 import {
   findMatchingPersonalCredential,
+  getVisibleConnectionProtocols,
   isAutoPushAccount,
   resolvePersonalCredentialSecretType,
   supportsPersonalCredential
@@ -93,8 +94,6 @@ export function useConnectionFormState() {
     () => userInfoStore.getConnectionPreferenceForProtocol(draft.value.protocol)?.connectMethod || ""
   );
 
-  const getVisibleProtocols = (protocols: PermedProtocol[]) =>
-    protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>
@@ -195,7 +194,7 @@ export function useConnectionFormState() {
     const saved = asset.savedConnection;
     const preferred = userInfoStore.getConnectionPreferenceForAsset(asset.id) || undefined;
     const source = { ...(saved || {}), ...(preferred || {}) } as ConnectionPreferenceInfo | ConnectionInfo;
-    const protocols = getVisibleProtocols(asset.permedProtocols || []);
+    const protocols = getVisibleConnectionProtocols(asset.permedProtocols);
     const accounts = asset.permedAccounts || [];
     const protocol = resolvePreferredProtocol(source, protocols, explicitProtocol);
     const savedCredentialMatchesProtocol =
@@ -307,7 +306,7 @@ export function useConnectionFormState() {
         : undefined;
 
     const availableProtocols = sortProtocolNames(
-      getVisibleProtocols(asset.permedProtocols || [])
+      getVisibleConnectionProtocols(asset.permedProtocols)
         .map((protocol) => protocol.name?.trim())
         .filter((protocol): protocol is string => !!protocol)
     );

@@ -31,6 +31,7 @@ export function useKokoTerminalInput(options: {
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   sendMittEvent: (event: TerminalMittEvent) => void;
   validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
+  matchesSearchShortcut?: (event: KeyboardEvent) => boolean;
   onData?: (data: string) => void;
   onExternalData?: () => void;
   onKeyEvent?: (event: KeyboardEvent) => boolean | undefined;
@@ -246,16 +247,16 @@ export function useKokoTerminalInput(options: {
       if (!dragging) copySettledSelection();
     });
     terminal.attachCustomKeyEventHandler((event) => {
-      const customResult = options.onKeyEvent?.(event);
-      if (customResult !== undefined) return customResult;
-      if (event.key === KeyboardKey.Enter && event.isComposing) return false;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.F) {
+      if (options.matchesSearchShortcut?.(event)) {
         if (event.type === "keydown") {
-          options.sendMittEvent(TerminalMittEvent.OpenSearch);
           event.preventDefault();
+          if (!event.repeat) options.sendMittEvent(TerminalMittEvent.OpenSearch);
         }
         return false;
       }
+      const customResult = options.onKeyEvent?.(event);
+      if (customResult !== undefined) return customResult;
+      if (event.key === KeyboardKey.Enter && event.isComposing) return false;
       if (isTerminalCopyChord(event)) {
         if (event.type === "keydown" && terminal.hasSelection()) {
           event.preventDefault();
