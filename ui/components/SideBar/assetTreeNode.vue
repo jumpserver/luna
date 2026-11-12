@@ -99,6 +99,17 @@ const isFolderIcon = computed(() => icon.value === "i-tabler-folder" || icon.val
 const assetCountTitle = computed(() =>
   t(props.node.id === "ungrouped" ? "Tree.UngroupedAssetCount" : "Tree.AuthorizationAssetCount")
 );
+const assetTooltip = computed(() => {
+  if (isParent.value) return undefined;
+  const { title, name, meta } = props.node;
+
+  const address = meta?.data?.address?.trim();
+  const comment = meta?.data?.comment?.trim();
+  if (!comment) return title?.trim() || address || name;
+  // Recent connections may have stored the full tree title as the comment.
+  if (!address || comment === address || comment.startsWith(`${address}\n`)) return comment;
+  return `${address}\n${comment}`;
+});
 
 const activate = () => {
   if (isParent.value && !props.searchMode) {
@@ -197,40 +208,48 @@ watch(
         @update:model-value="emit('check', node)"
       />
       <span v-else-if="batchMode" class="app-tree-icon-slot shrink-0" aria-hidden="true" />
-      <component
-        :is="batchLeaf ? 'label' : 'button'"
-        :for="batchLeaf && canCheck ? checkboxId : undefined"
-        :type="batchLeaf ? undefined : 'button'"
-        class="flex h-full min-w-min flex-1 items-center gap-1 rounded-(--app-radius) text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--app-focus-ring)"
-        :class="{ 'cursor-pointer': !batchLeaf || (canCheck && !batchCheckPending) }"
-        :title="node.title || node.name"
-        :aria-current="isAutomationFocused ? 'true' : undefined"
-        :aria-expanded="isParent && !searchMode ? isOpen : undefined"
-        :data-workspace-tour="workspaceTourTarget"
-        @click="!batchLeaf && activate()"
+      <UTooltip
+        :text="assetTooltip"
+        :delay-duration="500"
+        :content="{ side: 'right', align: 'start', sideOffset: 6 }"
+        :ui="{ content: 'h-auto max-w-xs py-1.5', text: 'whitespace-pre-wrap wrap-anywhere' }"
+        ignore-non-keyboard-focus
       >
-        <UIcon v-if="node.loading" name="i-lucide-loader-circle" class="app-tree-icon sidebar-icon animate-spin" />
-        <AppTreeFolderIcon
-          v-else-if="isFolderIcon"
-          :open="isOpen"
-          class="app-tree-icon sidebar-icon tree-folder-icon"
-        />
-        <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
-        <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
-        <span
-          class="inline-flex min-w-min flex-1 items-center font-medium"
-          :class="!isParent ? 'tracking-[0.01em]' : ''"
+        <component
+          :is="batchLeaf ? 'label' : 'button'"
+          :for="batchLeaf && canCheck ? checkboxId : undefined"
+          :type="batchLeaf ? undefined : 'button'"
+          class="flex h-full min-w-min flex-1 items-center gap-1 rounded-(--app-radius) text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--app-focus-ring)"
+          :class="{ 'cursor-pointer': !batchLeaf || (canCheck && !batchCheckPending) }"
+          :title="isParent ? node.title || node.name : undefined"
+          :aria-current="isAutomationFocused ? 'true' : undefined"
+          :aria-expanded="isParent && !searchMode ? isOpen : undefined"
+          :data-workspace-tour="workspaceTourTarget"
+          @click="!batchLeaf && activate()"
         >
-          <span class="sidebar-tree-label truncate" :title="node.name">{{ node.name }}</span>
+          <UIcon v-if="node.loading" name="i-lucide-loader-circle" class="app-tree-icon sidebar-icon animate-spin" />
+          <AppTreeFolderIcon
+            v-else-if="isFolderIcon"
+            :open="isOpen"
+            class="app-tree-icon sidebar-icon tree-folder-icon"
+          />
+          <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
+          <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
           <span
-            v-if="isParent && node.assetCount != null"
-            class="ml-1 shrink-0"
-            :title="treeKind === 'authorization' ? '' : assetCountTitle"
+            class="inline-flex min-w-min flex-1 items-center font-medium"
+            :class="!isParent ? 'tracking-[0.01em]' : ''"
           >
-            ({{ node.assetCount }})
+            <span class="sidebar-tree-label truncate" :title="isParent ? node.name : undefined">{{ node.name }}</span>
+            <span
+              v-if="isParent && node.assetCount != null"
+              class="ml-1 shrink-0"
+              :title="treeKind === 'authorization' ? '' : assetCountTitle"
+            >
+              ({{ node.assetCount }})
+            </span>
           </span>
-        </span>
-      </component>
+        </component>
+      </UTooltip>
       <button
         v-if="node.meta?.type === 'recent-connections' && node.children?.length"
         type="button"

@@ -163,6 +163,30 @@ describe("sidebar asset actions", () => {
     expect(addToast).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ title: "Tree.MultiOpenSkipped" }));
   });
 
+  it("loads details for the selected asset when the details menu item is clicked", async () => {
+    const actions = useSidebarAssetActions();
+    const response = { address: "10.0.0.2", comment: "Production\nSSH only", org_name: "Operations" };
+    getAssetDetailRequest.mockResolvedValue(response);
+    actions.handleAssetContextMenu(asset, {
+      preventDefault() {},
+      stopPropagation() {},
+      clientX: 0,
+      clientY: 0
+    } as MouseEvent);
+    expect(getAssetDetailRequest).not.toHaveBeenCalled();
+    const detailsItem = actions.assetContextMenuItems.value.find((item) => item.label === "AssetCard.Details");
+    await detailsItem?.onSelect?.(new Event("select"));
+
+    expect(actions.contextMenuVisible.value).toBe(false);
+    expect(getAssetDetailRequest).toHaveBeenCalledExactlyOnceWith(asset.id, asset.org_id);
+    expect(actions.assetDetails.value).toEqual({
+      asset: { id: asset.id, name: asset.name, address: asset.address },
+      detail: response
+    });
+    actions.updateAssetDetailsModal(false);
+    expect(actions.assetDetails.value).toBeUndefined();
+  });
+
   describe.each([false, true])("Web asset connections (desktop=%s)", (desktop) => {
     beforeEach(() => {
       vi.stubGlobal("isDesktopRuntime", () => desktop);
