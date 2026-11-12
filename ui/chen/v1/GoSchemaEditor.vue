@@ -16,7 +16,7 @@ import {
 } from "~/chen/utils/indexSql";
 import { registerSiteLeaveGuard } from "~/composables/useSiteAccountSwitch";
 import { newChenRequestId } from "./requestId";
-import { canAlterColumnDefinition, columnChangeSql, createTableSql, droppableIndexes } from "./schemaSql";
+import { columnChangeSql, createTableSql, droppableIndexes, needsNativeColumnDefinition } from "./schemaSql";
 
 const props = defineProps<{
   session: GoSession;
@@ -31,6 +31,8 @@ const { t } = useI18n();
 const tableName = ref("");
 const columns = ref<ChenCreateTableColumn[]>([]);
 const metadata = ref<GoCatalogInspect>();
+const nativeDdl = ref("");
+const stagedChanges = ref<{ key: string; sql: string }[]>([]);
 const busy = ref(false);
 const error = ref("");
 const preview = ref(false);
@@ -59,11 +61,9 @@ const actions = computed<{ label: string; value: GoColumnAction }[]>(() => [
   { label: t("Chen.AddColumn"), value: "add" },
   { label: t("Chen.GoWriteRenameColumn"), value: "rename" },
   { label: t("Chen.Delete"), value: "drop" },
-  ...(canAlterColumnDefinition(props.session.dialect)
-    ? [{ label: t("Chen.GoWriteColumnDefinition"), value: "alter" as const }]
-    : [])
+  { label: t("Chen.GoWriteColumnDefinition"), value: "alter" }
 ]);
-const definition = computed(() => {
+const currentDefinition = computed(() => {
   try {
     if (props.mode !== "create" && (!metadata.value || metadata.value.truncated))
       return { sql: "", error: t("Chen.GoV1MetadataPartial") };
@@ -78,12 +78,19 @@ const definition = computed(() => {
       };
     if (props.mode === "alter")
       return {
-        sql: columnChangeSql(props.object!, props.session.dialect, action.value, original.value, {
-          name: name.value,
-          type: type.value,
-          size: size.value,
-          nullable: nullable.value
-        }),
+        sql: columnChangeSql(
+          props.object!,
+          props.session.dialect,
+          action.value,
+          original.value,
+          {
+            name: name.value,
+            type: type.value,
+            size: size.value,
+            nullable: nullable.value
+          },
+          nativeDdl.value
+        ),
         error: ""
       };
     if (indexAction.value === "drop" && !indexNames.value.includes(indexName.value))
@@ -109,14 +116,14 @@ const definition = computed(() => {
     return { sql: "", error: chenErrorText(cause, t) };
   }
 });
-function addColumn() {
+function addColumn(initial = false) {
   columns.value.push({
     id: newChenRequestId(),
-    name: "",
-    type: types.value[0]!,
+    name: initial ? "id" : "",
+    type: columns.value[0]?.type || types.value[0]!,
     size: "",
-    nullable: false,
-    primaryKey: false
+    nullable: !initial,
+    primaryKey: initial
   });
 }
 // Compare editable values, including invalid input and row order, never generated SQL or row IDs.
@@ -138,11 +145,31 @@ function snapshot() {
     indexAction.value === "drop" ? [indexName.value] : [indexName.value, indexColumns.value, unique.value, method.value]
   );
 }
-addColumn();
+addColumn(true);
 const baseline = ref(snapshot());
-const dirty = computed(
+const currentDirty = computed(
   () => (props.mode === "alter" && action.value === "drop" && !!chosen.value) || snapshot() !== baseline.value
 );
+const dirty = computed(() => currentDirty.value || stagedChanges.value.length > 0);
+function changeKey() {
+  return action.value === "add" ? `new:${name.value.trim()}` : `column:${chosen.value}`;
+}
+const definition = computed(() => {
+  if (props.mode !== "alter" || !stagedChanges.value.length) return currentDefinition.value;
+  if (currentDirty.value && !currentDefinition.value.sql) return currentDefinition.value;
+  const changes = new Map(stagedChanges.value.map((change) => [change.key, change.sql]));
+  if (currentDirty.value && currentDefinition.value.sql) changes.set(changeKey(), currentDefinition.value.sql);
+  return { sql: [...changes.values()].join("\n"), error: "" };
+});
+function stageChange() {
+  if (!currentDefinition.value.sql || busy.value || !currentDirty.value) return;
+  const key = changeKey();
+  const changes = stagedChanges.value.filter((change) => change.key !== key);
+  changes.push({ key, sql: currentDefinition.value.sql });
+  stagedChanges.value = changes;
+  action.value = "add";
+  resetColumnInput();
+}
 const confirming = ref(false);
 const editorBody = ref<HTMLElement>();
 const keepEditingButton = ref<{ $el: HTMLButtonElement }>();
@@ -153,9 +180,9 @@ let transferred = false;
 function current() {
   return !controller.signal.aborted && !transferred;
 }
-function confirmDiscard(): Promise<boolean> {
+function confirmDiscard(allChanges = true): Promise<boolean> {
   if (!current() || discardResolver) return Promise.resolve(false);
-  if (!dirty.value) return Promise.resolve(true);
+  if (!(allChanges ? dirty.value : currentDirty.value)) return Promise.resolve(true);
   previousFocus =
     typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null;
   confirming.value = true;
@@ -199,12 +226,12 @@ function resetColumnInput() {
   preview.value = false;
 }
 async function changeAction(value: GoColumnAction) {
-  if (value === action.value || (value !== "add" && !metadata.value) || !(await confirmDiscard())) return;
+  if (value === action.value || (value !== "add" && !metadata.value) || !(await confirmDiscard(false))) return;
   action.value = value;
   resetColumnInput();
 }
 async function changeChosen(value: string) {
-  if (value === chosen.value || !(await confirmDiscard())) return;
+  if (value === chosen.value || !(await confirmDiscard(false))) return;
   chosen.value = value;
   resetColumnInput();
 }
@@ -245,10 +272,22 @@ onMounted(async () => {
       props.session.id,
       props.object.schema,
       props.object.name,
-      controller.signal
+      controller.signal,
+      props.object.database
     );
     if (!current()) return;
     metadata.value = result;
+    if (props.mode === "alter" && needsNativeColumnDefinition(props.session.dialect)) {
+      const ddl = await props.api.catalogDdl(
+        props.session.id,
+        props.object.schema,
+        props.object.name,
+        controller.signal,
+        props.object.database
+      );
+      if (!current()) return;
+      nativeDdl.value = ddl.text || "";
+    }
     // Initial selection must not reset the add-column input typed while metadata was loading.
     chosen.value = result.columns[0]?.name || "";
   } catch (cause) {
@@ -258,7 +297,7 @@ onMounted(async () => {
   }
 });
 const unregisterSiteLeaveGuard = registerSiteLeaveGuard(confirmDiscard);
-onBeforeRouteLeave(confirmDiscard);
+onBeforeRouteLeave(() => confirmDiscard());
 onBeforeUnmount(() => {
   controller.abort();
   finishDiscard(false);
@@ -280,7 +319,13 @@ async function nativeDefinition() {
     return;
   busy.value = true;
   try {
-    const ddl = await props.api.catalogDdl(props.session.id, props.object.schema, props.object.name, controller.signal);
+    const ddl = await props.api.catalogDdl(
+      props.session.id,
+      props.object.schema,
+      props.object.name,
+      controller.signal,
+      props.object.database
+    );
     if (!current()) return;
     if (!ddl.text) throw new Error(t("Chen.NotSupported"));
     // Check after the request too: the user may have edited while it was in flight.
@@ -396,7 +441,7 @@ defineExpose({ dirty, confirmDiscard });
               color="neutral"
               variant="soft"
               :label="t('Chen.AddColumn')"
-              @click="addColumn"
+              @click="addColumn()"
             />
           </template>
           <template v-else-if="mode === 'alter'">
@@ -417,7 +462,7 @@ defineExpose({ dirty, confirmDiscard });
                 @update:model-value="changeChosen"
               />
             </UFormField>
-            <UFormField v-if="action === 'add' || action === 'rename'" :label="t('Chen.Name')">
+            <UFormField v-if="action !== 'drop'" :label="t('Chen.Name')">
               <UInput v-model="name" size="xs" class="w-full" />
             </UFormField>
             <div v-if="action === 'add' || action === 'alter'" class="grid grid-cols-2 gap-3">
@@ -427,16 +472,19 @@ defineExpose({ dirty, confirmDiscard });
               <UFormField :label="t('Chen.LengthPrecision')">
                 <UInput v-model="size" size="xs" class="w-full" />
               </UFormField>
-              <UCheckbox v-model="nullable" :label="t('Chen.Nullable')" />
+              <UCheckbox
+                v-model="nullable"
+                :label="t('Chen.Nullable')"
+                :disabled="
+                  action === 'alter' && !!metadata?.sections.primary_key.items?.some((row) => row.column === chosen)
+                "
+              />
             </div>
             <p v-if="action !== 'add' && original" class="text-xs text-muted">
               {{ t("Chen.GoWriteOriginalType") }}: {{ original.data_type }}
             </p>
             <p v-if="action === 'alter' && !types.includes(type)" class="text-xs text-warning">
               {{ t("Chen.GoWriteUnsupportedType") }}
-            </p>
-            <p v-if="!canAlterColumnDefinition(session.dialect)" class="text-xs text-muted">
-              {{ t("Chen.GoWritePreserveDefinition") }}
             </p>
             <UButton
               icon="i-lucide-file-code-2"
@@ -505,6 +553,20 @@ defineExpose({ dirty, confirmDiscard });
             definition.sql
           }}</pre>
         </div>
+        <div v-if="!preview && mode === 'alter' && stagedChanges.length" class="space-y-2 border-t border-default pt-3">
+          <p class="text-xs font-medium">{{ t("Chen.GoSchemaStagedChanges", { count: stagedChanges.length }) }}</p>
+          <div v-for="change in stagedChanges" :key="change.key" class="flex items-start gap-2">
+            <pre class="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap font-ui-mono text-xs">{{ change.sql }}</pre>
+            <UButton
+              icon="i-lucide-x"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              :aria-label="t('Common.Remove')"
+              @click="stagedChanges = stagedChanges.filter((item) => item.key !== change.key)"
+            />
+          </div>
+        </div>
         <p v-if="!definition.sql" class="text-xs text-muted">{{ definition.error }}</p>
       </div>
     </template>
@@ -517,6 +579,14 @@ defineExpose({ dirty, confirmDiscard });
           variant="soft"
           :label="t('Chen.GoWriteBack')"
           @click="preview = false"
+        />
+        <UButton
+          v-if="!preview && mode === 'alter'"
+          color="neutral"
+          variant="soft"
+          :label="t('Chen.GoSchemaStageChange')"
+          :disabled="!currentDefinition.sql || !currentDirty || busy || session.state !== 'ready'"
+          @click="stageChange"
         />
         <UButton
           :label="t(preview ? 'Chen.ApplyChanges' : 'Chen.PreviewAndSave')"

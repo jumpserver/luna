@@ -14,6 +14,7 @@ const props = defineProps<{
   sessionId: string;
   dialect: string;
   database: string;
+  schema?: string;
   asset: string;
   ready: boolean;
   canPaste: boolean;
@@ -39,7 +40,7 @@ const { t } = useI18n();
 const toast = useToast();
 const preferences = useChenWorkspacePreferences();
 const databaseNamespace = computed(() => chenSqlDialect(props.dialect).databaseNamespace);
-const listsDatabases = computed(() => ["mysql", "mariadb", "oceanbase-mysql"].includes(props.dialect));
+const connectionContext = ref<QueryContext>({ database: props.database, schema: props.schema || "" });
 interface Node {
   id: string;
   label: string;
@@ -64,12 +65,13 @@ interface Row {
   type: "node" | "loading" | "error" | "empty" | "more";
 }
 function node(type: Node["type"], label: string, schema = "", extra: Partial<Node> = {}): Node {
+  const database = extra.database || "";
   return {
-    id: JSON.stringify([type, schema, label]),
+    id: `node:${JSON.stringify([type, database, schema, label])}`,
     label,
     type,
     schema,
-    database: props.database,
+    database,
     children: [],
     expanded: false,
     loaded: false,
@@ -127,7 +129,7 @@ async function toggleSearch() {
       ? context(current)
       : props.activeScope?.database
         ? { ...props.activeScope }
-        : { database: props.database, schema: databaseNamespace.value ? props.database : "" };
+        : { ...connectionContext.value };
     browsingSelection = selected.value;
     browsingScroll = tree.value?.scrollTop || 0;
     searchOpen.value = true;
@@ -184,18 +186,17 @@ const rows = computed(() => {
   return result;
 });
 const focusable = computed(() => rows.value.filter((row) => row.type === "node"));
-function groups(schema: string, database = props.database) {
+function groups(schema: string, database: string) {
   return (["table", "view"] as const).map((kind) => node("group", kind, schema, { kind, database }));
 }
 function context(current: Node): QueryContext {
-  if (current.type === "connection")
-    return { database: props.database, schema: databaseNamespace.value ? props.database : "" };
+  if (current.type === "connection") return { ...connectionContext.value };
   return { database: current.database, schema: current.schema };
 }
 function databaseNode(database: string) {
   return node("database", database, databaseNamespace.value ? database : "", {
     database,
-    expanded: database === props.database,
+    expanded: database === connectionContext.value.database,
     ...(databaseNamespace.value ? { children: groups(database, database), loaded: true } : {})
   });
 }
@@ -211,7 +212,7 @@ function relation(object: GoCatalogObject): Node {
 }
 async function load(current: Node, append = false) {
   if (!props.ready || current.loading || !expandable(current)) return;
-  if ((current.type === "connection" && !listsDatabases.value) || current.type === "schema") return;
+  if (current.type === "schema") return;
   if (current.type === "database" && databaseNamespace.value) return;
   const generation = ++current.generation;
   const controller = new AbortController();
@@ -221,41 +222,60 @@ async function load(current: Node, append = false) {
   try {
     let page: GoCatalogPage<unknown>;
     let items: Node[];
-    if (current.type === "connection" || current.type === "database") {
-      const schemas = await props.api.catalogSchemas(
+    if (current.type === "connection") {
+      const databases = await props.api.catalogDatabases(
         props.sessionId,
         append ? current.cursor : undefined,
         controller.signal
       );
+      if (generation !== current.generation || controller.signal.aborted) return;
+      page = databases;
+      connectionContext.value = { database: databases.database || "", schema: databases.schema || "" };
+      emit("defaultContext", { ...connectionContext.value });
+      items = databases.items.map((database) => databaseNode(database.name));
+    } else if (current.type === "database") {
+      const schemas = await props.api.catalogSchemas(
+        props.sessionId,
+        append ? current.cursor : undefined,
+        controller.signal,
+        current.database
+      );
       page = schemas;
-      if (current.type === "connection" && !controller.signal.aborted)
-        emit("defaultContext", { database: schemas.database || "", schema: schemas.database || "" });
       items = schemas.items.map((schema) =>
-        current.type === "connection"
-          ? databaseNode(schema.name)
-          : node("schema", schema.name, schema.name, {
-              database: current.database,
-              loaded: true,
-              children: groups(schema.name, current.database)
-            })
+        node("schema", schema.name, schema.name, {
+          database: current.database,
+          expanded:
+            current.database === connectionContext.value.database && schema.name === connectionContext.value.schema,
+          loaded: true,
+          children: groups(schema.name, current.database)
+        })
       );
     } else {
       const objects = await props.api.catalogObjects(
         props.sessionId,
-        { schema: current.schema, kind: current.kind, cursor: append ? current.cursor : undefined },
+        {
+          database: current.database,
+          schema: current.schema,
+          kind: current.kind,
+          cursor: append ? current.cursor : undefined
+        },
         controller.signal
       );
       page = objects;
       items = objects.items.map(relation);
     }
     if (generation !== current.generation || controller.signal.aborted) return;
-    if (current.type === "connection" && props.database && !items.some((item) => item.database === props.database))
-      items.unshift(current.children.find((item) => item.database === props.database) || databaseNode(props.database));
+    const defaultDatabase = connectionContext.value.database;
+    if (current.type === "connection" && defaultDatabase && !items.some((item) => item.database === defaultDatabase))
+      items.unshift(
+        current.children.find((item) => item.database === defaultDatabase) || databaseNode(defaultDatabase)
+      );
     current.children = mergeCatalogNodes(current.children, items, append);
     current.cursor = page.next_cursor;
     current.more = page.has_more;
     current.loaded = true;
     if (current.type === "connection") selectDefaultDatabase();
+    syncSelection();
   } catch (cause) {
     if (!controller.signal.aborted && generation === current.generation) current.error = chenErrorText(cause, t);
   } finally {
@@ -269,12 +289,11 @@ function expandable(current: Node) {
 async function toggle(current: Node) {
   if (!expandable(current)) return;
   current.expanded = !current.expanded;
-  if (current.expanded && !current.loaded) await load(current);
+  if (current.expanded) await resumeExpanded(current);
 }
 function select(current: Node, event: MouseEvent) {
   selected.value = current.id;
-  if (searchOpen.value && listsDatabases.value && !searchScope.value.database && current.database)
-    searchScope.value = context(current);
+  if (searchOpen.value && !searchScope.value.database && current.database) searchScope.value = context(current);
   // A native double click produces two clicks. Expand once, never run a query here.
   if (event.detail <= 1 && expandable(current)) void toggle(current);
 }
@@ -311,7 +330,17 @@ async function copyName(current: Node, qualified = false) {
     toast.add({ title: t("Common.CopyFailed"), color: "error" });
   }
 }
-async function refresh(current = listsDatabases.value ? root.value : root.value.children[0]!) {
+function invalidate(current: Node) {
+  if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) current.loaded = false;
+  for (const child of current.children) if (expandable(child)) invalidate(child);
+}
+async function resumeExpanded(current: Node) {
+  if (!props.ready || !current.expanded || !expandable(current)) return;
+  if (!current.loaded) await load(current);
+  if (current.error) return;
+  for (const child of current.children) if (child.expanded) await resumeExpanded(child);
+}
+async function refresh(current = root.value) {
   if (!current) return;
   if (!expandable(current)) {
     if (searching.value) return runSearch();
@@ -320,7 +349,6 @@ async function refresh(current = listsDatabases.value ? root.value : root.value.
     else if (parent) await refresh(parent.node);
     return;
   }
-  if (current.type === "connection" && !listsDatabases.value) return refresh(current.children[0]);
   if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) {
     current.expanded = true;
     await load(current);
@@ -329,7 +357,7 @@ async function refresh(current = listsDatabases.value ? root.value : root.value.
   for (const child of current.children) {
     if (!expandable(child)) continue;
     if (child.expanded || (child.type === "database" && databaseNamespace.value)) await refresh(child);
-    else if (child.type !== "schema") child.loaded = false;
+    else invalidate(child);
   }
 }
 function clearRecent() {
@@ -383,7 +411,7 @@ function menu(current: Node) {
           }
         ]
       : []),
-    ...(current.type === "schema" || (current.type === "database" && listsDatabases.value)
+    ...(current.type === "schema" || current.type === "database"
       ? [
           {
             label: t("Chen.GoOverviewOpen"),
@@ -527,7 +555,7 @@ async function keydown(event: KeyboardEvent, current: Node) {
 }
 async function runSearch(append = false) {
   if (!props.ready || !searching.value) return;
-  if (listsDatabases.value && !searchScope.value.database) return;
+  if (!searchScope.value.database) return;
   searchController?.abort();
   const controller = new AbortController();
   searchController = controller;
@@ -542,7 +570,8 @@ async function runSearch(append = false) {
     const page = await props.api.catalogObjects(
       props.sessionId,
       {
-        ...(listsDatabases.value ? { schema: searchScope.value.database } : {}),
+        database: searchScope.value.database,
+        schema: searchScope.value.schema || undefined,
         q: search.value.trim(),
         cursor: append ? current.cursor : undefined
       },
@@ -567,46 +596,38 @@ watch(search, () => {
   searchNode.value.more = false;
   searchNode.value.loading = false;
   searchNode.value.error = "";
-  if (searching.value && props.ready && (!listsDatabases.value || searchScope.value.database)) {
+  if (searching.value && props.ready && searchScope.value.database) {
     searchNode.value.loading = true;
     searchTimer = setTimeout(runSearch, 250);
   }
 });
 function initialize() {
-  const children = props.database ? [databaseNode(props.database)] : [];
-  root.value = node("connection", props.asset, databaseNamespace.value ? props.database : "", {
+  const children = connectionContext.value.database ? [databaseNode(connectionContext.value.database)] : [];
+  root.value = node("connection", props.asset, "", {
     expanded: true,
-    loaded: !listsDatabases.value,
     children
   });
   selected.value = children[0]?.id || root.value.id;
-  if (listsDatabases.value) void load(root.value);
-  else if (children[0]) void load(children[0]);
+  void load(root.value);
 }
 function selectDefaultDatabase() {
-  if (!props.database) return;
-  let database = root.value.children.find((child) => child.database === props.database);
+  const defaultDatabase = connectionContext.value.database;
+  if (!defaultDatabase) return;
+  let database = root.value.children.find((child) => child.database === defaultDatabase);
   if (!database) {
-    database = databaseNode(props.database);
+    database = databaseNode(defaultDatabase);
     root.value.children.unshift(database);
   }
   if (selected.value === root.value.id) {
     database.expanded = true;
     selected.value = database.id;
   }
-  syncSelection();
+  if (database.expanded && !database.loaded) void resumeExpanded(database);
 }
 onMounted(() => {
   initialize();
   syncSelection();
 });
-watch(
-  () => props.database,
-  () => {
-    if (listsDatabases.value) selectDefaultDatabase();
-    else initialize();
-  }
-);
 watch(
   () => props.ready,
   (ready) => {
@@ -614,9 +635,16 @@ watch(
     if (!ready) {
       searchController?.abort();
       searchNode.value.loading = false;
+      for (const controller of controllers) controller.abort();
+      function cancel(current: Node) {
+        if (current.loading) current.loaded = false;
+        current.generation++;
+        current.loading = false;
+        for (const child of current.children) cancel(child);
+      }
+      cancel(root.value);
     } else if (searching.value) void runSearch();
-    else if (!root.value.loaded) void load(root.value);
-    else if (root.value.children[0] && !root.value.children[0].loaded) void load(root.value.children[0]);
+    else void resumeExpanded(root.value);
   }
 );
 onBeforeUnmount(() => {
@@ -718,18 +746,15 @@ onBeforeUnmount(() => {
         v-model="search"
         :placeholder="t('Chen.GoV1FindTable')"
         :clear-label="t('Chen.GoV1ClearSearch')"
-        :disabled="listsDatabases && !searchScope.database"
+        :disabled="!searchScope.database"
         @keydown.down="focusSearchResults"
       />
     </div>
-    <p
-      v-if="searchOpen && listsDatabases && !searchScope.database"
-      class="shrink-0 px-4 py-3 text-center text-xs text-muted"
-    >
+    <p v-if="searchOpen && !searchScope.database" class="shrink-0 px-4 py-3 text-center text-xs text-muted">
       {{ t("Chen.SelectDatabaseAction") }}
     </p>
     <p
-      v-if="searchOpen && !searching && (!listsDatabases || searchScope.database)"
+      v-if="searchOpen && !searching && searchScope.database"
       class="grid min-h-0 flex-1 place-items-center px-4 text-center text-xs text-muted"
     >
       {{ t("Chen.GoV1FindTableHint") }}

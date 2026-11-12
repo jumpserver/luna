@@ -1,3 +1,4 @@
+import type { ColumnState } from "ag-grid-community";
 import type { OverviewViewSection } from "./overview";
 import type {
   ChenGoApi,
@@ -51,6 +52,8 @@ export interface QueryWorkspaceTab {
   resultPane: "results" | number;
   planSequence: number;
   planRuns: QueryPlanRun[];
+  pinnedResults: QueryWorkspaceTab[];
+  pinnedResultId: string | null;
   executionTransaction?: GoTransactionRequest;
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
@@ -64,6 +67,16 @@ export interface QueryWorkspaceTab {
   browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
+  executionRefresh?: {
+    viewId: string;
+    offset: number;
+    status: GoEditDraft["status"];
+    saveError?: GoExecution["error"];
+    retryOffset?: number;
+  };
+  resultViewId?: string;
+  resultTransactionRevision?: number;
+  gridView?: { filter: string; columns: ColumnState[] };
   executionBrowse?: GoBrowseRequest;
   executionQueryPage?: GoQueryPageRequest;
   queryCount?: GoExecution["query_count"] | null;
@@ -71,6 +84,10 @@ export interface QueryWorkspaceTab {
   exportBusy: boolean;
   pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
+  resultTabs: { id: string; execution: GoExecution; sql: string }[];
+  replacedResultIds: string[];
+  loadedExecutionId?: string;
+  pinnedSource?: boolean;
   resultSql: string;
   rows: GoRows | null;
   resultId: string;
@@ -93,6 +110,7 @@ export interface QueryWorkspaceTab {
     editPlanId?: string;
     browse?: GoBrowseRequest;
     queryPage?: GoQueryPageRequest;
+    refresh?: boolean;
   } | null;
   busy: boolean;
   loadingRows: boolean;
@@ -146,7 +164,10 @@ export function workspaceQuery(tab: ChenWorkspaceTab): QueryWorkspaceTab | null 
   return tab.kind === "object" ? tab.data : isQueryWorkspaceTab(tab) ? tab : null;
 }
 export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] {
-  return tabs.flatMap((tab) => workspaceQuery(tab) || []);
+  return tabs.flatMap((tab) => {
+    const query = workspaceQuery(tab);
+    return query ? [query, ...query.pinnedResults] : [];
+  });
 }
 export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
   // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
@@ -173,18 +194,22 @@ export function createQueryTab(
     resultPane: "results",
     planSequence: 0,
     planRuns: [],
+    pinnedResults: [],
+    pinnedResultId: null,
     executionConfirmWarnings: false,
     executionSubmitReview: false,
     edit: createEditDraft(),
-    loadingSettings: { mode: "page", batchSize: 200 },
+    loadingSettings: { mode: "page", batchSize: 50 },
     pendingLoading: null,
     loadMoreFailed: false,
-    browseDraft: { where: "", sort: [], page_size: 200 },
+    browseDraft: { where: "", sort: [], page_size: 50 },
     browseCount: null,
     exportJob: null,
     exportBusy: false,
     pendingCachedExport: null,
     resultExecution: null,
+    resultTabs: [],
+    replacedResultIds: [],
     resultSql: "",
     rows: null,
     resultId: "",
@@ -217,14 +242,14 @@ export function objectSelect(object: GoCatalogObject, dialect: string, preview =
   if (!preview) return `SELECT * FROM ${name};`;
   switch (chenSqlDialect(dialect).preview) {
     case "top":
-      return `SELECT TOP (200) * FROM ${name};`;
+      return `SELECT TOP (50) * FROM ${name};`;
     case "fetch":
-      return `SELECT * FROM ${name} FETCH FIRST 200 ROWS ONLY;`;
+      return `SELECT * FROM ${name} FETCH FIRST 50 ROWS ONLY;`;
     // ROWNUM also supports Oracle versions before the FETCH FIRST clause.
     case "rownum":
-      return `SELECT * FROM ${name} WHERE ROWNUM <= 200;`;
+      return `SELECT * FROM ${name} WHERE ROWNUM <= 50;`;
     default:
-      return `SELECT * FROM ${name} LIMIT 200;`;
+      return `SELECT * FROM ${name} LIMIT 50;`;
   }
 }
 export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab, "kind" | "object">>(
@@ -235,8 +260,8 @@ export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab,
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
   return { ...tab.context };
 }
-export function queryDirty(query: QueryWorkspaceTab) {
-  return query.sql !== query.baselineSql || editDirty(query.edit);
+export function queryDirty(query: QueryWorkspaceTab): boolean {
+  return query.sql !== query.baselineSql || editDirty(query.edit) || query.pinnedResults.some(queryDirty);
 }
 export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["pending"] {
   if (query.executionEditPlan && query.edit.plan?.plan_id !== query.executionEditPlan) return null;
@@ -284,20 +309,27 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   interruptQueryPlans(query);
 }
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
-  if (query.closed || value.console_id !== query.console?.id || query.pending) return false;
-  if (query.execution && value.id !== query.execution.id) return false;
-  query.execution = reconcileExecution(query.execution, value);
+  if (query.closed || value.console_id !== query.console?.id) return false;
   if (
     query.rows &&
     value.transaction?.outcome &&
+    value.transaction.revision > (query.resultTransactionRevision ?? -1) &&
     ["committed", "rolled_back", "implicit_commit", "unknown"].includes(value.transaction.outcome)
   ) {
     query.edit.refreshRequired = true;
     query.edit.transactionStale = true;
+    if (query.edit.status === "staged") {
+      query.edit.status = value.transaction.outcome === "implicit_commit" ? "committed" : value.transaction.outcome;
+    }
   }
   if (query.console && value.transaction && value.transaction.revision >= (query.console.transaction?.revision || 0))
     query.console.transaction = value.transaction;
+  for (const result of query.resultTabs) {
+    if (result.execution.id === value.id) result.execution = reconcileExecution(result.execution, value);
+  }
   if (query.resultExecution?.id === value.id) query.resultExecution = reconcileExecution(query.resultExecution, value);
+  if (query.pending || (query.execution && value.id !== query.execution.id)) return false;
+  query.execution = reconcileExecution(query.execution, value);
   return true;
 }
 export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogObject }>(
@@ -414,7 +446,7 @@ export function normalizeResultLoading(value: unknown): GoResultLoadingSettings 
   return {
     mode: saved.mode === "continuous" ? "continuous" : "page",
     batchSize:
-      Number.isInteger(saved.batchSize) && saved.batchSize! > 0 && saved.batchSize! <= 1000 ? saved.batchSize! : 200
+      Number.isInteger(saved.batchSize) && saved.batchSize! > 0 && saved.batchSize! <= 1000 ? saved.batchSize! : 50
   };
 }
 export function useResultLoadingPreferences() {
@@ -437,7 +469,7 @@ export function useResultLoadingPreferences() {
     }
   );
 }
-export function resultLoadingLocked(query: QueryWorkspaceTab) {
+export function resultLoadingLocked(query: QueryWorkspaceTab, allowStale = false) {
   return (
     query.closed ||
     query.console?.state !== "ready" ||
@@ -446,7 +478,7 @@ export function resultLoadingLocked(query: QueryWorkspaceTab) {
     !!query.pending ||
     executionActive(query.execution) ||
     query.edit.busy ||
-    query.edit.refreshRequired ||
+    (!allowStale && query.edit.refreshRequired) ||
     editDirty(query.edit)
   );
 }

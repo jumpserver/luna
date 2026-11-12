@@ -13,7 +13,7 @@ import type {
 } from "ag-grid-community";
 import type { PropType } from "vue";
 import type { ChenGoApi, GoCopiedSQL, GoCopySelection, GoRows } from "./api";
-import type { GoResultLoadingSettings } from "./workspace";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
 import type { ChenGridCell } from "~/chen/utils/dataGridSelection";
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
@@ -49,6 +49,8 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 
 const props = defineProps<{
   rows: GoRows;
+  viewId?: string;
+  initialView?: QueryWorkspaceTab["gridView"];
   canCopy: boolean;
   readResultPage?: ChenGoApi["rows"];
   rowActions?: DropdownMenuItem[];
@@ -81,7 +83,7 @@ const { t, locale } = useI18n();
 const toast = useToast();
 const gridApi = shallowRef<GridApi | null>(null);
 const selection = ref(emptyChenGridSelection());
-const filter = ref("");
+const filter = ref(props.initialView?.filter || "");
 const searchOpen = ref(false);
 const resultCopyBusy = ref(false);
 const localSearch = computed(() => props.displayMode !== "table");
@@ -91,7 +93,7 @@ const loadingModes = computed(() => [
   { label: t("Chen.GoBrowseContinuous"), value: "continuous", disabled: props.rows.query_page?.mode === "database" }
 ]);
 const batchSizes = computed(() =>
-  [...new Set([50, 100, 200, 500, 1000, props.loadingSettings?.batchSize || 200, props.maxBatchSize || 1000])]
+  [...new Set([50, 100, 200, 500, 1000, props.loadingSettings?.batchSize || 50, props.maxBatchSize || 1000])]
     .filter((size) => size <= (props.maxBatchSize || 1000))
     .sort((a, b) => a - b)
 );
@@ -841,9 +843,14 @@ function setCurrentCellNull() {
   const target = cell && editableTarget(row, cell.colId);
   if (target) emit("change", target.row, target.column, null);
 }
-defineExpose({ stopEditing: (cancel = false) => gridApi.value?.stopEditing(cancel) });
+defineExpose({
+  stopEditing: (cancel = false) => gridApi.value?.stopEditing(cancel),
+  snapshotView: () => ({ filter: filter.value, columns: gridApi.value?.getColumnState() || [] })
+});
 function ready(event: GridReadyEvent) {
   gridApi.value = event.api;
+  if (props.initialView?.columns.length)
+    event.api.applyColumnState({ state: props.initialView.columns, applyOrder: true });
 }
 function modelUpdated() {
   shownRows.value = gridApi.value?.getDisplayedRowCount() || 0;
@@ -852,7 +859,7 @@ function pinChanged() {
   pinVersion.value++;
   refreshSelection();
 }
-watch([() => props.rows.id, columnStructure], () => {
+watch([() => props.viewId || props.rows.id, columnStructure], () => {
   gridApi.value?.stopEditing(true);
   showAllColumns();
   fieldSearch.value = "";
@@ -874,6 +881,7 @@ watch(
 );
 watch([() => props.rows.id, () => props.rows.offset], () => {
   gridApi.value?.stopEditing(true);
+  gridApi.value?.clearFocusedCell();
   resetSelection();
   valueOpen.value = false;
 });
@@ -902,7 +910,7 @@ watch(
   { flush: "sync" }
 );
 watch(
-  () => props.rows.id,
+  () => props.viewId || props.rows.id,
   () => {
     filter.value = "";
   }

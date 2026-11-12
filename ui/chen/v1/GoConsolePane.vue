@@ -37,22 +37,38 @@ watch(
 const timeline = reactive<ChenConsoleTimelineEntry[]>([]);
 const history = reactive<{ id: string; sql: string }[]>([]);
 const loadingResults = new Set<string>();
+const copiedResultIds = new Set<string>();
+const releasingResultIds = new Set<string>();
 let generation = 0;
 let disposed = false;
 let clearedExecution = "";
-// ponytail: keep bounded in-memory history; persistent or full-result history belongs in a server-backed store.
-const MAX_ENTRIES = 50;
-const MAX_BYTES = 8 * 1024 * 1024;
-const sizes = new Map<string, number>();
+const MAX_ENTRIES = 200;
 function trimHistory() {
-  while (
-    timeline.length > MAX_ENTRIES ||
-    (timeline.length > 1 && [...sizes.values()].reduce((a, b) => a + b, 0) > MAX_BYTES)
-  ) {
-    const removed = timeline.shift()!;
-    sizes.delete(removed.id);
+  while (timeline.length > MAX_ENTRIES) timeline.shift();
+}
+function resultReferences() {
+  return [
+    props.query.rows?.id,
+    props.query.cachedResult?.id,
+    props.query.resultId,
+    props.query.resultLoadError?.id,
+    ...(props.query.execution?.result_ids || []),
+    ...(props.query.resultExecution?.result_ids || [])
+  ];
+}
+function releaseCopiedResults() {
+  const referenced = new Set(resultReferences());
+  for (const id of copiedResultIds) {
+    if (referenced.has(id) || releasingResultIds.has(id)) continue;
+    releasingResultIds.add(id);
+    void props.api
+      .releaseResult(id)
+      .then(() => copiedResultIds.delete(id))
+      .catch(() => {})
+      .finally(() => releasingResultIds.delete(id));
   }
 }
+watch(resultReferences, releaseCopiedResults, { flush: "post" });
 const tab = computed<ChenPromptConsoleTab>(() => ({
   id: props.query.id,
   kind: "console",
@@ -86,8 +102,8 @@ function resetTimeline() {
   clearedExecution = props.query.execution?.id || "";
   generation++;
   timeline.splice(0);
-  sizes.clear();
   loadingResults.clear();
+  releaseCopiedResults();
 }
 function clear() {
   if (!executionActive(props.query.execution) && !props.query.busy) resetTimeline();
@@ -98,7 +114,10 @@ async function loadResult(entry: ChenConsoleTimelineEntry, id: string) {
   loadingResults.add(key);
   const current = generation;
   try {
-    const rows: GoRows = props.query.rows?.id === id ? props.query.rows : await props.api.rows(id, 0, 200);
+    let rows: GoRows =
+      props.query.rows?.id === id && props.query.rows.offset === 0
+        ? props.query.rows
+        : await props.api.rows(id, 0, 1000);
     if (disposed || current !== generation || !timeline.includes(entry)) return;
     const fields = rows.columns.map((column, index) => ({
       name: `column_${index}`,
@@ -106,14 +125,14 @@ async function loadResult(entry: ChenConsoleTimelineEntry, id: string) {
       type: column.data_type
     }));
     const data: Record<string, unknown>[] = [];
-    let bytes = sizes.get(entry.id) || 0;
-    for (const row of rows.rows.slice(0, 200)) {
-      const size = new TextEncoder().encode(JSON.stringify(row)).length;
-      if (bytes + size > MAX_BYTES) break;
-      data.push(Object.fromEntries(fields.map((field, index) => [field.name, row[index]])));
-      bytes += size;
+    while (true) {
+      for (const row of rows.rows) {
+        data.push(Object.fromEntries(fields.map((field, index) => [field.name, row[index]])));
+      }
+      if (rows.next_offset === undefined || rows.next_offset <= rows.offset) break;
+      rows = await props.api.rows(id, rows.next_offset, 1000);
+      if (disposed || current !== generation || !timeline.includes(entry)) return;
     }
-    sizes.set(entry.id, bytes);
     entry.results.push({
       id,
       data: { fields, data },
@@ -123,6 +142,7 @@ async function loadResult(entry: ChenConsoleTimelineEntry, id: string) {
         rowLimit: data.length
       }
     });
+    copiedResultIds.add(id);
     trimHistory();
   } catch (cause) {
     if (!disposed && current === generation && timeline.includes(entry)) {
@@ -131,6 +151,8 @@ async function loadResult(entry: ChenConsoleTimelineEntry, id: string) {
     }
   } finally {
     if (current === generation) loadingResults.delete(key);
+    if (disposed || current !== generation || !timeline.includes(entry)) copiedResultIds.add(id);
+    releaseCopiedResults();
   }
 }
 watch(
@@ -157,7 +179,6 @@ watch(
         planOnly: !!execution.plan
       });
       timeline.push(entry);
-      sizes.set(entry.id, new TextEncoder().encode(entry.sql).length);
       if (!execution.plan) {
         history.push({ id: entry.id, sql: entry.sql });
         if (history.length > MAX_ENTRIES) history.shift();
@@ -206,6 +227,7 @@ watch(
 onBeforeUnmount(() => {
   disposed = true;
   generation++;
+  releaseCopiedResults();
 });
 function replaceDocument(sql: string) {
   if (!props.session.permissions.can_paste || props.disabled) return false;

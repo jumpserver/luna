@@ -6,7 +6,6 @@ import type {
   GoExecution,
   GoExportFormat,
   GoQueryPageRequest,
-  GoRows,
   GoSession,
   GoTransactionRequest
 } from "./api";
@@ -33,7 +32,6 @@ import GoConsolePane from "./GoConsolePane.vue";
 import GoExportPanel from "./GoExportPanel.vue";
 import GoQueryContextMenu from "./GoQueryContextMenu.vue";
 import GoQueryPagePanel from "./GoQueryPagePanel.vue";
-import GoResultGrid from "./GoResultGrid.client.vue";
 import GoResultSql from "./GoResultSql.vue";
 import GoTransactionControls from "./GoTransactionControls.vue";
 import GoWritePanel from "./GoWritePanel.vue";
@@ -50,42 +48,48 @@ const props = defineProps<{
   single: boolean;
   visible: boolean;
   dataOnly?: boolean;
+  pinnedView?: boolean;
   reviewCoreSite?: string;
   aiAvailable?: boolean;
   sqlKeywordCase?: ChenSqlKeywordCase;
 }>();
 const emit = defineEmits<{
   sql: [value: string];
-  applyEdits: [plan: GoEditPlan];
+  applyEdits: [plan: GoEditPlan, target?: QueryWorkspaceTab];
   uploadSql: [sql: string];
-  refreshData: [];
-  browse: [request: GoBrowseRequest];
-  queryPage: [request: GoQueryPageRequest];
-  cachedResult: [];
-  loadingSettings: [settings: GoResultLoadingSettings];
-  loadMore: [automatic: boolean];
+  refreshData: [target?: QueryWorkspaceTab];
+  browse: [request: GoBrowseRequest, target?: QueryWorkspaceTab];
+  queryPage: [request: GoQueryPageRequest, target?: QueryWorkspaceTab];
+  cachedResult: [target?: QueryWorkspaceTab];
+  loadingSettings: [settings: GoResultLoadingSettings, target?: QueryWorkspaceTab];
+  loadMore: [automatic: boolean, target?: QueryWorkspaceTab];
   run: [sql: string, version: number];
   explain: [sql: string, version: number];
-  cancel: [];
-  review: [];
-  confirmWarning: [executionId: string];
-  transaction: [request: GoTransactionRequest];
-  confirmImplicit: [executionId: string];
+  cancel: [target?: QueryWorkspaceTab];
+  review: [executionId: string, confirmationId?: string, target?: QueryWorkspaceTab];
+  confirmWarning: [executionId: string, confirmationId?: string, target?: QueryWorkspaceTab];
+  policyCancel: [executionId: string, confirmationId: string, target?: QueryWorkspaceTab];
+  transaction: [request: GoTransactionRequest, target?: QueryWorkspaceTab];
+  confirmImplicit: [executionId: string, target?: QueryWorkspaceTab];
   export: [
     mode: "cached" | "query",
     format: GoExportFormat,
-    snapshot: { sql: string; resultId: string; version: number; rows?: number }
+    snapshot: { sql: string; resultId: string; version: number; rows?: number },
+    target?: QueryWorkspaceTab
   ];
-  exportSync: [];
-  exportCancel: [];
-  exportDelete: [];
+  exportSync: [target?: QueryWorkspaceTab];
+  exportCancel: [target?: QueryWorkspaceTab];
+  exportDelete: [target?: QueryWorkspaceTab];
   ai: [operation: ChenSqlAiOperation];
-  recover: [];
-  reconnect: [];
-  rows: [id: string, offset?: number];
-  retryRows: [];
-  pane: [value: QueryWorkspaceTab["resultPane"]];
-  closePlan: [number: number];
+  recover: [target?: QueryWorkspaceTab];
+  reconnect: [target?: QueryWorkspaceTab];
+  rows: [id: string, offset?: number, target?: QueryWorkspaceTab];
+  retryRows: [target?: QueryWorkspaceTab];
+  pane: [value: QueryWorkspaceTab["resultPane"], target?: QueryWorkspaceTab];
+  closePlan: [number: number, target?: QueryWorkspaceTab];
+  closePinned: [target: QueryWorkspaceTab];
+  pin: [sql: string, title: string, view?: QueryWorkspaceTab["gridView"]];
+  selectPinned: [id: string | null];
   restore: [sql: string];
 }>();
 const { t } = useI18n();
@@ -231,11 +235,14 @@ async function deleteSnippet(snippet: ChenSqlSnippet) {
 }
 const ready = computed(() => props.session.state === "ready" && props.query.console?.state === "ready");
 const editorError = ref("");
-const pinned = ref<
-  { id: number; rows: GoRows; sql: string; title: string; source: string; startedAt?: string; resultId: string }[]
->([]);
-const pinnedId = ref<number | null>(null);
-let pinSequence = 0;
+const writePanel = useTemplateRef<InstanceType<typeof GoWritePanel>>("writePanel");
+const pinned = computed(() => props.query.pinnedResults);
+const pinnedId = computed({
+  get: () => props.query.pinnedResultId,
+  set: (id: string | null) => {
+    emit("selectPinned", id);
+  }
+});
 const pinnedResult = computed(() => pinned.value.find((item) => item.id === pinnedId.value));
 const showingPin = computed(() => !!pinnedResult.value && props.query.resultPane === "results");
 // The editor may already contain another statement. Only use the execution that owns these rows.
@@ -248,35 +255,12 @@ const loadedResultSql = computed(
 );
 function pinResult() {
   if (!props.query.rows || editDirty(props.query.edit) || props.query.edit.busy || props.query.loadingRows) return;
-  // A pin is a read-only in-memory copy of loaded rows, never an execution or edit context.
-  const json = JSON.stringify(props.query.rows);
-  if (pinned.value.length >= 3 || new TextEncoder().encode(json).byteLength > 2 * 1024 * 1024) {
-    editorError.value = t("Chen.GoPinnedLimit");
-    return;
-  }
-  const id = ++pinSequence;
-  pinned.value.push({
-    id,
-    resultId: props.query.resultId,
-    rows: JSON.parse(json),
-    sql: loadedResultSql.value,
-    title: queryResultTitle(loadedResultSql.value),
-    startedAt: props.query.resultExecution?.started_at,
-    source: props.query.resultExecution?.id || ""
-  });
-  pinnedId.value = id;
+  emit("pin", loadedResultSql.value, queryResultTitle(loadedResultSql.value), writePanel.value?.snapshotView());
 }
-function closePin(id: number) {
-  pinned.value = pinned.value.filter((item) => item.id !== id);
-  if (pinnedId.value === id) pinnedId.value = null;
+function closePin(id: string) {
+  const query = pinned.value.find((item) => item.id === id);
+  if (query) emit("closePinned", query);
 }
-watch(
-  () => props.session.id,
-  () => {
-    pinned.value = [];
-    pinnedId.value = null;
-  }
-);
 const historyOpen = ref(false);
 const history = ref<{ execution: GoExecution; sql: string }[]>([]);
 watch(
@@ -342,18 +326,20 @@ const planTabId = useId();
 const selectedPlan = computed(() => props.query.planRuns.find((run) => run.number === props.query.resultPane));
 const planLoading = (run: QueryPlanRun) => run.state === "pending" || run.state === "loading";
 const shownPlan = computed(() => selectedPlan.value?.plan ?? null);
-const displayExecution = computed(() => props.query.resultExecution || props.query.execution);
 const canSubmit = computed(
   () => ready.value && !active.value && !props.query.busy && !props.query.pending && !props.query.edit.busy
 );
 const canPolicySubmit = computed(
   () =>
-    canSubmit.value &&
+    ready.value &&
+    !props.query.busy &&
+    !props.query.pending &&
+    !props.query.edit.busy &&
+    (!active.value || !!props.query.execution?.confirmation) &&
     (!props.query.executionEditPlan || props.query.edit.plan?.plan_id === props.query.executionEditPlan)
 );
-const analysisBusy = ref(false);
 const writeConfirmation = ref<{ sql: string; version: number; consoleId: string } | null>(null);
-const canRun = computed(() => canSubmit.value && !editDirty(props.query.edit) && !analysisBusy.value);
+const canRun = computed(() => canSubmit.value && !editDirty(props.query.edit));
 const completedWithoutRows = computed(
   () =>
     !props.dataOnly &&
@@ -373,12 +359,15 @@ const showExecutionStatus = computed(
 );
 const waitingReview = computed(() => props.query.execution?.status === "waiting_review");
 const reviewRequired = computed(
-  () => props.query.execution?.status === "failed" && props.query.execution.error?.code === "command_review_required"
+  () =>
+    props.query.execution?.confirmation?.kind === "review" ||
+    (props.query.execution?.status === "failed" && props.query.execution.error?.code === "command_review_required")
 );
 const warningRequired = computed(
   () =>
-    props.query.execution?.status === "failed" &&
-    props.query.execution.error?.code === "command_warning_confirmation_required"
+    props.query.execution?.confirmation?.kind === "warning" ||
+    (props.query.execution?.status === "failed" &&
+      props.query.execution.error?.code === "command_warning_confirmation_required")
 );
 const implicitDialog = ref<{ id: string; sql: string; revision: number } | null>(null);
 const implicitRequired = computed(() => props.query.execution?.error?.code === "implicit_commit_confirmation_required");
@@ -433,19 +422,34 @@ const transactionNotice = computed(() => {
     );
   return t("Chen.Transaction.Committed");
 });
-const warningDialog = ref<{ id: string; sql: string } | null>(null);
+const warningDialog = ref<{ id: string; sql: string; confirmationId?: string } | null>(null);
 function openWarning() {
   if (!canPolicySubmit.value || !warningRequired.value || !props.query.execution) return;
-  warningDialog.value = { id: props.query.execution.id, sql: props.query.executionSql };
+  warningDialog.value = {
+    id: props.query.execution.id,
+    sql: props.query.execution.confirmation?.sql || props.query.executionSql,
+    confirmationId: props.query.execution.confirmation?.id
+  };
 }
 function confirmWarning() {
   const pending = warningDialog.value;
   warningDialog.value = null;
-  if (pending && canPolicySubmit.value && warningRequired.value && props.query.execution?.id === pending.id)
-    emit("confirmWarning", pending.id);
+  if (
+    pending &&
+    canPolicySubmit.value &&
+    warningRequired.value &&
+    props.query.execution?.id === pending.id &&
+    props.query.execution?.confirmation?.id === pending.confirmationId
+  )
+    emit("confirmWarning", pending.id, pending.confirmationId);
+}
+function cancelWarning() {
+  const pending = warningDialog.value;
+  warningDialog.value = null;
+  if (pending?.confirmationId) emit("policyCancel", pending.id, pending.confirmationId);
 }
 watch(
-  () => props.query.execution?.id,
+  () => [props.query.execution?.id, props.query.execution?.confirmation?.id],
   () => {
     warningDialog.value = null;
   }
@@ -479,20 +483,17 @@ function duration(execution: GoExecution | null) {
   return elapsed < 1000 ? `${elapsed} ms` : `${(elapsed / 1000).toFixed(2)} s`;
 }
 const liveResults = computed(() =>
-  (displayExecution.value?.result_ids || []).filter(
-    (id) => !pinned.value.some((item) => item.resultId === id && item.source === displayExecution.value?.id)
-  )
+  props.query.resultTabs.map((result) => result.id).filter((id) => !pinned.value.some((item) => item.resultId === id))
 );
 function resultSql(id: string) {
   return (
-    displayExecution.value?.statement_results.find((item) => item.result_id === id)?.source_sql ||
+    props.query.resultTabs.find((result) => result.id === id)?.sql ||
     (id === props.query.resultId ? props.query.rows?.source_sql || props.query.resultSql : "") ||
-    displayExecution.value?.sql ||
-    (displayExecution.value?.id === props.query.execution?.id ? props.query.executionSql : "")
+    ""
   );
 }
 const resultNames = computed(
-  () => new Map((displayExecution.value?.result_ids || []).map((id) => [id, queryResultTitle(resultSql(id))]))
+  () => new Map(props.query.resultTabs.map((result) => [result.id, queryResultTitle(result.sql)]))
 );
 function selectResult(id: string) {
   if (editDirty(props.query.edit) || props.query.edit.busy) return;
@@ -501,7 +502,7 @@ function selectResult(id: string) {
   if (id === props.query.resultId && props.query.rows?.id === id && !props.query.loadingRows) return;
   emit("rows", id);
 }
-function selectPin(id: number) {
+function selectPin(id: string) {
   if (editDirty(props.query.edit) || props.query.edit.busy) return;
   pinnedId.value = id;
   emit("pane", "results");
@@ -525,7 +526,7 @@ watch(
   (id) => {
     if (!id) return;
     resultsCollapsed.value = false;
-    if (!props.query.pending?.planNumber) pinnedId.value = null;
+    if (!props.query.pending?.planNumber && !props.query.pending?.transaction?.action) pinnedId.value = null;
   }
 );
 const [DefineExportAction, ExportAction] = createReusableTemplate();
@@ -552,32 +553,16 @@ watch(
     }),
   { flush: "post" }
 );
-async function run(sql: string, version: number) {
+function run(sql: string, version: number) {
   if (!canRun.value || !props.query.console) return;
   if (props.query.browseObject) {
     emit("refreshData");
     return;
   }
-  const consoleId = props.query.console.id;
-  analysisBusy.value = true;
   editorError.value = "";
-  try {
-    const analysis = await props.api.analyze(consoleId, sql, version);
-    if (!canSubmit.value || editDirty(props.query.edit) || props.query.console?.id !== consoleId) return;
-    // Parser classification informs confirmation; authorization is always enforced by Chen.
-    if (
-      props.query.console.transaction?.manual &&
-      analysis.statements.some((statement) => statement.implicit_commit || statement.transaction_control)
-    )
-      emit("run", sql, version);
-    else if (analysis.statements.some((statement) => statement.may_write !== false))
-      writeConfirmation.value = { sql, version, consoleId };
-    else emit("run", sql, version);
-  } catch (cause) {
-    editorError.value = chenErrorText(cause, t);
-  } finally {
-    analysisBusy.value = false;
-  }
+  if (props.query.kind !== "console" && chenUnrestrictedMutations(sql).length)
+    writeConfirmation.value = { sql, version, consoleId: props.query.console.id };
+  else emit("run", sql, version);
 }
 function confirmSql() {
   const snapshot = writeConfirmation.value;
@@ -597,6 +582,9 @@ const gridRows = computed(() =>
     ? "minmax(0, 1fr)"
     : `minmax(0, ${Math.max(0, (availableHeight.value * editorPercent.value) / 100 - toolbarHeight.value)}px) 1px minmax(0, 1fr)`
 );
+// File opening populates an editor model; this limit is independent of execution chunk transport.
+const SQL_FILE_MAX_BYTES = 1024 * 1024;
+const SQL_FILE_MAX_CODE_UNITS = 1024 * 1024;
 const sqlFile = ref<HTMLInputElement>();
 let fileGeneration = 0;
 onBeforeUnmount(() => fileGeneration++);
@@ -637,13 +625,14 @@ async function loadSqlFile(event: Event) {
   const sourceSession = props.session.id;
   const sourceQuery = props.query.id;
   editorError.value = "";
-  if (file.size > 1024 * 1024) {
+  if (file.size > SQL_FILE_MAX_BYTES) {
     editorError.value = t("Chen.GoWriteSqlFileLimit");
     return;
   }
   try {
-    const sql = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
-    if (!sql.trim() || sql.includes("\0")) throw new Error(t("Chen.GoWriteSqlFileInvalid"));
+    if (!file.size) throw new Error(t("Chen.SqlFileEmpty"));
+    const sql = await file.text();
+    if (sql.length > SQL_FILE_MAX_CODE_UNITS) throw new Error(t("Chen.GoWriteSqlFileLimit"));
     if (
       generation === fileGeneration &&
       props.session.id === sourceSession &&
@@ -1068,7 +1057,7 @@ defineExpose({
       :description="t('Chen.GoV1WarningDescription')"
       @update:open="
         (value) => {
-          if (!value) warningDialog = null;
+          if (!value) cancelWarning();
         }
       "
     >
@@ -1081,7 +1070,7 @@ defineExpose({
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton :label="t('Common.Cancel')" color="neutral" variant="soft" @click="warningDialog = null" />
+          <UButton :label="t('Common.Cancel')" color="neutral" variant="soft" @click="cancelWarning" />
           <UButton
             :label="t('Chen.GoV1WarningConfirm')"
             color="warning"
@@ -1109,7 +1098,16 @@ defineExpose({
           color="warning"
           variant="soft"
           :disabled="!canPolicySubmit"
-          @click="emit('review')"
+          @click="emit('review', query.execution!.id, query.execution?.confirmation?.id)"
+        />
+        <UButton
+          v-if="reviewRequired && query.execution?.confirmation"
+          :label="t('Common.Cancel')"
+          size="xs"
+          color="neutral"
+          variant="soft"
+          :disabled="!canPolicySubmit"
+          @click="emit('policyCancel', query.execution.id, query.execution.confirmation.id)"
         />
         <UButton
           v-if="ticketUrl"
@@ -1133,7 +1131,7 @@ defineExpose({
       <details>
         <summary class="cursor-pointer text-muted">{{ t("Chen.GoV1ReviewSql") }}</summary>
         <pre class="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words font-mono">{{
-          query.executionSql
+          query.execution?.confirmation?.sql || query.execution?.review?.sql || query.executionSql
         }}</pre>
       </details>
     </div>
@@ -1246,7 +1244,7 @@ defineExpose({
           data-chen-result-tabs
         >
           <UButton
-            v-if="!dataOnly"
+            v-if="!dataOnly && !pinnedView"
             icon="i-lucide-pin"
             size="xs"
             :color="showingPin ? 'primary' : 'neutral'"
@@ -1564,26 +1562,58 @@ defineExpose({
           </ExecutionPlanTree>
         </div>
         <div v-show="query.resultPane === 'results'" class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <template v-if="pinnedResult">
-            <GoResultGrid
-              :rows="pinnedResult.rows"
-              :can-copy="session.permissions.can_copy"
-              :active="visible && query.resultPane === 'results'"
+          <template v-for="pinnedQuery in pinned" :key="pinnedQuery.id">
+            <GoQueryPane
+              v-show="pinnedId === pinnedQuery.id"
+              :query="pinnedQuery"
+              :session="session"
+              :api="api"
+              :single="single"
+              :visible="visible && pinnedId === pinnedQuery.id && query.resultPane === 'results'"
+              :review-core-site="reviewCoreSite"
+              data-only
+              pinned-view
               class="min-h-0 flex-1"
-            >
-              <template #toolbar-start>
-                <GoResultSql
-                  :sql="pinnedResult.sql"
-                  :can-copy="session.permissions.can_copy"
-                  :started-at="pinnedResult.startedAt"
-                  :execution-id="pinnedResult.source"
-                />
-              </template>
-            </GoResultGrid>
+              @apply-edits="(plan, target) => emit('applyEdits', plan, target || pinnedQuery)"
+              @refresh-data="(target) => emit('refreshData', target || pinnedQuery)"
+              @browse="(request, target) => emit('browse', request, target || pinnedQuery)"
+              @query-page="(request, target) => emit('queryPage', request, target || pinnedQuery)"
+              @cached-result="(target) => emit('cachedResult', target || pinnedQuery)"
+              @loading-settings="(settings, target) => emit('loadingSettings', settings, target || pinnedQuery)"
+              @load-more="(automatic, target) => emit('loadMore', automatic, target || pinnedQuery)"
+              @cancel="(target) => emit('cancel', target || pinnedQuery)"
+              @review="
+                (executionId, confirmationId, target) =>
+                  emit('review', executionId, confirmationId, target || pinnedQuery)
+              "
+              @confirm-warning="
+                (executionId, confirmationId, target) =>
+                  emit('confirmWarning', executionId, confirmationId, target || pinnedQuery)
+              "
+              @policy-cancel="
+                (executionId, confirmationId, target) =>
+                  emit('policyCancel', executionId, confirmationId, target || pinnedQuery)
+              "
+              @transaction="(request, target) => emit('transaction', request, target || pinnedQuery)"
+              @confirm-implicit="(executionId, target) => emit('confirmImplicit', executionId, target || pinnedQuery)"
+              @export-sync="(target) => emit('exportSync', target || pinnedQuery)"
+              @export-cancel="(target) => emit('exportCancel', target || pinnedQuery)"
+              @export-delete="(target) => emit('exportDelete', target || pinnedQuery)"
+              @recover="(target) => emit('recover', target || pinnedQuery)"
+              @reconnect="(target) => emit('reconnect', target || pinnedQuery)"
+              @rows="(id, offset, target) => emit('rows', id, offset, target || pinnedQuery)"
+              @retry-rows="(target) => emit('retryRows', target || pinnedQuery)"
+              @pane="(value, target) => emit('pane', value, target || pinnedQuery)"
+              @close-plan="(number, target) => emit('closePlan', number, target || pinnedQuery)"
+              @export="
+                (mode, format, snapshot, target) => emit('export', mode, format, snapshot, target || pinnedQuery)
+              "
+            />
           </template>
-          <template v-else-if="query.rows">
+          <div v-if="query.rows" v-show="!pinnedResult" class="flex min-h-0 flex-1 flex-col">
             <GoWritePanel
-              :key="`${query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
+              ref="writePanel"
+              :key="`${query.resultViewId || query.rows.id}:${query.loadingSettings.mode}:${query.loadingSettings.batchSize}`"
               :visible="visible && query.resultPane === 'results'"
               :query="query"
               :session="session"
@@ -1604,15 +1634,14 @@ defineExpose({
               </template>
               <template v-if="dataOnly" #settings-actions>
                 <UButton
+                  v-if="!pinnedView"
                   icon="i-lucide-pin"
                   :label="t('Chen.PinResult')"
                   :title="t('Chen.GoPinnedHint')"
                   size="xs"
                   color="neutral"
                   variant="ghost"
-                  :disabled="
-                    !query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy || pinned.length >= 3
-                  "
+                  :disabled="!query.rows || query.loadingRows || editDirty(query.edit) || query.edit.busy"
                   @click="pinResult"
                 />
                 <UPopover v-if="query.resultExecution">
@@ -1708,8 +1737,8 @@ defineExpose({
               @rows="(id, offset) => emit('rows', id, offset)"
               @loading-settings="emit('loadingSettings', $event)"
             />
-          </template>
-          <div v-else class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
+          </div>
+          <div v-else-if="!pinnedResult" class="min-h-0 flex-1 overflow-auto p-3 text-xs text-muted">
             <div
               v-if="!query.execution && !query.pending && !query.loadingRows"
               class="grid h-full min-h-0 place-items-center text-sm"
