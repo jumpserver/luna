@@ -1,8 +1,84 @@
 import type { EffectScope } from "vue";
-import type { AssetTreeNode } from "~/types";
+import type { AssetItem, AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { applyAssetRename, hasAssetName, unwrapTypeTreeRoot, useAssetTree, useAssetTreeSearch } from "./useAssetTree";
+import {
+  applyAssetRename,
+  assetTreeCheckStates,
+  collectAssetTreeBranch,
+  hasAssetName,
+  unwrapTypeTreeRoot,
+  useAssetTree,
+  useAssetTreeSearch
+} from "./useAssetTree";
+
+describe("batch selection", () => {
+  const leaf = (id: string, data = { id }) => ({ id, name: id, meta: { data } });
+  const branch = (id: string, children?: AssetTreeNode[]): AssetTreeNode => ({
+    id,
+    name: id,
+    isParent: true,
+    open: false,
+    loaded: Boolean(children),
+    children
+  });
+  const selection = (...ids: string[]) => new Map(ids.map((id) => [id, { id } as AssetItem]));
+
+  it("collects a collapsed subtree across pages and counts duplicate assets once", async () => {
+    const child = branch("child");
+    const root = branch("root", [child, leaf("one")]);
+    root.nextPage = { phase: "assets", assetOffset: 1 };
+    const loadPage = vi.fn(async (node: AssetTreeNode) => {
+      node.children = [
+        ...(node.children || []),
+        ...(node === child ? [leaf("alias", { id: "one" }), { ...leaf("disabled"), chkDisabled: true }] : [leaf("two")])
+      ];
+      node.loaded = true;
+      node.nextPage = null;
+    });
+
+    expect(assetTreeCheckStates([root], selection("one")).get(root)).toBe("indeterminate");
+    const assets = await collectAssetTreeBranch(root, loadPage, () => true);
+    expect([...assets!.keys()]).toEqual(["one", "two"]);
+    expect(loadPage.mock.calls.map(([node]) => node.id)).toEqual(["child", "root"]);
+    expect(root.open).toBe(false);
+    expect(child.open).toBe(false);
+    expect(assetTreeCheckStates([root], selection("one", "two")).get(root)).toBe(true);
+    expect(assetTreeCheckStates([root], selection("two")).get(root)).toBe("indeterminate");
+  });
+
+  it("continues loading the group after more than 20 assets have been selected", async () => {
+    const root = branch(
+      "large",
+      Array.from({ length: 21 }, (_, index) => leaf(`asset-${index}`))
+    );
+    root.nextPage = { phase: "assets", assetOffset: 21 };
+    const loadPage = vi.fn(async (node: AssetTreeNode) => {
+      node.children?.push(leaf("last"));
+      node.nextPage = null;
+    });
+
+    const assets = await collectAssetTreeBranch(root, loadPage, () => true);
+
+    expect(loadPage).toHaveBeenCalledExactlyOnceWith(root);
+    expect(assets?.size).toBe(22);
+    expect(assets?.has("last")).toBe(true);
+  });
+
+  it("discards an in-flight selection when the batch context changes", async () => {
+    const root = branch("root");
+    let active = true;
+    const loadPage = vi.fn(async () => {
+      await Promise.resolve();
+      root.loaded = true;
+      root.children = [leaf("one")];
+    });
+    const pending = collectAssetTreeBranch(root, loadPage, () => active);
+    active = false;
+    expect(await pending).toBeNull();
+    expect(loadPage).toHaveBeenCalledOnce();
+  });
+});
 
 describe("applyAssetRename", () => {
   it("renames matching leaves in place and leaves parents open", () => {

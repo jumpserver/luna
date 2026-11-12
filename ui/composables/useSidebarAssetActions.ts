@@ -8,7 +8,11 @@ import { isExternalClientConnectMethod, pickConnectMethod, useConnectMethods } f
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { writeClipboardText } from "~/utils/clipboard";
-import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
+import {
+  getVisibleConnectionProtocols,
+  hasReusableSavedConnection,
+  isSavedConnectionAvailable
+} from "~/utils/connection";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
 const liveAssetConnect = {
@@ -72,10 +76,6 @@ export function useSidebarAssetActions() {
     const name = renameValue.value.trim();
     return !name || name === renameAsset.value?.name || renameNameTooLong.value || renameNameDuplicate.value;
   });
-
-  const hasSshProtocol = (asset: AssetItem) => {
-    return (asset.permedProtocols || []).some((protocol) => protocol.name === "ssh");
-  };
 
   const loadAssetConnectionDetails = async (asset: AssetItem) => {
     const detail = await getAssetDetailRequest(asset.id, asset.org_id || currentUser.value?.org?.id || "");
@@ -149,14 +149,13 @@ export function useSidebarAssetActions() {
       savedConnection: userInfoStore.getConnectionInfoForAsset(asset.id) || asset.savedConnection
     }));
     const details = await Promise.allSettled(selected.map((asset) => loadAssetConnectionDetails(asset)));
-    const sshAssets = details.flatMap((result) => {
-      if (result.status !== "fulfilled") return [];
+    const connectableAssets = details.flatMap((result) =>
+      result.status === "fulfilled" && getVisibleConnectionProtocols(result.value.permedProtocols).length
+        ? [result.value]
+        : []
+    );
 
-      const asset = result.value;
-      return hasSshProtocol(asset) ? [asset] : [];
-    });
-
-    if (sshAssets.length === 0) {
+    if (connectableAssets.length === 0) {
       const failed = details.find((result) => result.status === "rejected");
       if (failed?.status === "rejected") {
         addErrorToast({
@@ -178,11 +177,10 @@ export function useSidebarAssetActions() {
     }
 
     const configured = [];
-    for (const [index, asset] of sshAssets.entries()) {
+    for (const [index, asset] of connectableAssets.entries()) {
       const info = await configure(asset, {
-        protocol: "ssh",
         position: index + 1,
-        total: sshAssets.length
+        total: connectableAssets.length
       });
       if (!info) return;
       configured.push({ asset, info });
@@ -192,7 +190,7 @@ export function useSidebarAssetActions() {
       configured.length > 1 ? globalThis.crypto?.randomUUID?.() || `batch-${Date.now()}-${Math.random()}` : undefined;
     void Promise.all(configured.map(({ asset, info }) => launchWithInfo(asset, info, { aclBatchId })));
 
-    const skipped = assets.length - sshAssets.length;
+    const skipped = assets.length - connectableAssets.length;
     if (skipped > 0) {
       toast.add({
         title: t("Tree.MultiOpenSkipped", { count: skipped }),

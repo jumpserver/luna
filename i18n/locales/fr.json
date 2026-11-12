@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "Actifs autorisés, y compris les nœuds descendants",
     "UngroupedAssetCount": "Actifs autorisés sans nœud",
     "BatchActions": "Actions par lot",
-    "OpenMultiple": "Ouvrir plusieurs éléments",
+    "OpenMultiple": "Connexion par lot",
     "OpenSelected": "Ouvrir la sélection",
-    "FavoriteMultiple": "Ajouter plusieurs éléments aux favoris",
+    "FavoriteMultiple": "Ajouter aux favoris par lot",
     "FavoriteSelected": "Ajouter la sélection aux favoris",
     "SelectedCount": "{count} sélectionnés",
-    "MultiOpenNoConnectable": "Les actifs sélectionnés ne prennent pas en charge les connexions SSH",
-    "MultiOpenSkipped": "{count} actifs ignorés : SSH non pris en charge ou échec du chargement",
+    "BatchConnectionLimit": "Vous pouvez vous connecter à {limit} actifs à la fois. Désélectionnez-en au moins {excess}, puis réessayez.",
+    "MultiOpenNoConnectable": "Aucun des actifs sélectionnés ne dispose d’un protocole de connexion",
+    "MultiOpenSkipped": "{count} actifs ignorés faute de protocole de connexion disponible ou en raison d’un échec du chargement",
     "MultiFavoriteSuccess": "{count} actifs ajoutés aux favoris",
     "MultiFavoritePartial": "{success} actifs ajoutés aux favoris ; {failed} échecs",
     "MultiFavoriteFailed": "Impossible d’ajouter les actifs sélectionnés aux favoris"
@@ -3608,6 +3609,7 @@
       "fullscreen": "Basculer le plein écran",
       "rightPanel": "Afficher ou masquer le panneau droit",
       "terminalAi": "Ouvrir l’IA du terminal",
+      "terminalSearch": "Rechercher dans la sortie du terminal",
       "newSession": "Nouvelle connexion",
       "localShell": "Nouveau terminal local",
       "clipboardHistory": "Historique du presse-papiers",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "Espace de travail · lorsqu’une session est active",
       "application": "Application · hors des paramètres et des boîtes de dialogue",
-      "terminal": "Terminal · lorsque l’IA du terminal est disponible et que le terminal a le focus",
+      "terminal": "Terminal · lorsqu’il a le focus",
       "client": "Client · fenêtre principale et fenêtres de ressources"
     }
   },

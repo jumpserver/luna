@@ -4,14 +4,19 @@ import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
+import type { ShortcutOverrides } from "~/shared/shortcuts";
+import { matchesShortcut, shortcutBindings } from "~/shared/shortcuts";
 import source from "../../components/SearchInput/index.vue?raw";
 import terminalSource from "../../components/Terminal/index.vue?raw";
 import { TerminalMittEvent } from "../../composables/terminal/protocol";
+import { useKokoTerminalInput } from "../../composables/terminal/useTerminalInput";
+import { buildTerminalInput } from "../../composables/terminal/envelope";
 import "@xterm/xterm/css/xterm.css";
 
 const services = {
   ...Vue,
   useI18n: () => ({ t: (key: string) => key }),
+  useAppShortcuts: () => ({ kbds: () => [], matches: () => false, blocked: () => false }),
   useElementSize: () => ({ width: Vue.ref(0) }),
   useMutationObserver: () => {}
 };
@@ -43,6 +48,80 @@ const inputComponent = Vue.defineComponent({
       });
   }
 });
+
+it.skipIf(typeof document === "undefined").each([false, true])(
+  "uses the configured terminal search shortcut (macOS: %s)",
+  (mac) => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const terminal = new Terminal();
+    terminal.open(container);
+    terminal.focus();
+    const send = vi.fn();
+    const sendMittEvent = vi.fn();
+    const noop = () => {};
+    let overrides: ShortcutOverrides = {};
+    const input = useKokoTerminalInput({
+      container: Vue.shallowRef(container),
+      terminal: Vue.shallowRef(terminal),
+      socket: Vue.shallowRef({ send } as unknown as WebSocket),
+      terminalId: Vue.ref("1"),
+      sessionId: Vue.ref("session-1"),
+      selectionText: Vue.ref(""),
+      lastSendTime: Vue.ref(new Date()),
+      fit: noop,
+      isSocketOpen: () => true,
+      isZmodemActive: () => false,
+      abortZmodem: noop,
+      onContextMenu: noop,
+      getTerminalConfig: () => ({}),
+      onResize: noop,
+      inputLocked: () => false,
+      sendHostEvent: noop,
+      sendToHost: noop,
+      sendMittEvent,
+      matchesSearchShortcut: (event) =>
+        shortcutBindings("terminalSearch", overrides, { mac, desktop: false }).some((binding) =>
+          matchesShortcut(event, binding, mac, true)
+        ),
+      validateClipboardText: () => true
+    });
+    try {
+      input.start();
+      function press(modifiers: KeyboardEventInit) {
+        terminal.textarea!.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "f", code: "KeyF", keyCode: 70, cancelable: true, ...modifiers })
+        );
+      }
+      press({ ctrlKey: true });
+      expect(send).toHaveBeenCalledExactlyOnceWith(buildTerminalInput(1, "\x06"));
+      expect(sendMittEvent).not.toHaveBeenCalled();
+
+      const defaultModifiers = mac ? { metaKey: true } : { ctrlKey: true, altKey: true };
+      press(defaultModifiers);
+      expect(sendMittEvent).toHaveBeenCalledExactlyOnceWith(TerminalMittEvent.OpenSearch);
+      expect(send).toHaveBeenCalledOnce();
+
+      overrides = { terminalSearch: "Ctrl+KeyF" };
+      press(defaultModifiers);
+      expect(sendMittEvent).toHaveBeenCalledOnce();
+      send.mockClear();
+      press({ ctrlKey: true });
+      press({ ctrlKey: true, repeat: true });
+      expect(sendMittEvent).toHaveBeenCalledTimes(2);
+      expect(send).not.toHaveBeenCalled();
+
+      overrides = { terminalSearch: null };
+      press({ ctrlKey: true });
+      expect(sendMittEvent).toHaveBeenCalledTimes(2);
+      expect(send).toHaveBeenCalledExactlyOnceWith(buildTerminalInput(1, "\x06"));
+    } finally {
+      input.stop();
+      terminal.dispose();
+      container.remove();
+    }
+  }
+);
 
 it.skipIf(typeof document === "undefined").each(["clear", "close", "unmount"])(
   "clears terminal search decorations and selection on %s, including after more output",

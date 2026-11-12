@@ -7,6 +7,7 @@ import {
   useConnectMethods
 } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
+import { getVisibleConnectionProtocols } from "~/utils/connection";
 import ConnectAccountFields from "./connectAccountFields.vue";
 import ConnectAdvancedOptions from "./connectAdvancedOptions.vue";
 import ConnectMethodPicker from "./connectMethodPicker.vue";
@@ -151,9 +152,10 @@ const localConnectOptions = computed<Record<string, any>>({
 });
 
 const protocolTabItems = computed(() =>
-  sortProtocolNames(
-    props.protocols.filter((protocol) => protocol?.public !== false).map((protocol) => protocol.name)
-  ).map((name) => ({ label: name.toUpperCase(), value: name }))
+  sortProtocolNames(getVisibleConnectionProtocols(props.protocols).map((protocol) => protocol.name)).map((name) => ({
+    label: name.toUpperCase(),
+    value: name
+  }))
 );
 
 const ensureProtocolMethods = async (protocol: string) => {

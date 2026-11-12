@@ -58,6 +58,20 @@ describe("application shortcuts", () => {
     expect(shortcutBindings("clipboardHistory", {}, desktop)).toEqual(["Mod+Shift+KeyH"]);
   });
 
+  it("makes terminal search configurable while protecting plain Ctrl+F from other actions", () => {
+    expect(shortcutBindings("terminalSearch", {}, web)).toEqual(["Mod+Alt+KeyF"]);
+    expect(shortcutBindings("terminalSearch", {}, mac)).toEqual(["Mod+KeyF"]);
+    expect(isReservedShortcut("Ctrl+KeyF", "focus", web)).toBe(true);
+    expect(isReservedShortcut("Mod+KeyF", "focus", mac)).toBe(true);
+    expect(conflictingShortcut("focus", "Ctrl+Alt+KeyF", {}, web)).toBe("terminalSearch");
+
+    const custom = normalizeShortcutOverrides({ terminalSearch: "Ctrl+KeyF" });
+    expect(shortcutBindings("terminalSearch", custom, web)).toEqual(["Ctrl+KeyF"]);
+    expect(shortcutBindings("terminalSearch", custom, mac)).toEqual(["Ctrl+KeyF"]);
+    expect(conflictingShortcut("focus", "Ctrl+Alt+KeyF", custom, web)).toBeUndefined();
+    expect(shortcutBindings("terminalSearch", { terminalSearch: null }, web)).toEqual([]);
+  });
+
   it("replaces every old binding and releases disabled chords", () => {
     const overrides = { closeTab: "Mod+Shift+KeyE", terminalAi: null };
     expect(shortcutBindings("closeTab", overrides, desktop)).toEqual(["Mod+Shift+KeyE"]);

@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "配下ノードを含む許可済みアセット数",
     "UngroupedAssetCount": "ノードに属さない許可済みアセット数",
     "BatchActions": "一括操作",
-    "OpenMultiple": "複数を開く",
+    "OpenMultiple": "一括接続",
     "OpenSelected": "選択項目を開く",
-    "FavoriteMultiple": "複数をお気に入りに追加",
+    "FavoriteMultiple": "一括でお気に入りに追加",
     "FavoriteSelected": "選択項目をお気に入りに追加",
     "SelectedCount": "{count} 件選択済み",
-    "MultiOpenNoConnectable": "選択したアセットは SSH 接続をサポートしていません",
-    "MultiOpenSkipped": "SSH 非対応または読み込みに失敗した {count} 件のアセットをスキップしました",
+    "BatchConnectionLimit": "一度に接続できるアセットは {limit} 件までです。少なくとも {excess} 件の選択を解除してから再試行してください。",
+    "MultiOpenNoConnectable": "選択したアセットに利用可能な接続プロトコルがありません",
+    "MultiOpenSkipped": "利用可能な接続プロトコルがないか、読み込めなかった {count} 件のアセットをスキップしました",
     "MultiFavoriteSuccess": "{count} 件のアセットをお気に入りに追加しました",
     "MultiFavoritePartial": "{success} 件をお気に入りに追加、{failed} 件失敗",
     "MultiFavoriteFailed": "選択したアセットをお気に入りに追加できませんでした"
@@ -3608,6 +3609,7 @@
       "fullscreen": "全画面表示を切り替える",
       "rightPanel": "右パネルの表示を切り替える",
       "terminalAi": "ターミナル AI を開く",
+      "terminalSearch": "ターミナル出力を検索",
       "newSession": "新しい接続",
       "localShell": "新しいローカルターミナル",
       "clipboardHistory": "クリップボード履歴",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "ワークスペース · セッションがアクティブなとき",
       "application": "アプリ · 設定とダイアログ以外",
-      "terminal": "ターミナル · ターミナル AI が利用可能でフォーカスがあるとき",
+      "terminal": "ターミナル · フォーカス時",
       "client": "クライアント · メイン画面と資産ウィンドウ"
     }
   },

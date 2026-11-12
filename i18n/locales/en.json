@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "Authorized assets, including descendant nodes",
     "UngroupedAssetCount": "Authorized assets without a node",
     "BatchActions": "Batch actions",
-    "OpenMultiple": "Open multiple",
+    "OpenMultiple": "Batch connect",
     "OpenSelected": "Open selected",
-    "FavoriteMultiple": "Favorite multiple",
+    "FavoriteMultiple": "Batch favorite",
     "FavoriteSelected": "Favorite selected",
     "SelectedCount": "{count} selected",
-    "MultiOpenNoConnectable": "The selected assets do not support SSH connections",
-    "MultiOpenSkipped": "Skipped {count} assets that do not support SSH or failed to load",
+    "BatchConnectionLimit": "You can connect to up to {limit} assets at once. Deselect at least {excess} and try again.",
+    "MultiOpenNoConnectable": "None of the selected assets have an available connection protocol",
+    "MultiOpenSkipped": "Skipped {count} assets with no available connection protocol or that failed to load",
     "MultiFavoriteSuccess": "Added {count} assets to favorites",
     "MultiFavoritePartial": "Favorited {success} assets; {failed} failed",
     "MultiFavoriteFailed": "Failed to favorite selected assets"
@@ -3608,6 +3609,7 @@
       "fullscreen": "Toggle fullscreen",
       "rightPanel": "Toggle right panel",
       "terminalAi": "Open terminal AI",
+      "terminalSearch": "Search terminal output",
       "newSession": "New connection",
       "localShell": "New local terminal",
       "clipboardHistory": "Clipboard history",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "Workspace · when a session is active",
       "application": "Application · outside settings and dialogs",
-      "terminal": "Terminal · when terminal AI is available and focused",
+      "terminal": "Terminal · when focused",
       "client": "Client · main and asset windows"
     }
   },

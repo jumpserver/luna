@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "授权资产数量：包含当前节点及其子级节点",
     "UngroupedAssetCount": "授权资产数量：未分组的授权资产",
     "BatchActions": "批量操作",
-    "OpenMultiple": "打开多个",
+    "OpenMultiple": "批量连接",
     "OpenSelected": "打开已选",
-    "FavoriteMultiple": "收藏多个",
+    "FavoriteMultiple": "批量收藏",
     "FavoriteSelected": "收藏已选",
     "SelectedCount": "已选 {count} 个",
-    "MultiOpenNoConnectable": "所选资产不支持 SSH 连接",
-    "MultiOpenSkipped": "已跳过 {count} 个不支持 SSH 或加载失败的资产",
+    "BatchConnectionLimit": "每次最多连接 {limit} 个资产，请至少取消勾选 {excess} 个后再试。",
+    "MultiOpenNoConnectable": "所选资产没有可用的连接协议",
+    "MultiOpenSkipped": "已跳过 {count} 个无可用连接协议或加载失败的资产",
     "MultiFavoriteSuccess": "已收藏 {count} 个资产",
     "MultiFavoritePartial": "收藏成功 {success} 个，失败 {failed} 个",
     "MultiFavoriteFailed": "批量收藏失败"
@@ -3608,6 +3609,7 @@
       "fullscreen": "切换全屏",
       "rightPanel": "显示或隐藏右侧面板",
       "terminalAi": "打开终端 AI",
+      "terminalSearch": "查找终端输出",
       "newSession": "新建连接",
       "localShell": "新建本地终端",
       "clipboardHistory": "剪贴板历史",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "工作区 · 有活动会话时",
       "application": "应用 · 设置和对话框以外",
-      "terminal": "终端 · 聚焦且终端 AI 可用时",
+      "terminal": "终端 · 聚焦时",
       "client": "客户端 · 主窗口和资产窗口"
     }
   },

@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "하위 노드를 포함한 권한이 있는 자산 수",
     "UngroupedAssetCount": "노드에 속하지 않은 권한이 있는 자산 수",
     "BatchActions": "일괄 작업",
-    "OpenMultiple": "여러 항목 열기",
+    "OpenMultiple": "일괄 연결",
     "OpenSelected": "선택 항목 열기",
-    "FavoriteMultiple": "여러 항목 즐겨찾기",
+    "FavoriteMultiple": "일괄 즐겨찾기",
     "FavoriteSelected": "선택 항목 즐겨찾기",
     "SelectedCount": "{count}개 선택됨",
-    "MultiOpenNoConnectable": "선택한 자산은 SSH 연결을 지원하지 않습니다",
-    "MultiOpenSkipped": "SSH를 지원하지 않거나 불러오지 못한 자산 {count}개를 건너뛰었습니다",
+    "BatchConnectionLimit": "한 번에 최대 {limit}개의 자산에 연결할 수 있습니다. 최소 {excess}개의 선택을 해제한 후 다시 시도하세요.",
+    "MultiOpenNoConnectable": "선택한 자산에 사용 가능한 연결 프로토콜이 없습니다",
+    "MultiOpenSkipped": "사용 가능한 연결 프로토콜이 없거나 불러오지 못한 자산 {count}개를 건너뛰었습니다",
     "MultiFavoriteSuccess": "자산 {count}개를 즐겨찾기에 추가했습니다",
     "MultiFavoritePartial": "자산 {success}개 추가, {failed}개 실패",
     "MultiFavoriteFailed": "선택한 자산을 즐겨찾기에 추가하지 못했습니다"
@@ -3608,6 +3609,7 @@
       "fullscreen": "전체 화면 전환",
       "rightPanel": "오른쪽 패널 표시 전환",
       "terminalAi": "터미널 AI 열기",
+      "terminalSearch": "터미널 출력 검색",
       "newSession": "새 연결",
       "localShell": "새 로컬 터미널",
       "clipboardHistory": "클립보드 기록",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "작업 공간 · 활성 세션이 있을 때",
       "application": "앱 · 설정 및 대화 상자 외부",
-      "terminal": "터미널 · 터미널 AI를 사용할 수 있고 터미널에 포커스가 있을 때",
+      "terminal": "터미널 · 포커스 상태일 때",
       "client": "클라이언트 · 기본 창 및 자산 창"
     }
   },

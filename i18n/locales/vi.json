@@ -369,13 +369,14 @@
     "AuthorizationAssetCount": "Tài sản được cấp quyền, bao gồm các nút con",
     "UngroupedAssetCount": "Tài sản được cấp quyền không thuộc nút nào",
     "BatchActions": "Thao tác hàng loạt",
-    "OpenMultiple": "Mở nhiều mục",
+    "OpenMultiple": "Kết nối hàng loạt",
     "OpenSelected": "Mở mục đã chọn",
-    "FavoriteMultiple": "Yêu thích nhiều mục",
+    "FavoriteMultiple": "Thêm vào mục yêu thích hàng loạt",
     "FavoriteSelected": "Yêu thích mục đã chọn",
     "SelectedCount": "Đã chọn {count}",
-    "MultiOpenNoConnectable": "Các tài sản đã chọn không hỗ trợ kết nối SSH",
-    "MultiOpenSkipped": "Đã bỏ qua {count} tài sản không hỗ trợ SSH hoặc không tải được",
+    "BatchConnectionLimit": "Bạn có thể kết nối tối đa {limit} tài sản cùng lúc. Hãy bỏ chọn ít nhất {excess} tài sản rồi thử lại.",
+    "MultiOpenNoConnectable": "Không có tài sản nào đã chọn có giao thức kết nối khả dụng",
+    "MultiOpenSkipped": "Đã bỏ qua {count} tài sản không có giao thức kết nối khả dụng hoặc không tải được",
     "MultiFavoriteSuccess": "Đã thêm {count} tài sản vào mục yêu thích",
     "MultiFavoritePartial": "Đã yêu thích {success} tài sản; {failed} thất bại",
     "MultiFavoriteFailed": "Không thể thêm các tài sản đã chọn vào mục yêu thích"
@@ -3608,6 +3609,7 @@
       "fullscreen": "Chuyển chế độ toàn màn hình",
       "rightPanel": "Hiện hoặc ẩn bảng bên phải",
       "terminalAi": "Mở AI của terminal",
+      "terminalSearch": "Tìm kiếm trong đầu ra của terminal",
       "newSession": "Kết nối mới",
       "localShell": "Terminal cục bộ mới",
       "clipboardHistory": "Lịch sử bảng nhớ tạm",
@@ -3616,7 +3618,7 @@
     "Scopes": {
       "workspace": "Không gian làm việc · khi có phiên đang hoạt động",
       "application": "Ứng dụng · ngoài phần cài đặt và hộp thoại",
-      "terminal": "Terminal · khi AI của terminal khả dụng và terminal đang được lấy nét",
+      "terminal": "Terminal · khi đang được lấy nét",
       "client": "Ứng dụng khách · cửa sổ chính và cửa sổ tài sản"
     }
   },

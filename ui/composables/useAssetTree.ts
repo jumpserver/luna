@@ -9,6 +9,7 @@ import type {
 import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName } from "~/utils/itemName";
+import { isWorkspaceTourDemoNode } from "~/utils/workspaceTour";
 
 interface TreeQuery {
   parent_key?: string;
@@ -28,6 +29,67 @@ const TYPE_TREE_ASSET_PAGE_SIZE = 100;
 
 const treeNodeType = (node: Pick<AssetTreeNode, "isParent" | "meta">) =>
   node.meta?.type === "node" || node.isParent ? "node" : "asset";
+
+export const isAssetTreeBranch = (node: AssetTreeNode) =>
+  treeNodeType(node) === "node" || Boolean(node.children?.length);
+
+export const assetTreeAssetId = (node: AssetTreeNode) => String(node.meta?.data?.id || node.key || node.id);
+
+export const canCheckAssetTreeNode = (node: AssetTreeNode) =>
+  !node.chkDisabled && node.meta?.data?.is_active !== false && !isWorkspaceTourDemoNode(node.id);
+
+export async function collectAssetTreeBranch(
+  root: AssetTreeNode,
+  loadPage: (node: AssetTreeNode) => Promise<void>,
+  isCurrent: () => boolean
+) {
+  const assets = new Map<string, AssetTreeNode>();
+  async function visit(node: AssetTreeNode): Promise<boolean> {
+    if (!isCurrent()) return false;
+    if (!canCheckAssetTreeNode(node)) return true;
+    if (!isAssetTreeBranch(node)) {
+      assets.set(assetTreeAssetId(node), node);
+      return true;
+    }
+    if (!node.loaded) await loadPage(node);
+    let index = 0;
+    do {
+      const children = node.children || [];
+      while (index < children.length) {
+        if (!(await visit(children[index++]!))) return false;
+      }
+      if (node.loaded && !node.nextPage) return true;
+      if (isCurrent()) await loadPage(node);
+    } while (isCurrent());
+    return false;
+  }
+  return (await visit(root)) && isCurrent() ? assets : null;
+}
+
+export type AssetTreeCheckState = boolean | "indeterminate";
+
+export function assetTreeCheckStates(nodes: AssetTreeNode[], checked: ReadonlyMap<string, AssetItem>) {
+  const states = new Map<AssetTreeNode, AssetTreeCheckState>();
+  function visit(node: AssetTreeNode): AssetTreeCheckState | undefined {
+    if (!canCheckAssetTreeNode(node)) return;
+    if (!isAssetTreeBranch(node)) return checked.has(assetTreeAssetId(node));
+    let some = false;
+    let all = Boolean(node.loaded && !node.nextPage);
+    for (const child of node.children || []) {
+      const state = visit(child);
+      if (state === undefined) continue;
+      some ||= state !== false;
+      all &&= state === true;
+    }
+    const state = some ? (all ? true : "indeterminate") : false;
+    states.set(node, state);
+    // An empty, fully loaded branch has no effect on its parent's checkbox.
+    if (!some && all) return;
+    return state;
+  }
+  nodes.forEach(visit);
+  return states;
+}
 
 export const authorizationTreeMetricId = (node: AssetTreeNode) => String(node.meta?.data?.id ?? node.key ?? node.id);
 
@@ -267,11 +329,12 @@ export const useAssetTree = () => {
 
   const treeNodeToAsset = (node: AssetTreeNode): AssetItem => {
     const data = node.meta?.data || {};
+    const id = assetTreeAssetId(node);
     const protocols = (data.permedProtocols || data.permed_protocols || []) as PermedProtocol[];
     const accounts = (data.permedAccounts || data.permed_accounts || []) as PermedAccount[];
 
     return {
-      id: String(data.id || node.id),
+      id,
       name: String(data.name || node.name),
       address: String(data.address || ""),
       org_id: typeof data.org_id === "string" ? data.org_id : undefined,
@@ -285,7 +348,7 @@ export const useAssetTree = () => {
       comment: String(data.comment || node.title || ""),
       permedProtocols: protocols,
       permedAccounts: accounts,
-      savedConnection: userInfoStore.getConnectionInfoForAsset(String(data.id || node.id)) || undefined
+      savedConnection: userInfoStore.getConnectionInfoForAsset(id) || undefined
     };
   };
 
