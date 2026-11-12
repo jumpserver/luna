@@ -1587,6 +1587,7 @@
   },
   "AclDialog": {
     "ReviewPartialResult": "{approved} tickets approved, {declined} not approved. Assets in unapproved tickets will be skipped.",
+    "Ticket": "Ticket",
     "TicketNumber": "Ticket {number}",
     "ApprovalTicket": "Approval ticket",
     "ReviewersUnavailable": "No available reviewer",

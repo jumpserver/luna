@@ -1638,6 +1638,7 @@
       "failed": "處理失敗"
     },
     "ReviewPartialResult": "{approved} 張工單已通過，{declined} 張未通過。未通過工單中的資產將略過。",
+    "Ticket": "工單",
     "TicketNumber": "工單 {number}",
     "ApprovalTicket": "審批工單",
     "ReviewersUnavailable": "無可用審批人",

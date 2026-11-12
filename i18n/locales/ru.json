@@ -1638,6 +1638,7 @@
       "failed": "Ошибка"
     },
     "ReviewPartialResult": "Одобрено заявок: {approved}, не одобрено: {declined}. Активы из неодобренных заявок будут пропущены.",
+    "Ticket": "Заявка",
     "TicketNumber": "Заявка {number}",
     "ApprovalTicket": "Заявка на согласование",
     "ReviewersUnavailable": "Нет доступных согласующих",

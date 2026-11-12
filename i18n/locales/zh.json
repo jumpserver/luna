@@ -1587,6 +1587,7 @@
   },
   "AclDialog": {
     "ReviewPartialResult": "通过 {approved} 张工单，未通过 {declined} 张。未通过工单中的资产将跳过。",
+    "Ticket": "工单",
     "TicketNumber": "工单 {number}",
     "ApprovalTicket": "审批工单",
     "ReviewersUnavailable": "暂无可用审批人",
