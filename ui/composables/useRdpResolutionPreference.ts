@@ -1,5 +1,6 @@
 import type { RdpGraphics, ResolutionType } from "~/types";
 import { getLunaPreferences, updateLunaPreferences } from "~/composables/useApiRequest";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { resolveKeyboardLayout } from "~/lion/utils/keyboard";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -21,6 +22,7 @@ function normalizeKeyboardHook(value: unknown): NonNullable<RdpGraphics["rdp_key
 
 export function useRdpResolutionPreference() {
   const user = useUserInfoStore();
+  const sessionReady = useClientSessionReady(() => user.currentAccountId);
   const {
     rdpResolution,
     keyboardLayout: localKeyboardLayout,
@@ -51,12 +53,12 @@ export function useRdpResolutionPreference() {
   };
 
   watch(
-    scope,
-    async (currentScope, _previous, onCleanup) => {
+    [scope, sessionReady],
+    async ([currentScope, ready], previous, onCleanup) => {
       const request = ++generation;
-      serverGraphics.value = {};
-      busy.value = Boolean(currentScope);
-      if (!currentScope) return;
+      if (currentScope !== previous?.[0]) serverGraphics.value = {};
+      busy.value = Boolean(currentScope && ready);
+      if (!currentScope || !ready) return;
       let cancelled = false;
       onCleanup(() => {
         cancelled = true;

@@ -10,6 +10,10 @@ const password = ref("");
 const error = ref("");
 const pendingAction = ref<"unlock" | "logout" | "retry" | null>(null);
 const busy = computed(() => pendingAction.value !== null);
+const userDisplayName = computed(() => {
+  const { name, username } = state.value.session?.user || {};
+  return name && username ? `${name} (${username})` : name || username || "";
+});
 const blocked = computed(() => !desktop && (!state.value.ready || state.value.locked));
 const unconfirmed = computed(() => !state.value.session?.locked);
 const logoutAsText = computed(() => Boolean(state.value.error || state.value.session?.has_password));
@@ -165,7 +169,7 @@ onMounted(() => {
             </header>
             <dl v-if="state.session" class="screen-lock-user">
               <dt class="screen-lock-label">{{ t("Common.User") }}</dt>
-              <dd class="screen-lock-user-value">{{ state.session.user.name || state.session.user.username }}</dd>
+              <dd class="screen-lock-user-value">{{ userDisplayName }}</dd>
             </dl>
             <p v-if="state.logoutAt" class="screen-lock-description screen-lock-logout-reason" role="status">
               {{ t("ScreenLock.TooManyFailures") }}

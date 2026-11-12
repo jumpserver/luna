@@ -19,7 +19,6 @@ export interface ClientSessionBinding {
 }
 
 interface ClientSessionBindingState extends ClientSessionBinding {
-  unlockedAt: number;
   lastIdleSeconds?: number;
   idleNoticeRevision?: number;
   locked?: boolean;
@@ -242,11 +241,12 @@ export class DesktopAuthService {
     this.sessionCheckInterval = CLIENT_SESSION_CHECK_INTERVAL - Math.random() * 5_000;
     this.checkingSessions = false;
     this.lockRevision = 0;
+    this.lastUnlockAt = performance.now();
     this.policyNotices = new Map();
   }
 
   activeSessions() {
-    // Saved accounts keep their server deadline, without background polling or idle timers.
+    // Only the selected account polls Core; saved accounts share the client's idle clock.
     const session = this.sessions.get(this.currentSessionKey);
     return session && this.tokens[session.sessionKey] ? [session] : [];
   }
@@ -445,7 +445,11 @@ export class DesktopAuthService {
     return changed;
   }
 
-  setSession({ sessionKey, origin, connectionId, orgId = "" }, beforeSwitch?: () => void, idleSeconds = 0) {
+  setSession(
+    { sessionKey, origin, connectionId, orgId = "", requireUnlocked = false },
+    beforeSwitch?: () => void,
+    lockedSwitchSource?: ClientSessionBinding
+  ) {
     if (!sessionKey || !origin) throw new Error("session key and origin are required");
     origin = normalizeCompatibilitySite(origin);
     const current = this.sessions.get(this.currentSessionKey);
@@ -457,31 +461,32 @@ export class DesktopAuthService {
       pending.site === origin &&
       pending.sessionId === sessionKey;
     if (connectionId !== undefined && !approved) return { status: "stale" };
+    if (approved && pending.lockedSwitchSource !== lockedSwitchSource) return { status: "stale" };
     // A renderer can update the active organization, but cannot approve a new connection.
     if (!approved && (current?.sessionKey !== sessionKey || current?.origin !== origin)) return { status: "stale" };
-    const bearerToken = approved ? pending.bearer : current.bearerToken;
     const loginBinding = this.sessionBinding(sessionKey);
+    if (requireUnlocked) {
+      try {
+        if (
+          this.pendingAccountBinding({ sessionId: sessionKey, connectionId }, this.captureSessionBinding()) !==
+          loginBinding
+        )
+          return { status: "stale" };
+      } catch {
+        return { status: "stale" };
+      }
+      if (this.lockState(loginBinding).locked || this.boundToken(loginBinding)?.client_lock_pending)
+        return { status: "locked" };
+    }
+    const bearerToken = approved
+      ? this.boundToken(pending.loginBinding)?.access_token || pending.bearer
+      : current.bearerToken;
     const switching =
       approved &&
       (current?.sessionKey !== sessionKey ||
         current?.origin !== origin ||
         (current.loginBinding && current.loginBinding !== loginBinding));
-    if (switching) {
-      beforeSwitch?.();
-      const previousBinding = current?.loginBinding ?? this.captureSessionBinding();
-      const previousToken = this.boundToken(previousBinding);
-      if (previousToken) {
-        const idle = Math.max(
-          0,
-          Math.min(
-            Number.isFinite(idleSeconds) ? idleSeconds : 0,
-            (performance.now() - previousBinding.unlockedAt) / 1000
-          )
-        );
-        // Inactive accounts retain their own last activity across token rotation and restarts.
-        previousToken.client_inactive_last_activity_at = Date.now() - idle * 1000;
-      }
-    }
+    if (switching) beforeSwitch?.();
     this.currentSessionKey = sessionKey;
     if (approved) {
       this.sessions.set(sessionKey, {
@@ -498,24 +503,12 @@ export class DesktopAuthService {
     }
     if (approved) {
       const token = this.tokens[sessionKey];
-      if (token) {
-        token.username = pending.username;
-        const lastActivity = token.client_inactive_last_activity_at;
-        const minutes = token.client_login_policy?.idle_lock_time;
-        if (Number.isFinite(lastActivity) && minutes > 0 && Date.now() - lastActivity >= minutes * 60_000) {
-          // Lock before the newly bound renderer can use this login. Unlocking waits
-          // for Core to confirm any pending lock, including after a network failure.
-          this.lockSession(loginBinding);
-        }
-        delete token.client_inactive_last_activity_at;
-      }
+      if (token) token.username = pending.username;
       this.pendingConnection = null;
       this.pendingCompatibility = null;
-      const binding = this.sessionBinding(sessionKey);
-      if (binding) binding.unlockedAt = performance.now();
       this.lockRevision += 1;
       if (switching) {
-        void this.persistTokens().catch((error) => electronLog.warn("failed to persist inactive client state", error));
+        void this.persistTokens().catch((error) => electronLog.warn("failed to persist client account", error));
       }
     }
     this.scheduleSessionCheck();
@@ -553,10 +546,15 @@ export class DesktopAuthService {
         return;
       }
       const accepted = this.handleCallback(callbackUrl.toString());
-      response.writeHead(accepted ? 200 : 400, { "Content-Type": "text/html; charset=utf-8" });
+      const closePage =
+        accepted && !callbackUrl.searchParams.has("error") && !parseOAuthCallback(callbackUrl.toString())?.error;
+      response.writeHead(accepted ? 200 : 400, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
       response.end(
         accepted
-          ? "<!doctype html><meta charset=utf-8><title>JumpServer</title><p>登录完成，可以关闭此窗口。</p>"
+          ? `<!doctype html><meta charset=utf-8><title>JumpServer</title><p>请返回客户端查看登录结果，可手动关闭此页面。</p>${closePage ? "<script>setTimeout(() => window.close(), 3000);</script>" : ""}`
           : "<!doctype html><meta charset=utf-8><title>JumpServer</title><p>登录回调已失效，请返回客户端重试。</p>"
       );
     });
@@ -847,6 +845,15 @@ export class DesktopAuthService {
       .map(([sessionId]) => sessionId);
   }
 
+  listAccountLockStates(): Record<string, boolean> {
+    return Object.fromEntries(
+      Object.entries(this.tokens).map(([sessionId, token]: [string, any]) => [
+        sessionId,
+        Boolean(token.client_locked || token.client_lock_pending || this.sessionBindings.get(token)?.logoutAt)
+      ])
+    );
+  }
+
   async freshToken(site, sessionId, provided = "") {
     const stored = this.tokens[sessionId];
     if (!stored) {
@@ -943,6 +950,9 @@ export class DesktopAuthService {
         delete binding.lockVersion;
         binding.lockRevision = (binding.lockRevision || 0) + 1;
         this.lockRevision += 1;
+        // A newly locked active account protects every retained login in this client.
+        // Merely selecting an account which was already locked does not relock the others.
+        if (locked && sessionId === this.currentSessionKey) this.lockAllSessions();
         this.emitEvent("client-lock-changed");
         void this.persistTokens().catch((error) => electronLog.warn("failed to persist server lock", error));
       }
@@ -958,9 +968,10 @@ export class DesktopAuthService {
 
   async expireSession(sessionId, reason = "unknown", sessionInfo?: ClientLoginSession) {
     const token = this.tokens[sessionId];
-    if ((this.sessionBindings?.get(token)?.logoutAt || 0) > Date.now()) return;
+    const binding = this.sessionBindings?.get(token);
+    if ((binding?.logoutAt || 0) > Date.now()) return;
     const existed = Boolean(this.tokens[sessionId] || this.sessions?.has(sessionId));
-    this.lockState(this.sessionBindings?.get(token));
+    this.lockState(binding);
     delete this.tokens[sessionId];
     this.sessions?.delete(sessionId);
     if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
@@ -978,6 +989,12 @@ export class DesktopAuthService {
         },
         "main"
       );
+    if (reason === "lock_logout" && binding) {
+      // The handoff event establishes the renderer shield before this old
+      // binding is released. Other expiry reasons still wait for explicit exit.
+      binding.locked = false;
+      delete binding.logoutAt;
+    }
     this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
     try {
@@ -1066,7 +1083,14 @@ export class DesktopAuthService {
           client_login_session: sessionInfo
         };
       }
-      return this.approveConnection(attempt, sessionId, payload);
+      const approved = this.approveConnection(attempt, sessionId, payload);
+      if (approved.connection_id) this.pendingConnection.loginBinding = this.sessionBinding(sessionId);
+      return {
+        ...approved,
+        client_locked: Boolean(
+          this.tokens[sessionId]?.client_lock_pending || this.lockState(this.sessionBinding(sessionId)).locked
+        )
+      };
     } catch (error) {
       if (attempt.generation !== this.connectionGeneration) return { status: "stale" };
       if (error?.oauthError === "invalid_grant") {
@@ -1116,7 +1140,7 @@ export class DesktopAuthService {
     if (!token?.origin) return null;
     let binding = this.sessionBindings.get(token);
     if (!binding) {
-      binding = { sessionKey, origin: token.origin, unlockedAt: performance.now() };
+      binding = { sessionKey, origin: token.origin };
       this.sessionBindings.set(token, binding);
     }
     return binding;
@@ -1160,56 +1184,99 @@ export class DesktopAuthService {
 
   lockIdleSessions(idleSeconds: number) {
     if (!Number.isFinite(idleSeconds) || idleSeconds < 0) return;
-    for (const session of this.activeSessions()) {
-      const binding = this.sessionBinding(session.sessionKey);
+    const idle = Math.min(idleSeconds, (performance.now() - this.lastUnlockAt) / 1000);
+    const activeToken = this.tokens[this.currentSessionKey];
+    const activeMinutes = activeToken?.client_login_policy?.idle_lock_time;
+    if (activeMinutes > 0 && !activeToken.client_locked && idle >= activeMinutes * 60) {
+      this.lockAllSessions();
+      return;
+    }
+    // A background account may enforce a shorter limit. Activity is shared, but
+    // once any account locks it still needs its own password verification.
+    for (const sessionId of Object.keys(this.tokens)) {
+      const binding = this.sessionBinding(sessionId);
       const token = this.boundToken(binding);
       const minutes = token?.client_login_policy?.idle_lock_time;
       if (!binding || !minutes || token.client_locked) continue;
-      const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
-      if (idle >= minutes * 60) this.lockSession(binding);
+      if (idle >= minutes * 60) this.lockSession(binding, true);
     }
   }
 
   lockSessions(manual = false) {
-    for (const session of this.activeSessions()) this.lockSession(this.sessionBinding(session.sessionKey), manual);
+    if (
+      manual ||
+      this.activeSessions().some((session) => this.tokens[session.sessionKey]?.client_login_policy?.idle_lock_time)
+    )
+      this.lockAllSessions();
+  }
+
+  lockAllSessions(exceptSessionId = "") {
+    const bindings = Object.keys(this.tokens)
+      .filter((sessionId) => sessionId !== exceptSessionId)
+      .map((sessionId) => this.sessionBinding(sessionId))
+      .filter((binding): binding is ClientSessionBindingState => Boolean(binding));
+    this.lockSessionBindings(bindings);
   }
 
   lockSession(binding: ClientSessionBinding | null | undefined, manual = false) {
     const token = this.boundToken(binding);
     if (!token || (!manual && !token.client_login_policy?.idle_lock_time) || token.client_locked) return;
-    token.client_locked = true;
-    token.client_lock_pending = true;
-    const state = binding as ClientSessionBindingState;
-    delete state.lockVersion;
-    state.lockRevision = (state.lockRevision || 0) + 1;
+    this.lockSessionBindings([binding]);
+  }
+
+  lockSessionBindings(bindings: ClientSessionBinding[]) {
+    if (!bindings.length) return;
+    // Close every local access gate before emitting events or starting any I/O.
+    // Relocking also invalidates password checks begun before this client-wide lock.
+    for (const binding of bindings) {
+      const token = this.boundToken(binding);
+      if (!token) continue;
+      token.client_locked = true;
+      token.client_lock_pending = true;
+      const state = binding as ClientSessionBindingState;
+      delete state.lockVersion;
+      state.lockRevision = (state.lockRevision || 0) + 1;
+    }
     this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
     void this.persistTokens().catch((error) => electronLog.warn("failed to persist client lock", error));
-    void this.syncSessionLock(binding).catch((error) =>
-      electronLog.warn("client lock pending server confirmation", error)
-    );
+    for (const binding of bindings) {
+      void this.syncSessionLock(binding).catch((error) =>
+        electronLog.warn("client lock pending server confirmation", error)
+      );
+    }
   }
 
   async syncSessionLock(binding: ClientSessionBinding | null | undefined) {
-    const token = this.boundToken(binding);
-    if (!token?.client_lock_pending) return;
+    if (!this.boundToken(binding)?.client_lock_pending) return;
     const state = binding as ClientSessionBindingState;
     if (state.lockRequest) return state.lockRequest;
-    const revision = state.lockRevision;
     const pending = (async () => {
-      const session = this.getBoundSession(binding);
-      const result = await this.sendApiRequest(session, {
-        method: "POST",
-        path: CLIENT_SESSION_LOCK,
-        timeoutMs: 10_000
-      });
-      const current = this.boundToken(binding);
-      if (!current || revision !== state.lockRevision) return;
-      if (result?.client_login_session?.locked !== true || !this.recordLockResponse(binding, result, revision)) {
-        throw new Error("Client lock changed before confirmation. Please try again.");
+      while (this.boundToken(binding)?.client_lock_pending) {
+        const revision = state.lockRevision;
+        try {
+          // Saved accounts may not have a renderer session yet. Their trusted token
+          // still lets Core lock them before they are selected again.
+          const session = this.requireLockedSession(binding);
+          const result = await this.sendApiRequest(session, {
+            method: "POST",
+            path: CLIENT_SESSION_LOCK,
+            timeoutMs: 10_000
+          });
+          const current = this.boundToken(binding);
+          if (!current) return;
+          if (revision !== state.lockRevision) continue;
+          if (result?.client_login_session?.locked !== true || !this.recordLockResponse(binding, result, revision)) {
+            throw new Error("Client lock changed before confirmation. Please try again.");
+          }
+          current.client_lock_pending = false;
+          await this.persistTokens();
+        } catch (error) {
+          // Only a newer local lock gets another request here. Ordinary network
+          // failures keep the pending gate for the normal retry or user refresh.
+          if (revision === state.lockRevision) throw error;
+        }
       }
-      current.client_lock_pending = false;
-      await this.persistTokens();
     })();
     state.lockRequest = pending;
     try {
@@ -1247,7 +1314,7 @@ export class DesktopAuthService {
         }
         const minutes = token.client_login_policy?.idle_lock_time;
         if (!token.client_locked && minutes > 0 && Number.isFinite(idleSeconds) && idleSeconds >= 0) {
-          const idle = Math.min(idleSeconds, (performance.now() - binding.unlockedAt) / 1000);
+          const idle = Math.min(idleSeconds, (performance.now() - this.lastUnlockAt) / 1000);
           // A new input starts a new warning, including after the previous one was dismissed.
           const resumed = binding.lastIdleSeconds !== undefined && idle < binding.lastIdleSeconds;
           if (resumed) {
@@ -1257,7 +1324,7 @@ export class DesktopAuthService {
           const remainingSeconds = Math.ceil(minutes * 60 - idle);
           if (!resumed && idle > 0 && remainingSeconds > 0 && remainingSeconds < 60) {
             notices.push({
-              id: `${session.sessionKey}:idle:${binding.unlockedAt}:${binding.idleNoticeRevision || 0}`,
+              id: `${session.sessionKey}:idle:${this.lastUnlockAt}:${binding.idleNoticeRevision || 0}`,
               kind: "idle_lock",
               at: new Date(Date.now() + (minutes * 60 - idle) * 1000).toISOString(),
               remainingSeconds
@@ -1279,9 +1346,100 @@ export class DesktopAuthService {
   }
 
   requireLockedSession(binding: ClientSessionBinding | null | undefined) {
-    const session = this.getBoundSession(binding);
+    const token = this.boundToken(binding);
+    if (!token) throw new Error("Client login is no longer available");
     if (!this.lockState(binding).locked) throw new Error("Client login is not locked");
-    return session;
+    const session = this.sessions.get(binding.sessionKey);
+    if (session?.origin === binding.origin) return session;
+    return { sessionKey: binding.sessionKey, origin: binding.origin, bearerToken: token.access_token };
+  }
+
+  pendingAccountBinding({ sessionId, connectionId }, currentBinding: ClientSessionBinding | null | undefined) {
+    if (!currentBinding || this.captureSessionBinding() !== currentBinding)
+      throw new Error("Current client account changed");
+    this.getRequestSession(currentBinding);
+    const pending = this.pendingConnection;
+    const token = this.tokens[sessionId];
+    if (
+      !pending ||
+      pending.lockedSwitchSource ||
+      pending.generation !== this.connectionGeneration ||
+      pending.generation !== connectionId ||
+      pending.sessionId !== sessionId ||
+      !token ||
+      token.origin !== pending.site ||
+      !pending.loginBinding ||
+      this.boundToken(pending.loginBinding) !== token
+    )
+      throw new Error("Client account preflight is no longer available");
+    return pending.loginBinding as ClientSessionBinding;
+  }
+
+  requireLockedCurrentSession(binding: ClientSessionBinding | null | undefined) {
+    if (!binding || this.captureSessionBinding() !== binding) throw new Error("Current client account changed");
+    if ((binding as ClientSessionBindingState).logoutAt) throw new Error("Client login is no longer available");
+    return this.requireLockedSession(binding);
+  }
+
+  async prepareLockedAccountSwitch(
+    { sessionId, compatibilityConfirmationId = undefined },
+    sourceBinding: ClientSessionBinding | null | undefined
+  ) {
+    this.requireLockedCurrentSession(sourceBinding);
+    const target = this.sessionBinding(sessionId);
+    if (!target || !this.boundToken(target)) {
+      this.cancelAuth();
+      return { status: "auth-required" };
+    }
+    const result = await this.bootstrapAuthSession({
+      site: target.origin,
+      sessionId,
+      compatibilityConfirmationId
+    });
+    try {
+      this.requireLockedCurrentSession(sourceBinding);
+    } catch (error) {
+      if (this.pendingConnection?.generation === result.connection_id) this.pendingConnection = null;
+      throw error;
+    }
+    if (!result.connection_id) return result;
+    const pending = this.pendingConnection;
+    if (
+      !pending ||
+      pending.generation !== this.connectionGeneration ||
+      pending.generation !== result.connection_id ||
+      pending.loginBinding !== target ||
+      !this.boundToken(target)
+    )
+      return { status: "stale" };
+    // This approval can only switch between locked accounts, never authorize
+    // the ordinary unlocked-account flow or a renderer-supplied site address.
+    pending.lockedSwitchSource = sourceBinding;
+    this.lockSession(target, true);
+    return { ...result, client_locked: true };
+  }
+
+  setLockedAccountSession(
+    { sessionKey, connectionId, orgId = "" },
+    sourceBinding: ClientSessionBinding | null | undefined,
+    beforeSwitch?: () => void
+  ) {
+    this.requireLockedCurrentSession(sourceBinding);
+    const pending = this.pendingConnection;
+    const target = this.sessionBinding(sessionKey);
+    if (
+      !pending ||
+      pending.generation !== this.connectionGeneration ||
+      pending.generation !== connectionId ||
+      pending.sessionId !== sessionKey ||
+      pending.lockedSwitchSource !== sourceBinding ||
+      pending.loginBinding !== target ||
+      !this.boundToken(target) ||
+      target.origin !== pending.site ||
+      !this.lockState(target).locked
+    )
+      return { status: "stale" };
+    return this.setSession({ sessionKey, origin: pending.site, connectionId, orgId }, beforeSwitch, sourceBinding);
   }
 
   recordLockResponse(binding: ClientSessionBinding, result, revision: number | undefined) {
@@ -1306,11 +1464,13 @@ export class DesktopAuthService {
     return true;
   }
 
-  async lockInfo(binding: ClientSessionBinding | null | undefined) {
+  async lockInfo(binding: ClientSessionBinding | null | undefined, validateAccess?: () => void) {
+    validateAccess?.();
     const session = this.requireLockedSession(binding);
     const state = binding as ClientSessionBindingState;
     const revision = state.lockRevision;
     await this.syncSessionLock(binding);
+    validateAccess?.();
     if (revision !== state.lockRevision || this.boundToken(binding)?.client_lock_pending) {
       throw new Error("Client lock changed before confirmation. Please try again.");
     }
@@ -1319,6 +1479,7 @@ export class DesktopAuthService {
       path: CLIENT_SESSION_UNLOCK,
       timeoutMs: 10_000
     });
+    validateAccess?.();
     if (typeof result?.has_password !== "boolean" || typeof result.settings_path !== "string") {
       throw new Error("Invalid client credential response");
     }
@@ -1336,7 +1497,8 @@ export class DesktopAuthService {
     };
   }
 
-  async unlockSession(binding: ClientSessionBinding | null | undefined, { password }) {
+  async unlockSession(binding: ClientSessionBinding | null | undefined, { password }, validateAccess?: () => void) {
+    validateAccess?.();
     this.requireLockedSession(binding);
     if (typeof password !== "string" || !password || password.length > 128) {
       throw new Error("Client lock password is required");
@@ -1349,8 +1511,10 @@ export class DesktopAuthService {
     const verification = (async () => {
       const session = this.requireLockedSession(binding);
       await this.syncSessionLock(binding);
+      validateAccess?.();
       this.requireLockedSession(binding);
-      if (!state.lockVersion) await this.lockInfo(binding);
+      if (!state.lockVersion) await this.lockInfo(binding, validateAccess);
+      validateAccess?.();
       const lockVersion = requestedVersion || state.lockVersion;
       if (
         revision !== state.lockRevision ||
@@ -1369,6 +1533,7 @@ export class DesktopAuthService {
           timeoutMs: 15_000
         });
       } catch (cause) {
+        validateAccess?.();
         const error = cause as Error & { data?: { code?: string; attempts_remaining?: number } };
         if (error.data?.code === "client_lock_state_changed") {
           this.recordLockResponse(binding, error.data, revision);
@@ -1385,7 +1550,10 @@ export class DesktopAuthService {
           this.emitEvent("client-lock-changed");
           setTimeout(() => {
             delete state.logoutAt;
-            if (this.boundToken(binding)) void this.expireSession(binding.sessionKey, "logout");
+            if (this.boundToken(binding)) {
+              if (this.currentSessionKey === binding.sessionKey) this.lockAllSessions(binding.sessionKey);
+              void this.expireSession(binding.sessionKey, "lock_logout");
+            }
           }, 5000);
           return this.lockState(binding);
         }
@@ -1401,6 +1569,7 @@ export class DesktopAuthService {
         }
         throw cause;
       }
+      validateAccess?.();
       this.requireLockedSession(binding);
       if (
         revision !== state.lockRevision ||
@@ -1412,7 +1581,7 @@ export class DesktopAuthService {
       ) {
         throw new Error("Client lock changed during verification. Please try again.");
       }
-      state.unlockedAt = performance.now();
+      this.lastUnlockAt = performance.now();
       await this.persistTokens();
       return this.lockState(binding);
     })();
@@ -1425,15 +1594,33 @@ export class DesktopAuthService {
   }
 
   async logoutLockedSession(binding: ClientSessionBinding | null | undefined) {
+    if (!this.boundToken(binding)) {
+      // Expiry retains the old window's shield until the user explicitly leaves.
+      // Never let that old window remove a newer login with the same account key.
+      if (binding && this.tokens[binding.sessionKey]) throw new Error("Current client account changed");
+      if (!this.lockState(binding).expired) return this.lockState(binding);
+      this.lockAllSessions();
+      const state = binding as ClientSessionBindingState;
+      this.emitEvent("auth-session-expired", { sessionId: binding.sessionKey, reason: "lock_logout" }, "main");
+      state.locked = false;
+      delete state.logoutAt;
+      this.lockRevision += 1;
+      this.emitEvent("client-lock-changed");
+      return this.lockState(binding);
+    }
     const session = this.requireLockedSession(binding);
+    this.lockAllSessions(session.sessionKey);
     if ((binding as ClientSessionBindingState).logoutAt) {
       delete (binding as ClientSessionBindingState).logoutAt;
-      await this.expireSession(session.sessionKey, "logout");
+      await this.expireSession(session.sessionKey, "lock_logout");
       return;
     }
     const loggingOut = this.logout({ site: session.origin, sessionId: session.sessionKey });
     // Publish before disk/network waits so this logout cannot overtake a new login.
-    this.emitEvent("auth-session-expired", { sessionId: session.sessionKey, reason: "logout" }, "main");
+    this.emitEvent("auth-session-expired", { sessionId: session.sessionKey, reason: "lock_logout" }, "main");
+    (binding as ClientSessionBindingState).locked = false;
+    delete (binding as ClientSessionBindingState).logoutAt;
+    this.lockRevision += 1;
     this.emitEvent("client-lock-changed");
     await loggingOut;
     return this.lockState(binding);

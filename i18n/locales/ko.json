@@ -1166,6 +1166,7 @@
     "ScrollToLoadMore": "스크롤하여 더 불러오기"
   },
   "Login": {
+    "ReauthenticateConfirm": "로그인이 만료되었습니다. 다시 로그인하시겠습니까?",
     "Title": "로그인 사이트 입력",
     "Description": "전체 사이트 주소를 입력하세요. 예: https://example.com 또는 http://192.168.1.1",
     "SiteName": "사이트 이름",
@@ -1334,6 +1335,7 @@
     "SiteAccountsDescription": "현재 활성 사이트와 이 클라이언트에서 로그인한 JumpServer 사이트",
     "Current": "현재",
     "CurrentActive": "현재 사용 중",
+    "Locked": "잠김",
     "CurrentActiveUser": "현재 활성 사용자",
     "Switch": "전환",
     "SwitchToThisUser": "이 사용자로 전환",
@@ -1365,7 +1367,7 @@
     "ClientLoginActivityLimits": "다시 전환하면 최신 설정으로 만료와 유휴 시간을 확인합니다. 유휴 시간이 초과되면 잠금을 해제하고, 로그인이 만료되면 다시 로그인하세요. 외부 앱 창은 보호되지 않습니다.",
     "ClientLoginIdleLock": "유휴 잠금",
     "ClientLoginPolicyExpiry": "새 최대 유효기간을 초과하여 유예 종료 후 로그아웃됩니다",
-    "ClientLockShortcut": "자동 잠금이 꺼져 있어도 {shortcut}로 현재 계정을 언제든 잠글 수 있습니다."
+    "ClientLockShortcut": "자동 잠금이 비활성화되어 있어도 {shortcut}을 눌러 언제든지 이 클라이언트의 모든 계정을 잠글 수 있습니다."
   },
   "Setting": {
     "BackToApp": "앱으로 돌아가기",
@@ -3660,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "다른 계정에 연결할 수 없습니다. 네트워크를 확인하고 다시 시도하세요.",
+    "ExpiredAccountRemoved": "로그인이 만료되어 계정이 제거되었습니다.",
+    "SwitchAccount": "계정 전환",
+    "SwitchUnset": "“{setPassword}”을 클릭하고 브라우저에서 위 사이트에 같은 계정으로 로그인하여 비밀번호를 설정하거나, {copyLink}하여 직접 여세요. 설정한 후 {refresh}을 클릭하세요.",
+    "UnlockAccount": "계정 잠금 해제",
     "Title": "클라이언트가 잠겼습니다",
     "Description": "계속하려면 이 계정의 화면 잠금 비밀번호를 입력하세요. 연결은 유지됩니다.",
     "MainOnly": "이 로그인이 종료되었습니다. 메인 페이지로 돌아가 다시 로그인하세요.",
@@ -3671,6 +3678,7 @@
     "Reset": "잠금 비밀번호 재설정",
     "Refresh": "새로 고침",
     "Logout": "로그아웃",
+    "LogoutConfirm": "현재 계정에서 로그아웃하시겠습니까?",
     "GoToMain": "기본 화면으로",
     "LoadFailed": "불러오지 못했습니다. 연결을 확인하고 다시 시도하세요.",
     "UnlockFailed": "잠금 해제에 실패했습니다. 비밀번호와 연결을 확인하세요.",
@@ -3746,7 +3754,7 @@
     "ReauthHelp": "종료 후 다시 실행하면 재로그인이 필요합니다. 최소화하거나 숨기는 것은 종료가 아닙니다.",
     "ReauthRequired": "관리자가 활성화하여 끌 수 없습니다. 최소화하거나 숨기는 것은 종료가 아닙니다.",
     "UnlimitedHelp": "0은 무제한입니다. 비워 두면 기본값으로 복원됩니다.",
-    "IdleHelp": "유휴 시간이 초과되면 잠깁니다. 계정을 전환해도 이전 계정의 유휴 시간은 초기화되지 않습니다. 잠금 비밀번호로 해제합니다. 외부 앱 창은 보호되지 않습니다.",
+    "IdleHelp": "모든 계정이 활동 시간을 공유하지만 각 계정의 유휴 시간 설정에 따라 잠깁니다. 현재 계정이 잠기면 다른 계정도 함께 잠기며, 각각 잠금을 해제해야 합니다. 외부 앱 창은 보호되지 않습니다.",
     "WebIdleHelp": "설정한 유휴 시간이 지나면 콘솔과 Web 터미널이 잠깁니다. 잠금 비밀번호를 입력해 해제합니다. 유휴 잠금이 켜져 있으면 모든 페이지를 닫아도 10초 후 잠깁니다. 페이지 종료 시 로그아웃 설정이 우선합니다. 10초 안에 새로 고치거나 다시 열면 취소됩니다.",
     "LifetimeHelp": "로그인 시점부터 계산합니다. 만료 시 재로그인이 필요하며 활동해도 연장되지 않습니다."
   },

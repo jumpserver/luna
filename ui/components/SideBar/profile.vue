@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LoginSitePrefill } from "~/composables/useEventBus";
 import type { LangType, ThemePresetId } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -48,7 +49,7 @@ const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-
 
 const desktopLogin = useDesktopLogin();
 const { addingSite } = desktopLogin;
-useEventBus().on("login", (request) => openLoginPage(request?.accountId));
+useEventBus().on("login", (request) => openLoginPage(request?.accountId, request?.prefill));
 
 const accountTooltip = computed(() => {
   if (!loggedIn.value) return t("Common.More");
@@ -288,9 +289,10 @@ function applyCurrentThemeColor(broadcast = false) {
   }
 }
 
-function openLoginPage(accountId?: string) {
+function openLoginPage(accountId?: string, prefill?: LoginSitePrefill) {
   profileOpen.value = false;
-  desktopLogin.openLoginPage(accountId);
+  if (prefill) desktopLogin.openLoginPage(accountId, prefill);
+  else desktopLogin.openLoginPage(accountId);
 }
 
 /**

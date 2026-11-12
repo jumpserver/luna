@@ -78,6 +78,23 @@ export function clientLoginExpiryMessage(
   return fallback;
 }
 
+export function restoreMissingCurrentAccount<T extends { accountId: string; site: string }>(state: {
+  currentAccountId?: string;
+  currentUser?: T | null;
+  userMap?: Record<string, T>;
+}) {
+  const { currentAccountId, currentUser } = state;
+  if (
+    !currentAccountId ||
+    currentUser?.accountId !== currentAccountId ||
+    !currentUser.site?.trim() ||
+    state.userMap?.[currentAccountId]
+  )
+    return;
+  state.userMap ||= {};
+  state.userMap[currentAccountId] = currentUser;
+}
+
 // Keep remembered account preferences, but never serialize a process-only bearer credential.
 export function serializeUserInfo(state: unknown): string {
   return JSON.stringify(state, (_key, value) => {

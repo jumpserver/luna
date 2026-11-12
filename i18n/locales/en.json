@@ -1166,6 +1166,7 @@
     "ScrollToLoadMore": "Scroll to load more"
   },
   "Login": {
+    "ReauthenticateConfirm": "Login expired. Sign in again?",
     "Title": "Input Login Site",
     "Description": "Enter the full site address, such as https://example.com or http://192.168.1.1",
     "SiteName": "Site name",
@@ -1334,6 +1335,7 @@
     "SiteAccountsDescription": "The currently active site and JumpServer sites signed in on this client",
     "Current": "Current",
     "CurrentActive": "Currently active",
+    "Locked": "Locked",
     "CurrentActiveUser": "Currently active user",
     "Switch": "Switch",
     "SwitchToThisUser": "Switch to this user",
@@ -1365,7 +1367,7 @@
     "ClientLoginActivityLimits": "Switching back checks expiry and idle time against the latest settings. Unlock if idle has timed out; sign in again if the login has expired. External application windows are not protected.",
     "ClientLoginIdleLock": "Idle lock",
     "ClientLoginPolicyExpiry": "The new lifetime has been exceeded; sign-out follows the grace period",
-    "ClientLockShortcut": "Press {shortcut} to lock the current account at any time, even when automatic locking is disabled."
+    "ClientLockShortcut": "Press {shortcut} to lock all accounts in this client at any time, even when automatic locking is disabled."
   },
   "Setting": {
     "BackToApp": "Back to app",
@@ -3660,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "Unable to connect to the other accounts. Check your connection and retry.",
+    "ExpiredAccountRemoved": "Login expired. Account removed.",
+    "SwitchAccount": "Switch account",
+    "SwitchUnset": "Click “{setPassword}” and sign in to the site above with this account in your browser to set a password, or {copyLink} and open it manually. Once the password is set, click {refresh}.",
+    "UnlockAccount": "Unlock account",
     "Title": "Client locked",
     "Description": "Enter the screen lock password for this account to continue. Connections remain active.",
     "MainOnly": "This login has ended. Return to the main page to sign in again.",
@@ -3671,6 +3678,7 @@
     "Reset": "Reset lock password",
     "Refresh": "Refresh",
     "Logout": "Sign out",
+    "LogoutConfirm": "Sign out of the current account?",
     "GoToMain": "Go to main page",
     "LoadFailed": "Unable to load. Check the connection and retry.",
     "UnlockFailed": "Unlock failed. Check the password and connection, then retry.",
@@ -3746,7 +3754,7 @@
     "ReauthHelp": "Require a new login after exiting and restarting. Minimizing or hiding the client does not count as exiting.",
     "ReauthRequired": "Required by the administrator and cannot be disabled. Minimizing or hiding does not count as exiting.",
     "UnlimitedHelp": "0 means unlimited. Clear to restore the default.",
-    "IdleHelp": "Locks after the idle timeout. Switching accounts does not reset the previous account’s idle time. Enter the lock password to unlock. External application windows are not protected.",
+    "IdleHelp": "All accounts share the last activity time but lock after their own idle timeout. When the current account locks, all other accounts also lock. Each account must be unlocked separately. External application windows are not protected.",
     "WebIdleHelp": "Locks the console and Web terminal after the specified idle time. Enter the lock password to unlock. With idle locking enabled, closing all pages also locks this login after 10 seconds. Close-page sign-out takes priority. Refreshing or reopening within 10 seconds cancels this.",
     "LifetimeHelp": "Counted from login. Sign in again when it expires; activity does not extend it."
   },

@@ -1,28 +1,41 @@
 <script setup lang="ts">
+import type { ClientLockState as LockState } from "~/composables/useClientLockState";
+import type { SiteUserData } from "~/store/modules/userInfo";
 import type { ClientPolicyNotice } from "~/types";
 import { Translation as I18nT } from "vue-i18n";
 import { deferAuthFailureUntil } from "~/composables/useApiRequest";
+import { useClientLockState } from "~/composables/useClientLockState";
+import { closeCurrentSiteWorkspace } from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isElectronRuntime } from "~/utils/runtime";
 
-interface LockState {
-  locked: boolean;
-  logoutAt?: number;
-  sessionId: string;
-  origin: string;
-  username: string;
-  idleLockTime: number;
-  revision: number;
-  lockRevision: number;
-  canUnlock: boolean;
-}
-
 const { t } = useI18n();
 const desktop = isElectronRuntime();
 const ready = useState("auth-bootstrap-ready", () => false);
-const state = shallowRef<LockState | null>(null);
+const lockLogoutPending = useState("client-lock-logout-pending", () => false);
+const lockLogoutRecovery = useState<string | null>("client-lock-logout-recovery", () => null);
+const handingOff = computed(() => lockLogoutPending.value || lockLogoutRecovery.value !== null);
+const state = useClientLockState();
 const userInfo = useUserInfoStore();
+const accountSites = computed(() => {
+  const sites = new Map<string, { address: string; name: string; accounts: typeof userInfo.userMap }>();
+  for (const [accountId, account] of Object.entries(userInfo.userMap)) {
+    const address = account.site.replace(/\/+$/, "");
+    let site = sites.get(address);
+    if (!site) {
+      site = { address, name: account.siteName === account.site ? "" : account.siteName || "", accounts: {} };
+      sites.set(address, site);
+    }
+    site.accounts[accountId] = account;
+  }
+  return [...sites.values()];
+});
+const canSwitchAccount = computed(
+  () =>
+    !state.value?.expired &&
+    Object.entries(userInfo.userMap).some(([id, account]) => id !== state.value?.sessionId && !account.sessionExpired)
+);
 const userName = computed(() => {
   const account = userInfo.userMap[state.value?.sessionId || ""];
   const name = account?.name;
@@ -41,13 +54,28 @@ const { start: resetCopyFeedback, stop: stopCopyFeedback } = useTimeoutFn(
   3000,
   { immediate: false }
 );
-const pendingAction = ref<"unlock" | "logout" | null>(null);
-const busy = computed(() => pendingAction.value !== null);
+const pendingAction = ref<"unlock" | "logout" | "switch" | null>(null);
+const busy = computed(() => pendingAction.value !== null || lockLogoutPending.value);
 const confirmLogout = ref(false);
+const accountPickerOpen = ref(false);
+const accountSwitchError = ref("");
+const expiredAccount = shallowRef<Pick<SiteUserData, "name" | "username" | "site"> | null>(null);
+const removeExpiredOpen = computed({
+  get: () => Boolean(expiredAccount.value),
+  set: (open) => {
+    if (!open) expiredAccount.value = null;
+  }
+});
+const logoutError = ref("");
 const error = ref("");
 const blocked = computed(
   () =>
-    desktop && (!state.value || state.value.locked || (!state.value.sessionId && state.value.canUnlock && !ready.value))
+    desktop &&
+    (handingOff.value ||
+      !state.value ||
+      state.value.locked ||
+      state.value.expired ||
+      (!state.value.sessionId && state.value.canUnlock && !ready.value))
 );
 let unlisten: (() => void) | undefined;
 let unlistenNotices: (() => void) | undefined;
@@ -58,7 +86,7 @@ let requestSequence = 0;
 
 async function loadInfo() {
   const snapshot = state.value;
-  if (!snapshot?.locked || !snapshot.canUnlock) return;
+  if (!snapshot?.locked || snapshot.expired || !snapshot.canUnlock) return;
   error.value = "";
   hasPassword.value = null;
   try {
@@ -91,6 +119,7 @@ function applyState(next: LockState) {
   const changed =
     state.value?.sessionId !== next.sessionId ||
     state.value?.locked !== next.locked ||
+    state.value?.expired !== next.expired ||
     state.value?.lockRevision !== next.lockRevision;
   state.value = next;
   if (changed) {
@@ -101,7 +130,9 @@ function applyState(next: LockState) {
     linkCopied.value = false;
     error.value = "";
     confirmLogout.value = false;
-    if (next.locked && next.canUnlock) void loadInfo();
+    accountPickerOpen.value = false;
+    expiredAccount.value = null;
+    if (next.locked && !next.expired && next.canUnlock) void loadInfo();
   }
 }
 
@@ -155,17 +186,93 @@ async function copySettingsUrl() {
   }
 }
 
-async function logout() {
-  pendingAction.value = "logout";
+function requestLogout() {
+  logoutError.value = "";
+  confirmLogout.value = true;
+}
+
+function openAccountPicker() {
+  if (!canSwitchAccount.value) return;
+  accountSwitchError.value = "";
+  accountPickerOpen.value = true;
+}
+
+async function switchLockedAccount(accountId: string) {
+  if (busy.value || state.value?.expired || accountId === state.value?.sessionId) return;
+  const sourceAccountId = state.value?.sessionId;
+  pendingAction.value = "switch";
+  accountSwitchError.value = "";
   try {
-    await desktopInvoke("client_lock_logout");
+    const switched = await userInfo.setCurrentAccount(accountId, {
+      lockedSwitch: true,
+      beforeSwitch: closeCurrentSiteWorkspace
+    });
+    if (!switched) {
+      const account = userInfo.userMap[accountId];
+      if (account?.sessionExpired) {
+        const { name, username, site } = account;
+        // Preflight already confirmed this saved login is invalid; dismissal only acknowledges removal.
+        await userInfo.deleteUserData(accountId, { alreadyLoggedOut: true });
+        if (state.value?.sessionId !== sourceAccountId) return;
+        accountPickerOpen.value = false;
+        expiredAccount.value = { name, username, site };
+        return;
+      }
+      accountSwitchError.value = t(
+        userInfo.userMap[accountId]?.sessionExpired ? "Login.SessionExpired" : "Login.SwitchFailed"
+      );
+      return;
+    }
+    accountPickerOpen.value = false;
     await refreshState();
   } catch {
-    error.value = t("ClientLock.LoadFailed");
+    accountSwitchError.value = t("Login.SwitchFailed");
   } finally {
     pendingAction.value = null;
   }
 }
+
+function restoreLogoutFocus() {
+  if (shield.value?.open && (state.value?.locked || state.value?.expired) && !state.value.logoutAt)
+    shield.value.querySelector<HTMLButtonElement>(".screen-lock-logout-button")?.focus({ preventScroll: true });
+}
+
+async function logout() {
+  if (busy.value) return;
+  pendingAction.value = "logout";
+  logoutError.value = "";
+  try {
+    await desktopInvoke("client_lock_logout");
+    await refreshState();
+  } catch {
+    if (confirmLogout.value) logoutError.value = t("UserProfile.LogoutAccountFailed");
+    else error.value = t("ClientLock.LoadFailed");
+  } finally {
+    pendingAction.value = null;
+  }
+}
+
+async function retryLockLogout() {
+  const previousSite = lockLogoutRecovery.value;
+  if (busy.value || previousSite === null) return;
+  lockLogoutPending.value = true;
+  try {
+    await userInfo.selectNextAccount(previousSite, { removeExpiredAccounts: true });
+    await refreshState();
+    if (userInfo.loggedIn || Object.keys(userInfo.userMap).length === 0) lockLogoutRecovery.value = null;
+  } catch {
+    // An unavailable site keeps the shield and saved accounts available for another retry.
+  } finally {
+    lockLogoutPending.value = false;
+  }
+}
+
+watch(handingOff, (active) => {
+  if (!active) return;
+  confirmLogout.value = false;
+  accountPickerOpen.value = false;
+  expiredAccount.value = null;
+});
 
 watch(
   [blocked, shield],
@@ -209,25 +316,50 @@ onBeforeUnmount(() => {
     v-if="desktop"
     ref="shield"
     class="client-lock-shield"
-    :aria-labelledby="state?.locked ? 'client-lock-title' : undefined"
-    :aria-label="state?.locked ? undefined : t('ScreenLock.Checking')"
+    :aria-labelledby="handingOff || state?.locked || state?.expired ? 'client-lock-title' : undefined"
+    :aria-label="handingOff || state?.locked || state?.expired ? undefined : t('ScreenLock.Checking')"
     :aria-describedby="
-      state?.locked && !state.logoutAt && (!state.canUnlock || hasPassword !== false)
+      !handingOff && state?.locked && !state.expired && !state.logoutAt && (!state.canUnlock || hasPassword !== false)
         ? 'client-lock-description'
         : undefined
     "
-    @cancel.prevent
+    @cancel.prevent="!busy && ((confirmLogout = false), (accountPickerOpen = false), (removeExpiredOpen = false))"
     @keydown.stop
     @keyup.stop
     @click.stop
     @pointerdown.stop
   >
-    <div v-if="state?.locked" class="screen-lock-surface">
+    <div v-if="handingOff" class="screen-lock-surface">
       <div class="screen-lock-brand">
         <BrandLogo class="screen-lock-brand-mark" />
         <span>JumpServer</span>
       </div>
-      <div class="screen-lock-security-indicator">{{ t("ScreenLock.SecureLabel") }}</div>
+      <div class="screen-lock-content">
+        <UCard :ui="{ root: 'screen-lock-form-card ring-0', body: 'p-7 sm:p-7' }">
+          <div class="screen-lock-stack">
+            <div class="screen-lock-heading" tabindex="-1">
+              <UIcon name="i-lucide-lock-keyhole" class="screen-lock-status-icon" />
+              <h1 id="client-lock-title" class="text-lg font-semibold">{{ t("ScreenLock.Title") }}</h1>
+            </div>
+            <p class="screen-lock-description" role="status">
+              {{ t(lockLogoutPending ? "ScreenLock.Checking" : "ClientLock.HandoffFailed") }}
+            </p>
+            <UIcon
+              v-if="lockLogoutPending"
+              name="i-lucide-loader-circle"
+              class="mx-auto size-5 animate-spin text-muted"
+            />
+            <UButton v-else block @click="retryLockLogout">{{ t("UserProfile.Retry") }}</UButton>
+          </div>
+        </UCard>
+      </div>
+    </div>
+    <div v-else-if="state?.locked || state?.expired" class="screen-lock-surface">
+      <div class="screen-lock-brand">
+        <BrandLogo class="screen-lock-brand-mark" />
+        <span>JumpServer</span>
+      </div>
+      <div v-if="!state.expired" class="screen-lock-security-indicator">{{ t("ScreenLock.SecureLabel") }}</div>
       <div class="screen-lock-content">
         <UCard :ui="{ root: 'screen-lock-form-card ring-0', body: 'p-7 sm:p-7' }">
           <div class="screen-lock-stack">
@@ -235,11 +367,19 @@ onBeforeUnmount(() => {
               <div class="screen-lock-heading" tabindex="-1">
                 <UIcon name="i-lucide-lock-keyhole" class="screen-lock-status-icon" />
                 <h1 id="client-lock-title" class="text-lg font-semibold">
-                  {{ t(state?.logoutAt ? "ScreenLock.SignedOut" : "ScreenLock.Title") }}
+                  {{
+                    t(
+                      state.expired
+                        ? "Login.SessionExpired"
+                        : state.logoutAt
+                          ? "ScreenLock.SignedOut"
+                          : "ScreenLock.Title"
+                    )
+                  }}
                 </h1>
               </div>
               <p
-                v-if="!state?.logoutAt && (!state?.canUnlock || hasPassword !== false)"
+                v-if="!state.expired && !state?.logoutAt && (!state?.canUnlock || hasPassword !== false)"
                 id="client-lock-description"
                 class="screen-lock-description"
               >
@@ -265,7 +405,7 @@ onBeforeUnmount(() => {
               @return-to-login="logout"
             />
             <UAlert
-              v-if="error && !state?.logoutAt && hasPassword !== true"
+              v-if="error && !state.expired && !state?.logoutAt && hasPassword !== true"
               color="error"
               variant="soft"
               :description="error"
@@ -276,7 +416,7 @@ onBeforeUnmount(() => {
                 </UButton>
               </template>
             </UAlert>
-            <template v-if="state?.locked && state.canUnlock && !state.logoutAt">
+            <template v-if="state?.locked && !state.expired && state.canUnlock && !state.logoutAt">
               <div v-if="hasPassword === false" class="space-y-1" role="status">
                 <p class="screen-lock-unset-message">{{ t("ClientLock.UnsetTitle") }}</p>
                 <I18nT keypath="ClientLock.Unset" tag="p" scope="global" class="screen-lock-description">
@@ -346,27 +486,37 @@ onBeforeUnmount(() => {
               </UButton>
               <div class="screen-lock-actions">
                 <UButton
+                  v-if="canSwitchAccount"
                   color="neutral"
                   variant="link"
                   class="screen-lock-logout-button cursor-pointer text-muted hover:text-highlighted"
                   :disabled="busy"
-                  @click="confirmLogout = true"
+                  @click="openAccountPicker"
+                >
+                  {{ t("ClientLock.SwitchAccount") }}
+                </UButton>
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  class="screen-lock-logout-button cursor-pointer text-muted hover:text-highlighted"
+                  :disabled="busy"
+                  @click="requestLogout"
                 >
                   {{ t("ClientLock.Logout") }}
                 </UButton>
               </div>
-              <template v-if="confirmLogout">
-                <UAlert color="warning" variant="soft" :description="t('Login.LogoutSessionsDescription')" />
-                <div class="flex justify-end gap-3">
-                  <UButton color="neutral" variant="ghost" :disabled="busy" @click="confirmLogout = false">
-                    {{ t("Common.Cancel") }}
-                  </UButton>
-                  <UButton color="warning" :loading="pendingAction === 'logout'" @click="logout">
-                    {{ t("Common.Confirm") }}
-                  </UButton>
-                </div>
-              </template>
             </template>
+            <div v-else-if="state.expired && state.canUnlock" class="screen-lock-actions">
+              <UButton
+                color="neutral"
+                variant="link"
+                class="screen-lock-logout-button cursor-pointer text-muted hover:text-highlighted"
+                :disabled="busy"
+                @click="requestLogout"
+              >
+                {{ t("ClientLock.Logout") }}
+              </UButton>
+            </div>
             <UButton v-else-if="state?.locked && !state.logoutAt" block @click="desktopInvoke('client_lock_show_main')">
               {{ t("ClientLock.GoToMain") }}
             </UButton>
@@ -388,7 +538,130 @@ onBeforeUnmount(() => {
         </template>
       </div>
     </div>
-    <ClientPolicyNotices v-if="state?.locked" :notices="visibleNotices" @dismiss="dismissed.add($event)" />
+    <ClientPolicyNotices
+      v-if="state?.locked && !handingOff"
+      :notices="visibleNotices"
+      @dismiss="dismissed.add($event)"
+    />
+    <ModalMessageDialog
+      v-if="blocked && !handingOff"
+      :key="`accounts:${state?.sessionId}`"
+      v-model:open="accountPickerOpen"
+      :portal="false"
+      :title="t('ClientLock.SwitchAccount')"
+      :busy="busy"
+    >
+      <template #body>
+        <div class="space-y-4">
+          <UAlert v-if="accountSwitchError" color="error" variant="soft" :description="accountSwitchError" />
+          <div
+            v-for="site in accountSites"
+            :key="site.address"
+            class="overflow-hidden rounded-[var(--app-radius)] border border-default"
+          >
+            <div class="flex items-start gap-3 border-b border-default px-3 py-2 text-sm">
+              <UIcon name="i-lucide-globe" class="mt-0.5 size-4 shrink-0 text-highlighted" aria-hidden="true" />
+              <div class="min-w-0">
+                <p class="break-all font-medium text-highlighted">{{ site.address }}</p>
+                <p v-if="site.name" class="break-words text-muted">{{ site.name }}</p>
+              </div>
+            </div>
+            <div class="divide-y divide-default pr-2 pl-8">
+              <UButton
+                v-for="(account, accountId) in site.accounts"
+                :key="accountId"
+                color="neutral"
+                variant="ghost"
+                block
+                class="my-1 justify-start px-2 text-left"
+                :disabled="busy || accountId === state?.sessionId"
+                @click="switchLockedAccount(String(accountId))"
+              >
+                <UIcon name="i-lucide-circle-user-round" class="size-4 shrink-0" />
+                <span class="min-w-0 flex-1 break-words">
+                  {{
+                    account.name && account.username
+                      ? `${account.name} (${account.username})`
+                      : account.name || account.username
+                  }}
+                </span>
+                <UBadge
+                  v-if="accountId === state?.sessionId"
+                  color="warning"
+                  variant="subtle"
+                  size="sm"
+                  class="shrink-0 whitespace-nowrap"
+                >
+                  {{ t("UserProfile.CurrentActive") }}
+                </UBadge>
+                <span v-else-if="account.sessionExpired" class="shrink-0 text-xs text-warning">
+                  {{ t("Login.SessionExpired") }}
+                </span>
+              </UButton>
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <UButton color="neutral" variant="outline" :disabled="busy" @click="accountPickerOpen = false">
+          {{ t("Common.Cancel") }}
+        </UButton>
+      </template>
+    </ModalMessageDialog>
+    <ModalMessageDialog
+      v-if="blocked && !handingOff && removeExpiredOpen"
+      v-model:open="removeExpiredOpen"
+      :portal="false"
+      :title="t('ClientLock.ExpiredAccountRemoved')"
+      :busy="busy"
+    >
+      <template #body>
+        <div v-if="expiredAccount" class="space-y-1 text-sm">
+          <p class="break-words text-highlighted">
+            {{
+              expiredAccount.name && expiredAccount.username
+                ? `${expiredAccount.name} (${expiredAccount.username})`
+                : expiredAccount.name || expiredAccount.username
+            }}
+          </p>
+          <p class="break-all text-muted">{{ expiredAccount.site }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <UButton :disabled="busy" @click="removeExpiredOpen = false">
+          {{ t("Common.Confirm") }}
+        </UButton>
+      </template>
+    </ModalMessageDialog>
+    <!-- Unmount before the native dialog closes; hiding it would interrupt modal cleanup. -->
+    <ModalMessageDialog
+      v-if="blocked && !handingOff"
+      :key="state?.sessionId"
+      v-model:open="confirmLogout"
+      :portal="false"
+      :title="t('ClientLock.LogoutConfirm')"
+      :busy="busy"
+      @after:leave="restoreLogoutFocus"
+    >
+      <template #body>
+        <div class="space-y-4 text-sm">
+          <div class="space-y-1">
+            <p class="break-words text-highlighted">{{ userName }}</p>
+            <p class="break-all text-muted">{{ state?.origin }}</p>
+          </div>
+          <p class="text-muted">{{ t("Login.LogoutSessionsDescription") }}</p>
+          <UAlert v-if="logoutError" color="error" variant="soft" :description="logoutError" />
+        </div>
+      </template>
+      <template #footer>
+        <UButton color="neutral" variant="outline" :disabled="busy" @click="confirmLogout = false">
+          {{ t("Common.Cancel") }}
+        </UButton>
+        <UButton color="error" :loading="pendingAction === 'logout'" :disabled="busy" @click="logout">
+          {{ t("ClientLock.Logout") }}
+        </UButton>
+      </template>
+    </ModalMessageDialog>
   </dialog>
 </template>
 
