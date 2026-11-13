@@ -2,7 +2,14 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { applyChenMonacoTheme, monaco } from "./monaco";
 
-const props = defineProps<{ value: string; json: boolean; wrap: boolean; canCopy: boolean; label: string }>();
+const props = defineProps<{
+  value: string;
+  json: boolean;
+  wrap: boolean;
+  canCopy: boolean;
+  label: string;
+  floatingFind?: boolean;
+}>();
 const host = ref<HTMLElement>();
 let editor: monaco.editor.IStandaloneCodeEditor | undefined;
 let model: monaco.editor.ITextModel | undefined;
@@ -63,7 +70,7 @@ onMounted(() => {
     renderValidationDecorations: "off",
     links: false,
     quickSuggestions: false,
-    find: { seedSearchStringFromSelection: "selection" },
+    find: { seedSearchStringFromSelection: "selection", addExtraSpaceOnTop: !props.floatingFind },
     suggestOnTriggerCharacters: false,
     wordBasedSuggestions: "off",
     hover: { enabled: "off" },

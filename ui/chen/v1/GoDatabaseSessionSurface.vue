@@ -83,7 +83,6 @@ import {
   objectSelect,
   objectWorkspaceKey,
   openQueryPlan,
-  queryDirty,
   reconcileExport,
   resultLoadingLocked,
   reviewSubmission,
@@ -229,7 +228,6 @@ const tabDefinitions = computed(() =>
           : tab.kind === "console"
             ? "i-lucide-square-terminal"
             : "i-lucide-terminal-square",
-    dirty: !!workspaceQuery(tab) && queryDirty(workspaceQuery(tab)!),
     title: objectTitle(tab)
   }))
 );
@@ -2187,7 +2185,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               }
             "
           >
-            <template #after-tabs>
+            <template #after-tabs="{ buttonClass }">
               <UDropdownMenu
                 :items="createTabItems"
                 :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
@@ -2200,22 +2198,12 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   size="xs"
                   color="neutral"
                   variant="ghost"
+                  :class="buttonClass"
                   :disabled="!sessionReady"
                 />
               </UDropdownMenu>
             </template>
-            <template #trailing>
-              <UButton
-                v-if="aiAvailable && (!activeTab || activeTab.kind === 'overview' || activeTab.kind === 'object')"
-                icon="i-lucide-sparkles"
-                :aria-label="t('RightPanel.SQLAIGenerate')"
-                :title="t('RightPanel.SQLAIGenerate')"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                :disabled="!sqlAiContext()"
-                @click="requestSqlAi('generate')"
-              />
+            <template #trailing="{ buttonClass }">
               <UButton
                 v-if="!desktopTree"
                 :icon="drawer ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
@@ -2226,6 +2214,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                 size="xs"
                 color="neutral"
                 variant="ghost"
+                class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+                :class="buttonClass"
                 @click="drawer = !drawer"
               />
               <UButton
@@ -2236,6 +2226,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                 size="xs"
                 color="neutral"
                 variant="ghost"
+                :class="buttonClass"
                 :disabled="session.state === 'closed' || busy"
                 @click="closeSession"
               />
@@ -2244,7 +2235,9 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
                   size="xs"
                   icon="i-lucide-scroll-text"
                   color="neutral"
-                  :variant="logsOpen ? 'soft' : 'ghost'"
+                  variant="ghost"
+                  class="aria-pressed:bg-(--app-selected-soft) aria-pressed:text-(--app-fg)"
+                  :class="buttonClass"
                   :aria-pressed="logsOpen"
                   :aria-label="t('Chen.ToggleLogConsole')"
                   :title="

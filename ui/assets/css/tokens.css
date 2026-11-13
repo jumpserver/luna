@@ -91,6 +91,7 @@
   --editor-line-highlight: var(--app-state-hover);
   --editor-selection: color-mix(in srgb, var(--theme-accent) 20%, transparent);
   --editor-selection-inactive: color-mix(in srgb, var(--theme-fg) 14%, transparent);
+  --editor-suggest-selection: color-mix(in srgb, var(--theme-accent) 30%, var(--workspace-surface-panel));
   --editor-cursor: var(--theme-accent);
   --editor-find-match: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
   --editor-find-match-active: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-surface));
@@ -120,9 +121,10 @@
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
   --workspace-toolbar-height: 38px;
-  --workspace-action-bar-height: 48px;
+  --workspace-action-bar-height: 40px;
   --workspace-session-tab-width: 176px;
   --workspace-sub-tab-width: 160px;
+  --workspace-sub-tab-height: 36px;
   --workspace-tab-group-accent: var(--color-bg-accent);
   --workspace-tab-group-foreground: var(--app-accent-foreground);
   --workspace-surface-background: var(--app-surface-canvas);

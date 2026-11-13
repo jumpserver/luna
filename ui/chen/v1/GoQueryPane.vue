@@ -93,9 +93,11 @@ const emit = defineEmits<{
   restore: [sql: string];
 }>();
 const { t } = useI18n();
+const runScope = ref<"selection" | "current">("current");
+const runLabel = computed(() => t(runScope.value === "selection" ? "Chen.RunSelected" : "Chen.GoV1RunCurrent"));
 const editor = ref<{
   focus: () => void;
-  run: () => void;
+  run: () => Promise<void> | undefined;
   runAll: () => void;
   explain: () => void;
   format: () => void;
@@ -706,7 +708,7 @@ defineExpose({
         :label="t('Chen.GoV1Cancel')"
         icon="i-lucide-square"
         size="xs"
-        color="neutral"
+        color="warning"
         variant="soft"
         :disabled="!executionCanCancel(query.execution, session.can_cancel)"
         @click="emit('cancel')"
@@ -716,7 +718,7 @@ defineExpose({
       v-if="!dataOnly && query.kind !== 'console'"
       ref="queryToolbar"
       data-chen-query-toolbar
-      class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-default px-3 [&>*]:shrink-0"
+      class="flex h-[var(--workspace-action-bar-height)] shrink-0 items-center overflow-x-auto whitespace-nowrap border-b border-default px-3 [&>*]:shrink-0"
     >
       <UButton
         v-if="session.state === 'ready' && !ready"
@@ -739,7 +741,7 @@ defineExpose({
                       ? 'Chen.GoV1CancelReconnectHint'
                       : 'Chen.GoV1CancelHint'
               )
-            : `${t('Chen.RunSelectedOrAll')} (Ctrl/⌘ Enter)`
+            : `${runLabel} (Ctrl/⌘ + Enter)`
         "
       >
         <UButton
@@ -753,11 +755,12 @@ defineExpose({
                       ? 'Chen.GoV1InterruptConnection'
                       : 'Chen.GoV1Cancel'
                 )
-              : t('Chen.RunSelectedOrAll')
+              : runLabel
           "
           size="sm"
-          :color="active ? 'neutral' : 'primary'"
+          :color="active ? 'warning' : 'primary'"
           variant="soft"
+          :class="{ 'mr-1': query.console?.transaction?.supported }"
           :disabled="active ? !executionCanCancel(query.execution, session.can_cancel) : !canRun || !query.sql.trim()"
           @click="active ? emit('cancel') : editor?.run()"
         />
@@ -767,7 +770,9 @@ defineExpose({
         :disabled="!canRun"
         @action="emit('transaction', $event)"
       />
-      <span v-if="query.console?.transaction?.supported" class="h-5 w-px shrink-0 bg-[var(--app-border)]" />
+      <span v-if="query.console?.transaction?.supported" class="shrink-0 px-0.5" aria-hidden="true">
+        <span class="block h-5 w-px bg-[var(--app-border)]" />
+      </span>
       <UTooltip :text="t(canExplain ? 'Chen.GoV1EstimatedPlanHint' : 'Chen.GoPlanUnsupported')">
         <span class="inline-flex" :tabindex="canExplain ? undefined : 0">
           <UButton
@@ -776,6 +781,7 @@ defineExpose({
             size="sm"
             color="neutral"
             variant="soft"
+            :ui="{ label: 'text-dimmed' }"
             :disabled="!canRun || !canExplain || !query.sql.trim()"
             @click="editor?.explain()"
           />
@@ -796,6 +802,7 @@ defineExpose({
         size="sm"
         color="neutral"
         variant="soft"
+        :ui="{ label: 'text-dimmed' }"
         :disabled="query.kind === 'preview' || !query.sql.trim()"
         title="Alt Shift F"
         @click="editor?.format()"
@@ -808,6 +815,7 @@ defineExpose({
           size="sm"
           color="neutral"
           variant="soft"
+          :ui="{ label: 'text-dimmed' }"
           :title="snippetUnavailable || t('Chen.GoWriteSqlFileLimit')"
         />
       </UDropdownMenu>
@@ -831,6 +839,7 @@ defineExpose({
           size="sm"
           color="neutral"
           variant="soft"
+          :ui="{ label: 'text-dimmed' }"
           :disabled="!ready || !aiAvailable"
           :title="aiAvailable ? undefined : t('RightPanel.SQLAIUnavailableDescription')"
         />
@@ -1189,7 +1198,7 @@ defineExpose({
       @ai="emit('ai', $event)"
     />
     <div v-else ref="splitArea" class="grid min-h-0 min-w-0 flex-1" :style="{ gridTemplateRows: gridRows }">
-      <div v-if="!dataOnly" :id="editorId" class="flex min-h-0 min-w-0 flex-col overflow-hidden px-3">
+      <div v-if="!dataOnly" :id="editorId" class="flex min-h-0 min-w-0 flex-col overflow-hidden pr-3 pl-1.5">
         <MonacoSqlEditor
           ref="editor"
           class="min-h-0 flex-1"
@@ -1205,6 +1214,7 @@ defineExpose({
           :online="canRun"
           :visible="visible"
           @update:model-value="emit('sql', $event)"
+          @run-scope="runScope = $event"
           @run="run"
           @explain="explain"
           @editor-error="editorError = $event"
@@ -1240,7 +1250,7 @@ defineExpose({
       <div v-if="showResults" class="flex min-h-0 min-w-0 flex-col overflow-hidden" data-chen-results>
         <div
           v-if="!dataOnly || pinned.length"
-          class="flex h-8 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 text-xs"
+          class="flex h-(--workspace-sub-tab-height) min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 text-xs"
           data-chen-result-tabs
         >
           <UButton
@@ -1266,7 +1276,7 @@ defineExpose({
             ref="resultTabList"
             role="tablist"
             :aria-label="t('Chen.GoV1Result')"
-            class="chen-result-tab-list flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden"
+            class="chen-result-tab-list flex h-full min-w-0 flex-1 items-center overflow-x-auto overflow-y-hidden"
           >
             <div
               v-for="id in dataOnly ? [] : liveResults"

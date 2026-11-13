@@ -985,7 +985,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               :aria-label="t('TerminalBroadcast.Active', { count: broadcast.targetIds.length })"
             />
             <span
-              class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
+              class="workspace-session-tab-close flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
               @click.stop="void closeTab(entry.tab)"
             >
               <UIcon name="i-lucide-x" class="size-2.5" />

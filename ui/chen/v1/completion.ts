@@ -48,8 +48,8 @@ export function waitForCompletion(signal: AbortSignal, delay = 120): Promise<boo
   });
 }
 
-// Only SQL keywords follow the display preference; quoted catalog identifiers stay exact.
-export function completionInsertText(item: GoCompletion["items"][number], keywordCase?: "lower" | "upper") {
-  if (item.kind !== "keyword" || !keywordCase) return item.insert_text;
-  return keywordCase === "upper" ? item.insert_text.toUpperCase() : item.insert_text.toLowerCase();
+// Only SQL keywords follow the case preference; catalog identifiers stay exact.
+export function completionKeywordText(text: string, kind: string, keywordCase?: "lower" | "upper") {
+  if (kind !== "keyword" || !keywordCase) return text;
+  return keywordCase === "upper" ? text.toUpperCase() : text.toLowerCase();
 }

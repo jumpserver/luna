@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { nextTick, ref, watch } from "vue";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 
 export interface WorkspaceSubTab {
   id: string;
@@ -48,11 +49,7 @@ const localDraggedId = ref("");
 const dropTargetId = ref("");
 const dropPlacement = ref<"before" | "after">("before");
 const editorTabMime = "application/x-jumpserver-editor-tab";
-const SUB_TAB_GAP = 4;
-const tabStripIdealWidth = computed(() => {
-  const count = props.tabs.length;
-  return `calc(${count} * var(--workspace-sub-tab-width) + ${Math.max(0, count - 1) * SUB_TAB_GAP}px)`;
-});
+const tabStripIdealWidth = computed(() => `calc(${props.tabs.length} * var(--workspace-sub-tab-width))`);
 const tabMenuItems = computed<DropdownMenuItem[]>(() =>
   props.tabs.map((tab) => ({
     label: tab.label,
@@ -216,6 +213,7 @@ watch(
       icon="i-lucide-chevron-left"
       color="neutral"
       variant="ghost"
+      :class="workspaceButtonClass"
       :aria-label="t('TabMenu.ScrollLeft')"
       :title="t('TabMenu.ScrollLeft')"
       @click="scrollTabStrip('left')"
@@ -228,13 +226,13 @@ watch(
       <div
         ref="strip"
         role="tablist"
-        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center gap-1 overflow-x-auto"
+        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center overflow-x-auto"
         @wheel="scrollTabs"
       >
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:bg-[var(--app-hover-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+          class="group relative flex h-(--workspace-sub-tab-height) min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
           :class="[
             activeId === tab.id ? 'bg-[var(--workspace-surface-sub-tab-active)] text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',
@@ -270,7 +268,7 @@ watch(
           </span>
           <button
             type="button"
-            class="ml-auto flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
+            class="ml-auto flex size-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
             :aria-label="`${resolvedCloseLabel} ${tab.label}`"
             :title="`${resolvedCloseLabel} ${tab.label}`"
             @click.stop="$emit('close', tab.id)"
@@ -291,6 +289,7 @@ watch(
       icon="i-lucide-chevron-right"
       color="neutral"
       variant="ghost"
+      :class="workspaceButtonClass"
       :aria-label="t('TabMenu.ScrollRight')"
       :title="t('TabMenu.ScrollRight')"
       @click="scrollTabStrip('right')"
@@ -306,15 +305,16 @@ watch(
         icon="i-lucide-ellipsis"
         color="neutral"
         variant="ghost"
+        :class="workspaceButtonClass"
         :aria-label="t('TabMenu.SelectTab')"
         :title="t('TabMenu.SelectTab')"
       />
     </UDropdownMenu>
     <div v-if="$slots['after-tabs']" class="flex h-full shrink-0 items-center gap-1">
-      <slot name="after-tabs" />
+      <slot name="after-tabs" :button-class="workspaceButtonClass" />
     </div>
     <div v-if="$slots.trailing" class="ml-auto flex h-full shrink-0 items-center gap-1 pl-2">
-      <slot name="trailing" />
+      <slot name="trailing" :button-class="workspaceButtonClass" />
     </div>
   </div>
 </template>
