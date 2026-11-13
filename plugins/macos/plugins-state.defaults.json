@@ -15,7 +15,7 @@
     "databases:mongodb": "macos.dbx",
     "databases:dameng": "macos.dbx",
     "databases:clickhouse": "macos.dbeaver",
-    "databases:db2": "macos.dbeaver"
+    "databases:db2": "macos.dbx"
   },
   "plugins": {}
 }

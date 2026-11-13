@@ -7,12 +7,29 @@ the database is the asset's `db_name`.
 
 ## DB2 LUW
 
-Select DBeaver under application settings → DB2 and configure its executable
+Select DBX or DBeaver under application settings → DB2 and configure its executable
 path. Install the IBM JCC driver through DBeaver's usual driver manager if prompted.
-Launch uses `driver=db2` and `prop.securityMechanism=3` (USRIDPWD), explicitly,
+DBeaver launch uses `driver=db2`, `prop.securityMechanism=3` (USRIDPWD), and
+`prop.sslConnection=false`, explicitly,
 because the Magnus DRDA implementation does not implement encrypted-password or
 Kerberos security mechanisms. The DB2 backend's usual default port is 50000;
 native clients connect to the **Magnus** port instead.
+
+DBX launch supplies `type=db2`, `ssl=false`, and
+`url_params=securityMechanism=3;sslConnection=false;`. These settings describe the
+frontend connection, independently of asset backend TLS. JCC 4.33 changed its
+default security mechanism to 9; Magnus currently supports mechanism 3. DBX's
+JDBC connection pool also calls `Connection.isValid()`: Magnus now forwards the
+empty-parameter EXCSAT ping to Db2 and returns the backend's answer. This does
+not enable arbitrary manager changes, empty DSS frames or unaudited SQL.
+
+For an existing DBX CLI connection, apply the same SSL and URL parameter settings
+to its saved DBX profile. The CLI uses that profile; upgrading the launcher does
+not rewrite existing saved connections.
+
+If DBeaver cannot resolve `com.ibm.db2:jcc:RELEASE`, install a fixed JCC version
+(e.g. `com.ibm.db2:jcc:11.5.9.0`) or add its JAR in Driver Manager. Maven download
+failures occur before any connection reaches Magnus.
 
 The connection guide's CLI uses a build of **usql with the DB2 driver**:
 `db2://<encoded-token>:<encoded-secret>@<endpoint>:<magnus-port>/<database>?secmec=3&ssl=false`.
@@ -22,9 +39,30 @@ It does not catalog persistent IBM CLP aliases or change the local DB2 catalog.
 ## ClickHouse
 
 Select DBeaver under application settings → ClickHouse and configure its executable.
-Magnus supports **Native TCP**, not ClickHouse HTTP/HTTPS. The usual backend port
-is 9000, not 8123. Do not use the standard HTTP JDBC driver or DBX's HTTP driver
-for a Magnus native endpoint.
+Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX uses HTTP;
+DBeaver's bundled Magnus plugin and `clickhouse-client` use Native TCP.
+
+Configure the ClickHouse asset backend port to match its client transport:
+**8123** (HTTP) for DBX, **9000** (Native TCP) for the DBeaver plugin or native CLI.
+Custom ports and backend HTTPS/native TLS use the asset's explicit port and TLS
+settings. No backend port is guessed or silently retried. If both transports are
+needed, configure separate asset entries pointing at their respective service
+ports. Clients always connect to the **Magnus** host/port.
+
+Enable DBX under application settings → ClickHouse. Explicit saved DBX selections
+are preserved; existing DBeaver defaults are retained on upgrade. The launcher
+passes `type=clickhouse` and `ssl=false` for the frontend. Backend HTTPS is
+configured independently on the asset.
+
+HTTP requests authenticate with the token, substitute the asset account, apply
+SQL filtering/approval and audit callbacks before forwarding, and honor database
+pinning. UTF-8 SQL is bounded to 16 MiB. SQL in the URL and body is combined before
+policy evaluation. Basic authentication, ClickHouse credential headers, and URL
+credentials are accepted; identity cannot change on a keep-alive connection.
+Only the SQL endpoint is exposed, with a bounded setting allowlist. Persistent
+HTTP sessions, external tables, compressed input, and query bindings are rejected.
+Mandatory masking rejects execution. Backend POSTs use fresh connections with no
+redirects, credential forwarding, automatic fallback or write replay.
 
 The launcher provisions only a driver definition in the client configuration
 directory's `dbeaver-clickhouse-native/.metadata/.config/drivers.xml` and supplies
@@ -52,17 +90,20 @@ of existing driver files.
 - Both proxy frontends currently use plaintext. Use a trusted network or a
   separately secured tunnel. Do not configure frontend TLS as if it were
   backend TLS.
-- This change does not add protocol-level masking, HTTP bridging or new
-  authentication mechanisms to Magnus. Existing experimental DRDA/Native limits
-  still apply.
+- This change does not add result masking or new DB2 authentication mechanisms.
+  Existing experimental DRDA/Native limits still apply.
 - Enterprise licensing/vendor rules remain aligned with Oracle/Dameng.
 - Do not alter the driver mapping, authentication or user preferences of MySQL,
   MariaDB, PostgreSQL, Oracle, Dameng, SQL Server, Redis or MongoDB.
 - Automated checks cover platform plugin declarations, token/database/endpoint
   launch fields, delimiter rejection, workspace isolation and existing protocols.
-- Live read-only QA uses IBM JCC 11.5.8.0 and Housepower Native JDBC 2.5.6 through
-  Magnus, plus Go DRDA/Native clients (ClickHouse compression disabled/LZ4/ZSTD).
-  This is **not** a claim of Windows/Linux GUI validation.
+- Live read-only QA uses IBM JCC 11.5.9.0 / 4.33.31 (plain JDBC, DBeaver defaults,
+  DBX URL parameters and connection-pool validation), DBX DB2 Agent 0.1.56 RPC,
+  ClickHouse HTTP JSONCompact/streaming results, and Housepower Native JDBC 2.5.6,
+  plus Go DRDA/Native clients (compression disabled/LZ4/ZSTD). macOS DBeaver
+  26.2.4 also established its main and metadata connections and loaded schemas
+  and data types. Windows/Linux GUI and the complete DBX CLI workflow are not
+  claimed by these checks.
 
 References:
 
