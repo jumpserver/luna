@@ -166,6 +166,7 @@ export function useGuacamoleClient(
   requestAuth?: MaybeRefOrGetter<{ ticket?: string; token?: string }>
 ) {
   const toast = useToast();
+  const { t: globalT } = useI18n({ useScope: "global" });
   const { addErrorToast } = useErrorToast();
   const message = {
     info: (text: string) => toast.add({ title: text, color: "info" }),
@@ -237,12 +238,25 @@ export function useGuacamoleClient(
     }
   };
 
-  function disconnectGuaclient() {
-    connectGeneration += 1;
+  function clearPermissionWarning(dismiss = true) {
     if (warningIntervalId.value !== null) {
       window.clearInterval(warningIntervalId.value);
       warningIntervalId.value = null;
     }
+    if (dismiss) toast.remove(`lion-permission-${sessionObject.value?.id || ""}`);
+  }
+
+  watch(
+    connectStatus,
+    (state) => {
+      if (state >= 4) clearPermissionWarning();
+    },
+    { flush: "sync" }
+  );
+
+  function disconnectGuaclient() {
+    connectGeneration += 1;
+    clearPermissionWarning();
     inputCleanup?.();
     inputCleanup = null;
     keyboard.reset();
@@ -618,18 +632,28 @@ export function useGuacamoleClient(
       }
       case "perm_expired": {
         const warningMsg = `${t("PermissionExpired")}: ${dataObj.detail}`;
-        message.warning(warningMsg);
-        if (warningIntervalId.value !== null) window.clearInterval(warningIntervalId.value);
-        warningIntervalId.value = window.setInterval(() => {
-          message.warning(warningMsg);
-        }, 1000 * 31);
+        clearPermissionWarning(false);
+        if (connectStatus.value >= 4 || !guaClient.value) break;
+        const showWarning = () => {
+          if (connectStatus.value >= 4 || !guaClient.value) {
+            clearPermissionWarning();
+            return;
+          }
+          const session = sessionObject.value;
+          const asset = typeof session?.asset === "string" ? session.asset : session?.asset?.name;
+          toast.add({
+            id: `lion-permission-${session?.id || ""}`,
+            title: warningMsg,
+            description: `${globalT("RightPanel.SessionAsset")}: ${asset || "—"} · ${globalT("RightPanel.SessionId")}: ${session?.id || "—"}`,
+            color: "warning"
+          });
+        };
+        showWarning();
+        warningIntervalId.value = window.setInterval(showWarning, 1000 * 31);
         break;
       }
       case "perm_valid": {
-        if (warningIntervalId.value) {
-          window.clearInterval(warningIntervalId.value);
-          warningIntervalId.value = null;
-        }
+        clearPermissionWarning();
         message.success(t("PermissionValid"));
         break;
       }
