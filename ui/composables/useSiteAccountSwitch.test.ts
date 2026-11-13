@@ -1,5 +1,6 @@
 import type { AssetItem } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAccountSwitchPrompt } from "./useAccountSwitchPrompt";
 import { useBatchCommandPanel } from "./useBatchCommandPanel";
 import { useClientCompatibility } from "./useClientCompatibility";
 import {
@@ -149,24 +150,41 @@ describe("site account switch isolation", () => {
 
 describe("saved site switch feedback", () => {
   beforeEach(() => {
-    accountMocks.user = { currentAccountId: "a", loggedIn: true, userMap: { b: {} }, setCurrentAccount: vi.fn() };
+    accountMocks.user = {
+      currentAccountId: "a",
+      loggedIn: true,
+      userMap: { b: { accountId: "b", site: "https://b.example.com", username: "b" } },
+      setCurrentAccount: vi.fn()
+    };
     accountMocks.emit.mockReset();
     accountMocks.toast.mockReset();
     useClientCompatibility().dismiss();
+    useAccountSwitchPrompt().finish(false);
     vi.stubGlobal("useEventBus", () => ({ emit: accountMocks.emit }));
     vi.stubGlobal("useToast", () => ({ add: accountMocks.toast }));
     vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: (key: string) => key } }));
   });
 
   afterEach(() => {
+    useAccountSwitchPrompt().finish(false);
     accountMocks.user = {};
     vi.unstubAllGlobals();
   });
 
-  it("opens a known expired site's login without closing the current workspace", async () => {
+  it("confirms a known expired site's login without closing the current workspace", async () => {
     openSession();
     accountMocks.user.userMap.b.sessionExpired = true;
-    await expect(useSiteAccountSwitch().switchAccount("b")).resolves.toBe(false);
+    const prompt = useAccountSwitchPrompt();
+    const cancelled = useSiteAccountSwitch().switchAccount("b");
+    expect(prompt.pending.value?.kind).toBe("login");
+    expect(accountMocks.emit).not.toHaveBeenCalled();
+    prompt.finish(false);
+    await expect(cancelled).resolves.toBe(false);
+    expect(accountMocks.emit).not.toHaveBeenCalled();
+
+    const confirmed = useSiteAccountSwitch().switchAccount("b");
+    prompt.finish(true);
+    await expect(confirmed).resolves.toBe(false);
     expect(accountMocks.emit).toHaveBeenCalledWith("login", { accountId: "b" });
     expect(accountMocks.user.setCurrentAccount).not.toHaveBeenCalled();
     expect(tabs.tabs.value).toHaveLength(1);
@@ -176,10 +194,15 @@ describe("saved site switch feedback", () => {
   it("prefills login for an expiry discovered while switching", async () => {
     accountMocks.user.setCurrentAccount.mockImplementation(async (_id: string, options: any) => {
       accountMocks.user.userMap.b.sessionExpired = true;
-      options.onAuthRequired();
+      await options.onAuthRequired();
       return false;
     });
-    await expect(useSiteAccountSwitch().switchAccount("b")).resolves.toBe(false);
+    const switching = useSiteAccountSwitch().switchAccount("b");
+    const prompt = useAccountSwitchPrompt();
+    await vi.waitFor(() => expect(prompt.pending.value?.kind).toBe("login"));
+    expect(accountMocks.emit).not.toHaveBeenCalled();
+    prompt.finish(true);
+    await expect(switching).resolves.toBe(false);
     expect(accountMocks.emit).toHaveBeenCalledWith("login", { accountId: "b" });
     expect(accountMocks.toast).not.toHaveBeenCalled();
   });

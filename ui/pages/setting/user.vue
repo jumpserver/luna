@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { SiteUserData } from "~/store/modules/userInfo";
 import type { LabeledValue, UserData, UserProfile } from "~/types";
+import { useLocalStorage } from "@vueuse/core";
 import { getUserProfile } from "~/composables/useApiRequest";
+import { useClientLockState, useClientSessionReady } from "~/composables/useClientLockState";
 import { confirmLeaveCurrentSiteSessions, useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -18,6 +20,8 @@ const { closeSettings } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
 const { switchAccount: switchSiteAccount, switchingAccountId } = useSiteAccountSwitch();
 const { loggedIn, currentAccountId, currentUser, userMap, isLoggingOut } = storeToRefs(userInfoStore);
+const clientLockState = useClientLockState();
+const canLoadProfile = useClientSessionReady(() => currentAccountId.value);
 const profile = ref<UserProfile | null>(null);
 const loading = ref(false);
 const clientLoginReady = ref(false);
@@ -30,7 +34,7 @@ const pageLoading = computed(
 );
 const loadError = ref("");
 const avatarFailed = ref(false);
-const sitesExpanded = ref(false);
+const sitesExpanded = useLocalStorage("jumpserver-client:site-management-expanded", false, { writeDefaults: false });
 const sitesContentId = useId();
 let requestSequence = 0;
 
@@ -288,7 +292,7 @@ async function loadProfile() {
   clientLoginReady.value = false;
   loadError.value = "";
   loading.value = false;
-  if (!import.meta.client || !loggedIn.value) return;
+  if (!import.meta.client || !loggedIn.value || !canLoadProfile.value) return;
 
   loading.value = true;
 
@@ -316,8 +320,11 @@ function addAccount() {
 }
 
 watch(
-  [loggedIn, currentAccountId],
-  () => {
+  [loggedIn, currentAccountId, canLoadProfile],
+  ([authenticated, accountId], previous) => {
+    // Preserve loaded settings across a lock, but retry an interrupted load after unlocking.
+    if (previous?.[0] === authenticated && previous?.[1] === accountId && profile.value && clientLoginReady.value)
+      return;
     void loadProfile();
   },
   { immediate: true }
@@ -436,7 +443,7 @@ watch(
               :aria-controls="sitesContentId"
               @click="sitesExpanded = !sitesExpanded"
             >
-              {{ t("UserProfile.SiteManagement") }} ({{ sites.length }})
+              {{ t("UserProfile.SiteManagement") }}
               <UIcon
                 name="i-lucide-chevron-right"
                 class="size-3.5 transition-transform"
@@ -485,7 +492,11 @@ watch(
                   :key="accountId"
                   class="flex min-h-10 items-center gap-3 py-2 text-muted"
                 >
-                  <UIcon name="i-lucide-user-round" class="size-3.5 shrink-0 text-highlighted" aria-hidden="true" />
+                  <UIcon
+                    name="i-lucide-circle-user-round"
+                    class="size-3.5 shrink-0 text-highlighted"
+                    aria-hidden="true"
+                  />
                   <div class="min-w-0 flex-1">
                     <div class="flex min-w-0 items-center gap-2">
                       <p class="truncate text-sm font-medium text-highlighted" :title="accountLabel(account)">
@@ -496,7 +507,7 @@ watch(
                         :text="t('UserProfile.CurrentActiveUser')"
                       >
                         <UBadge
-                          color="primary"
+                          color="warning"
                           variant="subtle"
                           size="sm"
                           :aria-label="t('UserProfile.CurrentActiveUser')"
@@ -504,6 +515,16 @@ watch(
                         >
                           {{ t("UserProfile.CurrentActive") }}
                         </UBadge>
+                      </UTooltip>
+                      <UTooltip
+                        v-if="!account.sessionExpired && clientLockState?.accountLocks?.[accountId]"
+                        :text="t('UserProfile.Locked')"
+                      >
+                        <UIcon
+                          name="i-lucide-lock"
+                          class="size-3.5 shrink-0 text-warning"
+                          :aria-label="t('UserProfile.Locked')"
+                        />
                       </UTooltip>
                     </div>
                     <p v-if="account.sessionExpired" class="text-xs text-warning">

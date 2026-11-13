@@ -22,7 +22,7 @@ import {
 } from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { clientLoginExpiryMessage } from "~/utils/clientLoginPolicy";
+import { clientLoginExpiryMessage, restoreMissingCurrentAccount } from "~/utils/clientLoginPolicy";
 import {
   recordedOrganizationForBootstrap,
   resolveOrganizationSelection,
@@ -102,6 +102,9 @@ export const useAuthSession = () => {
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
   const expiredSessionNotice = useState<string | null>("client-expired-session-notice", () => null);
+  const lockLogoutPending = useState("client-lock-logout-pending", () => false);
+  const lockLogoutRecovery = useState<string | null>("client-lock-logout-recovery", () => null);
+  const settingsOpen = useState("settings-open", () => false);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
   const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
   const authReady = useState("auth-bootstrap-ready", () => false);
@@ -281,6 +284,7 @@ export const useAuthSession = () => {
       }
 
       const parsed = JSON.parse(raw) as PersistedUserSnapshot;
+      restoreMissingCurrentAccount(parsed);
       const snapshotAccountId = parsed.currentAccountId || "";
 
       if (!snapshotAccountId || !parsed.userMap?.[snapshotAccountId]) {
@@ -565,23 +569,43 @@ export const useAuthSession = () => {
 
   const handleDesktopAuthExpired = async (sessionId: string, reason?: string, session?: ClientLoginSession) => {
     if (!sessionId) return false;
+    const lockLogout = reason === "lock_logout";
+    const logout = lockLogout || reason === "logout";
     const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
-    if (userInfoStore.markSessionExpired(sessionId, reason, session) === false) return false;
+    if (userInfoStore.markSessionExpired(sessionId, lockLogout ? "logout" : reason, session) === false) return false;
     const account = userMap.value[sessionId];
     const wasCurrent = sessionId === currentAccountId.value;
-    if (wasCurrent) {
-      if (!alreadyExpired && reason !== "logout" && reason !== "app_exit") expiredSessionNotice.value = sessionId;
-      userInfoStore.setUserLoggedIn(false);
-      useEventBus().emit("clearAssets", undefined);
-      // Expiry ends live connections immediately, independently of the dismissible notice.
-      await closeCurrentSiteWorkspace();
+    if (lockLogout && wasCurrent) {
+      lockLogoutPending.value = true;
+      lockLogoutRecovery.value = null;
+      settingsOpen.value = false;
     }
-    if (reason === "logout" && userMap.value[sessionId] === account) {
-      if (expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
-      await userInfoStore.deleteUserData(sessionId, { alreadyLoggedOut: true });
-      if (wasCurrent && !userInfoStore.loggedIn) await navigateTo(localePath({ path: "/" }));
+    try {
+      if (wasCurrent) {
+        if (!alreadyExpired && !logout && reason !== "app_exit") expiredSessionNotice.value = sessionId;
+        userInfoStore.setUserLoggedIn(false);
+        useEventBus().emit("clearAssets", undefined);
+        // Expiry ends live connections immediately, independently of the dismissible notice.
+        await closeCurrentSiteWorkspace();
+      }
+      if (logout && userMap.value[sessionId] === account) {
+        if (expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
+        await userInfoStore.deleteUserData(sessionId, {
+          alreadyLoggedOut: true,
+          ...(lockLogout ? { removeExpiredAccounts: true } : {})
+        });
+        if (wasCurrent && (lockLogout || !userInfoStore.loggedIn)) await navigateTo(localePath({ path: "/" }));
+      }
+      return wasCurrent;
+    } finally {
+      if (lockLogout && wasCurrent) {
+        lockLogoutRecovery.value =
+          !userInfoStore.loggedIn && !currentAccountId.value && Object.keys(userMap.value).length
+            ? account?.site || ""
+            : null;
+        lockLogoutPending.value = false;
+      }
     }
-    return wasCurrent;
   };
 
   const expiredSessionDescription = computed(() => {

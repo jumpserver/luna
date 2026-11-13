@@ -133,6 +133,11 @@ export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEve
     { immediate: true }
   );
   const sessionCtxRef = inject(connectorSessionKey, null);
+  const clearPermissionWarning = () => {
+    if (warningInterval.value !== null) clearInterval(warningInterval.value);
+    warningInterval.value = null;
+    toast.remove(`koko-permission-${sessionId.value || unref(sessionCtxRef)?.tabId || terminalId.value}`);
+  };
   const queryTerminalThemeName = computed(() => unref(sessionCtxRef)?.terminalThemeName || "");
   // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
@@ -300,6 +305,7 @@ export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEve
     setClipboardAccess,
     showInfoOnce,
     onServerClose: (reason) => {
+      clearPermissionWarning();
       serverCloseReason = reason;
     },
     onTerminalReady: startupOutput.markReady,
@@ -397,6 +403,7 @@ export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEve
     };
 
     const handleSocketClose = (event: CloseEvent) => {
+      clearPermissionWarning();
       heartbeat.stop();
       if (paneId) unregisterKokoBroadcastEndpoint(paneId);
       zmodem.abortActiveSession();
@@ -533,7 +540,7 @@ export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEve
     themeObserver?.disconnect();
     input.stop();
     heartbeat.stop();
-    if (warningInterval.value) clearInterval(warningInterval.value);
+    clearPermissionWarning();
     const tabId = unref(sessionCtxRef)?.tabId;
     if (tabId) {
       unregisterKokoBroadcastEndpoint(tabId);

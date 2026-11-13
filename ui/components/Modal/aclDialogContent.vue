@@ -38,9 +38,9 @@ const scopeItems = computed(() =>
 );
 const reviewTicketKey = ref<string>();
 const reviewTickets = computed(() =>
-  getAclReviewTickets(affectedItems.value).map((ticket, index) => ({
+  getAclReviewTickets(affectedItems.value).map((ticket, index, tickets) => ({
     ...ticket,
-    label: `${t("AclDialog.TicketNumber", { number: index + 1 })} · ${t(`AclDialog.Status.${ticket.status}`)} · ${t("AclDialog.AssetCount", { count: ticket.items.length })}`,
+    label: `${tickets.length === 1 ? t("AclDialog.Ticket") : t("AclDialog.TicketNumber", { number: index + 1 })} · ${t(`AclDialog.Status.${ticket.status}`)} · ${t("AclDialog.AssetCount", { count: ticket.items.length })}`,
     reviewers: getAclReviewerGroups(ticket.items)
       .map((reviewer) => reviewer.label || t("AclDialog.ReviewersUnavailable"))
       .join(", ")
@@ -188,7 +188,7 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
     </UFormField>
     <section v-if="step === 'review'" class="min-w-0 space-y-4">
       <template v-if="reviewSubmitted && selectedReviewTicket">
-        <UFormField :label="t('AclDialog.ApprovalTicket')" :ui="fieldUi">
+        <UFormField v-if="reviewTickets.length > 1" :label="t('AclDialog.ApprovalTicket')" :ui="fieldUi">
           <USelect
             v-model="activeReviewTicketKey"
             :items="reviewTickets.map((ticket) => ({ value: ticket.key, label: ticket.label }))"
@@ -197,6 +197,7 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
             class="min-w-0 w-full"
           />
         </UFormField>
+        <p v-else class="break-words text-sm text-(--app-fg)">{{ selectedReviewTicket.label }}</p>
         <div class="min-w-0 overflow-hidden rounded-(--app-radius) border border-(--app-border)">
           <div
             class="flex flex-wrap items-center justify-between gap-2 border-b border-(--app-border) px-3 py-2 text-sm"

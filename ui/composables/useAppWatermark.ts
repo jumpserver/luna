@@ -2,6 +2,7 @@ import type { PublicSettings } from "~/composables/useApiRequest";
 import type { UserProfile } from "~/types";
 import { formatLocalDateTime } from "#online-player/utils/time";
 import { getPublicSettings, getUserProfile } from "~/composables/useApiRequest";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   buildWatermarkViewer,
@@ -20,6 +21,10 @@ export function useAppWatermark() {
   const userInfoStore = useUserInfoStore();
   const { loggedIn, currentUser } = storeToRefs(userInfoStore);
   const { authReady } = useAuthSession();
+  const sessionReady = useClientSessionReady(() => userInfoStore.currentAccountId);
+  const context = computed(() =>
+    loggedIn.value && authReady.value ? JSON.stringify([userInfoStore.currentSite, userInfoStore.currentAccountId]) : ""
+  );
   const { activeTab } = useWorkspaceTabs();
 
   const settings = ref<PublicSettings | null>(null);
@@ -93,12 +98,8 @@ export function useAppWatermark() {
   };
 
   const load = async () => {
+    if (!context.value || !sessionReady.value) return;
     const token = ++loadGeneration;
-    if (!loggedIn.value) {
-      settings.value = null;
-      profile.value = null;
-      return;
-    }
 
     try {
       const [nextSettings, nextProfile] = await Promise.all([getPublicSettings(), getUserProfile().catch(() => null)]);
@@ -113,18 +114,16 @@ export function useAppWatermark() {
   };
 
   watch(
-    [loggedIn, authReady],
-    () => {
-      if (!loggedIn.value) {
-        loadGeneration += 1;
+    [context, sessionReady],
+    ([currentContext], previous) => {
+      loadGeneration += 1;
+      if (currentContext !== previous?.[0]) {
         settings.value = null;
         profile.value = null;
-        return;
       }
-      if (!authReady.value) return;
       void load();
     },
-    { immediate: true }
+    { immediate: true, flush: "sync" }
   );
   watch([enabled, needsClock], syncClock, { immediate: true });
   useEventListener(window, "focus", () => void load());

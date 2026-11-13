@@ -51,6 +51,9 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { currentAccountId, currentSite, currentUser, loggedIn, orgId } = storeToRefs(userInfoStore);
+const sessionReady = useClientSessionReady(() => currentAccountId.value);
+const assetAccessReady = computed(() => loggedIn.value && sessionReady.value);
+const treeContext = computed(() => JSON.stringify([currentAccountId.value, currentSite.value, orgId.value]));
 const { fetchAuthorizationTreeMetrics, fetchAuthorizationTreePage, fetchTree, fetchTypeTreePage, treeNodeToAsset } =
   useAssetTree();
 const {
@@ -85,12 +88,16 @@ const batchFavoriteMenuOpen = ref(false);
 const checkedAssets = shallowRef(new Map<string, AssetItem>());
 const batchCheckPending = ref(false);
 let batchSelectionEpoch = 0;
-const pendingNodePages = new WeakMap<AssetTreeNode, Promise<void>>();
+const pendingNodePages = new WeakMap<AssetTreeNode, { epoch: number; promise: Promise<void> }>();
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
 const treeScrollRef = useTemplateRef<HTMLElement>("treeScroll");
 let treeRequestEpoch = 0;
+let loadedTreeContext = "";
+const rootsToLoad = new Set<PanelKind>(["authorization", "type"]);
+const isTreeRequestCurrent = (epoch: number) =>
+  epoch === treeRequestEpoch && assetAccessReady.value && loadedTreeContext === treeContext.value;
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 let autoPageLoadFrame: number | null = null;
@@ -242,7 +249,7 @@ const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] =>
     }));
 
 const reportError = (error: unknown) => {
-  if (!loggedIn.value) return;
+  if (!assetAccessReady.value) return;
 
   const title = t("Asset.GetAssetFailed");
   const description = error instanceof Error ? error.message : String(error);
@@ -264,6 +271,8 @@ const reportError = (error: unknown) => {
 };
 
 const loadAuthorizationNodeCounts = async (nodes: AssetTreeNode[]) => {
+  if (!assetAccessReady.value) return;
+  const requestEpoch = treeRequestEpoch;
   const pendingNodes: AssetTreeNode[] = [];
   const visit = (items: AssetTreeNode[]) => {
     for (const node of items) {
@@ -281,12 +290,13 @@ const loadAuthorizationNodeCounts = async (nodes: AssetTreeNode[]) => {
   });
   try {
     const counts = await fetchAuthorizationTreeMetrics(pendingNodes);
+    if (!isTreeRequestCurrent(requestEpoch)) return;
     pendingNodes.forEach((node) => {
       const id = authorizationTreeMetricId(node);
       if (counts.has(id)) node.assetCount = counts.get(id)!;
     });
   } catch (error) {
-    console.warn("Failed to load authorization tree metrics", error);
+    if (isTreeRequestCurrent(requestEpoch)) console.warn("Failed to load authorization tree metrics", error);
   } finally {
     pendingNodes.forEach((node) => {
       node.assetCountLoading = false;
@@ -295,7 +305,8 @@ const loadAuthorizationNodeCounts = async (nodes: AssetTreeNode[]) => {
 };
 
 const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
-  if (!loggedIn.value) return;
+  if (!isTreeRequestCurrent(requestEpoch)) return;
+  rootsToLoad.add(kind);
   if (kind === "authorization") {
     loadRecentConnections();
     authorizationLoaded.value = false;
@@ -304,7 +315,7 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
   try {
     const rootPage = kind === "authorization" ? await fetchAuthorizationTreePage() : null;
     const nodes = rootPage?.nodes || (await fetchTree(kind));
-    if (requestEpoch !== treeRequestEpoch) return;
+    if (!isTreeRequestCurrent(requestEpoch)) return;
     if (kind === "authorization") {
       authorizationNodes.value = removeFavoriteNodes(nodes);
       const roots = authorizationNodes.value;
@@ -325,9 +336,10 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
       typeNodes.value = unwrapTypeTreeRoot(nodes);
     }
   } catch (error) {
-    if (requestEpoch === treeRequestEpoch) reportError(error);
+    if (isTreeRequestCurrent(requestEpoch)) reportError(error);
   } finally {
-    if (requestEpoch === treeRequestEpoch) {
+    if (isTreeRequestCurrent(requestEpoch)) {
+      rootsToLoad.delete(kind);
       loading.value = false;
       if (kind === "authorization") authorizationLoaded.value = true;
     }
@@ -335,6 +347,7 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
 };
 
 const refresh = async () => {
+  if (!assetAccessReady.value) return;
   treeRequestEpoch += 1;
   const requestEpoch = treeRequestEpoch;
   resetBatchSelection();
@@ -343,6 +356,7 @@ const refresh = async () => {
 };
 
 const reloadRoot = (kind: PanelKind) => {
+  if (!assetAccessReady.value) return;
   treeRequestEpoch += 1;
   void loadRoot(kind, treeRequestEpoch);
 };
@@ -353,6 +367,8 @@ const switchTreeKind = () => {
 };
 
 async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
+  if (!assetAccessReady.value) return;
+  const requestEpoch = treeRequestEpoch;
   if (isWorkspaceTourDemoNode(node.id)) {
     node.open = !node.open;
     return;
@@ -373,11 +389,12 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     try {
       await loadNodePage(node, kind);
     } catch (error) {
-      reportError(error);
+      if (isTreeRequestCurrent(requestEpoch)) reportError(error);
       return;
     }
   }
 
+  if (!isTreeRequestCurrent(requestEpoch)) return;
   node.open = true;
   if (kind === "authorization") void loadAuthorizationNodeCounts(node.children || []);
   await nextTick();
@@ -395,16 +412,22 @@ function updateNodePagination(node: AssetTreeNode, nextPage: AssetTreeNode["next
   node.nextPageTriggerIndex = Math.max(1, total - Math.floor(appendedCount / 2));
 }
 
-function loadNodePage(node: AssetTreeNode, kind: PanelKind) {
+function loadNodePage(node: AssetTreeNode, kind: PanelKind): Promise<void> {
+  if (!assetAccessReady.value) return Promise.resolve();
+  const requestEpoch = treeRequestEpoch;
   const pending = pendingNodePages.get(node);
-  if (pending) return pending;
+  if (pending?.epoch === requestEpoch) return pending.promise;
+  const isCurrent = () => isTreeRequestCurrent(requestEpoch);
 
   const nextPage = node.nextPage || undefined;
   node.loading = !node.loaded;
   node.loadingMore = Boolean(nextPage);
   const request = (async () => {
     try {
-      const page = await (kind === "authorization" ? fetchAuthorizationTreePage : fetchTypeTreePage)(node, nextPage);
+      const page = await (kind === "authorization" ? fetchAuthorizationTreePage : fetchTypeTreePage)(node, nextPage, {
+        isCurrent
+      });
+      if (!isCurrent()) return;
       if (
         nextPage &&
         page.nextPage?.phase === nextPage.phase &&
@@ -424,23 +447,26 @@ function loadNodePage(node: AssetTreeNode, kind: PanelKind) {
         void loadAuthorizationNodeCounts(node.children.slice(existing.length));
       }
     } finally {
-      node.loading = false;
-      node.loadingMore = false;
-      pendingNodePages.delete(node);
+      if (pendingNodePages.get(node)?.epoch === requestEpoch) {
+        node.loading = false;
+        node.loadingMore = false;
+        pendingNodePages.delete(node);
+      }
     }
   })();
-  pendingNodePages.set(node, request);
+  pendingNodePages.set(node, { epoch: requestEpoch, promise: request });
   return request;
 }
 
 async function loadMoreNode(node: AssetTreeNode, kind: PanelKind) {
-  if (!node.nextPage || node.loadingMore) return;
+  if (!assetAccessReady.value || !node.nextPage || node.loadingMore) return;
+  const requestEpoch = treeRequestEpoch;
   try {
     await loadNodePage(node, kind);
     await nextTick();
     scheduleAutoPageLoad();
   } catch (error) {
-    reportError(error);
+    if (isTreeRequestCurrent(requestEpoch)) reportError(error);
   }
 }
 
@@ -457,6 +483,7 @@ const collectExpandedTreeRows = (nodes: AssetTreeNode[]) => {
 };
 
 const maybeLoadNextTreePage = (scrollElement: HTMLElement) => {
+  if (!assetAccessReady.value) return;
   const rows = collectExpandedTreeRows(activeTree.value.nodes);
   if (!rows.length) return;
 
@@ -578,7 +605,7 @@ const toggleCheckedNode = async (node: AssetTreeNode) => {
   if (!batchMode.value || batchCheckPending.value || !canCheckAssetTreeNode(node)) return;
   const kind = activeTreeKind.value;
   const epoch = batchSelectionEpoch;
-  const isCurrent = () => epoch === batchSelectionEpoch;
+  const isCurrent = () => epoch === batchSelectionEpoch && assetAccessReady.value;
   const isBranch = isBranchNode(node);
   batchCheckPending.value = isBranch;
   try {
@@ -733,7 +760,7 @@ const {
 
 function respondToWorkspaceUiCommand() {
   const command = workspaceUiCommand.value;
-  if (!command || command.status !== "pending") return;
+  if (!assetAccessReady.value || !command || command.status !== "pending") return;
 
   const query = props.search.trim();
   if (command.type === "set-search") {
@@ -768,19 +795,29 @@ watch(
   }
 );
 watch(
-  [loggedIn, orgId, currentSite, currentAccountId, () => Boolean(props.search.trim())],
-  ([isLoggedIn]) => {
-    authorizationNodes.value = [];
-    typeNodes.value = [];
-    authorizationLoaded.value = false;
-    tourDemoNodes.value = [];
-    closeBatchMode();
-    closeNodeMenu();
-    if (isLoggedIn && !props.search.trim()) {
-      refresh();
-    } else {
-      treeRequestEpoch += 1;
-      loading.value = false;
+  [loggedIn, treeContext, () => Boolean(props.search.trim()), assetAccessReady],
+  ([isLoggedIn, context, searching, ready], previous) => {
+    const contextChanged = previous?.[0] !== isLoggedIn || previous?.[1] !== context || previous?.[2] !== searching;
+    treeRequestEpoch += 1;
+    loadedTreeContext = context;
+    loading.value = false;
+    if (contextChanged) {
+      closeBatchMode();
+      closeNodeMenu();
+      authorizationNodes.value = [];
+      typeNodes.value = [];
+      authorizationLoaded.value = false;
+      tourDemoNodes.value = [];
+      rootsToLoad.add("authorization");
+      rootsToLoad.add("type");
+    } else if (!ready) {
+      batchSelectionEpoch += 1;
+      batchCheckPending.value = false;
+    }
+    // Keep loaded trees and expansion state through a lock. Only unfinished
+    // roots (including a newly selected locked account) load after unlocking.
+    if (ready && !searching) {
+      for (const kind of rootsToLoad) void loadRoot(kind, treeRequestEpoch);
     }
   },
   { immediate: true }
@@ -789,6 +826,7 @@ watch(
 watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
 
 onBeforeUnmount(() => {
+  treeRequestEpoch += 1;
   batchSelectionEpoch += 1;
   if (autoPageLoadFrame != null) window.cancelAnimationFrame(autoPageLoadFrame);
 });

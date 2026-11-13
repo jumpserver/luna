@@ -1,7 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ConnectMethod } from "~/composables/useConnectMethods";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
-import type { AssetItem, RdpGraphics } from "~/types";
+import type { AssetDetail, AssetItem, RdpGraphics } from "~/types";
 import { favoriteAssetsToFolder, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isAssetNameTaken } from "~/composables/useAssetTree";
 import { isExternalClientConnectMethod, pickConnectMethod, useConnectMethods } from "~/composables/useConnectMethods";
@@ -58,6 +58,7 @@ export function useSidebarAssetActions() {
   const renameModalOpen = ref(false);
   const renameAsset = ref<AssetItem | null>(null);
   const renameValue = ref("");
+  const assetDetails = shallowRef<{ asset: Pick<AssetItem, "id" | "name" | "address">; detail?: AssetDetail | null }>();
   const collectFavoriteAssets = (folders = favoriteFolders.value): AssetItem[] =>
     folders.flatMap((folder: FavoriteFolder) => [...folder.assets, ...collectFavoriteAssets(folder.children)]);
   const renameNameTooLong = computed(() => isItemNameTooLong(renameValue.value));
@@ -396,6 +397,21 @@ export function useSidebarAssetActions() {
     renameModalOpen.value = true;
   };
 
+  const updateAssetDetailsModal = (open: boolean) => {
+    if (!open) assetDetails.value = undefined;
+  };
+
+  const openAssetDetails = async (asset: AssetItem) => {
+    contextMenuVisible.value = false;
+    const selection = { asset: { id: asset.id, name: asset.name, address: asset.address } };
+    assetDetails.value = selection;
+
+    const detail = await getAssetDetailRequest(asset.id, asset.org_id || currentUser.value?.org?.id || "").catch(
+      () => null
+    );
+    if (assetDetails.value === selection) assetDetails.value = { ...selection, detail };
+  };
+
   const submitAssetRename = () => {
     const asset = renameAsset.value;
     const name = renameValue.value.trim();
@@ -507,6 +523,11 @@ export function useSidebarAssetActions() {
         onSelect: () => copyAssetName(asset)
       },
       {
+        label: t("AssetCard.Details"),
+        icon: "i-lucide-info",
+        onSelect: () => openAssetDetails(asset)
+      },
+      {
         label: t("ContextMenu.Rename"),
         icon: "i-lucide-pencil",
         onSelect: () => openRenameModal(asset)
@@ -532,6 +553,9 @@ export function useSidebarAssetActions() {
     ];
   });
 
+  watch([() => userInfoStore.currentAccountId, () => currentUser.value?.org?.id, loggedIn], () => {
+    updateAssetDetailsModal(false);
+  });
   watch(
     loggedIn,
     (value) => {
@@ -549,6 +573,8 @@ export function useSidebarAssetActions() {
     assetContextMenuItems,
     contextMenuVisible,
     contextMenuPosition,
+    assetDetails,
+    updateAssetDetailsModal,
     renameModalOpen,
     renameAsset,
     renameValue,

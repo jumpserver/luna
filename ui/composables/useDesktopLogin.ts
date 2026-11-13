@@ -1,6 +1,7 @@
-import { createSharedComposable } from "@vueuse/core";
+import type { LoginSitePrefill } from "~/composables/useEventBus";
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { UserData } from "~/types";
+import { createSharedComposable } from "@vueuse/core";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import { closeCurrentSiteWorkspace, confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke, desktopListen, openDesktopAuthUrl } from "~/shared/desktop/bridge";
@@ -214,22 +215,22 @@ export const useDesktopLogin = createSharedComposable(() => {
   /**
    * @description 打开登录页面
    */
-  function openLoginPage(accountId?: string) {
+  function openLoginPage(accountId?: string, prefill?: LoginSitePrefill) {
     if (!isDesktopRuntime()) {
       redirectToWebLogin();
       return;
     }
 
     if (loginInFlight || browserAuthUrl.value) cancelLogin();
-    addingSite.value = accountId === "";
+    addingSite.value = accountId === "" || loggedIn.value;
     const reauthAccountId =
       accountId ?? (!loggedIn.value ? currentAccountId.value || Object.keys(userMap.value)[0] || "" : "");
     const reauthUser = userMap.value[reauthAccountId];
     if (reauthUser && !loggedIn.value) userInfoStore.selectAccountForLogin(reauthAccountId);
     editingAccountId.value = reauthUser ? reauthAccountId : "";
-    inputSite.value = reauthUser?.site || "";
-    inputSiteName.value = reauthUser?.siteName || reauthUser?.site || "";
-    siteNameEdited.value = Boolean(reauthUser);
+    inputSite.value = reauthUser?.site || prefill?.site || "";
+    inputSiteName.value = reauthUser?.siteName || reauthUser?.site || prefill?.siteName || prefill?.site || "";
+    siteNameEdited.value = Boolean(reauthUser || prefill);
     openModal.value = !inlineVisible.value;
     hasValidationError.value = false;
     validationField.value = null;

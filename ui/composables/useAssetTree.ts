@@ -7,6 +7,7 @@ import type {
   PermedProtocol
 } from "~/types";
 import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName } from "~/utils/itemName";
 import { isWorkspaceTourDemoNode } from "~/utils/workspaceTour";
@@ -252,10 +253,11 @@ export const useAssetTree = () => {
   const fetchAuthorizationTreePage = async (
     parent?: AssetTreeNode,
     nextPage?: AssetTreeNextPage,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ): Promise<AssetTreePage> => {
     const nodePage = await requestAuthorizationPage(parent, nextPage || { phase: "nodes" }, options);
-    if (nodePage.nextPage || !parent || nextPage?.phase === "assets") return nodePage;
+    if (nodePage.nextPage || !parent || nextPage?.phase === "assets" || options?.isCurrent?.() === false)
+      return nodePage;
 
     // A branch exposes all direct child nodes before the first direct asset
     // page, matching the regular Lina node/asset tree contract.
@@ -269,7 +271,7 @@ export const useAssetTree = () => {
   const fetchTypeTreePage = async (
     parent: AssetTreeNode,
     nextPage?: AssetTreeNextPage,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ): Promise<AssetTreePage> => {
     const query = {
       ...buildQuery("type", parent),
@@ -313,7 +315,7 @@ export const useAssetTree = () => {
     kind: AssetTreeKind,
     parent?: AssetTreeNode,
     search?: string,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ) => {
     if (kind === "authorization") {
       return (await fetchAuthorizationTreePage(parent, undefined, options)).nodes;
@@ -369,6 +371,7 @@ export const useAssetTreeSearch = (
   }
 ) => {
   const userInfoStore = useUserInfoStore();
+  const sessionReady = useClientSessionReady(() => userInfoStore.currentAccountId);
   const { fetchTree } = useAssetTree();
   const nodes = ref<AssetTreeNode[]>([]);
   const loading = shallowRef(false);
@@ -380,13 +383,22 @@ export const useAssetTreeSearch = (
       () => userInfoStore.loggedIn,
       () => userInfoStore.orgId,
       () => userInfoStore.currentSite,
-      () => userInfoStore.currentAccountId
+      () => userInfoStore.currentAccountId,
+      () => sessionReady.value
     ],
-    ([query, loggedIn], _previous, onCleanup) => {
-      nodes.value = [];
-      completedQuery.value = "";
-      loading.value = Boolean(query && loggedIn);
-      if (!query || !loggedIn) return;
+    ([query, loggedIn, orgId, site, accountId, enabled], previous, onCleanup) => {
+      const contextChanged =
+        previous?.[0] !== query ||
+        previous?.[1] !== loggedIn ||
+        previous?.[2] !== orgId ||
+        previous?.[3] !== site ||
+        previous?.[4] !== accountId;
+      if (contextChanged) {
+        nodes.value = [];
+        completedQuery.value = "";
+      }
+      loading.value = Boolean(query && loggedIn && enabled && completedQuery.value !== query);
+      if (!loading.value) return;
 
       let active = true;
       const timer = setTimeout(async () => {

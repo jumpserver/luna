@@ -59,7 +59,7 @@ const securityIcon = computed(() =>
       >
         <UIcon
           :name="securityIcon.name"
-          class="mr-1 size-3.5 shrink-0 align-middle"
+          class="mr-3 size-3.5 shrink-0 align-middle"
           :class="securityIcon.color"
           aria-hidden="true"
         />

@@ -972,6 +972,25 @@
     "ReplayArchiveFile": "Archivo de grabación"
   },
   "AssetCard": {
+    "Organization": "Organización",
+    "Platform": "Plataforma",
+    "Category": "Categoría",
+    "Type": "Tipo",
+    "Zone": "Zona de red",
+    "Nodes": "Nodos",
+    "Labels": "Etiquetas",
+    "Connectivity": "Conectividad",
+    "DateVerified": "Última verificación",
+    "AuthorizedProtocols": "Protocolos autorizados",
+    "AuthorizedAccounts": "Cuentas autorizadas",
+    "DomainName": "Nombre de dominio",
+    "AllowedUrls": "Sitios permitidos",
+    "CreatedBy": "Creado por",
+    "DateCreated": "Fecha de creación",
+    "AssetId": "ID del activo",
+    "Details": "Detalles del activo",
+    "Comment": "Comentario",
+    "LoadDetailsFailed": "No se pudieron cargar los detalles del activo.",
     "Activated": "Activado",
     "Deactivated": "Desactivado",
     "Address": "Dirección",
@@ -1147,6 +1166,7 @@
     "ScrollToLoadMore": "Desplácese para cargar más"
   },
   "Login": {
+    "ReauthenticateConfirm": "La sesión ha caducado. ¿Iniciar sesión de nuevo?",
     "Title": "Introduzca el sitio de inicio de sesión",
     "Description": "Introduzca la dirección completa del sitio, como https://example.com o http://192.168.1.1",
     "SiteName": "Nombre del sitio",
@@ -1315,6 +1335,7 @@
     "SiteAccountsDescription": "El sitio activo actualmente y los sitios de JumpServer con sesión iniciada en este cliente",
     "Current": "Actual",
     "CurrentActive": "Activo actualmente",
+    "Locked": "Bloqueada",
     "CurrentActiveUser": "Usuario activo actualmente",
     "Switch": "Cambiar",
     "SwitchToThisUser": "Cambiar a este usuario",
@@ -1346,7 +1367,7 @@
     "ClientLoginActivityLimits": "Al volver, se comprueban la caducidad y la inactividad con la configuración más reciente. Desbloquee si se superó la inactividad; vuelva a iniciar sesión si caducó. Las aplicaciones externas no están protegidas.",
     "ClientLoginIdleLock": "Bloqueo por inactividad",
     "ClientLoginPolicyExpiry": "Se superó la nueva duración máxima; se cerrará sesión al terminar la prórroga",
-    "ClientLockShortcut": "Pulsa {shortcut} para bloquear la cuenta actual en cualquier momento, aunque el bloqueo automático esté desactivado."
+    "ClientLockShortcut": "Pulsa {shortcut} para bloquear todas las cuentas de este cliente en cualquier momento, incluso si el bloqueo automático está desactivado."
   },
   "Setting": {
     "BackToApp": "Volver a la aplicación",
@@ -1638,6 +1659,7 @@
       "failed": "Error"
     },
     "ReviewPartialResult": "{approved} solicitudes aprobadas y {declined} no aprobadas. Se omitirán los activos de las solicitudes no aprobadas.",
+    "Ticket": "Solicitud",
     "TicketNumber": "Solicitud {number}",
     "ApprovalTicket": "Solicitud de aprobación",
     "ReviewersUnavailable": "No hay revisores disponibles",
@@ -3640,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "No se puede conectar con las otras cuentas. Comprueba la conexión y vuelve a intentarlo.",
+    "ExpiredAccountRemoved": "La sesión ha caducado. Se ha eliminado la cuenta.",
+    "SwitchAccount": "Cambiar de cuenta",
+    "SwitchUnset": "Haz clic en «{setPassword}» e inicia sesión en el sitio indicado con esta cuenta en el navegador para establecer una contraseña, o {copyLink} y ábrelo manualmente. Después, haz clic en {refresh}.",
+    "UnlockAccount": "Desbloquear cuenta",
     "Title": "Cliente bloqueado",
     "Description": "Introduce la contraseña de bloqueo de esta cuenta. Las conexiones siguen activas.",
     "MainOnly": "Este inicio de sesión ha terminado. Vuelva a la página principal para iniciar sesión de nuevo.",
@@ -3651,6 +3678,7 @@
     "Reset": "Restablecer contraseña",
     "Refresh": "Actualizar",
     "Logout": "Cerrar sesión",
+    "LogoutConfirm": "¿Cerrar sesión de la cuenta actual?",
     "GoToMain": "Ir a la página principal",
     "LoadFailed": "No se pudo cargar. Comprueba la conexión e inténtalo de nuevo.",
     "UnlockFailed": "No se pudo desbloquear. Comprueba la contraseña y la conexión.",
@@ -3726,7 +3754,7 @@
     "ReauthHelp": "Exige iniciar sesión de nuevo al salir y reiniciar. Minimizar u ocultar el cliente no cuenta como salir.",
     "ReauthRequired": "Obligatorio por el administrador; no se puede desactivar. Minimizar u ocultar no cuenta como salir.",
     "UnlimitedHelp": "0 significa sin límite. Borre el campo para restaurar el valor predeterminado.",
-    "IdleHelp": "Se bloquea al superar el tiempo de inactividad. Cambiar de cuenta no reinicia la inactividad de la cuenta anterior. Introduzca la contraseña de bloqueo para desbloquear. Las aplicaciones externas no están protegidas.",
+    "IdleHelp": "Todas las cuentas comparten la hora de la última actividad, pero se bloquean según su propio límite de inactividad. Cuando se bloquea la cuenta activa, también se bloquean las demás. Cada cuenta debe desbloquearse por separado. Las ventanas de aplicaciones externas no están protegidas.",
     "WebIdleHelp": "Bloquea la consola y el terminal Web tras el tiempo de inactividad indicado. Introduzca la contraseña de bloqueo para desbloquear. Con el bloqueo por inactividad activado, cerrar todas las páginas también bloquea esta sesión tras 10 segundos. El cierre de sesión al cerrar las páginas tiene prioridad. Actualizar o reabrir en 10 segundos lo cancela.",
     "LifetimeHelp": "Se cuenta desde el inicio de sesión. Al vencer, vuelva a iniciar sesión; la actividad no lo prolonga."
   },

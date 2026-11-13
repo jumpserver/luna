@@ -972,6 +972,25 @@
     "ReplayArchiveFile": "Tệp lưu trữ bản ghi"
   },
   "AssetCard": {
+    "Organization": "Tổ chức",
+    "Platform": "Nền tảng",
+    "Category": "Danh mục",
+    "Type": "Loại",
+    "Zone": "Vùng mạng",
+    "Nodes": "Nút",
+    "Labels": "Nhãn",
+    "Connectivity": "Khả năng kết nối",
+    "DateVerified": "Lần xác minh cuối",
+    "AuthorizedProtocols": "Giao thức được cấp quyền",
+    "AuthorizedAccounts": "Tài khoản được cấp quyền",
+    "DomainName": "Tên miền",
+    "AllowedUrls": "Trang web được phép",
+    "CreatedBy": "Người tạo",
+    "DateCreated": "Thời gian tạo",
+    "AssetId": "ID tài sản",
+    "Details": "Chi tiết tài sản",
+    "Comment": "Ghi chú",
+    "LoadDetailsFailed": "Không thể tải chi tiết tài sản.",
     "Activated": "Đã kích hoạt",
     "Deactivated": "Đã vô hiệu hóa",
     "Address": "Địa chỉ",
@@ -1147,6 +1166,7 @@
     "ScrollToLoadMore": "Cuộn để tải thêm"
   },
   "Login": {
+    "ReauthenticateConfirm": "Phiên đăng nhập đã hết hạn. Đăng nhập lại?",
     "Title": "Nhập trang đăng nhập",
     "Description": "Nhập địa chỉ trang đầy đủ, ví dụ https://example.com hoặc http://192.168.1.1",
     "SiteName": "Tên trang web",
@@ -1315,6 +1335,7 @@
     "SiteAccountsDescription": "Trang web đang sử dụng và các trang JumpServer đã đăng nhập trên ứng dụng khách này",
     "Current": "Hiện tại",
     "CurrentActive": "Đang sử dụng",
+    "Locked": "Đã khóa",
     "CurrentActiveUser": "Người dùng hiện đang hoạt động",
     "Switch": "Chuyển",
     "SwitchToThisUser": "Chuyển sang người dùng này",
@@ -1346,7 +1367,7 @@
     "ClientLoginActivityLimits": "Khi quay lại, kiểm tra thời hạn đăng nhập và thời gian nhàn rỗi theo thiết lập mới nhất. Mở khóa nếu đã quá thời gian nhàn rỗi; đăng nhập lại nếu đã hết hạn. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
     "ClientLoginIdleLock": "Khóa khi không hoạt động",
     "ClientLoginPolicyExpiry": "Đã vượt thời hạn tối đa mới; đăng xuất sau thời gian gia hạn",
-    "ClientLockShortcut": "Nhấn {shortcut} để khóa tài khoản hiện tại bất cứ lúc nào, kể cả khi tắt khóa tự động."
+    "ClientLockShortcut": "Nhấn {shortcut} để khóa tất cả tài khoản trong ứng dụng bất kỳ lúc nào, ngay cả khi đã tắt khóa tự động."
   },
   "Setting": {
     "BackToApp": "Quay lại ứng dụng",
@@ -1638,6 +1659,7 @@
       "failed": "Thất bại"
     },
     "ReviewPartialResult": "{approved} yêu cầu đã được duyệt, {declined} yêu cầu chưa được duyệt. Các tài sản trong yêu cầu chưa được duyệt sẽ bị bỏ qua.",
+    "Ticket": "Yêu cầu",
     "TicketNumber": "Yêu cầu {number}",
     "ApprovalTicket": "Yêu cầu phê duyệt",
     "ReviewersUnavailable": "Không có người phê duyệt khả dụng",
@@ -3640,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "Không thể kết nối với các tài khoản khác. Kiểm tra kết nối mạng và thử lại.",
+    "ExpiredAccountRemoved": "Phiên đăng nhập đã hết hạn. Tài khoản đã được xóa.",
+    "SwitchAccount": "Chuyển tài khoản",
+    "SwitchUnset": "Nhấp vào “{setPassword}” và đăng nhập vào trang ở trên bằng tài khoản này trong trình duyệt để đặt mật khẩu, hoặc {copyLink} rồi mở thủ công. Sau khi đặt xong, nhấp vào {refresh}.",
+    "UnlockAccount": "Mở khóa tài khoản",
     "Title": "Ứng dụng khách đã khóa",
     "Description": "Nhập mật khẩu khóa của tài khoản này để tiếp tục. Kết nối vẫn hoạt động.",
     "MainOnly": "Lần đăng nhập này đã kết thúc. Quay lại trang chính để đăng nhập lại.",
@@ -3651,6 +3678,7 @@
     "Reset": "Đặt lại mật khẩu khóa",
     "Refresh": "Làm mới",
     "Logout": "Đăng xuất",
+    "LogoutConfirm": "Đăng xuất khỏi tài khoản hiện tại?",
     "GoToMain": "Đến trang chính",
     "LoadFailed": "Không thể tải. Kiểm tra kết nối và thử lại.",
     "UnlockFailed": "Mở khóa thất bại. Kiểm tra mật khẩu và kết nối.",
@@ -3726,7 +3754,7 @@
     "ReauthHelp": "Phải đăng nhập lại sau khi thoát và khởi động lại. Thu nhỏ hoặc ẩn ứng dụng không tính là thoát.",
     "ReauthRequired": "Quản trị viên đã bật nên không thể tắt. Thu nhỏ hoặc ẩn không tính là thoát.",
     "UnlimitedHelp": "0 là không giới hạn. Để trống để khôi phục giá trị mặc định.",
-    "IdleHelp": "Khóa khi hết thời gian nhàn rỗi. Chuyển tài khoản không đặt lại thời gian nhàn rỗi của tài khoản trước. Nhập mật khẩu khóa để mở khóa. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
+    "IdleHelp": "Tất cả tài khoản dùng chung thời điểm hoạt động cuối cùng nhưng bị khóa theo giới hạn nhàn rỗi riêng. Khi tài khoản hiện tại bị khóa, các tài khoản khác cũng bị khóa. Mỗi tài khoản cần được mở khóa riêng. Cửa sổ ứng dụng bên ngoài không được bảo vệ.",
     "WebIdleHelp": "Khóa bảng điều khiển và Web terminal khi hết thời gian nhàn rỗi đã đặt. Nhập mật khẩu khóa để mở khóa. Khi bật khóa do không hoạt động, đóng tất cả các trang cũng khóa phiên sau 10 giây. Đăng xuất khi đóng trang được ưu tiên. Làm mới hoặc mở lại trong 10 giây sẽ hủy thao tác này.",
     "LifetimeHelp": "Tính từ lúc đăng nhập. Hết hạn phải đăng nhập lại; hoạt động không kéo dài thời hạn."
   },

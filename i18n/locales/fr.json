@@ -972,6 +972,25 @@
     "PowerLow": "Faible (1/4 du CPU)"
   },
   "AssetCard": {
+    "Organization": "Organisation",
+    "Platform": "Plateforme",
+    "Category": "Catégorie",
+    "Type": "Type",
+    "Zone": "Zone réseau",
+    "Nodes": "Nœuds",
+    "Labels": "Étiquettes",
+    "Connectivity": "Connectivité",
+    "DateVerified": "Dernière vérification",
+    "AuthorizedProtocols": "Protocoles autorisés",
+    "AuthorizedAccounts": "Comptes autorisés",
+    "DomainName": "Nom de domaine",
+    "AllowedUrls": "Sites autorisés",
+    "CreatedBy": "Créé par",
+    "DateCreated": "Date de création",
+    "AssetId": "ID de l’actif",
+    "Details": "Détails de l’actif",
+    "Comment": "Commentaire",
+    "LoadDetailsFailed": "Impossible de charger les détails de l’actif.",
     "Activated": "Activé",
     "Deactivated": "Désactivé",
     "Address": "Adresse",
@@ -1147,6 +1166,7 @@
     "ScrollToLoadMore": "Faites défiler pour charger plus"
   },
   "Login": {
+    "ReauthenticateConfirm": "La session a expiré. Se reconnecter ?",
     "Title": "Saisir le site de connexion",
     "Description": "Saisissez l’adresse complète du site, par exemple https://example.com ou http://192.168.1.1",
     "SiteName": "Nom du site",
@@ -1315,6 +1335,7 @@
     "SiteAccountsDescription": "Le site actuellement actif et les sites JumpServer auxquels ce client est connecté",
     "Current": "Actuel",
     "CurrentActive": "Actuellement actif",
+    "Locked": "Verrouillé",
     "CurrentActiveUser": "Utilisateur actuellement actif",
     "Switch": "Commutateur",
     "SwitchToThisUser": "Basculer vers cet utilisateur",
@@ -1346,7 +1367,7 @@
     "ClientLoginActivityLimits": "Au retour, l’expiration et l’inactivité sont vérifiées avec les derniers réglages. Déverrouillez si le délai d’inactivité est dépassé ; reconnectez-vous si la connexion a expiré. Les applications externes ne sont pas protégées.",
     "ClientLoginIdleLock": "Verrouillage après inactivité",
     "ClientLoginPolicyExpiry": "La nouvelle durée est dépassée ; déconnexion à la fin du délai de grâce",
-    "ClientLockShortcut": "Appuyez sur {shortcut} pour verrouiller le compte actif à tout moment, même si le verrouillage automatique est désactivé."
+    "ClientLockShortcut": "Appuyez sur {shortcut} pour verrouiller tous les comptes de ce client à tout moment, même si le verrouillage automatique est désactivé."
   },
   "Setting": {
     "BackToApp": "Retour à l’application",
@@ -1638,6 +1659,7 @@
       "failed": "Échec"
     },
     "ReviewPartialResult": "{approved} demandes approuvées, {declined} non approuvées. Les actifs des demandes non approuvées seront ignorés.",
+    "Ticket": "Demande",
     "TicketNumber": "Demande {number}",
     "ApprovalTicket": "Demande d’approbation",
     "ReviewersUnavailable": "Aucun approbateur disponible",
@@ -3640,6 +3662,11 @@
     }
   },
   "ClientLock": {
+    "HandoffFailed": "Impossible de se connecter aux autres comptes. Vérifiez votre connexion et réessayez.",
+    "ExpiredAccountRemoved": "La session a expiré. Le compte a été supprimé.",
+    "SwitchAccount": "Changer de compte",
+    "SwitchUnset": "Cliquez sur « {setPassword} » et connectez-vous au site ci-dessus avec ce compte dans votre navigateur pour définir un mot de passe, ou {copyLink} et ouvrez-le manuellement. Ensuite, cliquez sur {refresh}.",
+    "UnlockAccount": "Déverrouiller le compte",
     "Title": "Client verrouillé",
     "Description": "Saisissez le mot de passe de verrouillage de ce compte. Les connexions restent actives.",
     "MainOnly": "Cette connexion a pris fin. Revenez à la page principale pour vous reconnecter.",
@@ -3651,6 +3678,7 @@
     "Reset": "Réinitialiser le mot de passe",
     "Refresh": "Actualiser",
     "Logout": "Se déconnecter",
+    "LogoutConfirm": "Se déconnecter du compte actuel ?",
     "GoToMain": "Page principale",
     "LoadFailed": "Chargement impossible. Vérifiez la connexion et réessayez.",
     "UnlockFailed": "Échec du déverrouillage. Vérifiez le mot de passe et la connexion.",
@@ -3726,7 +3754,7 @@
     "ReauthHelp": "Exige une nouvelle connexion après avoir quitté et relancé le client. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "ReauthRequired": "Imposé par l’administrateur et non désactivable. Réduire ou masquer la fenêtre ne compte pas comme quitter.",
     "UnlimitedHelp": "0 signifie illimité. Laissez vide pour rétablir la valeur par défaut.",
-    "IdleHelp": "Verrouille après le délai d’inactivité. Changer de compte ne réinitialise pas l’inactivité du compte précédent. Saisissez le mot de passe de verrouillage pour déverrouiller. Les applications externes ne sont pas protégées.",
+    "IdleHelp": "Tous les comptes partagent l’heure de la dernière activité, mais se verrouillent selon leur propre délai d’inactivité. Lorsque le compte actif se verrouille, les autres se verrouillent aussi. Chaque compte doit être déverrouillé séparément. Les fenêtres des applications externes ne sont pas protégées.",
     "WebIdleHelp": "Verrouille la console et le terminal Web après le délai d’inactivité indiqué. Saisissez le mot de passe de verrouillage pour déverrouiller. Si le verrouillage pour inactivité est activé, fermer toutes les pages verrouille aussi cette session après 10 secondes. La déconnexion à la fermeture est prioritaire. Actualiser ou rouvrir dans les 10 secondes annule cette action.",
     "LifetimeHelp": "Calculé depuis la connexion. Reconnectez-vous à l’expiration ; l’activité ne prolonge pas la durée."
   },
