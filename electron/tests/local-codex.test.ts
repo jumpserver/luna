@@ -14,7 +14,7 @@ import { DEFAULT_CODEX_SETTINGS } from "../../ui/shared/codex/types";
 import { MCP_FINAL_RESULT_META_KEY } from "../../ui/koko/composables/agent/types";
 import type { AgentEvent, AgentMcpManifest } from "../../ui/koko/composables/agent/types";
 
-async function runtime(t: test.TestContext) {
+async function runtime(t: test.TestContext, assertEnabled?: () => Promise<void>) {
   const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-test-"));
   const events: Array<{ ownerId: number; event: AgentEvent }> = [];
   const writes: any[] = [];
@@ -30,6 +30,7 @@ async function runtime(t: test.TestContext) {
   const turns = new Map<string, string>();
   const service = new LocalCodexService({
     directory,
+    assertEnabled,
     secrets: {
       encrypt: (value) => Buffer.from(value).toString("base64"),
       decrypt: (value) => Buffer.from(value, "base64").toString()
@@ -149,6 +150,37 @@ async function runtime(t: test.TestContext) {
     counts: () => ({ launches, closed })
   };
 }
+
+test("enterprise AI policy blocks native entry points and cancels active work without changing preferences", async (t) => {
+  let allowed = true;
+  const r = await runtime(t, async () => {
+    if (!allowed) throw new Error("AI Assistant is disabled in enterprise settings");
+  });
+  const session = await r.create();
+  await r.send(session);
+  allowed = false;
+  await assert.rejects(r.send(session, 1, "disabled"), /enterprise settings/);
+  assert.equal(r.counts().closed, 1);
+  assert.ok(r.events.some(({ event }) => event.type === "run.cancelled"));
+  assert.ok(r.events.some(({ event }) => event.type === "session.closed"));
+  assert.equal((await r.service.configuration()).enabled, true);
+  const settings = { enabled: true, executable: "codex", model: "" };
+  for (const operation of [
+    () => r.create(),
+    () => r.service.configure(settings),
+    () => r.service.models(1, "org-a", settings),
+    () => r.service.testConnection(1, "org-a", settings),
+    () => r.service.approve(1, "org-a", session),
+    () => r.service.result(1, "org-a", session)
+  ])
+    await assert.rejects(operation(), /enterprise settings/);
+  assert.equal(r.counts().launches, 1);
+  await r.service.configure({ ...settings, enabled: false });
+  allowed = true;
+  await r.service.configure(settings);
+  await r.create();
+  assert.equal(r.counts().launches, 2);
+});
 
 test("one native process supports more than twelve conversations and four active turns", async (t) => {
   const r = await runtime(t);

@@ -29,6 +29,7 @@ interface Options {
   runtime?: { executable(): Promise<string> };
   secrets?: { encrypt(value: string): string; decrypt(value: string): string };
   fetch?: (url: string, init: RequestInit) => Promise<Response>;
+  assertEnabled?: () => Promise<void>;
   assertOwner(ownerId: number, organizationId: string): void;
   emit(ownerId: number, event: AgentEvent): void;
   launch?: (
@@ -239,6 +240,15 @@ export class LocalCodexService {
   private threads = new Map<string, Session>();
   constructor(private readonly options: Options) {}
 
+  private async assertEnabled() {
+    try {
+      await this.options.assertEnabled?.();
+    } catch (error) {
+      this.close();
+      throw error;
+    }
+  }
+
   async configuration() {
     this.initialized ??= (async () => {
       try {
@@ -273,6 +283,7 @@ export class LocalCodexService {
   async configure(value: unknown) {
     const save = async () => {
       const { settings, encryptedApiKey } = await this.candidate(value);
+      if (settings.enabled) await this.assertEnabled();
       if (settings.enabled && settings.runtime === "managed") await this.executable(settings);
       if (JSON.stringify(this.settings) === JSON.stringify(settings) && this.encryptedApiKey === encryptedApiKey)
         return;
@@ -301,6 +312,7 @@ export class LocalCodexService {
     return result;
   }
   async models(ownerId: number, organizationId: string, value: unknown): Promise<LocalCodexModel[]> {
+    await this.assertEnabled();
     this.options.assertOwner(ownerId, organizationId);
     // Discovery is available before enabling AI or selecting a model and never saves draft credentials.
     const { settings, encryptedApiKey } = await this.candidate({ ...(record(value) ? value : {}), enabled: false });
@@ -401,6 +413,7 @@ export class LocalCodexService {
     }
   }
   async testConnection(ownerId: number, organizationId: string, value: unknown) {
+    await this.assertEnabled();
     if (this.connectionTest) throw new Error("A model connection test is already running");
     this.options.assertOwner(ownerId, organizationId);
     const { settings, encryptedApiKey } = await this.candidate({ ...(record(value) ? value : {}), enabled: true });
@@ -550,6 +563,7 @@ export class LocalCodexService {
     this.options.emit(session.ownerId, event);
   }
   async create(ownerId: number, organizationId: string, input: CodexSessionRequest) {
+    await this.assertEnabled();
     const manifest = input?.manifest;
     if (
       !manifest ||
@@ -656,6 +670,7 @@ export class LocalCodexService {
     session.context = structuredClone(args.context);
   }
   async send(ownerId: number, organizationId: string, args: CodexCommand) {
+    await this.assertEnabled();
     const session = this.session(ownerId, organizationId, args);
     const message = args.message;
     if (
@@ -862,6 +877,7 @@ export class LocalCodexService {
       this.finish(session, "run.failed", p.error?.message || "Codex turn failed");
   }
   async result(ownerId: number, organizationId: string, args: CodexCommand) {
+    await this.assertEnabled();
     const session = this.session(ownerId, organizationId, args);
     const call = session.calls.get(args.toolCallId || "");
     const result = args.result;
@@ -930,6 +946,7 @@ export class LocalCodexService {
     session.calls.delete(call.id);
   }
   async approve(ownerId: number, organizationId: string, args: CodexCommand) {
+    await this.assertEnabled();
     const session = this.session(ownerId, organizationId, args);
     const call = [...session.calls.values()].find((item) => item.approvalId === args.approvalId);
     if (!call || call.sent || call.runId !== session.runId || !["approve", "reject"].includes(args.decision || ""))

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { effectScope, reactive, shallowRef } from "vue";
 import { localCodexRevision, localCodexSettings, useLocalCodex } from "./useLocalCodex";
 import { DEFAULT_CODEX_SETTINGS } from "~/shared/codex/types";
-import { setLocalCodexEnabled, setWorkspaceAiEnabled, workspaceAiEnabled } from "~/shared/aiAvailability";
+import { setWorkspaceAiEnabled, workspaceAiEnabled } from "~/shared/aiAvailability";
 const mock = vi.hoisted(() => ({ invoke: vi.fn(), desktop: true, store: {} as any }));
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: mock.invoke, desktopListen: async () => () => {} }));
 vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => mock.desktop }));
@@ -19,14 +19,14 @@ beforeEach(() => {
   mock.desktop = true;
   mock.store = reactive({ loggedIn: true, currentSite: `site-${++sequence}`, currentAccountId: "user-a" });
   localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS };
-  setLocalCodexEnabled(false);
   setWorkspaceAiEnabled(false);
 });
 afterEach(() => {
   for (const scope of scopes.splice(0)) scope.stop();
-  setLocalCodexEnabled(false);
+  setWorkspaceAiEnabled(false);
 });
 it("opening settings does not reset an already configured local runtime", async () => {
+  setWorkspaceAiEnabled(true);
   mock.invoke.mockResolvedValue({ ...DEFAULT_CODEX_SETTINGS, enabled: true });
   const main = open();
   await main.refresh();
@@ -35,6 +35,17 @@ it("opening settings does not reset an already configured local runtime", async 
   const settings = open();
   await settings.refresh();
   expect(localCodexRevision.value).toBe(revision);
+  expect(localCodexSettings.value.enabled).toBe(true);
+});
+it("requires the enterprise AI switch without overwriting the saved local preference", async () => {
+  mock.invoke.mockResolvedValue({ ...DEFAULT_CODEX_SETTINGS, enabled: true });
+  const codex = open();
+  await codex.refresh();
+  expect(workspaceAiEnabled.value).toBe(false);
+  setWorkspaceAiEnabled(true);
+  expect(workspaceAiEnabled.value).toBe(true);
+  setWorkspaceAiEnabled(false);
+  expect(workspaceAiEnabled.value).toBe(false);
   expect(localCodexSettings.value.enabled).toBe(true);
 });
 it("ignores configuration returned for a logged-out account", async () => {

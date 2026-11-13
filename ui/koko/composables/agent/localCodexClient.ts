@@ -185,7 +185,7 @@ export function useDesktopCodexSession(
   const localOptions = () => ({
     ...options,
     client: localClient,
-    enabled: computed(() => localCodexSettings.value.enabled && current.value),
+    enabled: computed(() => serverWorkspaceAiEnabled.value && localCodexSettings.value.enabled && current.value),
     createSse: (stream: AgentSseOptions) => new LocalCodexConnection(stream)
   });
   const selected = () =>

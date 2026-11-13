@@ -1423,6 +1423,13 @@ async function handleInvoke(event, request) {
         directory: path.join(app.getPath("userData"), "local-codex", scope),
         runtime: codexInstallation,
         fetch: (url, init) => net.fetch(url, init),
+        async assertEnabled() {
+          const settings = await authService.apiRequest(
+            { method: "GET", path: "/api/v1/settings/public/", timeoutMs: 15_000 },
+            binding
+          );
+          if (settings?.CHAT_AI_ENABLED !== true) throw new Error("AI Assistant is disabled in enterprise settings");
+        },
         secrets: {
           encrypt(value) {
             requireCodexKeyStorage();
@@ -1779,7 +1786,17 @@ async function handleInvoke(event, request) {
     if (!(await confirmHttpConnection(args.site, win))) return { status: "stale" };
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   }
-  if (command === "api_request") return authService.apiRequest(args.request, binding);
+  if (command === "api_request") {
+    const publicSettings = args.request?.service !== "kael" && args.request?.path === "/api/v1/settings/public/";
+    try {
+      const result = await authService.apiRequest(args.request, binding);
+      if (binding && publicSettings && result?.CHAT_AI_ENABLED !== true) codexHosts.get(binding)?.close();
+      return result;
+    } catch (error) {
+      if (binding && publicSettings) codexHosts.get(binding)?.close();
+      throw error;
+    }
+  }
   if (command === "api_stream_start") return startApiStream(event, win, args, binding);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();

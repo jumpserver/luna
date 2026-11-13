@@ -3,6 +3,7 @@ import Connection from "~/components/Settings/localCodex/Connection.vue";
 import Installation from "~/components/Settings/localCodex/Installation.vue";
 import { useLocalAiMessages, useLocalCodex } from "~/composables/useLocalCodex";
 import { useLocalCodexModels } from "~/composables/useLocalCodexModels";
+import { serverWorkspaceAiEnabled } from "~/shared/aiAvailability";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
@@ -16,7 +17,7 @@ const hasSavedKey = computed(
 const apiKey = shallowRef("");
 const clearApiKey = shallowRef(false);
 const modelSettings = computed(() => {
-  if (!isDesktopRuntime() || !user.loggedIn) return null;
+  if (!isDesktopRuntime() || !user.loggedIn || !serverWorkspaceAiEnabled.value) return null;
   if (draft.connection === "api") {
     if (!draft.baseUrl.trim() || (!apiKey.value.trim() && (!hasSavedKey.value || clearApiKey.value))) return null;
     try {
@@ -47,10 +48,13 @@ watch(codex.settings, (value) => {
   clearApiKey.value = false;
 });
 const busy = shallowRef(false);
-const disabled = computed(() => busy.value || codex.runtime.value?.installing === true);
+const disabled = computed(
+  () => !serverWorkspaceAiEnabled.value || busy.value || codex.runtime.value?.installing === true
+);
 const notice = shallowRef("");
 const error = shallowRef("");
 async function run(action: "save" | "check" | "install" | "test") {
+  if (!serverWorkspaceAiEnabled.value) return;
   busy.value = true;
   notice.value = "";
   error.value = "";
@@ -84,6 +88,7 @@ onMounted(() => {
 
 <template>
   <div v-if="isDesktopRuntime() && user.loggedIn" class="space-y-4">
+    <UAlert v-if="!serverWorkspaceAiEnabled" color="warning" :title="t('enterpriseDisabled')" />
     <SettingsGroup>
       <SettingsRow :title="t('enabled')" :description="t('enabledHint')">
         <USwitch v-model="draft.enabled" :disabled="disabled" :aria-label="t('enabled')" />

@@ -65,7 +65,7 @@ const cleanups: Array<() => void> = [];
 beforeEach(() => {
   seq = 0;
   native.desktop = true;
-  setWorkspaceAiEnabled(false);
+  setWorkspaceAiEnabled(true);
   native.store = reactive({ loggedIn: true, currentSite: "site-a", currentAccountId: "user-a", orgId: "org-a" });
   native.invoke.mockReset();
   native.stop.mockClear();
@@ -160,6 +160,47 @@ it.each([
   expect(controller.state.activeRunId).toBe("");
   expect(server).not.toHaveBeenCalled();
 });
+
+it.each(["workspace", "terminal", "file", "sql", "script"] as const)(
+  "requires enterprise enablement and stops the local %s assistant when it is disabled",
+  async (domain) => {
+    setWorkspaceAiEnabled(false);
+    localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+    const resourceSessionId = `${domain}-policy`;
+    const controller = useAgentSession({
+      domain,
+      relay: new AgentToolRelay({ resourceSessionId: () => resourceSessionId, sendFrame: vi.fn() }),
+      messageMetadata: () => ({ domain }),
+      onAvailability: vi.fn(),
+      onMessage: vi.fn()
+    });
+    controllers.push(controller);
+    await controller.actions.attachManifest({ profile: domain, resourceSessionId, revision: 1, tools: [] });
+    expect(controller.state.available).toBe(false);
+    expect(native.invoke).not.toHaveBeenCalled();
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.available).toBe(true));
+    await controller.actions.sendMessage({
+      id: "policy-message",
+      role: "user",
+      parts: [{ type: "text", text: "Inspect" }]
+    });
+    emit("run.started", {}, { resource_session_id: resourceSessionId });
+    setWorkspaceAiEnabled(false);
+    await vi.waitFor(() => expect(native.invoke).toHaveBeenCalledWith("local_codex_cancel", expect.any(Object)));
+    await vi.waitFor(() => expect(native.invoke).toHaveBeenCalledWith("local_codex_delete", expect.any(Object)));
+    expect(controller.state.available).toBe(false);
+    expect(controller.state.activeRunId).toBe("");
+    expect(native.listeners.size).toBe(0);
+    expect(localCodexSettings.value.enabled).toBe(true);
+    await expect(
+      controller.actions.sendMessage({ id: "disabled", role: "user", parts: [{ type: "text", text: "Inspect" }] })
+    ).rejects.toThrow();
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.available).toBe(true));
+    expect(native.invoke.mock.calls.filter(([command]) => command === "local_codex_create")).toHaveLength(2);
+  }
+);
 
 it.each(["file", "sql", "script"] as const)(
   "keeps the %s assistant on Kael in Web and when local AI is disabled",

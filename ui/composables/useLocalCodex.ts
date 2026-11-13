@@ -9,7 +9,6 @@ import type {
 } from "~/shared/codex/types";
 import { localAiMessages } from "~/shared/codex/messages";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
-import { setLocalCodexEnabled } from "~/shared/aiAvailability";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
@@ -25,7 +24,6 @@ function apply(settings: LocalCodexSettings) {
     localCodexSettings.value = settings;
     localCodexRevision.value++;
   }
-  setLocalCodexEnabled(isDesktopRuntime() && settings.enabled);
 }
 export function useLocalCodex(authReady: Ref<boolean> = computed(() => true)) {
   const user = useUserInfoStore();
