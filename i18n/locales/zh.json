@@ -2,6 +2,7 @@
   "AccountProvisioning": {
     "Title": "正在准备登录账号",
     "FormHint": "首次连接时会自动创建同名账号并配置登录凭据。",
+    "BackgroundHint": "账号推送任务在后台执行，关闭页面不会停止推送。",
     "Queued": "正在等待推送同名账号…",
     "Running": "正在创建账号并配置登录凭据…",
     "Failed": "账号推送失败，请联系管理员。",

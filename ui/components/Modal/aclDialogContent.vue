@@ -376,6 +376,9 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
                 : item.token?.acl?.preparation?.detail
           }}
         </p>
+        <p v-if="!item.detail && !item.preparationReady" class="text-sm text-(--app-muted)">
+          {{ t("AccountProvisioning.BackgroundHint") }}
+        </p>
         <UProgress
           v-if="!item.detail"
           :model-value="item.preparationReady ? 100 : null"

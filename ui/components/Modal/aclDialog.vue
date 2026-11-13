@@ -8,6 +8,7 @@ const {
   description,
   isActionable,
   isBusy,
+  isPreparation,
   isPushFailed,
   isUnavailable,
   isReviewApproved,
@@ -45,8 +46,15 @@ const handleSubmit = () => {
       <AclDialogContent v-if="globalGroup" :group="globalGroup" />
     </template>
     <template #footer>
-      <UButton color="neutral" variant="outline" @click="handleClose">
-        {{ t(isActionable && !isUnavailable && !isReviewDeclined ? "Common.Cancel" : "ToolTips.Close") }}
+      <UButton
+        v-if="!isPreparation || isPushFailed || isUnavailable"
+        color="neutral"
+        variant="outline"
+        @click="handleClose"
+      >
+        {{
+          t(isActionable && !isPushFailed && !isUnavailable && !isReviewDeclined ? "Common.Cancel" : "ToolTips.Close")
+        }}
       </UButton>
       <UButton v-if="isReviewApproved" class="shrink-0 tabular-nums" disabled aria-live="polite">
         {{ reviewContinueLabel }} ({{ globalGroup.reviewApprovedCountdown }})

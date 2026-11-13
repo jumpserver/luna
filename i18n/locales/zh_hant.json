@@ -2,6 +2,7 @@
   "AccountProvisioning": {
     "Title": "正在準備登入帳號",
     "FormHint": "首次連線時會自動建立並設定與您同名的帳號。",
+    "BackgroundHint": "帳號推送任務在背景執行，關閉頁面不會停止推送。",
     "Queued": "正在等待推送同名帳號…",
     "Running": "正在建立帳號並設定登入憑證…",
     "Failed": "帳號推送失敗，請聯絡管理員。",

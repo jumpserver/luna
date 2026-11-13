@@ -2,6 +2,7 @@
   "AccountProvisioning": {
     "Title": "Preparando la cuenta de acceso",
     "FormHint": "Se creará y configurará automáticamente una cuenta con tu nombre de usuario en la primera conexión.",
+    "BackgroundHint": "La preparación de la cuenta se ejecuta en segundo plano. Cerrar esta página no la detendrá.",
     "Queued": "Esperando la creación de la cuenta con tu nombre de usuario…",
     "Running": "Creando la cuenta y configurando las credenciales de acceso…",
     "Failed": "No se pudo preparar la cuenta. Contacta con un administrador.",
