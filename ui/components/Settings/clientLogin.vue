@@ -260,6 +260,7 @@ watch(
           <UButton
             v-if="name === 'client_idle_lock_time'"
             :label="t('ClientLock.ManagePassword')"
+            icon="i-proicons-open"
             color="neutral"
             variant="outline"
             size="sm"

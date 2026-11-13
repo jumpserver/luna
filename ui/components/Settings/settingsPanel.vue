@@ -2,6 +2,7 @@
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { SettingsSection } from "~/composables/useSettingsWindow";
 import { TooltipProvider } from "reka-ui";
+import { useClientAccountHandoff } from "~/composables/useClientAccountHandoff";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(
@@ -23,8 +24,9 @@ const { isMacOS } = usePlatform();
 const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, isLoggingOut } = storeToRefs(userInfoStore);
-// Keep the user section mounted while logout validates the replacement account.
-const userSectionAvailable = computed(() => loggedIn.value || isLoggingOut.value);
+const { active: accountHandoffActive } = useClientAccountHandoff();
+// Keep the current section mounted through the expiry notice and account handoff.
+const userSectionAvailable = computed(() => loggedIn.value || isLoggingOut.value || accountHandoffActive.value);
 const hasNativeTitlebarInset = computed(() => isDesktopRuntime() && isMacOS.value);
 
 const sectionDefs = computed(() => {

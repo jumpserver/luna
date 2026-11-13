@@ -2,6 +2,7 @@
 import type { ClientLockState as LockState } from "~/composables/useClientLockState";
 import type { SiteUserData } from "~/store/modules/userInfo";
 import type { ClientPolicyNotice } from "~/types";
+import { TooltipProvider } from "reka-ui";
 import { Translation as I18nT } from "vue-i18n";
 import { deferAuthFailureUntil } from "~/composables/useApiRequest";
 import { useClientLockState } from "~/composables/useClientLockState";
@@ -552,55 +553,89 @@ onBeforeUnmount(() => {
       :busy="busy"
     >
       <template #body>
-        <div class="space-y-4">
-          <UAlert v-if="accountSwitchError" color="error" variant="soft" :description="accountSwitchError" />
-          <div
-            v-for="site in accountSites"
-            :key="site.address"
-            class="overflow-hidden rounded-[var(--app-radius)] border border-default"
-          >
-            <div class="flex items-start gap-3 border-b border-default px-3 py-2 text-sm">
-              <UIcon name="i-lucide-globe" class="mt-0.5 size-4 shrink-0 text-highlighted" aria-hidden="true" />
-              <div class="min-w-0">
-                <p class="break-all font-medium text-highlighted">{{ site.address }}</p>
-                <p v-if="site.name" class="break-words text-muted">{{ site.name }}</p>
+        <!-- The lock shield is outside ManagedApp's UApp and its tooltip provider. -->
+        <TooltipProvider>
+          <div class="space-y-4">
+            <UAlert v-if="accountSwitchError" color="error" variant="soft" :description="accountSwitchError" />
+            <div
+              v-for="site in accountSites"
+              :key="site.address"
+              class="overflow-hidden rounded-[var(--app-radius)] border border-default"
+            >
+              <div class="flex items-start gap-3 border-b border-default px-3 py-2 text-sm">
+                <UIcon name="i-lucide-globe" class="mt-0.5 size-4 shrink-0 text-highlighted" aria-hidden="true" />
+                <div class="min-w-0">
+                  <p class="break-all font-medium text-highlighted">{{ site.address }}</p>
+                  <p v-if="site.name" class="break-words text-muted">{{ site.name }}</p>
+                </div>
+              </div>
+              <div class="divide-y divide-default pl-8">
+                <UButton
+                  v-for="(account, accountId) in site.accounts"
+                  :key="accountId"
+                  color="neutral"
+                  variant="ghost"
+                  block
+                  class="my-1 justify-start px-2 text-left"
+                  :class="{ 'disabled:opacity-100 aria-disabled:opacity-100': accountId === state?.sessionId }"
+                  :disabled="busy || accountId === state?.sessionId"
+                  @click="switchLockedAccount(String(accountId))"
+                >
+                  <UIcon name="i-lucide-circle-user-round" class="size-4 shrink-0" />
+                  <span class="min-w-0 flex-1 break-words">
+                    {{
+                      account.name && account.username
+                        ? `${account.name} (${account.username})`
+                        : account.name || account.username
+                    }}
+                  </span>
+                  <span
+                    class="ml-auto flex shrink-0 cursor-default items-center gap-1.5"
+                    @pointerdown.prevent
+                    @click.stop
+                  >
+                    <UTooltip
+                      v-if="account.sessionExpired"
+                      :text="t('Login.SessionExpired')"
+                      :content="{ side: 'top', align: 'center' }"
+                      :portal="false"
+                    >
+                      <UIcon
+                        name="i-lucide-circle-x"
+                        class="size-3.5 shrink-0 text-error"
+                        :aria-label="t('Login.SessionExpired')"
+                      />
+                    </UTooltip>
+                    <UTooltip
+                      v-else-if="accountId === state?.sessionId"
+                      :text="t('UserProfile.CurrentActiveUser')"
+                      :content="{ side: 'top', align: 'center' }"
+                      :portal="false"
+                    >
+                      <UIcon
+                        name="i-lucide-circle-check"
+                        class="size-3.5 shrink-0 text-(--theme-accent)"
+                        :aria-label="t('UserProfile.CurrentActiveUser')"
+                      />
+                    </UTooltip>
+                    <UTooltip
+                      v-if="!account.sessionExpired && state?.accountLocks?.[accountId]"
+                      :text="t('UserProfile.Locked')"
+                      :content="{ side: 'top', align: 'center' }"
+                      :portal="false"
+                    >
+                      <UIcon
+                        name="i-lucide-lock"
+                        class="size-3.5 shrink-0 text-warning"
+                        :aria-label="t('UserProfile.Locked')"
+                      />
+                    </UTooltip>
+                  </span>
+                </UButton>
               </div>
             </div>
-            <div class="divide-y divide-default pr-2 pl-8">
-              <UButton
-                v-for="(account, accountId) in site.accounts"
-                :key="accountId"
-                color="neutral"
-                variant="ghost"
-                block
-                class="my-1 justify-start px-2 text-left"
-                :disabled="busy || accountId === state?.sessionId"
-                @click="switchLockedAccount(String(accountId))"
-              >
-                <UIcon name="i-lucide-circle-user-round" class="size-4 shrink-0" />
-                <span class="min-w-0 flex-1 break-words">
-                  {{
-                    account.name && account.username
-                      ? `${account.name} (${account.username})`
-                      : account.name || account.username
-                  }}
-                </span>
-                <UBadge
-                  v-if="accountId === state?.sessionId"
-                  color="warning"
-                  variant="subtle"
-                  size="sm"
-                  class="shrink-0 whitespace-nowrap"
-                >
-                  {{ t("UserProfile.CurrentActive") }}
-                </UBadge>
-                <span v-else-if="account.sessionExpired" class="shrink-0 text-xs text-warning">
-                  {{ t("Login.SessionExpired") }}
-                </span>
-              </UButton>
-            </div>
           </div>
-        </div>
+        </TooltipProvider>
       </template>
       <template #footer>
         <UButton color="neutral" variant="outline" :disabled="busy" @click="accountPickerOpen = false">

@@ -277,11 +277,7 @@ const handleApiAuthFailure = () => {
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
-  if (isDesktopRuntime()) {
-    useEventBus().emit("login", undefined);
-  } else {
-    redirectToWebLogin();
-  }
+  redirectToWebLogin();
 };
 
 const handleWebApiAuthFailure = () => {
@@ -480,10 +476,9 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
     if (error instanceof ApiRequestError && error.status === 401 && error.data?.code === "authentication_required") {
       throw error;
     }
-    if (isAuthFailure(error)) {
-      if (isDesktopRuntime()) handleApiAuthFailure();
-      else await handleWebApiAuthFailure();
-    }
+    // Desktop auth failures are scoped by the main process's auth-session-expired
+    // event. A late response from a previous account must not sign out its replacement.
+    if (!isDesktopRuntime() && isAuthFailure(error)) await handleWebApiAuthFailure();
     throw error;
   }
 }

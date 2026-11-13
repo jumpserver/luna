@@ -971,7 +971,7 @@ export class DesktopAuthService {
     const binding = this.sessionBindings?.get(token);
     if ((binding?.logoutAt || 0) > Date.now()) return;
     const existed = Boolean(this.tokens[sessionId] || this.sessions?.has(sessionId));
-    this.lockState(binding);
+    const { locked } = this.lockState(binding);
     delete this.tokens[sessionId];
     this.sessions?.delete(sessionId);
     if (this.currentSessionKey === sessionId) this.currentSessionKey = "";
@@ -984,6 +984,7 @@ export class DesktopAuthService {
         {
           sessionId,
           reason,
+          locked,
           policy: token?.client_login_policy,
           session: sessionInfo
         },

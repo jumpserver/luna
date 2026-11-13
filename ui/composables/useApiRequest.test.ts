@@ -321,7 +321,7 @@ describe("API error summaries", () => {
     expect(userInfoStore.setUserLoggedIn).not.toHaveBeenCalled();
   });
 
-  it("does not throttle the next auth failure while already logged out", async () => {
+  it("leaves desktop expiry handling to the main process account-scoped event", async () => {
     const emit = vi.fn();
     vi.stubGlobal("isDesktopRuntime", () => true);
     vi.stubGlobal("useEventBus", () => ({ emit }));
@@ -333,10 +333,9 @@ describe("API error summaries", () => {
     userInfoStore.loggedIn = true;
     await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toMatchObject({ status: 401 });
 
-    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledOnce();
-    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledWith(false);
-    expect(emit).toHaveBeenCalledWith("clearAssets", undefined);
-    expect(emit).toHaveBeenCalledWith("login", undefined);
+    expect(userInfoStore.loggedIn).toBe(true);
+    expect(userInfoStore.setUserLoggedIn).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("preserves structured validation data", () => {

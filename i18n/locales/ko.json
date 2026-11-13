@@ -1331,6 +1331,7 @@
     "ExpiresAt": "만료일",
     "CurrentAccount": "현재 계정",
     "SiteManagement": "사이트 관리",
+    "SiteAccountCountHint": "사이트 수 / 계정 수",
     "SiteAccounts": "사이트 계정",
     "SiteAccountsDescription": "현재 활성 사이트와 이 클라이언트에서 로그인한 JumpServer 사이트",
     "Current": "현재",

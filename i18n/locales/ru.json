@@ -1331,6 +1331,7 @@
     "ExpiresAt": "Дата истечения срока действия",
     "CurrentAccount": "Текущая учетная запись",
     "SiteManagement": "Управление сайтами",
+    "SiteAccountCountHint": "Количество сайтов / Количество аккаунтов",
     "SiteAccounts": "Учетные записи сайтов",
     "SiteAccountsDescription": "Текущий активный сайт и сайты JumpServer, на которых выполнен вход в этом клиенте",
     "Current": "Текущий",

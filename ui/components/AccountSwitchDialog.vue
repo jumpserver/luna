@@ -171,6 +171,7 @@ onBeforeUnmount(() => finish(false));
                 v-model="password"
                 type="password"
                 autocomplete="current-password"
+                autofocus
                 :maxlength="128"
                 :disabled="busy"
                 class="w-full"
