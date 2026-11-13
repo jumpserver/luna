@@ -2152,8 +2152,6 @@ app.on("will-quit", () => {
   clipboardHistory.stop();
   void faceEngine?.shutdown();
 });
-app.on("activate", () => createWindow("main"));
-
 app.whenReady().then(async () => {
   debugLogService = new DebugLogService({ logsDir: app.getPath("logs") });
   await debugLogService.initialize();
@@ -2227,6 +2225,7 @@ app.whenReady().then(async () => {
   nativeTheme.on("updated", () => {
     emitDesktopEvent("desktop://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
+  app.on("activate", () => createWindow("main"));
   createWindow("main");
   authService.startSessionMonitor();
   idleLockTimer = setInterval(checkIdleLocks, 1_000);
