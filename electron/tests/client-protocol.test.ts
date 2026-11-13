@@ -87,6 +87,94 @@ function loadWithElectronMocks(relativePath: string, replacements: Record<string
   return exports;
 }
 
+test("macOS activation waits for desktop services before opening a window", async () => {
+  const filename = fileURLToPath(new URL("../src/desktop/main.ts", import.meta.url));
+  const source = ts.createSourceFile(filename, readFileSync(filename, "utf8"), ts.ScriptTarget.Latest, true);
+  const entry = source.statements.filter((statement) => {
+    if (!ts.isExpressionStatement(statement) || !ts.isCallExpression(statement.expression)) return false;
+    const call = statement.expression;
+    return (
+      call.expression.getText(source) === "app.whenReady().then" ||
+      (call.expression.getText(source) === "app.on" && call.arguments[0]?.getText(source) === '"activate"')
+    );
+  });
+  let finishInitialization!: () => void;
+  const initializing = new Promise<void>((resolve) => {
+    finishInitialization = resolve;
+  });
+  let windows = 0;
+  class Service {
+    async initialize() {}
+  }
+  class AuthService extends Service {
+    scheduleSessionCheck() {}
+    startSessionMonitor() {}
+  }
+  const app = Object.assign(new EventEmitter(), {
+    whenReady: () => Promise.resolve(),
+    getPath: () => "/app",
+    getVersion: () => "test",
+    isPackaged: true
+  });
+  const context = {
+    app,
+    path,
+    process: { platform: "darwin" },
+    authService: undefined as AuthService | undefined,
+    DebugLogService: class {
+      initialize() {
+        return initializing;
+      }
+      setEnabled() {}
+      isEnabled() {
+        return false;
+      }
+    },
+    DesktopAuthService: AuthService,
+    ApplicationConfigService: Service,
+    LocalApplicationLauncher: Service,
+    SiteCertificateService: Service,
+    OfflineRecordingStore: Service,
+    FfmpegPluginManager: Service,
+    FaceEngineManager: Service,
+    ReplayTranscoder: Service,
+    projectRoot: "/app",
+    productName: "JumpServer",
+    isDevelopment: false,
+    shell: {},
+    emitDesktopEvent() {},
+    readFile: async () => "",
+    parsePersistedDebugLogEnabled: () => false,
+    activateDebugLogService() {},
+    electronLog: { info() {} },
+    registerProtocols: async () => {},
+    drainPendingProtocolUrls: async () => false,
+    ipcMain: { handle() {} },
+    handleInvoke() {},
+    clipboardHistory: { start() {} },
+    loadAppIcon: () => null,
+    buildMenu() {},
+    setupTray() {},
+    nativeTheme: new EventEmitter(),
+    powerMonitor: new EventEmitter(),
+    setInterval: () => ({ unref() {} }),
+    checkIdleLocks() {},
+    createWindow() {
+      context.authService!.scheduleSessionCheck();
+      windows++;
+    }
+  };
+  const started = runInNewContext(entry.map((statement) => statement.getText(source)).join("\n"), context);
+  await Promise.resolve();
+  assert.doesNotThrow(() => app.emit("activate"));
+  assert.equal(windows, 0);
+  finishInitialization();
+  await started;
+  assert.equal(windows, 1);
+  app.emit("activate");
+  assert.equal(windows, 2);
+});
+
 test("serialized Node plugin scripts keep credentials on stdin and recover after failure", async () => {
   const calls = [];
   const children = [];
