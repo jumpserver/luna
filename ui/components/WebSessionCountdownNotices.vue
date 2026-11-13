@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ToastProvider, ToastViewport } from "reka-ui";
-import { computed, ref, watch } from "vue";
+import { computed, ref, useTemplateRef, watch } from "vue";
 import { Translation as I18nT } from "vue-i18n";
 
 const props = defineProps<{
@@ -9,8 +9,8 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const idleContent = ref<HTMLElement | null>(null);
-const expiryContent = ref<HTMLElement | null>(null);
+const idleContent = useTemplateRef<HTMLElement>("idleContent");
+const expiryContent = useTemplateRef<HTMLElement>("expiryContent");
 const displayedIdleRemaining = ref(props.idleRemaining ?? 0);
 const displayedExpiryRemaining = ref(props.expiryRemaining ?? 0);
 const idleDismissed = ref(false);

@@ -143,6 +143,15 @@ export function createKokoTerminalMessageHandlers(options: {
   // pane key a second connection would overwrite the first one's session id,
   // asset name and share state.
   const paneId = () => options.sessionCtxRef.value?.tabId || "";
+  let sessionAsset = "";
+  const permissionToastId = () => `koko-permission-${options.sessionId.value || paneId() || options.terminalId.value}`;
+  const permissionDescription = () =>
+    `${options.t("RightPanel.SessionAsset")}: ${sessionAsset || "—"} · ${options.t("RightPanel.SessionId")}: ${options.sessionId.value || "—"}`;
+  const clearPermissionWarning = (dismiss = true) => {
+    if (options.warningInterval.value !== null) clearInterval(options.warningInterval.value);
+    options.warningInterval.value = null;
+    if (dismiss) options.toast.remove(permissionToastId());
+  };
   const updatePane = (patch: Parameters<typeof options.connectionStore.updatePane>[1]) => {
     options.connectionStore.updatePane(paneId(), patch);
   };
@@ -205,6 +214,7 @@ export function createKokoTerminalMessageHandlers(options: {
     [MESSAGE_TYPE.CLOSE]: (message) => {
       if (message.terminalId && options.terminalId.value && message.terminalId !== Number(options.terminalId.value))
         return;
+      clearPermissionWarning();
       updatePane({ enableShare: false, onlineUsers: [] });
       options.onServerClose?.(message.data || "session_closed");
       options.socketRef.value?.close(1000, "luna:koko_close");
@@ -233,7 +243,10 @@ export function createKokoTerminalMessageHandlers(options: {
       }>(message.data, { setting: {} });
       options.featureSetting.value = info.setting;
       options.setClipboardAccess(info.permission, info.clipboard_policy);
-      if (info.asset?.name) updatePane({ assetName: info.asset.name });
+      if (info.asset?.name) {
+        sessionAsset = info.asset.name;
+        updatePane({ assetName: info.asset.name });
+      }
       updateIcon(info.setting);
 
       socket.send(
@@ -289,6 +302,7 @@ export function createKokoTerminalMessageHandlers(options: {
         ctrlCAsCtrlZ?: boolean;
         themeName?: string;
       }>(message.data, { session: { id: "" } });
+      sessionAsset = sessionInfo.session.asset || sessionAsset;
       options.emitTerminalSession(sessionInfo as TerminalSessionInfo);
       options.setClipboardAccess(sessionInfo.permission, sessionInfo.clipboard_policy);
 
@@ -360,8 +374,13 @@ export function createKokoTerminalMessageHandlers(options: {
       }
     },
     [MESSAGE_TYPE.TERMINAL_PERM_VALID]: () => {
-      if (options.warningInterval.value) clearInterval(options.warningInterval.value);
-      options.toast.add({ title: options.t("koko.terminal.permissionValid"), color: "info" });
+      clearPermissionWarning(false);
+      options.toast.add({
+        id: permissionToastId(),
+        title: options.t("koko.terminal.permissionValid"),
+        description: permissionDescription(),
+        color: "info"
+      });
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_LEAVE]: (message) => {
       const payload = parseJson<OnlineUser>(message.data, {} as OnlineUser);
@@ -376,11 +395,22 @@ export function createKokoTerminalMessageHandlers(options: {
     [MESSAGE_TYPE.TERMINAL_PERM_EXPIRED]: (message) => {
       const payload = parseJson<{ detail?: string }>(message.data, {});
       const warningMsg = `${options.t("koko.terminal.permissionExpired")}: ${payload.detail || ""}`;
-      options.toast.add({ title: warningMsg, color: "warning" });
-      if (options.warningInterval.value) clearInterval(options.warningInterval.value);
-      options.warningInterval.value = setInterval(() => {
-        options.toast.add({ title: warningMsg, color: "warning" });
-      }, 60_000);
+      clearPermissionWarning(false);
+      if (options.socketRef.value?.readyState !== WebSocket.OPEN) return;
+      const showWarning = () => {
+        if (options.socketRef.value?.readyState !== WebSocket.OPEN) {
+          clearPermissionWarning();
+          return;
+        }
+        options.toast.add({
+          id: permissionToastId(),
+          title: warningMsg,
+          description: permissionDescription(),
+          color: "warning"
+        });
+      };
+      showWarning();
+      options.warningInterval.value = setInterval(showWarning, 60_000);
     },
     [MESSAGE_TYPE.TERMINAL_SESSION_PAUSE]: (message) => {
       const payload = parseJson<{ user?: string }>(message.data, {});
@@ -396,6 +426,7 @@ export function createKokoTerminalMessageHandlers(options: {
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE]: () => {
       options.toast.add({ title: options.t("koko.terminal.removedFromShare"), color: "info" });
+      clearPermissionWarning();
       options.onServerClose?.("share_removed");
       options.socketRef.value?.close(1000, "luna:koko_close");
     }
