@@ -55,6 +55,7 @@ import { isFaceLiveWebSocket } from "../face/socket-policy";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
+import { WebVideoRecording } from "../replay/web-recording";
 import { readableToWebBody } from "../shared/bytes";
 import {
   decodeClientProtocolPayload,
@@ -151,7 +152,12 @@ const shortcutEnvironment = { mac: process.platform === "darwin", desktop: true 
 const localShellSessions = new Map();
 const clipboardHistory = new ClipboardHistoryService(() => clipboard.readText());
 const apiStreams = new Map();
-const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
+const webProxyManager = createWebProxyManager({
+  emit: emitDesktopEvent,
+  labelForWindow,
+  log: electronLog,
+  startRecording: (options) => WebVideoRecording.start(options, path.join(electronDir, "web-recording-preload.js"))
+});
 const clientNoticeLayers = new ClientPolicyNoticeLayers({
   url: () => rendererTarget("/luna/auth/client-notices"),
   preload: path.join(electronDir, "preload.js"),
@@ -2133,13 +2139,15 @@ app.on("before-quit", (event) => {
     event.preventDefault();
     return;
   }
-  if (!authService?.hasExitSessions()) return;
+  if (!authService?.hasExitSessions() && !WebVideoRecording.hasActiveRecordings()) return;
   event.preventDefault();
   authExitPending = true;
-  void authService.revokeOnExit().finally(() => {
-    authExitFinished = true;
-    app.quit();
-  });
+  void WebVideoRecording.finishAll()
+    .then(() => authService?.revokeOnExit())
+    .finally(() => {
+      authExitFinished = true;
+      app.quit();
+    });
 });
 
 app.on("window-all-closed", () => {
