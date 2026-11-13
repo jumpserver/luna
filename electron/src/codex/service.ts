@@ -207,7 +207,6 @@ async function launch(
     "memories.use_memories=false"
   ];
   overrides.push(...mcpOverrides);
-  await mkdir(directory, { recursive: true, mode: 0o700 });
   return new CodexProcess(
     plan.command,
     [...plan.args, "app-server", "--listen", "stdio://", ...overrides.flatMap((value) => ["-c", value])],
@@ -1071,13 +1070,11 @@ export class LocalCodexService {
   }
   private fail(error: Error) {
     const reason = this.safeMessage(error.message);
-    for (const session of this.sessions.values()) {
-      this.finish(session, "run.failed", reason);
-      this.push(session, "session.closed", { reason });
-    }
+    for (const session of this.sessions.values()) this.finish(session, "run.failed", reason);
     this.close(new Error(reason));
   }
   close(error = new Error("Codex runtime closed")) {
+    const reason = this.safeMessage(error.message);
     for (const controller of this.modelRequests.values()) controller.abort();
     this.modelRequests.clear();
     this.connectionTest?.close(error);
@@ -1086,7 +1083,7 @@ export class LocalCodexService {
     this.starting = undefined;
     for (const session of this.sessions.values()) {
       this.finish(session, "run.cancelled", "runtime_closed");
-      this.push(session, "session.closed");
+      this.push(session, "session.closed", { reason });
       session.history.close();
     }
     this.sessions.clear();

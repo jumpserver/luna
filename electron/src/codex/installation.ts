@@ -130,7 +130,8 @@ export class CodexInstallation {
     this.controller?.abort();
   }
   private async download() {
-    if ((await this.status()).installed) return { ...(await this.status()), installing: false };
+    const status = await this.status();
+    if (status.installed) return { ...status, installing: false };
     const target = this.target;
     await mkdir(path.dirname(this.directory), { recursive: true, mode: 0o700 });
     const staging = await mkdtemp(path.join(path.dirname(this.directory), ".install-"));

@@ -730,14 +730,17 @@ test("connection tests use an ephemeral thread with no workspace tools and prese
   assert.equal(r.counts().closed, 1);
 });
 
-test("provider startup errors cannot return the stored API key", async (t) => {
+test("provider startup failures close the session once and redact its stored API key", async (t) => {
   const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-key-error-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const secret = "private-provider-key";
+  const events: AgentEvent[] = [];
   const service = new LocalCodexService({
     directory,
     assertOwner() {},
-    emit() {},
+    emit(_ownerId, event) {
+      events.push(event);
+    },
     secrets: {
       encrypt: (value) => Buffer.from(value).toString("base64"),
       decrypt: (value) => Buffer.from(value, "base64").toString()
@@ -760,6 +763,7 @@ test("provider startup errors cannot return the stored API key", async (t) => {
     }),
     (error: Error) => error.message.includes("[redacted]") && !error.message.includes(secret)
   );
+  assert.equal(events.filter((event) => event.type === "session.closed").length, 1);
 });
 
 test("MCP isolation disables complete transports without copying their credentials into arguments", () => {

@@ -199,10 +199,7 @@ export function useDesktopCodexSession(
   let switching = Promise.resolve();
   const watchSettings = () =>
     watch(
-      () =>
-        localCodexSettings.value.enabled
-          ? `${localCodexSettings.value.executable}\0${localCodexSettings.value.model}\0${localCodexRevision.value}`
-          : "server",
+      () => (localCodexSettings.value.enabled ? localCodexRevision.value : null),
       () => {
         const current = ++generation;
         switching = switching

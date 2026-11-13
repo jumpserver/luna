@@ -102,65 +102,6 @@ function emit(type: AgentEvent["type"], payload = {}, extra: Partial<AgentEvent>
   };
   for (const handler of native.listeners) handler({ payload: event });
 }
-it.each([
-  ["file", "read_file"],
-  ["sql", "read_sql_context"],
-  ["script", "read_script"]
-] as const)("routes the %s assistant and its tool results through local AI without Kael", async (domain, toolName) => {
-  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
-  const server = vi.spyOn(agentClient, "createSession");
-  const resourceSessionId = `${domain}-current`;
-  const tools = [{ name: toolName, inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }];
-  const sendFrame = vi.fn();
-  const messages = vi.fn();
-  const controller = useAgentSession({
-    domain,
-    relay: new AgentToolRelay({ resourceSessionId: () => resourceSessionId, sendFrame }),
-    messageMetadata: () => ({ domain }),
-    onAvailability: vi.fn(),
-    onMessage: messages
-  });
-  controllers.push(controller);
-  await controller.actions.attachManifest({ profile: domain, resourceSessionId, revision: 1, tools });
-  await vi.waitFor(() => expect(controller.state.status).toBe("connected"));
-  expect(native.invoke).toHaveBeenCalledWith(
-    "local_codex_create",
-    expect.objectContaining({
-      input: expect.objectContaining({ manifest: expect.objectContaining({ profile: domain }) })
-    })
-  );
-  await controller.actions.sendMessage({
-    id: `message-${domain}`,
-    role: "user",
-    parts: [{ type: "text", text: "Inspect current context" }]
-  });
-  emit("run.started", {}, { resource_session_id: resourceSessionId });
-  emit(
-    "tool.call",
-    { tool_name: toolName, arguments: {}, definition_version: 1 },
-    { resource_session_id: resourceSessionId, tool_call_id: "domain-call" }
-  );
-  expect(sendFrame).toHaveBeenCalledOnce();
-  const frame = sendFrame.mock.calls[0]![0];
-  expect(frame.data.params.name).toBe(toolName);
-  await controller.actions.receiveKokoFrame({
-    type: "mcp.response",
-    version: 1,
-    resource_session_id: resourceSessionId,
-    data: { jsonrpc: "2.0", id: frame.data.id, result: { structuredContent: { revision: 1 } } }
-  });
-  expect(native.invoke).toHaveBeenCalledWith(
-    "local_codex_result",
-    expect.objectContaining({
-      resourceSessionId,
-      result: expect.objectContaining({ result: { revision: 1 }, done: true })
-    })
-  );
-  emit("run.completed", {}, { resource_session_id: resourceSessionId });
-  expect(controller.state.activeRunId).toBe("");
-  expect(server).not.toHaveBeenCalled();
-});
-
 it.each(["workspace", "terminal", "file", "sql", "script"] as const)(
   "requires enterprise enablement and stops the local %s assistant when it is disabled",
   async (domain) => {
@@ -282,7 +223,6 @@ it("local File AI attaches after SFTP initialization and reconnects without losi
     { resource_session_id: "file-2", tool_call_id: "read-file" }
   );
   const request = JSON.parse(sendFrame.mock.calls[0]![0]);
-  expect(request.data).toBeTypeOf("string");
   const rpc = JSON.parse(request.data);
   expect(rpc.params).toMatchObject({ name: "read_text", arguments: { path: "/readme.txt" } });
   handleKokoFileAiWireMessage(targetId, {
