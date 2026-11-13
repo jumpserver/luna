@@ -29,6 +29,10 @@ async function runtime(t: test.TestContext) {
   const turns = new Map<string, string>();
   const service = new LocalCodexService({
     directory,
+    secrets: {
+      encrypt: (value) => Buffer.from(value).toString("base64"),
+      decrypt: (value) => Buffer.from(value, "base64").toString()
+    },
     assertOwner(owner, org) {
       assert.equal(owners.get(owner), org, "stale owner");
     },
@@ -52,7 +56,21 @@ async function runtime(t: test.TestContext) {
                 id: message.id,
                 result: {
                   data: first
-                    ? [{ id: "catalog-id", model: "native-model", displayName: "Native", isDefault: true }]
+                    ? [
+                        {
+                          id: "catalog-id",
+                          model: "native-model",
+                          displayName: "Native",
+                          isDefault: true,
+                          supportedReasoningEfforts: [
+                            { reasoningEffort: "low", description: "Fast" },
+                            { reasoningEffort: "high", description: "Thorough" },
+                            { reasoningEffort: "future-effort", description: "New model capability" },
+                            { reasoningEffort: "high", description: "Duplicate" },
+                            { reasoningEffort: "" }
+                          ]
+                        }
+                      ]
                     : [{ id: "another-model", model: "another-model" }],
                   nextCursor: first ? "next-model-page" : null
                 }
@@ -140,6 +158,69 @@ test("one native process supports more than twelve conversations and four active
   assert.equal(new Set(sessions.map((session) => session.threadId)).size, 13);
   assert.equal(r.events.filter((item) => item.event.type === "run.started").length, 13);
   await assert.rejects(r.send(sessions[0], 1, "overlapping-message"), /Wait for the active Codex turn/);
+});
+
+test("reasoning overrides reach workspace and terminal turns while default settings inherit Codex configuration", async (t) => {
+  const r = await runtime(t);
+  await r.send(await r.create());
+  const inherited = r.writes.find((write) => write.method === "turn/start");
+  assert.ok(!("effort" in JSON.parse(JSON.stringify(inherited.params))));
+  await r.service.configure({ enabled: true, executable: "codex", model: "", reasoningEffort: "future-effort" });
+  await r.send(await r.create());
+  await r.send(await r.create(1, "terminal"));
+  assert.deepEqual(
+    r.writes
+      .filter((write) => write.method === "turn/start")
+      .slice(1)
+      .map((write) => write.params.effort),
+    ["future-effort", "future-effort"]
+  );
+});
+
+test("API connections retain reasoning overrides and surface unsupported-effort failures", async (t) => {
+  const r = await runtime(t);
+  const settings = await r.service.configure({
+    ...DEFAULT_CODEX_SETTINGS,
+    enabled: true,
+    runtime: "system",
+    model: "service-model",
+    reasoningEffort: "high",
+    apiKey: "test-provider-key"
+  });
+  const session = await r.create();
+  await r.send(session);
+  assert.equal(r.writes.find((write) => write.method === "turn/start").params.effort, "high");
+  const checking = r.service.testConnection(1, "org-a", settings);
+  const rejected = assert.rejects(checking, /Unsupported reasoning effort: high/);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(r.writes.filter((write) => write.method === "turn/start").at(-1).params.effort, "high");
+  r.receive({
+    method: "turn/completed",
+    params: {
+      threadId: "thread-2",
+      turn: { id: "turn-2", status: "failed", error: { message: "Unsupported reasoning effort: high" } }
+    }
+  });
+  await rejected;
+});
+
+test("API settings default missing reasoning effort to medium and preserve an explicit model default", async (t) => {
+  const r = await runtime(t);
+  const saved = await r.service.configure({
+    ...DEFAULT_CODEX_SETTINGS,
+    enabled: true,
+    runtime: "system",
+    model: "service-model",
+    reasoningEffort: undefined,
+    apiKey: "test-provider-key"
+  });
+  assert.equal(saved.reasoningEffort, "medium");
+  await r.send(await r.create());
+  assert.equal(r.writes.find((write) => write.method === "turn/start").params.effort, "medium");
+  const inherited = await r.service.configure({ ...saved, reasoningEffort: "" });
+  assert.equal(inherited.reasoningEffort, "");
+  await r.send(await r.create());
+  assert.equal(r.writes.filter((write) => write.method === "turn/start").at(-1).params.effort, undefined);
 });
 
 test("history pages old events after cache eviction without an event-count ceiling", (t) => {
@@ -463,6 +544,7 @@ test("legacy settings retain the user's CLI, while API credentials remain encryp
   const legacy = validateCodexSettings({ enabled: true, executable: "codex", model: "" });
   assert.equal(legacy.runtime, "system");
   assert.equal(legacy.connection, "existing");
+  assert.equal(legacy.reasoningEffort, "");
   const service = new LocalCodexService({
     directory,
     assertOwner() {},
@@ -473,8 +555,17 @@ test("legacy settings retain the user's CLI, while API credentials remain encryp
     }
   });
   const secret = "private-test-api-key";
-  const input = { ...DEFAULT_CODEX_SETTINGS, runtime: "system" as const, model: "configured-model", apiKey: secret };
+  const input = {
+    ...DEFAULT_CODEX_SETTINGS,
+    runtime: "system" as const,
+    model: "configured-model",
+    reasoningEffort: "high",
+    apiKey: secret
+  };
   const saved = await service.configure(input);
+  assert.equal(saved.reasoningEffort, "high");
+  const restored = new LocalCodexService({ directory, assertOwner() {}, emit() {} });
+  assert.equal((await restored.configuration()).reasoningEffort, "high");
   assert.equal(saved.hasApiKey, true);
   assert.ok(!JSON.stringify(saved).includes(secret));
   assert.ok(!(await readFile(path.join(directory, "settings.json"), "utf8")).includes(secret));
@@ -490,15 +581,23 @@ test("legacy settings retain the user's CLI, while API credentials remain encryp
   );
   assert.equal((await service.configure({ ...saved, clearApiKey: true })).hasApiKey, false);
   assert.throws(() => validateCodexSettings({ ...input, baseUrl: "https://user:secret@model.test/v1" }));
+  for (const reasoningEffort of [123, {}, "x".repeat(65), "high\nlow"])
+    assert.throws(() => validateCodexSettings({ ...input, reasoningEffort }), /reasoning effort/);
 });
 
 test("connection tests use an ephemeral thread with no workspace tools and preserve the current conversation", async (t) => {
   const r = await runtime(t);
   await r.create();
   const events = r.events.length;
-  const checking = r.service.testConnection(1, "org-a", { enabled: false, executable: "codex", model: "" });
+  const checking = r.service.testConnection(1, "org-a", {
+    enabled: false,
+    executable: "codex",
+    model: "",
+    reasoningEffort: "high"
+  });
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.deepEqual(r.writes.filter((item) => item.method === "thread/start").at(-1).params.dynamicTools, []);
+  assert.equal(r.writes.filter((item) => item.method === "turn/start").at(-1).params.effort, "high");
   r.receive({
     method: "turn/completed",
     params: { threadId: "thread-2", turn: { id: "turn-1", status: "completed" } }
@@ -642,7 +741,12 @@ test("existing configuration discovers paginated native models without creating 
   const r = await runtime(t);
   const settings = await r.service.configuration();
   assert.deepEqual(await r.service.models(1, "org-a", settings), [
-    { id: "native-model", name: "Native", isDefault: true },
+    {
+      id: "native-model",
+      name: "Native",
+      isDefault: true,
+      supportedReasoningEfforts: ["low", "high", "future-effort"]
+    },
     { id: "another-model", name: "another-model", isDefault: false }
   ]);
   assert.equal(r.writes.filter((write) => write.method === "model/list").length, 2);

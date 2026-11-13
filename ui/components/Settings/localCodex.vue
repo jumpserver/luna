@@ -30,6 +30,7 @@ const modelSettings = computed(() => {
   return {
     enabled: false,
     model: "",
+    reasoningEffort: "",
     runtime: draft.runtime,
     executable: draft.executable,
     connection: draft.connection,
@@ -100,6 +101,7 @@ onMounted(() => {
       v-model:connection="draft.connection"
       v-model:base-url="draft.baseUrl"
       v-model:model="draft.model"
+      v-model:reasoning-effort="draft.reasoningEffort"
       v-model:api-key="apiKey"
       v-model:clear-api-key="clearApiKey"
       :has-api-key="hasSavedKey"

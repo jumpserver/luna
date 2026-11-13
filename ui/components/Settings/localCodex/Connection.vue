@@ -13,8 +13,17 @@ defineEmits<{ refreshModels: [] }>();
 const connection = defineModel<LocalCodexSettings["connection"]>("connection", { required: true });
 const baseUrl = defineModel<string>("baseUrl", { required: true });
 const model = defineModel<string>("model", { required: true });
+const reasoningEffort = defineModel<string>("reasoningEffort", { required: true });
 const apiKey = defineModel<string>("apiKey", { required: true });
 const clearApiKey = defineModel<boolean>("clearApiKey", { required: true });
+const selectedConnection = computed({
+  get: () => connection.value,
+  set: (value: LocalCodexSettings["connection"]) => {
+    if (value === connection.value) return;
+    connection.value = value;
+    reasoningEffort.value = value === "api" ? "medium" : "";
+  }
+});
 const modelOpen = shallowRef(false);
 const selectedModel = computed({
   get: () => model.value || null,
@@ -36,6 +45,42 @@ const modelItems = computed(() => [
     ? [{ label: model.value, value: model.value }]
     : [])
 ]);
+const modelReasoningEfforts = computed(
+  () => props.models.find((item) => (model.value ? item.id === model.value : item.isDefault))?.supportedReasoningEfforts
+);
+const selectedReasoningEffort = computed({
+  get: () => reasoningEffort.value || "default",
+  set: (value: string) => {
+    reasoningEffort.value = value === "default" ? "" : value;
+  }
+});
+const reasoningItems = computed(() => {
+  const levels = modelReasoningEfforts.value ?? ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
+  const labels: Record<string, string> = {
+    none: t("reasoningNone"),
+    minimal: t("reasoningMinimal"),
+    low: t("reasoningLow"),
+    medium: t("reasoningMedium"),
+    high: t("reasoningHigh"),
+    xhigh: t("reasoningXhigh"),
+    max: t("reasoningMax"),
+    ultra: t("reasoningUltra")
+  };
+  return [
+    { label: connection.value === "api" ? t("reasoningModelDefault") : t("reasoningDefault"), value: "default" },
+    ...[...new Set([...levels, ...(reasoningEffort.value ? [reasoningEffort.value] : [])])].map((value) => ({
+      label: labels[value] ? `${labels[value]} (${value})` : value,
+      value
+    }))
+  ];
+});
+watch(
+  modelReasoningEfforts,
+  (levels) => {
+    if (levels && reasoningEffort.value && !levels.includes(reasoningEffort.value)) reasoningEffort.value = "";
+  },
+  { immediate: true }
+);
 function selectCustomModel(value: string) {
   model.value = value;
   modelOpen.value = false;
@@ -45,7 +90,13 @@ function selectCustomModel(value: string) {
 <template>
   <SettingsGroup :title="t('connection')" icon="i-lucide-plug">
     <SettingsRow :title="t('connection')" :description="connection === 'api' ? t('apiHint') : t('existingHint')">
-      <USelect v-model="connection" :items="connections" :disabled="busy" :aria-label="t('connection')" class="w-72" />
+      <USelect
+        v-model="selectedConnection"
+        :items="connections"
+        :disabled="busy"
+        :aria-label="t('connection')"
+        class="w-72"
+      />
     </SettingsRow>
     <template v-if="connection === 'api'">
       <SettingsRow :title="t('baseUrl')">
@@ -110,6 +161,18 @@ function selectCustomModel(value: string) {
           {{ t("modelsLoaded", { count: models.length }) }}
         </p>
       </div>
+    </SettingsRow>
+    <SettingsRow
+      :title="t('reasoningEffort')"
+      :description="connection === 'api' ? t('reasoningApiHint') : t('reasoningHint')"
+    >
+      <USelect
+        v-model="selectedReasoningEffort"
+        :items="reasoningItems"
+        :disabled="busy"
+        :aria-label="t('reasoningEffort')"
+        class="w-72"
+      />
     </SettingsRow>
   </SettingsGroup>
 </template>

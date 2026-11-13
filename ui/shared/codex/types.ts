@@ -4,6 +4,7 @@ export interface LocalCodexSettings {
   enabled: boolean;
   executable: string;
   model: string;
+  reasoningEffort: string;
   runtime: "managed" | "system";
   connection: "api" | "existing";
   baseUrl: string;
@@ -16,6 +17,7 @@ export interface LocalCodexModel {
   id: string;
   name: string;
   isDefault: boolean;
+  supportedReasoningEfforts?: string[];
 }
 
 export interface CodexRuntimeStatus {
@@ -29,6 +31,7 @@ export const DEFAULT_CODEX_SETTINGS: LocalCodexSettings = {
   enabled: false,
   executable: "codex",
   model: "",
+  reasoningEffort: "medium",
   runtime: "managed",
   connection: "api",
   baseUrl: "https://api.openai.com/v1",

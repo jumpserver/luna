@@ -99,6 +99,8 @@ export function validateCodexSettings(value: unknown): LocalCodexSettings {
   const connection = value.connection ?? "existing";
   if (!["managed", "system"].includes(runtime) || !["api", "existing"].includes(connection))
     throw new Error("Invalid local AI installation or connection mode");
+  const reasoningEffort = value.reasoningEffort ?? (connection === "api" ? "medium" : "");
+  if (!bounded(reasoningEffort, 64)) throw new Error("Invalid local AI reasoning effort");
   const baseUrl = value.baseUrl ?? DEFAULT_CODEX_SETTINGS.baseUrl;
   if (!bounded(baseUrl, 2048)) throw new Error("Invalid model service URL");
   const url = new URL(baseUrl);
@@ -108,6 +110,7 @@ export function validateCodexSettings(value: unknown): LocalCodexSettings {
     enabled: value.enabled,
     executable,
     model: value.model.trim(),
+    reasoningEffort: reasoningEffort.trim(),
     runtime,
     connection,
     baseUrl: url.href.replace(/\/+$/, ""),
@@ -373,7 +376,17 @@ export class LocalCodexService {
           : undefined;
         if (!bounded(id, 256) || !id.trim()) throw new Error("Invalid model identifier returned");
         const name = record(entry) && bounded(entry.displayName, 256) ? entry.displayName : id;
-        models.set(id, { id, name, isDefault: record(entry) && entry.isDefault === true });
+        const model: LocalCodexModel = { id, name, isDefault: record(entry) && entry.isDefault === true };
+        if (record(entry) && Array.isArray(entry.supportedReasoningEfforts))
+          model.supportedReasoningEfforts = [
+            ...new Set<string>(
+              entry.supportedReasoningEfforts
+                .map((option) => (record(option) ? option.reasoningEffort : option))
+                .filter((effort) => bounded(effort, 64) && effort.trim())
+                .map((effort: string) => effort.trim())
+            )
+          ];
+        models.set(id, model);
       }
       return [...models.values()];
     } catch (error) {
@@ -684,6 +697,7 @@ export class LocalCodexService {
     try {
       session.submission = this.request("turn/start", {
         threadId: session.threadId,
+        effort: this.settings.reasoningEffort || undefined,
         input: [{ type: "text", text, text_elements: [] }]
       });
       const response = await session.submission;
