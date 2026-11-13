@@ -34,6 +34,9 @@ failures occur before any connection reaches Magnus.
 The connection guide's CLI uses a build of **usql with the DB2 driver**:
 `db2://<encoded-token>:<encoded-secret>@<endpoint>:<magnus-port>/<database>?secmec=3&ssl=false`.
 Credentials/database names must be URI encoded, then the entire URI shell quoted.
+The generated command includes `--no-password`: a rejected connection token
+ends the attempt without asking for another password. Create a new valid token
+before reconnecting. This does not change usql's standalone password prompt defaults.
 It does not catalog persistent IBM CLP aliases or change the local DB2 catalog.
 
 ## ClickHouse
