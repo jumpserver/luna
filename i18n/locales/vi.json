@@ -2,6 +2,7 @@
   "AccountProvisioning": {
     "Title": "Đang chuẩn bị tài khoản đăng nhập",
     "FormHint": "Tài khoản trùng tên người dùng của bạn sẽ được tự động tạo và cấu hình khi kết nối lần đầu.",
+    "BackgroundHint": "Quá trình chuẩn bị tài khoản chạy trong nền. Đóng trang này sẽ không dừng quá trình đó.",
     "Queued": "Đang chờ tạo tài khoản trùng tên…",
     "Running": "Đang tạo tài khoản và cấu hình thông tin đăng nhập…",
     "Failed": "Chuẩn bị tài khoản thất bại. Hãy liên hệ quản trị viên.",

@@ -2,6 +2,7 @@
   "AccountProvisioning": {
     "Title": "Preparing login account",
     "FormHint": "Your same-name account will be created and configured automatically on first connection.",
+    "BackgroundHint": "Account provisioning runs in the background. Closing this page will not stop it.",
     "Queued": "Waiting to push your same-name account…",
     "Running": "Creating your account and configuring login credentials…",
     "Failed": "Account push failed. Contact an administrator.",
