@@ -8,6 +8,28 @@ import {
   useDesktopCodexSession
 } from "#koko/composables/agent/localCodexClient";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
+import {
+  connectKokoFileAiSession,
+  disconnectKokoFileAiSession,
+  handleKokoFileAiWireMessage,
+  isKokoFileAiAvailable,
+  registerKokoFileAiSession,
+  submitKokoFileAiPrompt,
+  unregisterKokoFileAiSession
+} from "#koko/composables/sftp/useFileAiSessions";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
+import {
+  registerChenSqlAiSession,
+  handleChenSqlAiWireMessage,
+  unregisterChenSqlAiSession
+} from "~/chen/composables/useChenSqlAiSessions";
+import {
+  registerScriptAiSession,
+  rejectScriptAiProposal,
+  submitScriptAiPrompt,
+  unregisterScriptAiSession
+} from "~/composables/useScriptAiSessions";
 import type { AgentSessionController, AgentSessionOptions } from "#koko/composables/agent/useAgentSession";
 import type { AgentEvent, AgentMcpManifest } from "#koko/composables/agent/types";
 import { localCodexSettings, localCodexRevision } from "~/composables/useLocalCodex";
@@ -16,9 +38,11 @@ const native = vi.hoisted(() => ({
   invoke: vi.fn(),
   listeners: new Set<(value: { payload: AgentEvent }) => void>(),
   stop: vi.fn(),
+  desktop: true,
   store: {} as any
 }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => native.store }));
+vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => native.desktop }));
 vi.mock("~/shared/desktop/bridge", () => ({
   desktopInvoke: native.invoke,
   desktopListen: async (_name: string, handler: (event: any) => void) => {
@@ -37,8 +61,11 @@ const manifest: AgentMcpManifest = {
 };
 let seq = 0;
 const controllers: AgentSessionController[] = [];
+const cleanups: Array<() => void> = [];
 beforeEach(() => {
   seq = 0;
+  native.desktop = true;
+  setWorkspaceAiEnabled(false);
   native.store = reactive({ loggedIn: true, currentSite: "site-a", currentAccountId: "user-a", orgId: "org-a" });
   native.invoke.mockReset();
   native.stop.mockClear();
@@ -47,12 +74,19 @@ beforeEach(() => {
   native.invoke.mockImplementation(async (command, args) => {
     structuredClone(args);
     if (command === "local_codex_create")
-      return { session_id: "native-session", after: 0, registration_ids: { get_workspace_state: "registered" } };
+      return {
+        session_id: "native-session",
+        after: 0,
+        registration_ids: Object.fromEntries(
+          args.input.manifest.tools.map((tool: { name: string }) => [tool.name, "registered"])
+        )
+      };
     if (command === "local_codex_history") return { events: [], next_cursor: 0, has_more: false };
     if (command === "local_codex_send") return { message_id: args.message.message_id, run_id: "native-run", cursor: 0 };
   });
 });
 afterEach(async () => {
+  for (const cleanup of cleanups.splice(0)) cleanup();
   for (const controller of controllers.splice(0)) await controller.actions.dispose();
   vi.restoreAllMocks();
 });
@@ -68,6 +102,330 @@ function emit(type: AgentEvent["type"], payload = {}, extra: Partial<AgentEvent>
   };
   for (const handler of native.listeners) handler({ payload: event });
 }
+it.each([
+  ["file", "read_file"],
+  ["sql", "read_sql_context"],
+  ["script", "read_script"]
+] as const)("routes the %s assistant and its tool results through local AI without Kael", async (domain, toolName) => {
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const server = vi.spyOn(agentClient, "createSession");
+  const resourceSessionId = `${domain}-current`;
+  const tools = [{ name: toolName, inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }];
+  const sendFrame = vi.fn();
+  const messages = vi.fn();
+  const controller = useAgentSession({
+    domain,
+    relay: new AgentToolRelay({ resourceSessionId: () => resourceSessionId, sendFrame }),
+    messageMetadata: () => ({ domain }),
+    onAvailability: vi.fn(),
+    onMessage: messages
+  });
+  controllers.push(controller);
+  await controller.actions.attachManifest({ profile: domain, resourceSessionId, revision: 1, tools });
+  await vi.waitFor(() => expect(controller.state.status).toBe("connected"));
+  expect(native.invoke).toHaveBeenCalledWith(
+    "local_codex_create",
+    expect.objectContaining({
+      input: expect.objectContaining({ manifest: expect.objectContaining({ profile: domain }) })
+    })
+  );
+  await controller.actions.sendMessage({
+    id: `message-${domain}`,
+    role: "user",
+    parts: [{ type: "text", text: "Inspect current context" }]
+  });
+  emit("run.started", {}, { resource_session_id: resourceSessionId });
+  emit(
+    "tool.call",
+    { tool_name: toolName, arguments: {}, definition_version: 1 },
+    { resource_session_id: resourceSessionId, tool_call_id: "domain-call" }
+  );
+  expect(sendFrame).toHaveBeenCalledOnce();
+  const frame = sendFrame.mock.calls[0]![0];
+  expect(frame.data.params.name).toBe(toolName);
+  await controller.actions.receiveKokoFrame({
+    type: "mcp.response",
+    version: 1,
+    resource_session_id: resourceSessionId,
+    data: { jsonrpc: "2.0", id: frame.data.id, result: { structuredContent: { revision: 1 } } }
+  });
+  expect(native.invoke).toHaveBeenCalledWith(
+    "local_codex_result",
+    expect.objectContaining({
+      resourceSessionId,
+      result: expect.objectContaining({ result: { revision: 1 }, done: true })
+    })
+  );
+  emit("run.completed", {}, { resource_session_id: resourceSessionId });
+  expect(controller.state.activeRunId).toBe("");
+  expect(server).not.toHaveBeenCalled();
+});
+
+it.each(["file", "sql", "script"] as const)(
+  "keeps the %s assistant on Kael in Web and when local AI is disabled",
+  async (domain) => {
+    const harness = installAgentSessionHarness();
+    for (const desktop of [false, true]) {
+      native.desktop = desktop;
+      localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: !desktop };
+      const resourceSessionId = `${domain}-${desktop}`;
+      const controller = useAgentSession({
+        domain,
+        relay: new AgentToolRelay({ resourceSessionId: () => resourceSessionId, sendFrame: vi.fn() }),
+        messageMetadata: () => ({ domain }),
+        onAvailability: vi.fn(),
+        onMessage: vi.fn()
+      });
+      controllers.push(controller);
+      const manifest = { profile: domain, resourceSessionId, revision: 1, tools: [] };
+      await controller.actions.attachManifest(manifest);
+      await vi.waitFor(() => expect(controller.state.status).toBe("connected"));
+      expect(harness.createSession).toHaveBeenCalledWith(
+        manifest,
+        expect.any(String),
+        expect.objectContaining({ onExpired: expect.any(Function) })
+      );
+    }
+    expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_create")).toBe(false);
+  }
+);
+
+it("local File AI attaches after SFTP initialization and reconnects without losing its draft", async () => {
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const targetId = "local-file-reconnect";
+  const context = {
+    targetId,
+    assetId: "asset",
+    assetName: "File server",
+    currentPath: "/",
+    selectedEntries: [],
+    connected: false
+  };
+  const sendFrame = vi.fn();
+  cleanups.push(() => unregisterKokoFileAiSession(targetId));
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const socket = { readyState: WebSocket.OPEN, send: sendFrame } as unknown as WebSocket;
+    const session = registerKokoFileAiSession(targetId, socket, { ...context })!;
+    disconnectKokoFileAiSession(targetId, socket);
+    handleKokoFileAiWireMessage(targetId, {
+      type: "mcp.manifest",
+      version: 1,
+      resource_session_id: `file-${attempt}`,
+      data: {
+        profile: "file",
+        revision: 1,
+        tools: [{ name: "read_text", inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }]
+      }
+    });
+    await vi.waitFor(() => expect(session.agent.state.available).toBe(true));
+    expect(isKokoFileAiAvailable(targetId)).toBe(false);
+    connectKokoFileAiSession(targetId, socket);
+    expect(isKokoFileAiAvailable(targetId)).toBe(true);
+    if (attempt === 1) session.draft = "Continue after reconnect";
+    else expect(session.draft).toBe("Continue after reconnect");
+  }
+  localCodexRevision.value++;
+  await vi.waitFor(() =>
+    expect(native.invoke.mock.calls.filter(([command]) => command === "local_codex_create")).toHaveLength(3)
+  );
+  await vi.waitFor(() => expect(isKokoFileAiAvailable(targetId)).toBe(true));
+  const prompt = submitKokoFileAiPrompt(targetId, "List the current directory");
+  void prompt.catch(() => {});
+  await vi.waitFor(() =>
+    expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_send")).toBe(true)
+  );
+  emit("run.started", {}, { resource_session_id: "file-2" });
+  emit(
+    "tool.call",
+    { tool_name: "read_text", arguments: { path: "/readme.txt" }, definition_version: 1 },
+    { resource_session_id: "file-2", tool_call_id: "read-file" }
+  );
+  const request = JSON.parse(sendFrame.mock.calls[0]![0]);
+  expect(request.data).toBeTypeOf("string");
+  const rpc = JSON.parse(request.data);
+  expect(rpc.params).toMatchObject({ name: "read_text", arguments: { path: "/readme.txt" } });
+  handleKokoFileAiWireMessage(targetId, {
+    type: "mcp.response",
+    version: 1,
+    resource_session_id: "file-2",
+    data: { jsonrpc: "2.0", id: rpc.id, result: { structuredContent: { text: "File contents" } } }
+  });
+  await vi.waitFor(() =>
+    expect(native.invoke).toHaveBeenCalledWith(
+      "local_codex_result",
+      expect.objectContaining({ toolCallId: "read-file" })
+    )
+  );
+  emit("run.completed", {}, { resource_session_id: "file-2" });
+  await prompt;
+});
+
+it("local SQL keeps metadata consent and holds the proposal result until the editor applies it", async () => {
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const paneId = "local-sql-proposal";
+  const context = {
+    dialect: "postgresql",
+    database: "app",
+    schema: "public",
+    nodeKey: "node",
+    consoleId: "console",
+    paneId,
+    tabId: "tab",
+    workspaceTabId: "query",
+    workspaceTabKind: "query" as const,
+    currentContext: "context",
+    revision: 1,
+    selectionFrom: 0,
+    selectionTo: 0,
+    selectedSql: "",
+    documentSql: "SELECT 1"
+  };
+  const sendFrame = vi.fn((_frame: { data: string }) => true);
+  const apply = vi.fn(() => ({ applied: true }));
+  const session = registerChenSqlAiSession(paneId, sendFrame, () => context, apply)!;
+  cleanups.push(() => unregisterChenSqlAiSession(paneId));
+  const resourceSessionId = "local-sql-resource";
+  handleChenSqlAiWireMessage(paneId, {
+    type: "mcp.manifest",
+    version: 1,
+    resource_session_id: resourceSessionId,
+    data: {
+      profile: "sql",
+      revision: 1,
+      tools: ["inspect_schema", "propose_sql"].map((name) => ({
+        name,
+        inputSchema: { type: "object" },
+        annotations: { readOnlyHint: true }
+      }))
+    }
+  });
+  await vi.waitFor(() => expect(session.agent.state.status).toBe("connected"));
+  const pending = session.request("generate", "Prepare a query");
+  void pending.catch(() => {});
+  await vi.waitFor(() =>
+    expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_send")).toBe(true)
+  );
+  emit("run.started", {}, { resource_session_id: resourceSessionId });
+  emit(
+    "approval.requested",
+    { tool_name: "inspect_schema", arguments: { tables: ["items"] }, digest: "schema-digest" },
+    { resource_session_id: resourceSessionId, approval_id: "schema-approval", tool_call_id: "schema-call" }
+  );
+  expect(session.metadataApproval?.tables).toEqual(["items"]);
+  expect(sendFrame).not.toHaveBeenCalled();
+  session.resolveMetadataApproval("approve_once");
+  await vi.waitFor(() =>
+    expect(native.invoke).toHaveBeenCalledWith(
+      "local_codex_approve",
+      expect.objectContaining({ approvalId: "schema-approval", decision: "approve" })
+    )
+  );
+  emit(
+    "approval.resolved",
+    { state: "approved" },
+    { resource_session_id: resourceSessionId, approval_id: "schema-approval", tool_call_id: "schema-call" }
+  );
+  expect(session.metadataApproval).toBeNull();
+  emit(
+    "tool.call",
+    { tool_name: "propose_sql", arguments: { sql: "SELECT 2", explanation: "Updated query" }, definition_version: 1 },
+    { resource_session_id: resourceSessionId, tool_call_id: "sql-proposal" }
+  );
+  const request = JSON.parse(sendFrame.mock.calls[0]![0].data);
+  handleChenSqlAiWireMessage(paneId, {
+    type: "mcp.response",
+    version: 1,
+    resource_session_id: resourceSessionId,
+    data: {
+      jsonrpc: "2.0",
+      id: request.id,
+      result: {
+        structuredContent: { kind: "proposal", proposal: { sql: "SELECT 2", base: { ...context, target: "document" } } }
+      }
+    }
+  });
+  expect(session.pendingProposalCalls.has("sql-proposal")).toBe(true);
+  expect(apply).not.toHaveBeenCalled();
+  expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_result")).toBe(false);
+  expect(session.applyProposal("sql-proposal")).toEqual({ applied: true });
+  await vi.waitFor(() =>
+    expect(native.invoke).toHaveBeenCalledWith(
+      "local_codex_result",
+      expect.objectContaining({
+        toolCallId: "sql-proposal",
+        result: expect.objectContaining({ result: { proposal_id: "sql-proposal", status: "applied" } })
+      })
+    )
+  );
+  expect(apply).toHaveBeenCalledOnce();
+  emit("run.completed", {}, { resource_session_id: resourceSessionId });
+  await pending;
+});
+
+it("local script proposals wait for the user's rejection and never apply the draft automatically", async () => {
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const paneId = "local-script-proposal";
+  const apply = vi.fn(() => ({ applied: true }));
+  const session = registerScriptAiSession(
+    paneId,
+    () => ({
+      paneId,
+      scriptId: "script",
+      name: "Script",
+      content: "",
+      module: "shell",
+      comment: "",
+      scope: "private",
+      variables: [],
+      revision: 1
+    }),
+    apply
+  )!;
+  cleanups.push(() => unregisterScriptAiSession(paneId));
+  await vi.waitFor(() => expect(session.agent.state.status).toBe("connected"));
+  const resourceSessionId = session.resourceSessionId;
+  const pending = submitScriptAiPrompt(paneId, "Prepare a script draft");
+  void pending.catch(() => {});
+  await vi.waitFor(() =>
+    expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_send")).toBe(true)
+  );
+  emit("run.started", {}, { resource_session_id: resourceSessionId });
+  emit(
+    "tool.call",
+    {
+      tool_name: "propose_script",
+      arguments: {
+        expected_revision: 1,
+        content: "uptime",
+        name: "Script",
+        module: "shell",
+        comment: "",
+        summary: "Inspect uptime",
+        risk_level: 1,
+        risks: []
+      },
+      definition_version: 1
+    },
+    { resource_session_id: resourceSessionId, tool_call_id: "script-proposal" }
+  );
+  expect(session.proposals.has("script-proposal")).toBe(true);
+  expect(apply).not.toHaveBeenCalled();
+  expect(native.invoke.mock.calls.some(([command]) => command === "local_codex_result")).toBe(false);
+  expect(rejectScriptAiProposal(paneId, "script-proposal")).toBe(true);
+  await vi.waitFor(() =>
+    expect(native.invoke).toHaveBeenCalledWith(
+      "local_codex_result",
+      expect.objectContaining({
+        toolCallId: "script-proposal",
+        result: expect.objectContaining({ result: { proposal_id: "script-proposal", status: "rejected" } })
+      })
+    )
+  );
+  expect(apply).not.toHaveBeenCalled();
+  emit("run.completed", {}, { resource_session_id: resourceSessionId });
+  await pending;
+});
+
 it("reuses the existing controller and relay over IPC without calling Kael", async () => {
   const server = vi.spyOn(agentClient, "createSession");
   const sendFrame = vi.fn();

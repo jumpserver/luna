@@ -197,35 +197,45 @@ export function useDesktopCodexSession(
   let disposed = false;
   let generation = 0;
   let switching = Promise.resolve();
-  const stop = watch(
-    () =>
-      localCodexSettings.value.enabled
-        ? `${localCodexSettings.value.executable}\0${localCodexSettings.value.model}\0${localCodexRevision.value}`
-        : "server",
-    () => {
-      const current = ++generation;
-      switching = switching
-        .catch(() => {})
-        .then(async () => {
-          if (disposed || current !== generation) return;
-          await controller.value.actions.dispose();
-          if (disposed || current !== generation) return;
-          controller.value = create(selected());
-          if (manifest) await controller.value.actions.attachManifest(manifest);
-        });
-      void switching.catch(() => {});
-    },
-    { flush: "sync" }
-  );
+  const watchSettings = () =>
+    watch(
+      () =>
+        localCodexSettings.value.enabled
+          ? `${localCodexSettings.value.executable}\0${localCodexSettings.value.model}\0${localCodexRevision.value}`
+          : "server",
+      () => {
+        const current = ++generation;
+        switching = switching
+          .catch(() => {})
+          .then(async () => {
+            if (disposed || current !== generation) return;
+            await controller.value.actions.dispose();
+            if (disposed || current !== generation) return;
+            controller.value = create(selected());
+            if (manifest) await controller.value.actions.attachManifest(manifest);
+          });
+        void switching.catch(() => {});
+      },
+      { flush: "sync" }
+    );
+  let stop = watchSettings();
   return {
     get state() {
       return controller.value.state;
     },
     actions: {
       async attachManifest(value) {
+        const current = generation;
         manifest = value;
         await switching;
-        if (!disposed) await controller.value.actions.attachManifest(value);
+        if (current !== generation) return;
+        // SFTP and terminal connections reuse their controller after disconnecting.
+        if (disposed) {
+          controller.value = create(selected());
+          disposed = false;
+          stop = watchSettings();
+        }
+        await controller.value.actions.attachManifest(value);
       },
       async updateContext(value) {
         await switching;
@@ -243,10 +253,11 @@ export function useDesktopCodexSession(
       setApprovalMode: (mode) => controller.value.actions.setApprovalMode(mode),
       async dispose() {
         disposed = true;
+        manifest = undefined;
         ++generation;
         stop();
-        await controller.value.actions.dispose();
-        await switching.catch(() => {});
+        switching = Promise.all([controller.value.actions.dispose(), switching.catch(() => {})]).then(() => {});
+        await switching;
       }
     }
   };

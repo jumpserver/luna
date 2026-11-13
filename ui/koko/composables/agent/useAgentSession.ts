@@ -634,7 +634,7 @@ export function agentEventToUiMessage(
 }
 
 export function useAgentSession(options: AgentSessionOptions): AgentSessionController {
-  if (!options.client && isDesktopRuntime() && ["workspace", "terminal"].includes(options.domain)) {
+  if (!options.client && isDesktopRuntime()) {
     return useDesktopCodexSession(options, createAgentSession);
   }
   return createAgentSession(options);

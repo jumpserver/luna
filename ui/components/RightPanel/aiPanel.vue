@@ -79,11 +79,7 @@ const timelineEmptyState = computed(() =>
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <AiPresenceHeader
-      :assistant-name="
-        localCodexSettings.enabled && session?.kind === 'terminal'
-          ? 'Codex'
-          : presentation?.assistantName || t('RightPanel.LunaAiName')
-      "
+      :assistant-name="localCodexSettings.enabled ? 'Codex' : presentation?.assistantName || t('RightPanel.LunaAiName')"
       :description="presentation?.headerDescription || ''"
       :status-label="presentation ? presenceStatusLabel : ''"
       :status-tone="presentation?.available ? presenceStatusTone : 'warning'"

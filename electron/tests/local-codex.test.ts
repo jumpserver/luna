@@ -11,6 +11,7 @@ import {
   validateCodexSettings
 } from "../src/codex/service";
 import { DEFAULT_CODEX_SETTINGS } from "../../ui/shared/codex/types";
+import { MCP_FINAL_RESULT_META_KEY } from "../../ui/koko/composables/agent/types";
 import type { AgentEvent, AgentMcpManifest } from "../../ui/koko/composables/agent/types";
 
 async function runtime(t: test.TestContext) {
@@ -108,9 +109,9 @@ async function runtime(t: test.TestContext) {
       { name: "navigate_workspace", inputSchema: { type: "object" }, annotations: { readOnlyHint: false } }
     ]
   };
-  const create = async (owner = 1, profile: "workspace" | "terminal" = "workspace") => {
+  const create = async (owner = 1, profile: AgentMcpManifest["profile"] = "workspace", tools = manifest.tools) => {
     const created = await service.create(owner, "org-a", {
-      manifest: { ...manifest, profile, resourceSessionId: `${profile}-${owner}-${thread}` },
+      manifest: { ...manifest, profile, tools, resourceSessionId: `${profile}-${owner}-${thread}` },
       approvalMode: "auto"
     });
     return {
@@ -159,6 +160,91 @@ test("one native process supports more than twelve conversations and four active
   assert.equal(r.events.filter((item) => item.event.type === "run.started").length, 13);
   await assert.rejects(r.send(sessions[0], 1, "overlapping-message"), /Wait for the active Codex turn/);
 });
+
+test("file, SQL and script sessions share the runtime and round-trip their registered tools", async (t) => {
+  const r = await runtime(t);
+  for (const [profile, name] of [
+    ["file", "read_file"],
+    ["sql", "read_sql_context"],
+    ["script", "read_script"]
+  ] as const) {
+    const session = await r.create(1, profile, [
+      { name, inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }
+    ]);
+    const run = await r.send(session);
+    const started = r.writes.filter((write) => write.method === "thread/start").at(-1);
+    assert.equal(started.params.dynamicTools[0].name, name);
+    assert.ok(started.params.developerInstructions.includes(`${profile} assistant`));
+    r.call(session.threadId, name, `rpc-${profile}`);
+    const event = r.events.filter((item) => item.event.type === "tool.call").at(-1)!.event;
+    assert.equal(event.session_id, session.sessionId);
+    await r.service.result(1, "org-a", {
+      ...session,
+      toolCallId: event.tool_call_id,
+      result: {
+        jsonrpc: "2.0",
+        id: event.tool_call_id!,
+        run_id: run.run_id,
+        seq: 0,
+        done: true,
+        status: "success",
+        result: { revision: 1 }
+      }
+    });
+    const reply = r.writes.find((write) => write.id === `rpc-${profile}` && write.result);
+    assert.equal(reply.result.success, true);
+    assert.deepEqual(JSON.parse(reply.result.contentItems[0].text).result, { revision: 1 });
+  }
+  assert.equal(r.counts().launches, 1);
+});
+
+for (const [profile, name] of [
+  ["sql", "propose_sql"],
+  ["script", "propose_script"]
+] as const) {
+  test(`${profile} proposal decisions prevent further tools until a new turn`, async (t) => {
+    const r = await runtime(t);
+    const session = await r.create(1, profile, [
+      {
+        name,
+        inputSchema: { type: "object" },
+        annotations: { readOnlyHint: true },
+        _meta: { [MCP_FINAL_RESULT_META_KEY]: true }
+      },
+      { name: "read_context", inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }
+    ]);
+    const run = await r.send(session);
+    r.call(session.threadId, name, "proposal");
+    const event = r.events.find((item) => item.event.type === "tool.call")!.event;
+    assert.ok(!r.writes.some((write) => write.id === "proposal" && write.result));
+    await r.service.result(1, "org-a", {
+      ...session,
+      toolCallId: event.tool_call_id,
+      result: {
+        jsonrpc: "2.0",
+        id: event.tool_call_id!,
+        run_id: run.run_id,
+        seq: 0,
+        done: true,
+        status: "success",
+        result: { status: "rejected" }
+      }
+    });
+    const reply = r.writes.find((write) => write.id === "proposal" && write.result);
+    assert.match(JSON.parse(reply.result.contentItems[0].text).instruction, /does not mean saved or executed/);
+    r.call(session.threadId, "read_context", "after-decision");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(r.writes.find((write) => write.id === "after-decision").result.success, false);
+    assert.equal(r.events.filter((item) => item.event.type === "tool.call").length, 1);
+    r.receive({
+      method: "turn/completed",
+      params: { threadId: session.threadId, turn: { id: "turn-1", status: "completed" } }
+    });
+    await r.send(session, 1, "next-message");
+    r.call(session.threadId, "read_context", "next-turn");
+    assert.equal(r.events.filter((item) => item.event.type === "tool.call").length, 2);
+  });
+}
 
 test("reasoning overrides reach workspace and terminal turns while default settings inherit Codex configuration", async (t) => {
   const r = await runtime(t);
@@ -419,7 +505,12 @@ test("settings reject shell arguments and unsupported domains never start a proc
   );
   await assert.rejects(
     r.service.create(1, "org-a", {
-      manifest: { profile: "sql", resourceSessionId: "sql", revision: 1, tools: [] },
+      manifest: {
+        profile: "unknown" as AgentMcpManifest["profile"],
+        resourceSessionId: "unknown",
+        revision: 1,
+        tools: []
+      },
       approvalMode: "auto"
     })
   );
@@ -522,19 +613,19 @@ test("oversized merged context is rejected before a run starts and does not bloc
 
 test("database metadata still requires consent when the tool advertises read-only access", async (t) => {
   const r = await runtime(t);
-  const created = await r.service.create(1, "org-a", {
-    manifest: {
-      profile: "terminal",
-      resourceSessionId: "database-terminal",
-      revision: 1,
-      tools: [{ name: "database_schema", inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }]
-    },
-    approvalMode: "auto"
-  });
-  const session = { sessionId: created.session_id, resourceSessionId: "database-terminal" };
-  await r.send(session);
-  r.call("thread-1", "database_schema");
-  assert.ok(r.events.some((item) => item.event.type === "approval.requested"));
+  for (const [profile, name] of [
+    ["terminal", "database_schema"],
+    ["sql", "inspect_schema"]
+  ] as const) {
+    const session = await r.create(1, profile, [
+      { name, inputSchema: { type: "object" }, annotations: { readOnlyHint: true } }
+    ]);
+    await r.send(session);
+    r.call(session.threadId, name, `metadata-${profile}`);
+    assert.ok(
+      r.events.some((item) => item.event.type === "approval.requested" && item.event.session_id === session.sessionId)
+    );
+  }
   assert.ok(!r.events.some((item) => item.event.type === "tool.call"));
 });
 
