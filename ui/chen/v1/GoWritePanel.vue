@@ -8,6 +8,7 @@ import { useI18n } from "vue-i18n";
 import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
 import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
 import { chenErrorText } from "~/chen/utils/errorMessages";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { executionActive } from "./api";
 import {
   clearEditDraft,
@@ -460,6 +461,7 @@ defineExpose({ snapshotView: () => grid.value?.snapshotView() });
             size="xs"
             color="neutral"
             variant="ghost"
+            :class="workspaceButtonClass"
             :label="t('Chen.AddRow')"
             :disabled="!canInsert || count >= GO_EDIT_LIMIT"
             @click="addRow"
@@ -470,6 +472,7 @@ defineExpose({ snapshotView: () => grid.value?.snapshotView() });
             size="xs"
             color="neutral"
             variant="ghost"
+            :class="workspaceButtonClass"
             :label="t('Chen.DeleteRow')"
             :disabled="
               !canChange ||
@@ -493,6 +496,7 @@ defineExpose({ snapshotView: () => grid.value?.snapshotView() });
             size="xs"
             color="neutral"
             variant="ghost"
+            :class="workspaceButtonClass"
             :label="t('Common.Cancel')"
             :disabled="cannotDiscard"
             @click="discard"
@@ -509,6 +513,7 @@ defineExpose({ snapshotView: () => grid.value?.snapshotView() });
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :aria-label="t('Chen.RefreshData')"
           :title="t('Chen.RefreshData')"
           :disabled="
@@ -527,6 +532,7 @@ defineExpose({ snapshotView: () => grid.value?.snapshotView() });
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :aria-label="t('Chen.ImportCsv')"
           :disabled="!canInsert || count >= GO_EDIT_LIMIT || Object.keys(draft.changes).length > 0"
           :title="t('Chen.GoWriteCsvBatchHint')"

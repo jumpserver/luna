@@ -33,7 +33,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="transaction?.supported" class="flex shrink-0 items-center gap-1.5" data-chen-transaction>
+  <div v-if="transaction?.supported" class="flex shrink-0 items-center" data-chen-transaction>
     <UTooltip :text="t(transaction.manual ? 'Chen.Transaction.DisableHint' : 'Chen.Transaction.EnableHint')">
       <UButton
         :label="t(transaction.manual ? 'Chen.Transaction.Manual' : 'Chen.Transaction.Auto')"
@@ -41,6 +41,7 @@ watch(
         size="sm"
         color="neutral"
         variant="soft"
+        :ui="{ label: 'text-dimmed' }"
         :disabled="disabled || transaction.state === 'unknown'"
         @click="toggle"
       >

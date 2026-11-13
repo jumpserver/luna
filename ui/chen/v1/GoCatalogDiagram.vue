@@ -6,6 +6,7 @@ import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import SchemaDiagram from "~/chen/components/SchemaDiagram.vue";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { ChenGoError } from "./api";
 import { catalogDiagramTables, diagramBudget, diagramEdgeId } from "./catalogDiagram";
 import { diagramObjectId, inspectDiagram } from "./diagram";
@@ -28,6 +29,8 @@ const busy = ref(false);
 const stale = ref(false);
 const error = ref("");
 const unavailable = ref(false);
+const refreshDisabled = computed(() => !props.ready || busy.value || unavailable.value);
+defineExpose({ refresh: () => load(true), refreshDisabled });
 const capped = ref(false);
 const partial = ref(false);
 const nodeMetadata = ref(new Map<string, ChenSchemaDiagramTable>());
@@ -230,11 +233,12 @@ function copy(event: ClipboardEvent) {
       <div v-if="error" role="alert" class="flex items-center gap-2 text-error">
         <span>{{ t(`Chen.GoDiagram${error}`) }}</span>
         <UButton
-          v-if="!unavailable"
+          v-if="!target && !unavailable"
           :label="t('Chen.Retry')"
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :disabled="!ready || busy"
           @click="load(true)"
         />
@@ -254,17 +258,20 @@ function copy(event: ClipboardEvent) {
       :relationships-supported="pages.edges?.state !== 'unsupported'"
       :title="target ? t('Chen.GoDiagramIncoming') : t('Chen.SchemaDiagram')"
       :openable="ready && !stale"
+      :show-details="!!target"
       @open-object="open"
     >
       <template #actions>
         <UButton
+          v-if="!target"
           icon="i-lucide-refresh-cw"
           :aria-label="t('Chen.GoV1Refresh')"
           :title="t('Chen.GoV1Refresh')"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           size="xs"
-          :disabled="!ready || busy || unavailable"
+          :disabled="refreshDisabled"
           @click="load(true)"
         />
         <UButton
@@ -272,6 +279,7 @@ function copy(event: ClipboardEvent) {
           :label="t('Chen.GoV1LoadMore')"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           size="xs"
           :disabled="!ready || stale || unavailable"
           @click="load()"

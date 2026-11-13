@@ -19,6 +19,8 @@ const data = ref<ReturnType<typeof inspectDiagram>>();
 const busy = ref(false);
 const stale = ref(false);
 const error = ref("");
+const refreshDisabled = computed(() => !props.ready || busy.value);
+defineExpose({ refresh: load, refreshDisabled });
 const identity = computed(() => diagramObjectId(props.sessionId, props.object));
 let controller: AbortController | undefined;
 function cancel() {
@@ -83,22 +85,14 @@ function preventCopy(event: ClipboardEvent) {
     @copy="preventCopy"
     @cut="preventCopy"
   >
-    <div class="shrink-0 border-b border-default px-3 py-2 text-xs">
-      <div class="flex justify-end gap-2">
-        <UButton
-          :label="t(error ? 'Chen.GoV1Retry' : 'Chen.GoV1Refresh')"
-          icon="i-lucide-refresh-cw"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="!ready || busy"
-          @click="load"
-        />
-      </div>
-      <p v-if="!ready || stale" class="mt-1 text-warning">{{ t("Chen.GoDiagramStale") }}</p>
-      <p v-if="busy" role="status" class="mt-1 text-muted">{{ t("Chen.GoV1Loading") }}</p>
-      <p v-if="error" role="alert" class="mt-1 text-error">{{ error }}</p>
-      <p v-if="data && data.tables[0]?.foreignKeys.length === 0" class="mt-1 text-muted">
+    <div
+      v-if="!ready || stale || busy || error || data?.tables[0]?.foreignKeys.length === 0"
+      class="shrink-0 space-y-1 border-b border-default px-3 py-2 text-xs"
+    >
+      <p v-if="!ready || stale" class="text-warning">{{ t("Chen.GoDiagramStale") }}</p>
+      <p v-if="busy" role="status" class="text-muted">{{ t("Chen.GoV1Loading") }}</p>
+      <p v-if="error" role="alert" class="text-error">{{ error }}</p>
+      <p v-if="data && data.tables[0]?.foreignKeys.length === 0" class="text-muted">
         {{
           t(
             data.statuses.foreignKeys === "Complete"

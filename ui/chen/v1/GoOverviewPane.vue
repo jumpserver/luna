@@ -4,6 +4,7 @@ import type { GoOverview, OverviewRow, OverviewSection, OverviewValue, OverviewV
 import type { QueryContext } from "./workspace";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { writeClipboardText } from "~/utils/clipboard";
 import { ChenGoError } from "./api";
 import GoCatalogDiagram from "./GoCatalogDiagram.vue";
@@ -301,18 +302,23 @@ onBeforeUnmount(stop);
       }
     "
   >
-    <header class="flex min-w-0 shrink-0 items-center gap-1 border-b border-default px-2 py-1">
-      <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" :aria-label="t('Chen.GoOverviewTitle')">
+    <header
+      class="flex h-(--workspace-sub-tab-height) min-w-0 shrink-0 items-center gap-1 border-b border-default px-2"
+    >
+      <nav
+        class="flex min-w-0 flex-1 items-center gap-px overflow-x-auto whitespace-nowrap"
+        :aria-label="t('Chen.GoOverviewTitle')"
+      >
         <UButton
           v-for="item in sections"
           :key="item.id"
-          :label="item.label"
-          :variant="section === item.id ? 'soft' : 'ghost'"
-          color="neutral"
-          :aria-pressed="section === item.id"
-          class="shrink-0 text-xs"
-          :class="section === item.id ? 'bg-accented' : 'text-muted'"
           size="xs"
+          variant="ghost"
+          class="shrink-0 aria-pressed:bg-(--app-selected-soft)"
+          :class="section === item.id ? undefined : workspaceButtonClass"
+          :label="item.label"
+          :aria-pressed="section === item.id"
+          :color="section === item.id ? 'primary' : 'neutral'"
           @click="section = item.id"
         />
       </nav>
@@ -322,9 +328,22 @@ onBeforeUnmount(stop);
         size="xs"
         color="neutral"
         variant="ghost"
+        :class="workspaceButtonClass"
         :aria-label="t('Common.Copy')"
         :disabled="!canCopy || !ready || stale || ddl.state !== 'supported'"
         @click="copyDDL"
+      />
+      <UButton
+        v-if="section !== 'diagram'"
+        icon="i-lucide-refresh-cw"
+        :aria-label="t('Chen.GoV1Refresh')"
+        :title="t('Chen.GoV1Refresh')"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        :class="workspaceButtonClass"
+        :disabled="!ready || loading || unavailable"
+        @click="refresh"
       />
       <UDropdownMenu
         :items="
@@ -334,18 +353,16 @@ onBeforeUnmount(stop);
           }))
         "
       >
-        <UButton icon="i-lucide-ellipsis" size="xs" color="neutral" variant="ghost" :aria-label="t('Common.More')" />
+        <UButton
+          icon="i-lucide-ellipsis"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+          :class="workspaceButtonClass"
+          :aria-label="t('Common.More')"
+        />
       </UDropdownMenu>
-      <UButton
-        v-if="section !== 'diagram'"
-        :label="t('Chen.GoV1Refresh')"
-        icon="i-lucide-refresh-cw"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :disabled="!ready || loading || unavailable"
-        @click="refresh"
-      />
     </header>
     <GoCatalogDiagram
       v-if="diagramVisited"
@@ -370,6 +387,7 @@ onBeforeUnmount(stop);
             color="neutral"
             variant="ghost"
             size="xs"
+            :class="workspaceButtonClass"
             :disabled="!ready || loading"
             @click="refresh"
           />
@@ -447,6 +465,7 @@ onBeforeUnmount(stop);
                       size="xs"
                       color="neutral"
                       variant="ghost"
+                      :class="workspaceButtonClass"
                     />
                     <template #content>
                       <pre
@@ -479,6 +498,7 @@ onBeforeUnmount(stop);
             size="xs"
             color="neutral"
             variant="ghost"
+            :class="workspaceButtonClass"
             :disabled="!ready || stale || data.items.length >= 10000"
             @click="load(true)"
           />

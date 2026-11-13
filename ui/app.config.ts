@@ -1,3 +1,18 @@
+const menuSlots = {
+  content:
+    "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] rounded-[length:var(--app-radius)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+  viewport: "relative overflow-y-auto flex-1",
+  group: "p-1 isolate",
+  label:
+    "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
+  separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
+  item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-[length:var(--app-radius)] leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
+  itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
+  itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
+  itemWrapper: "min-w-0 flex-1 overflow-hidden",
+  itemLabel: "block truncate text-sm"
+};
+
 export default defineAppConfig({
   app: {
     name: "JumpServer",
@@ -35,6 +50,10 @@ export default defineAppConfig({
         base: "cursor-pointer rounded-[length:var(--app-radius)]"
       },
       compoundVariants: [
+        {
+          trailing: true,
+          class: "aria-[haspopup=menu]:gap-1 aria-[haspopup=menu]:[&>[data-slot=trailingIcon]]:size-[0.9em]"
+        },
         {
           color: "neutral",
           variant: ["outline", "subtle"],
@@ -131,20 +150,10 @@ export default defineAppConfig({
       }
     },
     dropdownMenu: {
-      slots: {
-        content:
-          "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] rounded-[length:var(--app-radius)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
-        viewport: "relative overflow-y-auto flex-1",
-        group: "p-1 isolate",
-        label:
-          "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
-        separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-[length:var(--app-radius)] leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
-        itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
-        itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
-        itemWrapper: "min-w-0 flex-1 overflow-hidden",
-        itemLabel: "block truncate text-sm"
-      }
+      slots: menuSlots
+    },
+    contextMenu: {
+      slots: menuSlots
     },
     modal: {
       slots: {

@@ -28,6 +28,7 @@ import {
   getChenGridSelectionBounds,
   startChenGridSelection
 } from "~/chen/utils/dataGridSelection";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { writeClipboardText } from "~/utils/clipboard";
 import GoResultCellEditor from "./GoResultCellEditor.vue";
 import GoResultValue from "./GoResultValue.client.vue";
@@ -950,6 +951,7 @@ onBeforeUnmount(() => {
             size="xs"
             :color="filter || searchOpen ? 'primary' : 'neutral'"
             :variant="filter || searchOpen ? 'soft' : 'ghost'"
+            :class="filter || searchOpen ? undefined : workspaceButtonClass"
             :aria-label="filter ? `${t('Chen.GoResultSearch')}: ${filter}` : t('Chen.GoResultSearch')"
             :title="filter ? `${t('Chen.GoResultSearch')}: ${filter}` : t('Chen.GoResultSearch')"
           />
@@ -993,6 +995,8 @@ onBeforeUnmount(() => {
             size="xs"
             color="neutral"
             variant="ghost"
+            class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+            :class="workspaceButtonClass"
             :title="
               localSearch
                 ? t('Chen.GoBrowseTableSettings')
@@ -1067,6 +1071,8 @@ onBeforeUnmount(() => {
                   size="xs"
                   color="neutral"
                   variant="ghost"
+                  class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+                  :class="workspaceButtonClass"
                 />
               </UDropdownMenu>
               <div v-if="rows.columns.length" class="space-y-2 border-t border-default pt-3">

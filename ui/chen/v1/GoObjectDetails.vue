@@ -4,6 +4,7 @@ import type { OverviewRow } from "./overview";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import MonacoValueViewer from "./MonacoValueViewer.client.vue";
 import { overviewNumber } from "./overview";
 const props = defineProps<{
@@ -57,40 +58,13 @@ const ddl = ref<GoCatalogSection>();
 const ddlError = ref("");
 const error = ref("");
 const viewer = ref<{ find: () => void } | null>(null);
-const sections = computed(() =>
-  [
-    { key: "basic" as const, label: t("Chen.BasicInfo"), columns: [] },
-    {
-      key: "primary_key" as const,
-      label: t("RightPanel.SQLAIMetadataCategory.primary_keys"),
-      columns: ["name", "column", "ordinal"]
-    },
-    {
-      key: "foreign_keys" as const,
-      label: t("Chen.ForeignKeys"),
-      columns: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"]
-    },
-    {
-      key: "indexes" as const,
-      label: t("Chen.Indexes"),
-      columns: ["name", "column", "ordinal", "unique", "method", "sort_order", "included", "expression", "definition"]
-    },
-    { key: "constraints" as const, label: t("Chen.Constraints"), columns: ["name", "type", "definition"] },
-    {
-      key: "defaults" as const,
-      label: t("RightPanel.SQLAIMetadataCategory.default_values"),
-      columns: ["column", "expression"]
-    },
-    {
-      key: "ddl" as const,
-      label:
-        (ddl.value || data.value?.sections.ddl)?.source === "native_view_query"
-          ? t("Chen.GoV1ViewQueryDefinition")
-          : "DDL",
-      columns: []
-    }
-  ].filter((section) => (props.mode === "ddl" ? section.key === "ddl" : section.key !== "ddl"))
-);
+const sectionColumns: Partial<Record<typeof active.value, string[]>> = {
+  primary_key: ["name", "column", "ordinal"],
+  foreign_keys: ["name", "column", "referenced_schema", "referenced_table", "referenced_column", "ordinal"],
+  indexes: ["name", "column", "ordinal", "unique", "method", "sort_order", "included", "expression", "definition"],
+  constraints: ["name", "type", "definition"],
+  defaults: ["column", "expression"]
+};
 const current = computed(() =>
   active.value === "ddl"
     ? ddl.value || data.value?.sections.ddl
@@ -98,7 +72,7 @@ const current = computed(() =>
       ? undefined
       : data.value?.sections[active.value]
 );
-const columns = computed(() => sections.value.find((item) => item.key === active.value)?.columns || []);
+const columns = computed(() => sectionColumns[active.value] || []);
 const sectionError = computed(() =>
   current.value?.error ? chenErrorText(current.value.error, t, "catalog_failed") : ""
 );
@@ -117,6 +91,13 @@ const labels: Record<string, string> = {
   type: "Chen.Type",
   definition: "Chen.Definition"
 };
+const refreshDisabled = computed(() => !props.ready || (active.value === "ddl" ? ddlBusy.value : busy.value));
+function refresh() {
+  if (active.value === "ddl") return loadDdl();
+  if (active.value === "basic") return loadStatistics();
+  return load();
+}
+defineExpose({ refresh, refreshDisabled });
 let controller: AbortController | undefined;
 let ddlController: AbortController | undefined;
 async function load() {
@@ -242,37 +223,6 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="flex min-h-0 flex-1 flex-col" data-chen-object-details @copy="preventCopy">
-    <div class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-default px-3 py-1">
-      <UButton
-        v-for="item in detailSection ? [] : sections"
-        :key="item.key"
-        :label="item.label"
-        size="xs"
-        :color="active === item.key ? 'primary' : 'neutral'"
-        :variant="active === item.key ? 'soft' : 'ghost'"
-        :aria-pressed="active === item.key"
-        @click="active = item.key"
-      />
-      <UButton
-        class="ml-auto"
-        icon="i-lucide-refresh-cw"
-        :label="t('Chen.GoV1Refresh')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :disabled="!ready || (active === 'ddl' ? ddlBusy : busy)"
-        @click="active === 'ddl' ? loadDdl() : active === 'basic' ? loadStatistics() : load()"
-      />
-      <UButton
-        v-if="active === 'ddl' && current?.text"
-        icon="i-lucide-search"
-        :label="t('Chen.GoV1ValueFind')"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        @click="viewer?.find()"
-      />
-    </div>
     <p v-if="!ready" class="px-3 py-2 text-xs text-warning">{{ t("Chen.GoV1CatalogStale") }}</p>
     <p v-if="busy || (active === 'ddl' && ddlBusy)" role="status" class="px-3 py-2 text-xs text-muted">
       {{ t("Chen.GoV1Loading") }}
@@ -319,16 +269,28 @@ onBeforeUnmount(() => {
     </div>
     <template v-if="current?.supported">
       <template v-if="active === 'ddl'">
-        <MonacoValueViewer
-          v-if="current.text"
-          ref="viewer"
-          class="min-h-0 flex-1"
-          :value="current.text"
-          :json="false"
-          :wrap="true"
-          :can-copy="canCopy"
-          :label="current.source === 'native_view_query' ? t('Chen.GoV1ViewQueryDefinition') : 'DDL'"
-        />
+        <div v-if="current.text" class="group relative min-h-0 flex-1">
+          <MonacoValueViewer
+            ref="viewer"
+            :value="current.text"
+            :json="false"
+            :wrap="true"
+            :can-copy="canCopy"
+            :label="current.source === 'native_view_query' ? t('Chen.GoV1ViewQueryDefinition') : 'DDL'"
+            floating-find
+          />
+          <UButton
+            icon="i-lucide-search"
+            :aria-label="t('Chen.GoV1ValueFind')"
+            :title="t('Chen.GoV1ValueFind')"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            class="absolute top-1 right-6 z-10 bg-(--app-surface-overlay) shadow-sm ring ring-default group-has-[.find-widget.visible]:hidden"
+            :class="workspaceButtonClass"
+            @click="viewer?.find()"
+          />
+        </div>
         <p v-else-if="!ddlBusy && !ddlError" class="p-3 text-xs text-muted">{{ t("Chen.DefinitionUnavailable") }}</p>
       </template>
       <div v-else class="min-h-0 flex-1 overflow-auto" :class="{ 'select-none': !canCopy }">

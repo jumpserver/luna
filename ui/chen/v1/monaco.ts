@@ -1,10 +1,11 @@
 import * as monaco from "monaco-editor/editor/editor.api.js";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
-import { parseColorToRgb } from "~/shared/theme/color";
+import { contrastingTextColor, parseColorToRgb } from "~/shared/theme/color";
 import {
   readResolvedEditorTokens,
   readResolvedSyntaxTokens,
-  readResolvedWorkspaceTokens
+  readResolvedWorkspaceTokens,
+  resolveCssColor
 } from "~/shared/theme/resolvedTokens";
 import "monaco-editor/languages/definitions/mysql/register.js";
 import "monaco-editor/languages/definitions/pgsql/register.js";
@@ -26,9 +27,12 @@ import "monaco-editor/editor/contrib/contextmenu/browser/contextmenu.js";
 globalThis.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 export function applyChenMonacoTheme() {
+  const root = document.documentElement;
   const editor = readResolvedEditorTokens();
   const syntax = readResolvedSyntaxTokens();
   const workspace = readResolvedWorkspaceTokens();
+  const suggestSelection = resolveCssColor("--editor-suggest-selection", workspace.panel);
+  const suggestSelectionForeground = contrastingTextColor(suggestSelection);
   // Monaco requires hex colors; the shared resolver intentionally returns CSS rgb/rgba.
   const hex = (color: string) => {
     const rgb = parseColorToRgb(color);
@@ -38,7 +42,7 @@ export function applyChenMonacoTheme() {
     return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
   };
   monaco.editor.defineTheme("chen-app", {
-    base: document.documentElement.classList.contains("dark") ? "vs-dark" : "vs",
+    base: root.classList.contains("dark") ? "vs-dark" : "vs",
     inherit: true,
     rules: Object.entries(syntax).flatMap(([token, value]) => {
       const foreground = hex(value);
@@ -62,10 +66,11 @@ export function applyChenMonacoTheme() {
         "editorWidget.border": workspace.border,
         "editorSuggestWidget.background": workspace.panel,
         "editorSuggestWidget.foreground": editor.foreground,
-        "editorSuggestWidget.selectedBackground": workspace.subTabActive,
-        "editorSuggestWidget.selectedForeground": editor.foreground,
+        "editorSuggestWidget.selectedBackground": suggestSelection,
+        "editorSuggestWidget.selectedForeground": suggestSelectionForeground,
+        "editorSuggestWidget.selectedIconForeground": suggestSelectionForeground,
         "editorSuggestWidget.highlightForeground": editor.foreground,
-        "editorSuggestWidget.focusHighlightForeground": editor.foreground,
+        "editorSuggestWidget.focusHighlightForeground": suggestSelectionForeground,
         "editorSuggestWidget.border": workspace.border,
         "editorWidget.foreground": editor.foreground,
         "input.background": workspace.panel,

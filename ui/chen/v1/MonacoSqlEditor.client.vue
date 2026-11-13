@@ -6,8 +6,8 @@ import { useI18n } from "vue-i18n";
 import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
-import { completionFilterText, completionInsertText, completionIsCurrent, waitForCompletion } from "./completion";
-import { analysisMatches, statementAt } from "./executionRange";
+import { completionFilterText, completionIsCurrent, completionKeywordText, waitForCompletion } from "./completion";
+import { analysisMatches, statementAt, statementFoldingRanges } from "./executionRange";
 import { applyChenMonacoTheme, monaco } from "./monaco";
 
 const props = defineProps<{
@@ -27,7 +27,7 @@ const emit = defineEmits<{
   "update:modelValue": [value: string];
   run: [sql: string, version: number];
   explain: [sql: string, version: number];
-  scope: [mode: "selection" | "current" | "empty"];
+  runScope: [mode: "selection" | "current"];
   editorError: [message: string];
   cancel: [];
   openSnippets: [];
@@ -38,16 +38,19 @@ const host = shallowRef<HTMLElement | null>(null);
 let editor: monaco.editor.IStandaloneCodeEditor | undefined;
 let model: monaco.editor.ITextModel | undefined;
 const disposables: monaco.IDisposable[] = [];
+const foldingChanged = new monaco.Emitter<monaco.languages.FoldingRangeProvider>();
 let themeObserver: MutationObserver | undefined;
 let completion: AbortController | undefined;
 let completionContext: { version: number; offset: number } | undefined;
 let completionSerial = 0;
 let layoutFrame = 0;
+let statementFrameRequest = 0;
 let analysis: { consoleId: string; result: GoAnalysis } | undefined;
 let analysisRequest: { consoleId: string; version: number; promise: Promise<GoAnalysis | undefined> } | undefined;
 let analysisController: AbortController | undefined;
 let analysisTimer: ReturnType<typeof setTimeout> | undefined;
-let currentDecoration: monaco.editor.IEditorDecorationsCollection | undefined;
+let framedStatement: SqlSourceRange | null = null;
+const statementFrame = shallowRef<{ left: number; top: number; width: number; height: number; gutter: number }>();
 let unregisterClipboard: (() => void) | undefined;
 const runMarkers = shallowRef<
   {
@@ -62,7 +65,7 @@ const runMarkers = shallowRef<
 >([]);
 function updateRunMarkers() {
   const result = currentAnalysis();
-  if (!editor || !model || !result || props.readOnly || props.online === false || props.visible === false) {
+  if (!editor || !model || !result || props.readOnly || props.visible === false) {
     runMarkers.value = [];
     return;
   }
@@ -147,10 +150,64 @@ function invalidateChangedCompletion() {
     invalidateCompletion();
 }
 
-function monacoRange(range: SqlSourceRange) {
-  const from = model!.getPositionAt(range.from);
-  const to = model!.getPositionAt(range.to);
-  return new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column);
+function updateStatementFrame() {
+  cancelAnimationFrame(statementFrameRequest);
+  if (!framedStatement) {
+    statementFrame.value = undefined;
+    return;
+  }
+  statementFrameRequest = requestAnimationFrame(() => {
+    if (!editor || !model || !framedStatement) return;
+    const start = model.getPositionAt(framedStatement.from);
+    const end = model.getPositionAt(framedStatement.to);
+    const layout = editor.getLayoutInfo();
+    const gutter = layout.contentLeft - 3;
+    const top = editor.getTopForLineNumber(start.lineNumber) - editor.getScrollTop();
+    const bottom = editor.getBottomForLineNumber(end.lineNumber) - editor.getScrollTop();
+    if (bottom <= 0 || top >= layout.height) {
+      statementFrame.value = undefined;
+      return;
+    }
+
+    const visible = editor.getVisibleRanges();
+    const charWidth = editor.getOption(monaco.editor.EditorOption.fontInfo).typicalHalfwidthCharacterWidth;
+    let left = Infinity;
+    let right = 0;
+    for (let lineNumber = start.lineNumber; lineNumber <= end.lineNumber; lineNumber++) {
+      const from = lineNumber === start.lineNumber ? start.column : model.getLineFirstNonWhitespaceColumn(lineNumber);
+      const to = lineNumber === end.lineNumber ? end.column : model.getLineLastNonWhitespaceColumn(lineNumber);
+      if (!from || to <= from) continue;
+      const isVisible = visible.some(
+        (range) => lineNumber >= range.startLineNumber && lineNumber <= range.endLineNumber
+      );
+      const offset = (column: number) => {
+        const measured = isVisible ? editor!.getOffsetForColumn(lineNumber, column) : -1;
+        // ponytail: approximate unrendered lines by Monaco's display columns; exact widths would require rendering them.
+        return measured >= 0
+          ? measured
+          : (editor!.getVisibleColumnFromPosition({ lineNumber, column }) - 1) * charWidth;
+      };
+      left = Math.min(left, offset(from));
+      right = Math.max(right, offset(to));
+    }
+    if (right <= left) {
+      statementFrame.value = undefined;
+      return;
+    }
+    statementFrame.value = {
+      left: left - editor.getScrollLeft(),
+      top,
+      width: right - left + 6,
+      height: bottom - top,
+      gutter
+    };
+  });
+}
+
+function frameStatement(range: SqlSourceRange | null) {
+  if (range?.from === framedStatement?.from && range?.to === framedStatement?.to) return;
+  framedStatement = range;
+  updateStatementFrame();
 }
 
 function currentAnalysis() {
@@ -161,33 +218,33 @@ function currentAnalysis() {
     : undefined;
 }
 
+const foldingProvider: monaco.languages.FoldingRangeProvider = {
+  onDidChange: foldingChanged.event,
+  provideFoldingRanges(candidate) {
+    const result = currentAnalysis();
+    if (candidate !== model || !result) return [];
+    return statementFoldingRanges(
+      candidate.getValue(),
+      result.statements,
+      (offset) => candidate.getPositionAt(offset).lineNumber
+    );
+  }
+};
+
 function updateScope() {
   updateRunMarkers();
   if (!editor || !model) return;
   const selection = editor.getSelection();
   if (selection && !selection.isEmpty()) {
-    currentDecoration?.clear();
-    emit("scope", model.getValueInRange(selection).trim() ? "selection" : "empty");
+    frameStatement(null);
+    emit("runScope", "selection");
     return;
   }
   const position = editor.getPosition();
   const result = currentAnalysis();
   const range = position && result && statementAt(model.getValue(), result.statements, model.getOffsetAt(position));
-  currentDecoration?.set(
-    range
-      ? [
-          {
-            range: monacoRange(range),
-            options: {
-              inlineClassName: "chen-current-statement",
-              linesDecorationsClassName: "chen-current-statement-gutter",
-              stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
-            }
-          }
-        ]
-      : []
-  );
-  emit("scope", range ? "current" : "empty");
+  frameStatement(range || null);
+  emit("runScope", "current");
 }
 
 function invalidateAnalysis() {
@@ -195,6 +252,7 @@ function invalidateAnalysis() {
   analysisController?.abort();
   analysisRequest = undefined;
   analysis = undefined;
+  foldingChanged.fire(foldingProvider);
   updateScope();
   if (model && props.consoleId && props.online !== false && props.visible !== false) {
     analysisTimer = setTimeout(() => {
@@ -226,6 +284,7 @@ async function analyzeDocument(): Promise<GoAnalysis | undefined> {
       )
         return undefined;
       analysis = { consoleId, result };
+      foldingChanged.fire(foldingProvider);
       updateScope();
       return result;
     })
@@ -256,12 +315,8 @@ function emitStatement(action: "run" | "explain", sql: string, version: number) 
   else emit("run", sql, version);
 }
 function run() {
-  if (!editor || !model) return;
-  const selection = editor.getSelection();
-  if (!selection || selection.isEmpty()) return runAll();
-  const sql = model.getValueInRange(selection);
-  if (sql.trim()) emit("run", sql, model.getVersionId());
-  else emit("editorError", t("Chen.GoV1NothingAtCursor"));
+  if (props.online === false || props.visible === false) return;
+  return currentStatement("run");
 }
 function explain() {
   return currentStatement("explain");
@@ -281,7 +336,7 @@ async function currentStatement(action: "run" | "explain") {
   const offset = model.getOffsetAt(position);
   const consoleId = props.consoleId;
   const result = await analyzeDocument();
-  if (!model || model.isDisposed()) return;
+  if (!model || model.isDisposed() || props.visible === false || props.online === false) return;
   const currentPosition = editor.getPosition();
   if (
     !analysisMatches(version, model.getVersionId(), consoleId, props.consoleId) ||
@@ -407,6 +462,13 @@ onMounted(() => {
   const language = dialect.monaco;
   applyChenMonacoTheme();
   model = monaco.editor.createModel(props.modelValue, language);
+  disposables.push(
+    monaco.languages.registerFoldingRangeProvider(
+      { language, scheme: model.uri.scheme, pattern: model.uri.path },
+      foldingProvider
+    ),
+    foldingChanged
+  );
   editor = monaco.editor.create(host.value, {
     model,
     theme: "chen-app",
@@ -415,9 +477,9 @@ onMounted(() => {
     minimap: { enabled: false },
     fontFamily: getComputedStyle(host.value).getPropertyValue("--font-mono"),
     fontSize: 13,
-    lineNumbersMinChars: 3,
+    lineNumbersMinChars: 2,
     glyphMargin: true,
-    lineDecorationsWidth: 20,
+    lineDecorationsWidth: 14,
     renderLineHighlight: "all",
     padding: { top: 5, bottom: 5 },
     scrollBeyondLastLine: false,
@@ -442,8 +504,15 @@ onMounted(() => {
     pasteAs: { enabled: props.canPaste },
     contextmenu: props.canCopy && props.canPaste
   });
-  currentDecoration = editor.createDecorationsCollection();
-  disposables.push(editor.onDidScrollChange(updateRunMarkers), editor.onDidLayoutChange(updateRunMarkers));
+  const updateOverlays = () => {
+    updateRunMarkers();
+    updateStatementFrame();
+  };
+  disposables.push(
+    editor.onDidScrollChange(updateOverlays),
+    editor.onDidLayoutChange(updateOverlays),
+    editor.onDidChangeHiddenAreas(updateOverlays)
+  );
   void layoutWhenVisible();
   disposables.push(
     editor.onDidChangeModelContent(() => {
@@ -464,7 +533,7 @@ onMounted(() => {
   disposables.push(
     editor.addAction({
       id: "chen.run",
-      label: t("Chen.RunSelectedOrAll"),
+      label: t("Chen.RunSelectedOrCurrent"),
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
       run
     })
@@ -555,8 +624,11 @@ onMounted(() => {
               // matches outside the previous page and a new SQL context can appear.
               incomplete: true,
               suggestions: result.items.map((item, index) => ({
-                label: { label: item.label, description: item.detail },
-                insertText: completionInsertText(item, props.sqlKeywordCase),
+                label: {
+                  label: completionKeywordText(item.label, item.kind, props.sqlKeywordCase),
+                  description: item.detail
+                },
+                insertText: completionKeywordText(item.insert_text, item.kind, props.sqlKeywordCase),
                 kind: kinds[item.kind] || monaco.languages.CompletionItemKind.Text,
                 detail: item.detail,
                 documentation: item.documentation,
@@ -636,10 +708,8 @@ watch(
 watch(
   () => props.online,
   (value) => {
-    if (value === false) {
-      dismissCompletion();
-    }
-    invalidateAnalysis();
+    if (value === false) dismissCompletion();
+    else if (props.visible !== false) void analyzeDocument();
   }
 );
 watch(
@@ -654,6 +724,7 @@ watch(
 onBeforeUnmount(() => {
   unregisterClipboard?.();
   cancelAnimationFrame(layoutFrame);
+  cancelAnimationFrame(statementFrameRequest);
   completion?.abort();
   clearTimeout(analysisTimer);
   analysisController?.abort();
@@ -702,18 +773,35 @@ defineExpose({
 <template>
   <div class="relative h-full min-h-0 w-full">
     <div ref="host" class="chen-sql-editor h-full min-h-0 w-full" />
+    <div
+      v-if="statementFrame"
+      class="pointer-events-none absolute inset-y-0 right-0 overflow-hidden"
+      :style="{ left: `${statementFrame.gutter}px` }"
+      aria-hidden="true"
+    >
+      <div
+        class="chen-current-statement-frame absolute"
+        :style="{
+          left: `${statementFrame.left}px`,
+          top: `${statementFrame.top}px`,
+          width: `${statementFrame.width}px`,
+          height: `${statementFrame.height}px`
+        }"
+      />
+    </div>
     <button
       v-for="marker in runMarkers"
       :key="marker.from"
       type="button"
       class="chen-run-statement-button absolute z-10"
       :style="{ top: `${marker.top}px`, left: `${marker.left}px` }"
+      :disabled="online === false"
       :aria-label="`${t('Chen.RunStatement')} · ${marker.line}`"
       :title="t('Chen.RunStatement')"
       data-chen-run-statement
       @click="runMarker(marker)"
     >
-      <span aria-hidden="true">▶</span>
+      <UIcon name="i-lucide-play" class="size-3" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -724,17 +812,16 @@ defineExpose({
   width: 20px;
   height: 20px;
   margin-top: 1px;
-  cursor: pointer;
   place-items: center;
-  border: 0;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--theme-accent);
-  font-size: 10px;
-  line-height: 1;
 }
-.chen-run-statement-button:hover {
-  background: var(--app-hover-soft);
+.chen-run-statement-button:enabled {
+  cursor: pointer;
+}
+.chen-run-statement-button:enabled:hover {
+  background: var(--app-hover-strong);
 }
 .chen-run-statement-button:focus-visible {
   outline: 2px solid var(--theme-accent);
@@ -769,16 +856,17 @@ defineExpose({
   pointer-events: none;
 }
 
+.chen-sql-editor :deep(.monaco-editor .margin-view-overlays .codicon[class*="codicon-folding-"]) {
+  font-size: 12px;
+}
+
 .chen-sql-editor :deep(.monaco-editor .view-overlays .current-line),
 .chen-sql-editor :deep(.monaco-editor .margin-view-overlays .current-line-margin) {
   background-color: color-mix(in srgb, var(--app-hover-soft) 75%, transparent);
 }
 
-:deep(.chen-current-statement) {
-  background-color: var(--editor-selection-inactive);
-}
-:deep(.chen-current-statement-gutter) {
-  border-left: 2px solid var(--editor-cursor);
-  margin-left: 3px;
+.chen-current-statement-frame {
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--app-radius);
 }
 </style>

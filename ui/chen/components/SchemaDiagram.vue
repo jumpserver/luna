@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 
 const props = withDefaults(
   defineProps<{
@@ -383,8 +384,11 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
       <UButton
         v-if="searchable"
         size="xs"
-        color="neutral"
-        :variant="showRelated ? 'solid' : 'soft'"
+        :color="showRelated ? 'primary' : 'neutral'"
+        variant="ghost"
+        class="aria-pressed:bg-(--app-selected-soft)"
+        :class="showRelated ? undefined : workspaceButtonClass"
+        :aria-pressed="showRelated"
         icon="i-lucide-git-fork"
         :disabled="!selectedTable || !relatedTables.length"
         @click="toggleRelated"
@@ -395,7 +399,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         v-if="searchable"
         size="xs"
         :color="focusMode ? 'primary' : 'neutral'"
-        :variant="focusMode ? 'solid' : 'soft'"
+        variant="ghost"
+        class="aria-pressed:bg-(--app-selected-soft)"
+        :class="focusMode ? undefined : workspaceButtonClass"
+        :aria-pressed="focusMode"
         icon="i-lucide-focus"
         :disabled="!selectedTable"
         @click="toggleFocus"
@@ -408,6 +415,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         size="xs"
         color="neutral"
         variant="ghost"
+        :class="workspaceButtonClass"
         :aria-label="t('Chen.ClearDiagramSelection')"
         @click="clearSelection"
       />
@@ -419,6 +427,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :aria-label="t('Chen.ZoomOut')"
           @click="setScale(scale / 1.15)"
         />
@@ -428,6 +437,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :aria-label="t('Chen.ZoomIn')"
           @click="setScale(scale * 1.15)"
         />
@@ -436,7 +446,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           size="xs"
           color="neutral"
           variant="ghost"
+          :class="workspaceButtonClass"
           :aria-label="t('Chen.FitDiagram')"
+          :title="t('Chen.FitDiagram')"
           @click="fit"
         />
       </div>
@@ -566,6 +578,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               size="xs"
               color="neutral"
               variant="ghost"
+              :class="workspaceButtonClass"
               :aria-label="t('Chen.OpenNamedTable', { name: entity.name })"
               @click.stop="open(entity)"
             />

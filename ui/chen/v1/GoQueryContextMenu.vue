@@ -123,7 +123,7 @@ const items = computed<DropdownMenuItem[]>(() => {
             ? label(current)
             : t('Chen.Context')
       "
-      :ui="{ label: 'truncate' }"
+      :ui="{ label: 'text-dimmed' }"
     />
   </UDropdownMenu>
 </template>

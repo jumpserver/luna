@@ -5,6 +5,7 @@ import { useIntervalFn } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { editDirty } from "./dataEditing";
 import { downloadGoExport } from "./exportDownload";
 import { exportActive } from "./workspace";
@@ -138,6 +139,7 @@ useIntervalFn(() => {
     size="xs"
     color="neutral"
     variant="ghost"
+    :class="workspaceButtonClass"
     :disabled="!session.permissions.can_download || (!ready && !job)"
     :title="!ready ? unavailableMessage : job ? t('Chen.GoV1ExportTask') : t('Chen.ExportData')"
     @click="show"
