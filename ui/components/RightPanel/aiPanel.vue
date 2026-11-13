@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getActiveKokoFileAiTargetId, KOKO_GLOBAL_FILE_AI_OWNER_ID } from "#koko/composables/sftp/useFileAiSessions";
+import { localCodexSettings } from "~/composables/useLocalCodex";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import AiPanelFooter from "./ai/AiPanelFooter.vue";
 import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
@@ -78,7 +79,7 @@ const timelineEmptyState = computed(() =>
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <AiPresenceHeader
-      :assistant-name="presentation?.assistantName || t('RightPanel.LunaAiName')"
+      :assistant-name="localCodexSettings.enabled ? 'Codex' : presentation?.assistantName || t('RightPanel.LunaAiName')"
       :description="presentation?.headerDescription || ''"
       :status-label="presentation ? presenceStatusLabel : ''"
       :status-tone="presentation?.available ? presenceStatusTone : 'warning'"

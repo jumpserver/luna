@@ -69,6 +69,7 @@ function mountPanel() {
   };
   const services = {
     ...terminal,
+    localCodexSettings: Vue.shallowRef({ enabled: false }),
     terminalAiPanelDomain,
     resolveWorkspaceTerminalTarget,
     useWorkspaceAssistantRuntime: () => ({}),

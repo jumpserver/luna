@@ -1,8 +1,8 @@
 import { readonly, shallowRef } from "vue";
 
-const enabled = shallowRef(false);
-export const workspaceAiEnabled = readonly(enabled);
-
+const serverEnabled = shallowRef(false);
+export const serverWorkspaceAiEnabled = readonly(serverEnabled);
+export const workspaceAiEnabled = serverWorkspaceAiEnabled;
 export function setWorkspaceAiEnabled(value: boolean) {
-  enabled.value = value;
+  serverEnabled.value = value;
 }
