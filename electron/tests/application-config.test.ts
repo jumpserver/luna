@@ -222,14 +222,23 @@ for (const platform of ["macos", "linux", "windows"]) {
       oracle: "oracle",
       sqlserver: "mssql",
       dameng: "dm",
+      db2: "db2",
+      clickhouse: "clickhouse",
       mongodb: "mongodb",
       redis: "redis"
     };
     assert.deepEqual(new Set(dbx.protocol), new Set(Object.keys(types)));
-    assert.deepEqual(dbx.match_first, dbx.protocol);
+    assert.deepEqual(
+      dbx.match_first,
+      dbx.protocol.filter((protocol) => protocol !== "clickhouse")
+    );
     const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
     launcher.resolveExecutable = async (application) => application.path;
     for (const [protocol, type] of Object.entries(types)) {
+      if (protocol === "clickhouse") {
+        await service.updateSelection({ category: "databases", protocol, name: "dbx", path: process.execPath });
+        await service.updateSelection({ category: "databases", protocol, name: "dbx", makeDefault: true });
+      }
       const payload = {
         protocol,
         name: "测试 DBX &连接",
@@ -257,6 +266,8 @@ for (const platform of ["macos", "linux", "windows"]) {
           password: payload.token.value,
           database: protocol === "oracle" ? payload.token.id : payload.asset.info.db_name,
           one_time: "true",
+          ...(["db2", "clickhouse"].includes(protocol) ? { ssl: "false" } : {}),
+          ...(protocol === "db2" ? { url_params: "securityMechanism=3;sslConnection=false;" } : {}),
           ...(protocol === "mongodb" ? { url_params: "authSource=admin&loadBalanced=true&retryWrites=false" } : {})
         });
         launches++;
@@ -302,15 +313,15 @@ for (const platform of ["macos", "linux", "windows"]) {
     service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
     await service.initialize();
     const config = await service.getConfig();
-    assert.ok(!config.databases.find((item) => item.name === "dbx").protocol.includes("clickhouse"));
+    assert.ok(config.databases.find((item) => item.name === "dbx").protocol.includes("clickhouse"));
     for (const protocol of ["db2", "clickhouse"]) {
       await service.updateSelection({
         category: "databases",
         protocol,
         name: "dbeaver",
-        path: process.execPath,
-        makeDefault: true
+        path: process.execPath
       });
+      await service.updateSelection({ category: "databases", protocol, name: "dbeaver", makeDefault: true });
       const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
       const payload = {
         protocol,
@@ -327,7 +338,7 @@ for (const platform of ["macos", "linux", "windows"]) {
             protocol === "db2" ? "db2" : "jumpserver-clickhouse-native"
           }|user=selector-token|password= secret ' &+=中文 |database=ANALYTICS` +
           `|host=gateway.example.com|port=15525|save=false|connect=true${
-            protocol === "db2" ? "|prop.securityMechanism=3" : ""
+            protocol === "db2" ? "|prop.securityMechanism=3|prop.sslConnection=false" : ""
           }`;
         if (protocol === "db2") assert.deepEqual(args, ["-con", expected]);
         else {
@@ -350,7 +361,7 @@ for (const platform of ["macos", "linux", "windows"]) {
     }
   });
 
-  test(`${platform} migrates only the incompatible built-in ClickHouse association`, async (context) => {
+  test(`${platform} preserves explicit ClickHouse client choices`, async (context) => {
     const appData = await mkdtemp(path.join(os.tmpdir(), "jms-native-upgrade-"));
     context.after(() => rm(appData, { recursive: true, force: true }));
     const service = new ApplicationConfigService({ getPath: () => appData }, projectRoot);
@@ -365,7 +376,7 @@ for (const platform of ["macos", "linux", "windows"]) {
       };
       await service.saveState(preferences);
       const state = await service.loadState();
-      const expected = selected === `${platform}.dbx` ? `${platform}.dbeaver` : selected;
+      const expected = selected;
       assert.equal(state.selections["databases:clickhouse"], expected);
       assert.deepEqual(state.enabled_selections["databases:clickhouse"], expected ? [expected] : []);
       assert.equal(state.selections["databases:mysql"], `${platform}.dbx`);

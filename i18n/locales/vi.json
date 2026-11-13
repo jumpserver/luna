@@ -1270,7 +1270,7 @@
   },
   "ConnectionGuide": {
     "DB2NativeHelp": "DB2 sử dụng JCC securityMechanism=3 (USRIDPWD). Lệnh CLI yêu cầu usql có trình điều khiển DB2. Tắt SSL giữa máy khách và Magnus; sử dụng mạng tin cậy hoặc đường hầm bảo mật.",
-    "ClickHouseNativeHelp": "Sử dụng ClickHouse Native TCP, không dùng trình điều khiển JDBC HTTP/HTTPS. DBeaver dùng không gian làm việc riêng và tải trình điều khiển JDBC lần đầu, không thay đổi trình điều khiển hoặc kết nối hiện có. Chưa hỗ trợ TLS giữa máy khách và Magnus.",
+    "ClickHouseNativeHelp": "DBX dùng HTTP (cổng máy chủ thường là 8123); DBeaver Native và clickhouse-client dùng Native TCP (9000). Chọn tài sản có cổng phù hợp và kết nối tới cổng Magnus khi tắt SSL.",
     "ClientTransport": "Máy khách → Magnus",
     "DatabaseTransport": "Cấu hình TLS phía cơ sở dữ liệu",
     "TLSUnknown": "Không lấy được cấu hình",

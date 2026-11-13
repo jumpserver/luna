@@ -1270,7 +1270,7 @@
   },
   "ConnectionGuide": {
     "DB2NativeHelp": "DB2는 JCC securityMechanism=3 (USRIDPWD)을 사용합니다. CLI에는 DB2 드라이버가 포함된 usql이 필요합니다. 클라이언트와 Magnus 간 SSL을 끄고 신뢰할 수 있는 네트워크나 보안 터널을 사용하세요.",
-    "ClickHouseNativeHelp": "HTTP/HTTPS JDBC 드라이버 대신 ClickHouse Native TCP를 사용하세요. DBeaver는 별도 작업 공간을 사용하며 최초 실행 시 JDBC 드라이버를 다운로드합니다. 기존 드라이버와 연결은 변경하지 않습니다. 클라이언트와 Magnus 간 TLS는 지원하지 않습니다.",
+    "ClickHouseNativeHelp": "DBX는 HTTP(보통 자산 백엔드 포트 8123)를, DBeaver Native와 clickhouse-client는 Native TCP(보통 9000)를 사용합니다. 해당 포트로 설정된 자산을 선택하고 SSL을 끈 상태로 Magnus 포트에 연결하세요.",
     "ClientTransport": "클라이언트 → Magnus",
     "DatabaseTransport": "백엔드 TLS 설정",
     "TLSUnknown": "설정을 가져올 수 없음",

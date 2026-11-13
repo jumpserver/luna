@@ -1270,7 +1270,7 @@
   },
   "ConnectionGuide": {
     "DB2NativeHelp": "DB2 使用 JCC securityMechanism=3（USRIDPWD）；命令行需使用包含 DB2 驱动的 usql。客户端到 Magnus 不启用 SSL，请使用可信网络或安全隧道。",
-    "ClickHouseNativeHelp": "请使用 ClickHouse Native TCP，不要使用 HTTP/HTTPS JDBC 驱动。DBeaver 使用独立的 Native 工作区，首次使用需下载 JDBC 驱动，不修改原有驱动和连接。客户端到 Magnus 暂不支持 TLS。",
+    "ClickHouseNativeHelp": "DBX 使用 HTTP（资产后端端口通常为 8123）；DBeaver Native 和 clickhouse-client 使用 Native TCP（通常为 9000）。请选择配置了对应后端端口的资产。客户端连接 Magnus 端口，不启用 SSL。",
     "ClientTransport": "客户端 → Magnus",
     "DatabaseTransport": "后端 TLS 配置",
     "TLSUnknown": "未获取到配置",

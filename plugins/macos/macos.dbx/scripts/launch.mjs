@@ -12,5 +12,10 @@ export default function (context) {
     one_time: "true"
   });
   if (context.protocol === "mongodb") query.set("url_params", "authSource=admin&loadBalanced=true&retryWrites=false");
+  if (context.protocol === "db2") {
+    query.set("ssl", "false");
+    query.set("url_params", "securityMechanism=3;sslConnection=false;");
+  }
+  if (context.protocol === "clickhouse") query.set("ssl", "false");
   return { type: "args", args: [`dbx://connection/new?${query}`] };
 }

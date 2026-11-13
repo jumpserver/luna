@@ -215,21 +215,6 @@ export class ApplicationConfigService {
       // Missing preferences use platform defaults, including before the first login.
       // Explicitly cleared selections and disabled plugins remain user choices.
       const merged = { ...defaults, ...state, selections: { ...defaults.selections, ...state.selections } };
-      // DBX's ClickHouse driver uses HTTP, but Magnus accepts only Native TCP.
-      // Migrate only the old built-in association; retain custom/cleared selections and paths.
-      const key = "databases:clickhouse";
-      const native = defaults.selections?.[key];
-      if (native?.endsWith(".dbeaver") && merged.selections[key] === native.replace(/\.dbeaver$/, ".dbx")) {
-        const previous = merged.selections[key];
-        merged.selections[key] = native;
-        const enabled = state.enabled_selections?.[key];
-        if (Array.isArray(enabled)) {
-          merged.enabled_selections = {
-            ...state.enabled_selections,
-            [key]: enabled.map((id) => (id === previous ? native : id))
-          };
-        }
-      }
       return merged;
     }
     await writeJson(this.statePath, defaults);
