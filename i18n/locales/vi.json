@@ -1331,6 +1331,7 @@
     "ExpiresAt": "Ngày hết hạn",
     "CurrentAccount": "Tài khoản hiện tại",
     "SiteManagement": "Quản lý trang web",
+    "SiteAccountCountHint": "Số trang web / Số tài khoản",
     "SiteAccounts": "Tài khoản trang web",
     "SiteAccountsDescription": "Trang web đang sử dụng và các trang JumpServer đã đăng nhập trên ứng dụng khách này",
     "Current": "Hiện tại",

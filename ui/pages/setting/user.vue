@@ -3,6 +3,7 @@ import type { SiteUserData } from "~/store/modules/userInfo";
 import type { LabeledValue, UserData, UserProfile } from "~/types";
 import { useLocalStorage } from "@vueuse/core";
 import { getUserProfile } from "~/composables/useApiRequest";
+import { useClientAccountHandoff } from "~/composables/useClientAccountHandoff";
 import { useClientLockState, useClientSessionReady } from "~/composables/useClientLockState";
 import { confirmLeaveCurrentSiteSessions, useSiteAccountSwitch } from "~/composables/useSiteAccountSwitch";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -20,6 +21,7 @@ const { closeSettings } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
 const { switchAccount: switchSiteAccount, switchingAccountId } = useSiteAccountSwitch();
 const { loggedIn, currentAccountId, currentUser, userMap, isLoggingOut } = storeToRefs(userInfoStore);
+const { active: accountHandoffActive } = useClientAccountHandoff();
 const clientLockState = useClientLockState();
 const canLoadProfile = useClientSessionReady(() => currentAccountId.value);
 const profile = ref<UserProfile | null>(null);
@@ -27,6 +29,7 @@ const loading = ref(false);
 const clientLoginReady = ref(false);
 const pageLoading = computed(
   () =>
+    accountHandoffActive.value ||
     loading.value ||
     Boolean(switchingAccountId.value) ||
     (!loggedIn.value && isLoggingOut.value) ||
@@ -401,18 +404,20 @@ watch(
                   }}
                 </h3>
                 <div class="flex min-w-0 flex-1 items-center gap-2">
-                  <UBadge color="neutral" variant="subtle" size="sm" class="min-w-0 text-xs font-normal text-muted">
-                    <SiteCertificateAddress :site="activeSite?.address || currentUser?.site || ''" />
-                  </UBadge>
-                  <UBadge
+                  <UTooltip
                     v-if="isDesktopRuntime() && activeSite?.name"
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                    class="min-w-0 max-w-[40%] shrink-0 text-xs font-normal text-muted"
+                    :text="activeSite.address"
+                    :content="{ side: 'top', align: 'center' }"
                   >
-                    <span class="truncate">{{ activeSite.name }}</span>
-                  </UBadge>
+                    <UBadge
+                      color="neutral"
+                      variant="subtle"
+                      size="sm"
+                      class="min-w-0 max-w-full text-xs font-normal text-muted"
+                    >
+                      <span class="truncate">{{ activeSite.name }}</span>
+                    </UBadge>
+                  </UTooltip>
                 </div>
               </div>
               <UTooltip v-if="isDesktopRuntime()" :text="t('UserProfile.LogoutAccount')">
@@ -444,6 +449,11 @@ watch(
               @click="sitesExpanded = !sitesExpanded"
             >
               {{ t("UserProfile.SiteManagement") }}
+              <UTooltip :text="t('UserProfile.SiteAccountCountHint')" :content="{ side: 'top', align: 'center' }">
+                <span :aria-label="t('UserProfile.SiteAccountCountHint')">
+                  ({{ sites.length }}/{{ Object.keys(userMap).length }})
+                </span>
+              </UTooltip>
               <UIcon
                 name="i-lucide-chevron-right"
                 class="size-3.5 transition-transform"
@@ -486,52 +496,58 @@ watch(
                   @click="editSite(site.address)"
                 />
               </div>
-              <div class="divide-y divide-[var(--app-border)] pr-4 pl-10.5">
+              <div class="@container/accounts divide-y divide-[var(--app-border)] pr-4 pl-10.5">
                 <div
                   v-for="[accountId, account] in site.accounts"
                   :key="accountId"
-                  class="flex min-h-10 items-center gap-3 py-2 text-muted"
+                  class="grid min-h-10 grid-cols-[minmax(0,40%)_minmax(0,1fr)] items-center gap-3 py-2 text-muted @min-[28rem]/accounts:grid-cols-[minmax(0,40%)_minmax(0,1fr)_auto]"
                 >
-                  <UIcon
-                    name="i-lucide-circle-user-round"
-                    class="size-3.5 shrink-0 text-highlighted"
-                    aria-hidden="true"
-                  />
-                  <div class="min-w-0 flex-1">
-                    <div class="flex min-w-0 items-center gap-2">
-                      <p class="truncate text-sm font-medium text-highlighted" :title="accountLabel(account)">
-                        {{ accountLabel(account) }}
-                      </p>
-                      <UTooltip
-                        v-if="accountId === currentAccountId && loggedIn"
-                        :text="t('UserProfile.CurrentActiveUser')"
-                      >
-                        <UBadge
-                          color="warning"
-                          variant="subtle"
-                          size="sm"
-                          :aria-label="t('UserProfile.CurrentActiveUser')"
-                          class="shrink-0 whitespace-nowrap"
-                        >
-                          {{ t("UserProfile.CurrentActive") }}
-                        </UBadge>
-                      </UTooltip>
-                      <UTooltip
-                        v-if="!account.sessionExpired && clientLockState?.accountLocks?.[accountId]"
-                        :text="t('UserProfile.Locked')"
-                      >
-                        <UIcon
-                          name="i-lucide-lock"
-                          class="size-3.5 shrink-0 text-warning"
-                          :aria-label="t('UserProfile.Locked')"
-                        />
-                      </UTooltip>
-                    </div>
-                    <p v-if="account.sessionExpired" class="text-xs text-warning">
-                      {{ t("Login.SessionExpired") }}
+                  <div class="flex min-w-0 items-center gap-3">
+                    <UIcon
+                      name="i-lucide-circle-user-round"
+                      class="size-3.5 shrink-0 text-highlighted"
+                      aria-hidden="true"
+                    />
+                    <p class="truncate text-sm font-medium text-highlighted" :title="accountLabel(account)">
+                      {{ accountLabel(account) }}
                     </p>
                   </div>
-                  <div class="flex shrink-0 items-center gap-2">
+                  <div
+                    class="flex min-w-0 cursor-default flex-wrap items-center gap-2"
+                    @pointerdown.prevent
+                    @click.stop
+                  >
+                    <UTooltip v-if="account.sessionExpired" :text="t('Login.SessionExpired')">
+                      <UIcon
+                        name="i-lucide-circle-x"
+                        class="size-3.5 shrink-0 text-error"
+                        :aria-label="t('Login.SessionExpired')"
+                      />
+                    </UTooltip>
+                    <UTooltip
+                      v-if="accountId === currentAccountId && loggedIn"
+                      :text="t('UserProfile.CurrentActiveUser')"
+                    >
+                      <UIcon
+                        name="i-lucide-circle-check"
+                        class="size-3.5 shrink-0 text-(--theme-accent)"
+                        :aria-label="t('UserProfile.CurrentActiveUser')"
+                      />
+                    </UTooltip>
+                    <UTooltip
+                      v-if="!account.sessionExpired && clientLockState?.accountLocks?.[accountId]"
+                      :text="t('UserProfile.Locked')"
+                    >
+                      <UIcon
+                        name="i-lucide-lock"
+                        class="size-3.5 shrink-0 text-warning"
+                        :aria-label="t('UserProfile.Locked')"
+                      />
+                    </UTooltip>
+                  </div>
+                  <div
+                    class="col-span-2 flex shrink-0 items-center justify-self-end gap-2 @min-[28rem]/accounts:col-span-1"
+                  >
                     <UTooltip
                       v-if="accountId !== currentAccountId || !loggedIn"
                       :text="t('UserProfile.SwitchToThisUser')"

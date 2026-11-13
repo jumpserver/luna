@@ -13,7 +13,9 @@ import type {
 } from "~/types";
 import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import { ApiRequestError, getUserPermissions, getWebSessionProfile } from "~/composables/useApiRequest";
+import { useClientAccountHandoff } from "~/composables/useClientAccountHandoff";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { useClientLockState } from "~/composables/useClientLockState";
 import {
   closeCurrentSiteWorkspace,
   confirmLeaveCurrentSiteSessions,
@@ -101,13 +103,15 @@ export const useAuthSession = () => {
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
-  const expiredSessionNotice = useState<string | null>("client-expired-session-notice", () => null);
+  const { notice: expiredSessionNotice, handoff: expiredSessionHandoff } = useClientAccountHandoff();
   const lockLogoutPending = useState("client-lock-logout-pending", () => false);
   const lockLogoutRecovery = useState<string | null>("client-lock-logout-recovery", () => null);
+  const clientLock = useClientLockState();
   const settingsOpen = useState("settings-open", () => false);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
   const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
   const authReady = useState("auth-bootstrap-ready", () => false);
+  let expiredWorkspaceCleanup = Promise.resolve();
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -567,48 +571,66 @@ export const useAuthSession = () => {
     return bootstrapPromise;
   }
 
-  const handleDesktopAuthExpired = async (sessionId: string, reason?: string, session?: ClientLoginSession) => {
-    if (!sessionId) return false;
-    const lockLogout = reason === "lock_logout";
-    const logout = lockLogout || reason === "logout";
-    const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
-    if (userInfoStore.markSessionExpired(sessionId, lockLogout ? "logout" : reason, session) === false) return false;
+  const removeExpiredAccount = async (sessionId: string, kind: "logout" | "lock_logout" | "expired") => {
     const account = userMap.value[sessionId];
+    if (!account?.sessionExpired) return;
     const wasCurrent = sessionId === currentAccountId.value;
+    const lockLogout = kind === "lock_logout";
     if (lockLogout && wasCurrent) {
       lockLogoutPending.value = true;
       lockLogoutRecovery.value = null;
       settingsOpen.value = false;
     }
     try {
-      if (wasCurrent) {
-        if (!alreadyExpired && !logout && reason !== "app_exit") expiredSessionNotice.value = sessionId;
-        userInfoStore.setUserLoggedIn(false);
-        useEventBus().emit("clearAssets", undefined);
-        // Expiry ends live connections immediately, independently of the dismissible notice.
-        await closeCurrentSiteWorkspace();
-      }
-      if (logout && userMap.value[sessionId] === account) {
-        if (expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
-        await userInfoStore.deleteUserData(sessionId, {
-          alreadyLoggedOut: true,
-          ...(lockLogout ? { removeExpiredAccounts: true } : {})
-        });
-        if (wasCurrent && (lockLogout || !userInfoStore.loggedIn)) await navigateTo(localePath({ path: "/" }));
-      }
-      return wasCurrent;
+      if (wasCurrent) await expiredWorkspaceCleanup;
+      // A late confirmation must not remove a newer login of this account.
+      if (userMap.value[sessionId] !== account || !account.sessionExpired) return;
+      if (kind !== "expired" && expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
+      await userInfoStore.deleteUserData(sessionId, {
+        alreadyLoggedOut: true,
+        ...(kind !== "logout" ? { removeExpiredAccounts: true } : {})
+      });
+      if (wasCurrent && (lockLogout || (kind === "logout" && !userInfoStore.loggedIn)))
+        await navigateTo(localePath({ path: "/" }));
     } finally {
       if (lockLogout && wasCurrent) {
         lockLogoutRecovery.value =
-          !userInfoStore.loggedIn && !currentAccountId.value && Object.keys(userMap.value).length
-            ? account?.site || ""
-            : null;
+          !userInfoStore.loggedIn && !currentAccountId.value && Object.keys(userMap.value).length ? account.site : null;
         lockLogoutPending.value = false;
       }
     }
   };
 
+  const handleDesktopAuthExpired = async (
+    sessionId: string,
+    reason?: string,
+    session?: ClientLoginSession,
+    locked?: boolean
+  ) => {
+    if (!sessionId) return false;
+    const lockLogout = reason === "lock_logout";
+    const logout = lockLogout || reason === "logout";
+    const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
+    if (userInfoStore.markSessionExpired(sessionId, lockLogout ? "logout" : reason, session) === false) return false;
+    const wasCurrent = sessionId === currentAccountId.value;
+    const wasLocked =
+      locked ?? (clientLock.value?.sessionId === sessionId && (clientLock.value.locked || clientLock.value.expired));
+    if (wasCurrent) {
+      // A locked account already has an expiry/exit screen; do not leave a second notice behind it.
+      if (!alreadyExpired && !logout && !wasLocked && reason !== "app_exit") expiredSessionNotice.value = sessionId;
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      // End live connections immediately, and finish cleanup before activating the replacement.
+      expiredWorkspaceCleanup = closeCurrentSiteWorkspace();
+    }
+    if (logout) await removeExpiredAccount(sessionId, lockLogout ? "lock_logout" : "logout");
+    else if (wasCurrent) await expiredWorkspaceCleanup;
+    return wasCurrent;
+  };
+
   const expiredSessionDescription = computed(() => {
+    if (expiredSessionHandoff.value)
+      return t(expiredSessionHandoff.value.status === "pending" ? "ScreenLock.Checking" : "ClientLock.HandoffFailed");
     const account = expiredSessionNotice.value ? userMap.value[expiredSessionNotice.value] : undefined;
     if (!account) return "";
     const message = clientLoginExpiryMessage(
@@ -619,11 +641,35 @@ export const useAuthSession = () => {
     );
     return message ? t(message.key, message.params) : "";
   });
-  const dismissExpiredSessionNotice = async (login = false) => {
+  const dismissExpiredSessionNotice = async (confirm = false) => {
+    if (expiredSessionHandoff.value?.status === "pending") return;
     const accountId = expiredSessionNotice.value;
-    expiredSessionNotice.value = null;
-    if (login && accountId === currentAccountId.value && userMap.value[accountId]?.sessionExpired) {
-      await promptDesktopLogin();
+    const account = accountId ? userMap.value[accountId] : undefined;
+    const removingCurrent = accountId === currentAccountId.value && account?.sessionExpired;
+    if (!confirm || (!removingCurrent && !expiredSessionHandoff.value)) {
+      expiredSessionNotice.value = null;
+      return;
+    }
+    const site = expiredSessionHandoff.value?.site ?? account!.site;
+    expiredSessionHandoff.value = { site, status: "pending" };
+    try {
+      // Keep the current page and use the expiry notice for progress/retry.
+      // The lock shield is reserved for accounts that are actually locked.
+      if (removingCurrent && accountId) await removeExpiredAccount(accountId, "expired");
+      else await userInfoStore.selectNextAccount(site, { removeExpiredAccounts: true });
+    } catch (error) {
+      console.warn("expired account handoff deferred", error);
+    } finally {
+      if (!userInfoStore.loggedIn && Object.keys(userMap.value).length) {
+        expiredSessionHandoff.value = { site, status: "retry" };
+      } else {
+        if (!userInfoStore.loggedIn) {
+          settingsOpen.value = false;
+          await navigateTo(localePath({ path: "/" }));
+        }
+        expiredSessionNotice.value = null;
+        expiredSessionHandoff.value = null;
+      }
     }
   };
 
@@ -662,6 +708,7 @@ export const useAuthSession = () => {
     authReady,
     bootstrapPersistedSession,
     expiredSessionNotice,
+    expiredSessionHandoff,
     expiredSessionDescription,
     dismissExpiredSessionNotice,
     handleDesktopAuthExpired,

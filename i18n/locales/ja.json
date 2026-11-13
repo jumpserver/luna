@@ -1331,6 +1331,7 @@
     "ExpiresAt": "有効期限",
     "CurrentAccount": "現在のアカウント",
     "SiteManagement": "サイト管理",
+    "SiteAccountCountHint": "サイト数 / アカウント数",
     "SiteAccounts": "サイトアカウント",
     "SiteAccountsDescription": "現在アクティブなサイトと、このクライアントでログインしている JumpServer サイト",
     "Current": "現在",

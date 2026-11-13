@@ -1331,6 +1331,7 @@
     "ExpiresAt": "Expiration date",
     "CurrentAccount": "Current account",
     "SiteManagement": "Site management",
+    "SiteAccountCountHint": "Site count / Account count",
     "SiteAccounts": "Site accounts",
     "SiteAccountsDescription": "The currently active site and JumpServer sites signed in on this client",
     "Current": "Current",

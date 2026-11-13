@@ -149,7 +149,11 @@ test("shared invalid refresh emits one account-scoped expiration event", async (
   assert.equal(events.length, 2);
   assert.equal(events[1][0], "client-lock-changed");
   assert.equal(events[0][0], "auth-session-expired");
-  assert.deepEqual(JSON.parse(JSON.stringify(events[0][1])), { sessionId: "account", reason: "absolute_timeout" });
+  assert.deepEqual(JSON.parse(JSON.stringify(events[0][1])), {
+    sessionId: "account",
+    reason: "absolute_timeout",
+    locked: false
+  });
   assert.equal(events[0][2], "main");
   assert.equal(auth.refreshingTokens.size, 0);
 });

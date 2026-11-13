@@ -1331,6 +1331,7 @@
     "ExpiresAt": "失效日期",
     "CurrentAccount": "当前账户",
     "SiteManagement": "站点管理",
+    "SiteAccountCountHint": "站点数 / 账号数",
     "SiteAccounts": "站点账户",
     "SiteAccountsDescription": "当前激活的站点，以及客户端中已登录的 JumpServer 站点",
     "Current": "当前",

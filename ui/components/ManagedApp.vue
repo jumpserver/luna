@@ -35,7 +35,7 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 const route = useRoute();
 const authSession = useAuthSession();
 const expiredSessionNoticeOpen = computed({
-  get: () => authSession.expiredSessionNotice.value !== null,
+  get: () => authSession.expiredSessionNotice.value !== null || authSession.expiredSessionHandoff.value !== null,
   set: (open) => {
     if (!open) void authSession.dismissExpiredSessionNotice();
   }
@@ -385,8 +385,14 @@ onMounted(async () => {
         sessionId?: string;
         reason?: string;
         session?: import("~/types/index").ClientLoginSession;
+        locked?: boolean;
       }>("auth-session-expired", ({ payload }) => {
-        void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""), payload?.reason, payload?.session);
+        void authSession.handleDesktopAuthExpired(
+          String(payload?.sessionId || ""),
+          payload?.reason,
+          payload?.session,
+          payload?.locked
+        );
       });
     } catch (err) {
       console.error("listen auth-session-expired failed", err);
@@ -500,11 +506,18 @@ onBeforeUnmount(() => {
           :title="t('Login.SessionExpired')"
           :description="authSession.expiredSessionDescription.value"
           :dismissible="false"
+          :close="false"
           :ui="{ content: 'max-w-md', footer: 'justify-end' }"
         >
           <template #footer>
-            <UButton color="primary" @click="authSession.dismissExpiredSessionNotice(true)">
-              {{ t("Common.Confirm") }}
+            <UButton
+              color="primary"
+              :loading="authSession.expiredSessionHandoff.value?.status === 'pending'"
+              @click="authSession.dismissExpiredSessionNotice(true)"
+            >
+              {{
+                t(authSession.expiredSessionHandoff.value?.status === "retry" ? "UserProfile.Retry" : "Common.Confirm")
+              }}
             </UButton>
           </template>
         </UModal>
