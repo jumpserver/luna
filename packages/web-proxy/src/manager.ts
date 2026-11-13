@@ -28,6 +28,7 @@ interface ManagerOptions {
   direct?: boolean;
   allowManualNavigation?: boolean;
   createSession?: () => Promise<any>;
+  startRecording?: (options: any) => Promise<any>;
 }
 export function createWebProxyManager({
   emit: emitDesktopEvent,
@@ -36,7 +37,8 @@ export function createWebProxyManager({
   requireRecording = false,
   direct = false,
   allowManualNavigation = false,
-  createSession
+  createSession,
+  startRecording = WebProxyRecording.start
 }: ManagerOptions) {
   const webProxyViews = new Map();
   const lockedHosts = new Set<number>();
@@ -777,7 +779,7 @@ export function createWebProxyManager({
           finishWebProxyAutofill(managed, "unavailable", "WebProxy.AssetAutofillDisabled");
         }
         if (requireRecording) {
-          managed.recording = await WebProxyRecording.start({
+          managed.recording = await startRecording({
             label,
             sessionId: session.sessionId,
             targetUrl: target.toString(),
@@ -785,10 +787,20 @@ export function createWebProxyManager({
             proxyAuth: managed.proxyAuth,
             width: view.getBounds().width,
             height: view.getBounds().height,
+            webContents: view.webContents,
+            getPauseReasons: () => [
+              ...(!managed.active ? ["inactive"] : []),
+              ...(managed.autofillVisibilityBlocked ? ["autofill"] : [])
+            ],
             capture: () => captureWebProxyFrame(managed),
             emit: (state) => emitWebProxyRecordingState(managed, state)
           });
           managed.recording.setPaused("inactive", !managed.active, "WebProxy.AwaitingWindow");
+          managed.recording.setPaused(
+            "autofill",
+            managed.autofillVisibilityBlocked,
+            "WebProxy.RecordingPausedForAutofill"
+          );
           if (managed.autofillFailure || view.webContents.isDestroyed() || webProxyViews.get(label) !== managed) {
             managed.recording.setPaused("closed", true, "WebProxy.SessionEnded");
             await managed.recording.finish();
@@ -946,7 +958,7 @@ export function createWebProxyManager({
             "WebProxy.WebRecordingReady"
           );
         }
-        const recording = await WebProxyRecording.start({
+        const recording = await startRecording({
           label: managed.label,
           sessionId: webSession.sessionId,
           targetUrl: target.toString(),
@@ -954,6 +966,11 @@ export function createWebProxyManager({
           proxyAuth: managed.proxyAuth,
           width: Math.round(Number(args.width)),
           height: Math.round(Number(args.height)),
+          webContents: managed.view.webContents,
+          getPauseReasons: () => [
+            ...(!managed.active ? ["inactive"] : []),
+            ...(managed.autofillVisibilityBlocked ? ["autofill"] : [])
+          ],
           capture: () => captureWebProxyFrame(managed),
           emit: (state) => emitWebProxyRecordingState(managed, state)
         });
@@ -967,12 +984,13 @@ export function createWebProxyManager({
           return;
         }
         managed.recording = recording;
-        if (!managed.active) {
-          managed.recording.setPaused("inactive", true, "WebProxy.TabBackgroundPauseRecording");
-        }
-        if (managed.autofillPreviewFrozen && managed.autofillVisibilityBlocked) {
-          managed.recording.setPaused("autofill", true, "WebProxy.RecordingPausedForAutofill");
-        }
+        // Login may have completed while the native video encoder was starting.
+        managed.recording.setPaused("inactive", !managed.active, "WebProxy.TabBackgroundPauseRecording");
+        managed.recording.setPaused(
+          "autofill",
+          managed.autofillVisibilityBlocked,
+          "WebProxy.RecordingPausedForAutofill"
+        );
         electronLog.info(`web proxy recording start ${managed.label}`);
         return managed.recording.state(
           managed.recording.pauseReasons.size ? "paused" : "recording",

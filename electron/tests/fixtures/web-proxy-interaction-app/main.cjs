@@ -5,6 +5,11 @@ app.on("window-all-closed", () => {});
 app.whenReady().then(async () => {
   try {
     const { tsImport } = await import("tsx/esm/api");
+    if (process.argv.includes("recording")) {
+      const { runRecordingChecks } = await tsImport("../../web-recording-check.ts", pathToFileURL(__filename).href);
+      await runRecordingChecks();
+      return app.exit(0);
+    }
     const { runProxyAuthChecks } = await tsImport("../../web-proxy-auth-check.ts", pathToFileURL(__filename).href);
     await runProxyAuthChecks();
     if (process.argv.includes("auth")) return app.exit(0);

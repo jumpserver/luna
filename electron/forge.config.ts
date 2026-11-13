@@ -259,6 +259,11 @@ const config: ForgeConfig = {
           entry: path.join(electronRoot, "src", "preload.ts"),
           config: path.join(electronRoot, "vite.preload.config.ts"),
           target: "preload"
+        },
+        {
+          entry: path.join(electronRoot, "src", "replay", "web-recording-preload.ts"),
+          config: path.join(electronRoot, "vite.preload.config.ts"),
+          target: "preload"
         }
       ],
       renderer: []
