@@ -11,6 +11,7 @@ import {
   validateCodexSettings
 } from "../src/codex/service";
 import { DEFAULT_CODEX_SETTINGS } from "../../ui/shared/codex/types";
+import type { CodexSessionRequest } from "../../ui/shared/codex/types";
 import { MCP_FINAL_RESULT_META_KEY } from "../../ui/koko/composables/agent/types";
 import type { AgentEvent, AgentMcpManifest } from "../../ui/koko/composables/agent/types";
 
@@ -110,10 +111,15 @@ async function runtime(t: test.TestContext, assertEnabled?: () => Promise<void>)
       { name: "navigate_workspace", inputSchema: { type: "object" }, annotations: { readOnlyHint: false } }
     ]
   };
-  const create = async (owner = 1, profile: AgentMcpManifest["profile"] = "workspace", tools = manifest.tools) => {
+  const create = async (
+    owner = 1,
+    profile: AgentMcpManifest["profile"] = "workspace",
+    tools = manifest.tools,
+    approvalMode: CodexSessionRequest["approvalMode"] = "auto"
+  ) => {
     const created = await service.create(owner, "org-a", {
       manifest: { ...manifest, profile, tools, resourceSessionId: `${profile}-${owner}-${thread}` },
-      approvalMode: "auto"
+      approvalMode
     });
     return {
       sessionId: created.session_id,
@@ -454,7 +460,68 @@ test("native threads reuse one process and round-trip only registered workspace 
   assert.equal(active.at(-1)!.event.type, "run.started");
 });
 
-test("write approval is bound to the owning window and cannot be disabled", async (t) => {
+for (const [mode, forwarded] of [
+  ["auto", ["read_context"]],
+  ["always", []],
+  ["never", ["read_context", "write_file", "delete_file", "database_schema", "inspect_schema", "unannotated_tool"]]
+] as const) {
+  test(`${mode} mode applies the selected assistant approval policy`, async (t) => {
+    const r = await runtime(t);
+    const tools = [
+      { name: "read_context", annotations: { readOnlyHint: true } },
+      { name: "write_file", annotations: { readOnlyHint: false } },
+      { name: "delete_file", annotations: { readOnlyHint: true, destructiveHint: true } },
+      { name: "database_schema", annotations: { readOnlyHint: true } },
+      { name: "inspect_schema", annotations: { readOnlyHint: true } },
+      { name: "unannotated_tool" }
+    ].map((tool) => ({ ...tool, inputSchema: { type: "object" } }));
+    const session = await r.create(1, "terminal", tools, mode);
+    await r.send(session);
+    for (const tool of tools) r.call(session.threadId, tool.name, tool.name);
+    assert.deepEqual(
+      r.events.filter(({ event }) => event.type === "tool.call").map(({ event }) => event.payload!.tool_name),
+      forwarded
+    );
+    assert.equal(
+      r.events.filter(({ event }) => event.type === "approval.requested").length,
+      tools.length - forwarded.length
+    );
+  });
+}
+
+test("never mode preserves connector errors and can switch back to approval", async (t) => {
+  const r = await runtime(t);
+  const session = await r.create(1, "terminal", [
+    { name: "execute_command", inputSchema: { type: "object" }, annotations: { readOnlyHint: false } }
+  ]);
+  r.service.mode(1, "org-a", { ...session, mode: "never" });
+  const run = await r.send(session);
+  r.call(session.threadId, "execute_command", "command", { command: "id" });
+  const call = r.events.find(({ event }) => event.type === "tool.call")!.event;
+  const error = { code: -32000, message: "command rejected by ACL" };
+  await r.service.result(1, "org-a", {
+    ...session,
+    toolCallId: call.tool_call_id,
+    result: {
+      jsonrpc: "2.0",
+      id: call.tool_call_id!,
+      run_id: run.run_id,
+      seq: 0,
+      done: true,
+      status: "error",
+      error
+    }
+  });
+  const reply = r.writes.find((write) => write.id === "command" && write.result).result;
+  assert.equal(reply.success, false);
+  assert.deepEqual(JSON.parse(reply.contentItems[0].text).error, error);
+  r.service.mode(1, "org-a", { ...session, mode: "always" });
+  r.call(session.threadId, "execute_command", "needs-approval", { command: "id" });
+  assert.equal(r.events.filter(({ event }) => event.type === "approval.requested").length, 1);
+  assert.equal(r.events.filter(({ event }) => event.type === "tool.call").length, 1);
+});
+
+test("write approval and mode changes are bound to the owning window", async (t) => {
   const r = await runtime(t);
   const session = await r.create();
   await r.send(session);
@@ -464,7 +531,8 @@ test("write approval is bound to the owning window and cannot be disabled", asyn
   await assert.rejects(
     r.service.approve(2, "org-a", { ...session, approvalId: approval.approval_id, decision: "approve" })
   );
-  assert.throws(() => r.service.mode(1, "org-a", { ...session, mode: "never" as any }));
+  assert.throws(() => r.service.mode(2, "org-a", { ...session, mode: "never" }));
+  assert.throws(() => r.service.mode(1, "org-a", { ...session, mode: "invalid" as any }));
   await r.service.approve(1, "org-a", { ...session, approvalId: approval.approval_id, decision: "approve" });
   assert.equal(r.events.filter((item) => item.event.type === "tool.call").length, 1);
   await assert.rejects(

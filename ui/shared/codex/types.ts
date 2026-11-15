@@ -1,4 +1,9 @@
-import type { AgentMcpManifest, AgentMessageRequest, AgentToolResultRequest } from "../../koko/composables/agent/types";
+import type {
+  AgentApprovalMode,
+  AgentMcpManifest,
+  AgentMessageRequest,
+  AgentToolResultRequest
+} from "../../koko/composables/agent/types";
 
 export interface LocalCodexSettings {
   enabled: boolean;
@@ -40,7 +45,7 @@ export const DEFAULT_CODEX_SETTINGS: LocalCodexSettings = {
 
 export interface CodexSessionRequest {
   manifest: AgentMcpManifest;
-  approvalMode: "always" | "auto";
+  approvalMode: AgentApprovalMode;
   language?: string;
 }
 
@@ -54,6 +59,6 @@ export interface CodexCommand {
   result?: AgentToolResultRequest;
   approvalId?: string;
   decision?: "approve" | "reject";
-  mode?: "always" | "auto";
+  mode?: AgentApprovalMode;
   after?: number;
 }

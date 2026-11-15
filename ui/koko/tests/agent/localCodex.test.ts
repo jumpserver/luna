@@ -431,6 +431,14 @@ it("reuses the existing controller and relay over IPC without calling Kael", asy
   controllers.push(controller);
   await controller.actions.attachManifest(reactive(manifest));
   await vi.waitFor(() => expect(controller.state.status).toBe("connected"));
+  await controller.actions.setApprovalMode("never");
+  expect(native.invoke).toHaveBeenCalledWith("local_codex_mode", {
+    sessionId: "native-session",
+    resourceSessionId: manifest.resourceSessionId,
+    mode: "never"
+  });
+  expect(controller.state.approvalMode).toBe("never");
+  await controller.actions.setApprovalMode("auto");
   emit("run.started");
   emit(
     "tool.call",

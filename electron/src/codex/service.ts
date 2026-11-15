@@ -55,7 +55,7 @@ interface Session {
   organizationId: string;
   manifest: CodexSessionRequest["manifest"];
   registrations: Record<string, string>;
-  mode: "always" | "auto";
+  mode: CodexSessionRequest["approvalMode"];
   language: string;
   threadId: string;
   turnId: string;
@@ -573,7 +573,7 @@ export class LocalCodexService {
       manifest.revision < 1 ||
       !Array.isArray(manifest.tools) ||
       manifest.tools.length > 128 ||
-      !["auto", "always"].includes(input.approvalMode) ||
+      !["auto", "always", "never"].includes(input.approvalMode) ||
       (input.language !== undefined && !bounded(input.language, 64))
     )
       throw new Error("Invalid local Codex session");
@@ -812,10 +812,11 @@ export class LocalCodexService {
         }, 11 * 60_000);
         call.timer.unref();
         if (
-          session.mode === "always" ||
-          ["database_schema", "inspect_schema"].includes(tool.name) ||
-          tool.annotations?.readOnlyHint !== true ||
-          tool.annotations?.destructiveHint === true
+          session.mode !== "never" &&
+          (session.mode === "always" ||
+            ["database_schema", "inspect_schema"].includes(tool.name) ||
+            tool.annotations?.readOnlyHint !== true ||
+            tool.annotations?.destructiveHint === true)
         ) {
           call.approvalId = randomUUID();
           this.push(
@@ -965,8 +966,8 @@ export class LocalCodexService {
   }
   mode(ownerId: number, organizationId: string, args: CodexCommand) {
     const session = this.session(ownerId, organizationId, args);
-    if (args.mode !== "auto" && args.mode !== "always")
-      throw new Error("Local Codex requires approval for write operations");
+    if (args.mode !== "auto" && args.mode !== "always" && args.mode !== "never")
+      throw new Error("Invalid local Codex approval mode");
     session.mode = args.mode;
     this.push(session, "session.approval_mode_changed", { current: args.mode });
   }
