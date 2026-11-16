@@ -1511,6 +1511,7 @@ function createAgentSession(options: AgentSessionOptions): AgentSessionControlle
     if (options.allowedApprovalModes && !options.allowedApprovalModes.includes(mode)) {
       throw new Error(`Approval mode ${mode} is not allowed for the ${options.domain} agent`);
     }
+    if (attachFlight) await attachFlight.promise;
     if (!state.agentSessionId || !state.resourceSessionId) {
       state.approvalMode = mode;
       options.onApprovalMode?.(mode);
