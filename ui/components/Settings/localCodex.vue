@@ -131,8 +131,15 @@ onMounted(() => {
       <p v-if="errorText" role="alert" class="text-error">{{ errorText }}</p>
       <p v-else-if="notice" role="status">{{ notice }}</p>
       <div class="flex gap-2">
-        <UButton :label="t('save')" :loading="busy" :disabled="disabled" @click="run('save')" />
-        <UButton :label="t('test')" color="neutral" variant="outline" :disabled="disabled" @click="run('test')" />
+        <UButton :label="t('save')" :loading="activeAction === 'save'" :disabled="disabled" @click="run('save')" />
+        <UButton
+          :label="t('test')"
+          color="neutral"
+          variant="outline"
+          :loading="activeAction === 'test'"
+          :disabled="disabled"
+          @click="run('test')"
+        />
       </div>
     </div>
   </div>
