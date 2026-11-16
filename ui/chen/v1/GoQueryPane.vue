@@ -10,7 +10,7 @@ import type {
   GoTransactionRequest
 } from "./api";
 import type { GoSqlEditorSnapshot } from "./sqlAi";
-import type { GoResultLoadingSettings, QueryPlanRun, QueryWorkspaceTab } from "./workspace";
+import type { ExportTaskAction, GoResultLoadingSettings, QueryPlanRun, QueryWorkspaceTab } from "./workspace";
 import type { ChenSqlAiOperation } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
@@ -77,9 +77,7 @@ const emit = defineEmits<{
     snapshot: { sql: string; resultId: string; version: number; rows?: number },
     target?: QueryWorkspaceTab
   ];
-  exportSync: [id: string, target?: QueryWorkspaceTab];
-  exportCancel: [id: string, target?: QueryWorkspaceTab];
-  exportDelete: [id: string, target?: QueryWorkspaceTab];
+  exportAction: [id: string, action: ExportTaskAction, target?: QueryWorkspaceTab];
   ai: [operation: ChenSqlAiOperation];
   recover: [target?: QueryWorkspaceTab];
   reconnect: [target?: QueryWorkspaceTab];
@@ -1406,12 +1404,9 @@ defineExpose({
             icon-only
             :query="query"
             :session="session"
-            :api="api"
             :ready="ready && !editDirty(query.edit) && !query.edit.busy"
             @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
-            @sync="emit('exportSync', $event)"
-            @cancel="emit('exportCancel', $event)"
-            @remove="emit('exportDelete', $event)"
+            @action="(id, action) => emit('exportAction', id, action)"
           />
         </DefineExportAction>
         <div
@@ -1469,7 +1464,6 @@ defineExpose({
             {{ t("Chen.GoV1PreviousResult") }}
           </span>
           <div v-if="showExportJobStatus" class="ml-auto flex items-center gap-1">
-            <span class="text-muted">{{ t("Chen.GoV1ExportTask") }}</span>
             <ExportAction />
           </div>
         </div>
@@ -1606,9 +1600,7 @@ defineExpose({
               "
               @transaction="(request, target) => emit('transaction', request, target || pinnedQuery)"
               @confirm-implicit="(executionId, target) => emit('confirmImplicit', executionId, target || pinnedQuery)"
-              @export-sync="(id, target) => emit('exportSync', id, target || pinnedQuery)"
-              @export-cancel="(id, target) => emit('exportCancel', id, target || pinnedQuery)"
-              @export-delete="(id, target) => emit('exportDelete', id, target || pinnedQuery)"
+              @export-action="(id, action, target) => emit('exportAction', id, action, target || pinnedQuery)"
               @recover="(target) => emit('recover', target || pinnedQuery)"
               @reconnect="(target) => emit('reconnect', target || pinnedQuery)"
               @rows="(id, offset, target) => emit('rows', id, offset, target || pinnedQuery)"

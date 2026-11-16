@@ -15,6 +15,7 @@ import type {
 import type { GoSqlEditorSnapshot } from "./sqlAi";
 import type {
   ChenWorkspaceTab,
+  ExportTaskAction,
   GoResultLoadingSettings,
   ObjectWorkspaceSection,
   ObjectWorkspaceTab,
@@ -29,7 +30,7 @@ import type {
 } from "~/chen/composables/useChenSqlAiSessions";
 import type { ChenLogConsoleEntry } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import { useElementSize, useLocalStorage } from "@vueuse/core";
+import { useElementSize, useIntervalFn, useLocalStorage } from "@vueuse/core";
 import {
   computed,
   nextTick,
@@ -108,6 +109,7 @@ const logsOpen = ref(false);
 const unreadLogErrors = ref(0);
 const loggedExecutions = new Map<string, string>();
 const requestedDownloads = new WeakMap<QueryWorkspaceTab, Set<string>>();
+const syncingExports = new Set<string>();
 function appendLog(sourceId: string, sourceTitle: string, level: ChenLogConsoleEntry["level"], message: string) {
   logs.value.push({ id: newChenRequestId(), timestamp: Date.now(), sourceId, sourceTitle, level, message });
   if (logs.value.length > 200) logs.value.shift();
@@ -805,6 +807,11 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
       query.executionBrowse?.action === "append"
     );
 }
+function requestExportDownload(query: QueryWorkspaceTab, id: string) {
+  const requested = requestedDownloads.get(query) || new Set<string>();
+  requested.add(id);
+  requestedDownloads.set(query, requested);
+}
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
   if (!isCurrent(query)) return;
   const requested = requestedDownloads.get(query);
@@ -814,31 +821,52 @@ function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
   if (index < 0) query.exportJobs.unshift(job);
   else query.exportJobs[index] = job;
   if (!requested?.has(job.id) || exportActive(job) || (job.status === "succeeded" && !job.ready)) return;
+  if (job.status === "succeeded" && query.exportActions[job.id]?.busy === "cancel") return;
   requested.delete(job.id);
-  if (job.status !== "succeeded") return;
-  const sessionApi = api;
-  void downloadGoExportFile(sessionApi, job, () => {
-    if (
-      !isCurrent(query) ||
-      api !== sessionApi ||
-      !sessionReady.value ||
-      !session.value?.permissions.can_download ||
-      query.console?.state !== "ready" ||
-      !query.exportJobs.some((item) => item.id === job.id) ||
-      editDirty(query.edit) ||
-      query.edit.busy
-    )
-      throw new Error(t("Chen.GoV1ExportUnavailable"));
-  }).catch((cause) => {
-    if (isCurrent(query) && api === sessionApi && query.exportJobs.some((item) => item.id === job.id))
-      query.error = failureText(cause);
-  });
+  if (job.status === "succeeded") {
+    void handleExportAction(query, job.id, "download");
+  } else if (job.status === "failed" || job.status === "unknown") {
+    toast.add({
+      title: job.filename || t("Chen.GoV1ExportTask"),
+      description: job.error ? failureText(job.error) : t(`Chen.GoV1Status_${job.status}`),
+      color: "error"
+    });
+  }
+}
+function exportNotFound(cause: unknown) {
+  return cause instanceof ChenGoError && cause.status === 404 && cause.code === "not_found";
+}
+function forgetExport(query: QueryWorkspaceTab, id: string) {
+  requestedDownloads.get(query)?.delete(id);
+  query.exportJobs = query.exportJobs.filter((job) => job.id !== id);
+  delete query.exportActions[id];
 }
 async function syncExport(query: QueryWorkspaceTab, id: string) {
-  if (session.value?.state === "closed") return;
-  const current = await api.getExport(id);
-  if (session.value?.state !== "closed") acceptExport(query, current);
+  if (session.value?.state === "closed" || syncingExports.has(id)) return;
+  const sessionApi = api;
+  syncingExports.add(id);
+  try {
+    const current = await sessionApi.getExport(id);
+    if (sessionApi === api && session.value?.state !== "closed") acceptExport(query, current);
+  } catch (cause) {
+    if (!exportNotFound(cause)) throw cause;
+    if (isCurrent(query) && sessionApi === api) forgetExport(query, id);
+  } finally {
+    syncingExports.delete(id);
+  }
 }
+function syncTrackedExports() {
+  if (!sessionReady.value) return;
+  const reads: Promise<void>[] = [];
+  for (const query of queries.value) {
+    const ids = new Set(requestedDownloads.get(query));
+    for (const job of query.exportJobs) if (exportNeedsSync(job)) ids.add(job.id);
+    for (const id of ids) reads.push(syncExport(query, id));
+  }
+  return Promise.allSettled(reads);
+}
+// A fast job can finish before its submission response identifies it to the event listener.
+useIntervalFn(syncTrackedExports, 3000);
 function loseConsole(query: QueryWorkspaceTab) {
   interruptQueryPlans(query);
   if (query.console) query.console.state = "lost";
@@ -935,13 +963,8 @@ async function watchEvents(scope: SessionConnection) {
       if (!isConnectionCurrent(scope) || controller.signal.aborted) break;
       eventConnected.value = true;
       // State reads must not delay lock/close events already available on the stream.
-      void Promise.allSettled(
-        queries.value.flatMap((query) => {
-          const ids = new Set(requestedDownloads.get(query));
-          for (const job of query.exportJobs) if (exportNeedsSync(job)) ids.add(job.id);
-          return [syncExecution(query), ...Array.from(ids, (id) => syncExport(query, id))];
-        })
-      );
+      void Promise.allSettled(queries.value.map(syncExecution));
+      void syncTrackedExports();
       delay = 1000;
       await readChenEvents(
         stream,
@@ -1589,11 +1612,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
         : undefined;
     query.executionBrowse = pending.browse;
     query.executionQueryPage = pending.queryPage;
-    if (value.export_id && pending.exportFormat) {
-      const requested = requestedDownloads.get(query) || new Set<string>();
-      requested.add(value.export_id);
-      requestedDownloads.set(query, requested);
-    }
+    if (value.export_id && pending.exportFormat) requestExportDownload(query, value.export_id);
     // A close event may precede the HTTP response. Do not revive a running spinner after SSE has ended.
     if (session.value?.state === "closed" || (query.console as GoConsole).state === "closed") {
       closeQuerySession(query);
@@ -1679,7 +1698,12 @@ async function startExport(
     const value = await api.exportCached(pending.resultId, pending.format, pending.id, pending.rows);
     if (!isCurrent(query) || session.value?.state === "closed") return;
     query.pendingCachedExport = null;
-    query.exportJobs.unshift(value);
+    requestExportDownload(query, value.id);
+    acceptExport(query, value);
+    if (exportNeedsSync(value))
+      void syncExport(query, value.id).catch(() => {
+        /* Retried by background sync. */
+      });
   } catch (cause) {
     if (isCurrent(query)) {
       if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) query.pendingCachedExport = null;
@@ -1691,30 +1715,51 @@ async function startExport(
     if (isCurrent(query)) query.exportBusy = false;
   }
 }
-async function cancelExport(query: QueryWorkspaceTab, id: string) {
-  if (!sessionReady.value || !query.exportJobs.some((job) => job.id === id && exportActive(job))) return;
-  try {
-    acceptExport(query, await api.cancelExport(id));
-  } catch (cause) {
-    if (isCurrent(query)) query.error = failureText(cause);
-  }
-}
-async function deleteExport(query: QueryWorkspaceTab, id: string) {
+async function handleExportAction(query: QueryWorkspaceTab, id: string, action: ExportTaskAction) {
   const job = query.exportJobs.find((item) => item.id === id);
-  if (!job || !isCurrent(query) || query.exportBusy) return;
+  if (!job || !isCurrent(query) || query.exportActions[id]?.busy) return;
   const closed = session.value?.state === "closed";
-  if (!closed && exportActive(job)) return;
-  query.exportBusy = true;
+  const sessionApi = api;
+  const currentJob = () =>
+    isCurrent(query) && api === sessionApi ? query.exportJobs.find((item) => item.id === id) : undefined;
+  query.exportActions[id] = { busy: action };
   try {
-    if (!closed) await api.deleteExport(id);
-    if (isCurrent(query)) {
-      requestedDownloads.get(query)?.delete(id);
-      query.exportJobs = query.exportJobs.filter((item) => item.id !== id);
+    if (action === "download") {
+      const result = await downloadGoExportFile(sessionApi, job, () => {
+        if (
+          !currentJob()?.ready ||
+          !sessionReady.value ||
+          !session.value?.permissions.can_download ||
+          query.console?.state !== "ready" ||
+          editDirty(query.edit) ||
+          query.edit.busy
+        )
+          throw new Error(t("Chen.GoV1ExportUnavailable"));
+      });
+      if (currentJob() && result !== "cancelled")
+        toast.add({
+          title: t(result === "saved" ? "Chen.ExportDownloaded" : "Chen.GoV1ExportDownloadStarted"),
+          description: job.filename
+        });
+    } else if (action === "cancel") {
+      if (sessionReady.value && exportActive(job)) acceptExport(query, await sessionApi.cancelExport(id));
+    } else {
+      if (!closed && exportActive(job)) return;
+      if (!closed) await sessionApi.deleteExport(id);
+      if (currentJob()) forgetExport(query, id);
     }
   } catch (cause) {
-    if (isCurrent(query)) query.error = failureText(cause);
+    if (currentJob() && action !== "download" && exportNotFound(cause)) {
+      forgetExport(query, id);
+    } else if (currentJob()) {
+      const error = failureText(cause);
+      query.exportActions[id] = { error };
+      toast.add({ title: job.filename || t("Chen.GoV1ExportTask"), description: error, color: "error" });
+    }
   } finally {
-    if (isCurrent(query)) query.exportBusy = false;
+    if (query.exportActions[id]?.busy === action) delete query.exportActions[id];
+    const latest = currentJob();
+    if (action === "cancel" && latest?.ready && requestedDownloads.get(query)?.has(id)) acceptExport(query, latest);
   }
 }
 async function confirmPolicy(query: QueryWorkspaceTab, executionId: string, confirmationId: string, accepted: boolean) {
@@ -2384,14 +2429,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @transaction="(request, target) => transactionAction(target || query, request)"
               @confirm-implicit="(id, target) => confirmImplicitCommit(target || query, id)"
               @export="(mode, format, snapshot, target) => startExport(target || query, mode, format, snapshot)"
-              @export-sync="
-                (id, target) =>
-                  syncExport(target || query, id).catch((cause) => {
-                    (target || query).error = failureText(cause);
-                  })
-              "
-              @export-cancel="(id, target) => cancelExport(target || query, id)"
-              @export-delete="(id, target) => deleteExport(target || query, id)"
+              @export-action="(id, action, target) => handleExportAction(target || query, id, action)"
               @recover="(target) => recoverSubmission(target || query)"
               @reconnect="(target) => reconnect(target || query)"
               @rows="(id, offset, target) => loadRows(target || query, id, offset)"
