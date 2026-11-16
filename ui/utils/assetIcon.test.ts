@@ -63,19 +63,24 @@ describe("asset icon URLs", () => {
     ["H3C", "h3c", "h3c.png"],
     ["Cisco", "cisco", "cisco.svg"],
     ["Huawei", "huawei", "huawei.png"]
-  ])("uses the %s brand icon for the device type or platform", (platform, type, filename) => {
+  ])("uses the %s brand icon only for the matching platform type", (platform, type, filename) => {
     const icon = { src: `/luna/icons/${filename}`, fallback: "i-lucide-router" };
-    expect(resolveAssetIconFromFields({ type, category: "device" }, "/luna/")).toEqual(icon);
-    expect(resolveAssetIconFromFields({ platform, type: "general", category: "device" }, "/luna/")).toEqual(icon);
-    expect(resolveAssetIconFromCandidates([type, "switch"], "/luna/")).toEqual(icon);
+    expect(resolveAssetIconFromFields({ platform: "Renamed device", type, category: "device" }, "/luna/")).toEqual(
+      icon
+    );
+    expect(resolveAssetIconFromFields({ platform, type: "general", category: "device" }, "/luna/").src).toBe("");
+    expect(resolveAssetIconFromFields({ type: "general" }, "/luna/", [platform, "switch"]).src).toBe("");
     expect(resolveAssetIconSrc(type, "/luna/")).toBe(icon.src);
   });
 
-  it("uses brand icons only for exact asset metadata", () => {
-    expect(resolveAssetIconFromCandidates(["device"], "/", ["Cisco"])).toEqual({
+  it("requires the complete device platform type", () => {
+    expect(resolveAssetIconFromFields({ type: "cisco-test", category: "device" }).src).toBe("");
+  });
+
+  it("keeps the generic network icon for general devices with a custom name", () => {
+    expect(resolveAssetIconFromFields({ type: "general", category: "device" }, "/", ["Windows gateway"])).toEqual({
       src: "",
       fallback: "i-lucide-router"
     });
-    expect(resolveAssetIconFromFields({ platform: "Huawei Cloud", category: "cloud" }).src).toBe("");
   });
 });

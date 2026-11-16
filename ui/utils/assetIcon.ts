@@ -75,21 +75,19 @@ export function resolveAssetIconFallback(type?: string) {
 
 export function resolveAssetIconFromFields(
   fields: { type?: string; platform?: string; category?: string },
-  baseURL = "/"
+  baseURL = "/",
+  extraCandidates: (string | undefined)[] = []
 ) {
-  return resolveAssetIconFromCandidates([fields.platform, fields.type, fields.category], baseURL);
+  const deviceIcon = networkDeviceIcon(fields.type);
+  if (deviceIcon || fields.category === "device") {
+    return { src: withAppBase(deviceIcon || "", baseURL), fallback: "i-lucide-router" };
+  }
+  return resolveAssetIconFromCandidates([fields.platform, fields.type, fields.category, ...extraCandidates], baseURL);
 }
 
-export function resolveAssetIconFromCandidates(
-  values: (string | undefined)[],
-  baseURL = "/",
-  treeHints: (string | undefined)[] = []
-) {
+export function resolveAssetIconFromCandidates(values: (string | undefined)[], baseURL = "/") {
   const resolve = (src: string, fallback: string) => ({ src: withAppBase(src, baseURL), fallback });
-  const deviceIcon = values.map(networkDeviceIcon).find(Boolean);
-  if (deviceIcon) return resolve(deviceIcon, "i-lucide-router");
-
-  const candidates = [...values, ...treeHints].map((value) => String(value || "").toLowerCase()).filter(Boolean);
+  const candidates = values.map((value) => String(value || "").toLowerCase()).filter(Boolean);
   const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
 
   if (has("k8s") || has("kubernetes")) return resolve(iconMap.kubernetes!, "i-lucide-container");

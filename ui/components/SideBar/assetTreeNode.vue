@@ -2,7 +2,7 @@
 import type { AssetTreeCheckState } from "~/composables/useAssetTree";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { assetTreeAssetId, canCheckAssetTreeNode, isAssetTreeBranch } from "~/composables/useAssetTree";
-import { resolveAssetIconFromCandidates } from "~/utils/assetIcon";
+import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 defineOptions({ name: "AssetTreeNode" });
 
@@ -43,32 +43,32 @@ const workspaceTourTarget = computed(() => {
   if (props.searchMode || props.batchMode || props.node.meta?.type === "recent-connections") return undefined;
   return isParent.value ? "node" : "asset";
 });
-const iconMetadata = computed(() => {
+const iconCandidates = computed(() => {
   const data = props.node.meta?.data || {};
   const choiceText = (value: string | { name?: string; value?: string } | undefined) =>
     typeof value === "object" ? [value?.name, value?.value] : [value];
 
   return [
-    data.platform_name,
     ...choiceText(data.platform),
     data.platform_type,
     ...choiceText(data.category),
     ...choiceText(data.type),
     props.node.type,
-    props.node.iconSkin
-  ];
+    props.node.iconSkin,
+    props.node.key,
+    props.node.id,
+    props.node.name
+  ]
+    .map((value) => String(value || "").toLowerCase())
+    .filter(Boolean);
 });
-const iconTreeHints = computed(() => [props.node.key, props.node.id, props.node.name]);
 
 const typeGroupIcon = computed(() => {
   if (props.treeKind !== "type" || !isParent.value || (props.node.level || 0) !== 0) return "";
 
-  const iconCandidates = [...iconMetadata.value, ...iconTreeHints.value]
-    .map((value) => String(value || "").toLowerCase())
-    .filter(Boolean);
   const has = (...keywords: string[]) =>
-    iconCandidates.some((value) => keywords.some((keyword) => value.includes(keyword)));
-  const hasExact = (...keywords: string[]) => iconCandidates.some((value) => keywords.includes(value));
+    iconCandidates.value.some((value) => keywords.some((keyword) => value.includes(keyword)));
+  const hasExact = (...keywords: string[]) => iconCandidates.value.some((value) => keywords.includes(value));
 
   if (has("k8s", "kubernetes", "container")) return "i-lucide-container";
   if (has("database", "mysql", "mariadb", "oracle", "dameng", "postgres", "sqlserver", "redis", "mongodb", "db2")) {
@@ -86,7 +86,14 @@ const typeGroupIcon = computed(() => {
   return "";
 });
 
-const assetIcon = computed(() => resolveAssetIconFromCandidates(iconMetadata.value, appBaseURL, iconTreeHints.value));
+const assetIcon = computed(() => {
+  const data = props.node.meta?.data;
+  const type = data?.platform_type || (typeof data?.type === "string" ? data.type : data?.type?.value);
+  const category =
+    (typeof data?.category === "string" ? data.category : data?.category?.value) ||
+    (props.node.iconSkin === "switch" ? "device" : undefined);
+  return resolveAssetIconFromFields({ type, category }, appBaseURL, iconCandidates.value);
+});
 
 const icon = computed(() => {
   if (props.node.meta?.type === "recent-connections") return "i-lucide-history";

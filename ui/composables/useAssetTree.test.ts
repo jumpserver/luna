@@ -406,12 +406,12 @@ describe("asset tree search", () => {
     expect(page.nextPage).toEqual({ phase: "assets", assetOffset: 100 });
   });
 
-  it("preserves the platform name when opening a connection for a generic device", () => {
+  it("uses the explicit platform type when opening a connection", () => {
     const { treeNodeToAsset } = useAssetTree();
     const asset = treeNodeToAsset({
       id: "asset-1",
       name: "Network device",
-      meta: { data: { platform_name: "Cisco", platform_type: "general" } }
+      meta: { data: { platform: "Cisco", platform_type: "general", type: { value: "cisco" } } }
     });
 
     expect(asset).toMatchObject({ platform: "Cisco", type: "general" });
