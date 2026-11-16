@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CodexRuntimeStatus, LocalCodexSettings } from "~/shared/codex/types";
 
-defineProps<{ status: CodexRuntimeStatus | null; busy: boolean }>();
+defineProps<{ status: CodexRuntimeStatus | null; busy: boolean; checking: boolean }>();
 const emit = defineEmits<{ install: []; check: [] }>();
 const runtime = defineModel<LocalCodexSettings["runtime"]>("runtime", { required: true });
 const executable = defineModel<string>("executable", { required: true });
@@ -46,7 +46,14 @@ const sources = computed(() => [
       <UProgress :model-value="status.progress" :aria-label="t('installing')" />
     </div>
     <div class="px-4 py-3">
-      <UButton :label="t('check')" color="neutral" variant="outline" :disabled="busy" @click="emit('check')" />
+      <UButton
+        :label="t('check')"
+        color="neutral"
+        variant="outline"
+        :loading="checking"
+        :disabled="busy"
+        @click="emit('check')"
+      />
     </div>
   </SettingsGroup>
 </template>

@@ -8,6 +8,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 const { t } = useLocalAiMessages();
+const toast = useToast();
 const user = useUserInfoStore();
 const codex = useLocalCodex();
 const draft = reactive({ ...codex.settings.value });
@@ -47,21 +48,25 @@ watch(codex.settings, (value) => {
   apiKey.value = "";
   clearApiKey.value = false;
 });
-const busy = shallowRef(false);
+type SettingsAction = "save" | "check" | "install" | "test";
+const activeAction = shallowRef<SettingsAction | null>(null);
+const busy = computed(() => activeAction.value !== null);
 const disabled = computed(
   () => !serverWorkspaceAiEnabled.value || busy.value || codex.runtime.value?.installing === true
 );
 const notice = shallowRef("");
 const error = shallowRef("");
-async function run(action: "save" | "check" | "install" | "test") {
+async function run(action: SettingsAction) {
   if (!serverWorkspaceAiEnabled.value) return;
-  busy.value = true;
+  activeAction.value = action;
   notice.value = "";
   error.value = "";
   try {
     const settings = { ...draft, apiKey: apiKey.value, clearApiKey: clearApiKey.value };
-    if (action === "check") notice.value = (await codex.probe(settings)).version;
-    else if (action === "install") {
+    if (action === "check") {
+      notice.value = `${t("installed")} (${(await codex.probe(settings)).version})`;
+      toast.add({ title: notice.value, color: "success" });
+    } else if (action === "install") {
       await codex.install();
       notice.value = t("installed");
     } else if (action === "test") {
@@ -75,8 +80,9 @@ async function run(action: "save" | "check" | "install" | "test") {
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : t("failed");
+    if (action === "check") toast.add({ title: t("failed"), description: error.value, color: "error" });
   } finally {
-    busy.value = false;
+    activeAction.value = null;
   }
 }
 onMounted(() => {
@@ -99,6 +105,7 @@ onMounted(() => {
       v-model:executable="draft.executable"
       :status="codex.runtime.value"
       :busy="disabled"
+      :checking="activeAction === 'check'"
       @install="run('install')"
       @check="run('check')"
     />
