@@ -42,15 +42,22 @@ It does not catalog persistent IBM CLP aliases or change the local DB2 catalog.
 ## ClickHouse
 
 Select DBeaver under application settings → ClickHouse and configure its executable.
-Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX uses HTTP;
+Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX and the
+standard ClickHouse driver used when configuring DBeaver manually use HTTP.
 DBeaver's bundled Magnus plugin and `clickhouse-client` use Native TCP.
 
-Configure the ClickHouse asset backend port to match its client transport:
-**8123** (HTTP) for DBX, **9000** (Native TCP) for the DBeaver plugin or native CLI.
-Custom ports and backend HTTPS/native TLS use the asset's explicit port and TLS
-settings. No backend port is guessed or silently retried. If both transports are
-needed, configure separate asset entries pointing at their respective service
-ports. Clients always connect to the **Magnus** host/port.
+Keep the ClickHouse asset protocol port as the **Native TCP** port (usually
+**9000**). In the platform's ClickHouse protocol settings, configure the independent
+`http_port` (**8123** by default) for DBX and DBeaver's standard HTTP driver.
+Magnus selects the backend port for each connection before creating an SSH gateway
+forward. Native clients keep using the asset protocol port, so both transports can
+share one asset and token. Custom service ports are supported explicitly; clients
+always connect to the **Magnus** host/port.
+
+For an existing platform, edit and save its HTTP port to enable dual-port routing.
+A missing `http_port` preserves the legacy single-port HTTP configuration; no
+existing asset port is rewritten or guessed. Frontend TLS remains disabled and
+backend TLS continues to use the asset's configuration.
 
 Enable DBX under application settings → ClickHouse. Explicit saved DBX selections
 are preserved; existing DBeaver defaults are retained on upgrade. The launcher
@@ -62,7 +69,12 @@ SQL filtering/approval and audit callbacks before forwarding, and honor database
 pinning. UTF-8 SQL is bounded to 16 MiB. SQL in the URL and body is combined before
 policy evaluation. Basic authentication, ClickHouse credential headers, and URL
 credentials are accepted; identity cannot change on a keep-alive connection.
-Only the SQL endpoint is exposed, with a bounded setting allowlist. Persistent
+The official HTTP JDBC driver's default `query_id`, `compress=0/1` response
+compression and disabled `async_insert=0` are supported. Its result-format header
+and response format/timezone/exception metadata are preserved, including binary
+results. Async insert, compressed request bodies and binary bulk inserts remain
+unsupported, so SQL can be inspected before execution. Only the SQL endpoint is
+exposed, with a bounded setting allowlist. Persistent
 HTTP sessions, external tables, compressed input, and query bindings are rejected.
 Mandatory masking rejects execution. Backend POSTs use fresh connections with no
 redirects, credential forwarding, automatic fallback or write replay.
@@ -103,7 +115,10 @@ of existing driver files.
 - Live read-only QA uses IBM JCC 11.5.9.0 / 4.33.31 (plain JDBC, DBeaver defaults,
   DBX URL parameters and connection-pool validation), DBX DB2 Agent 0.1.56 RPC,
   ClickHouse HTTP JSONCompact/streaming results, and Housepower Native JDBC 2.5.6,
-  plus Go DRDA/Native clients (compression disabled/LZ4/ZSTD). macOS DBeaver
+  plus Go DRDA/Native clients (compression disabled/LZ4/ZSTD). The official
+  ClickHouse HTTP JDBC 0.9.4 and 0.10.0 drivers are also tested with its default response
+  compression, binary result format, connection validation, metadata, prepared
+  queries, policy rejection and same-connection recovery. macOS DBeaver
   26.2.4 also established its main and metadata connections and loaded schemas
   and data types. Windows/Linux GUI and the complete DBX CLI workflow are not
   claimed by these checks.
