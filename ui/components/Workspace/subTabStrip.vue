@@ -232,7 +232,7 @@ watch(
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-(--workspace-sub-tab-height) min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+          class="group relative flex h-(--workspace-sub-tab-height) min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:bg-[var(--workspace-surface-sub-tab-active)] hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
           :class="[
             activeId === tab.id ? 'bg-[var(--workspace-surface-sub-tab-active)] text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',

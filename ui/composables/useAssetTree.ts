@@ -341,7 +341,10 @@ export const useAssetTree = () => {
       address: String(data.address || ""),
       org_id: typeof data.org_id === "string" ? data.org_id : undefined,
       platform: String(
-        (typeof data.platform === "object" ? data.platform?.name : data.platform) || data.platform_type || ""
+        data.platform_name ||
+          (typeof data.platform === "object" ? data.platform?.name : data.platform) ||
+          data.platform_type ||
+          ""
       ),
       zone: String((typeof data.zone === "object" ? data.zone?.name : data.zone) || ""),
       category: normalizeChoice(data.category),

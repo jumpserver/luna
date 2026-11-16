@@ -42,7 +42,7 @@ const assetFromRaw = (raw: any): AssetItem | null => {
     id: String(id),
     name: String(data?.name || source?.name || id),
     address: String(data?.address || ""),
-    platform: String(data?.platform?.name || data?.platform || data?.platform_type || ""),
+    platform: String(data?.platform_name || data?.platform?.name || data?.platform || data?.platform_type || ""),
     zone: String(data?.zone?.name || data?.zone || ""),
     category: String(data?.category?.value || data?.category || ""),
     type: String(data?.type?.value || data?.type || data?.platform_type || ""),

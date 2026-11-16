@@ -1,12 +1,12 @@
+import { useResizeObserver } from "@vueuse/core";
 import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import * as Vue from "vue";
-import * as terminalBroadcast from "#koko/composables/terminal/useTerminalBroadcast";
-import { useResizeObserver } from "@vueuse/core";
 import { compileScript, parse } from "vue/compiler-sfc";
+import * as terminalBroadcast from "#koko/composables/terminal/useTerminalBroadcast";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
-import source from "./tabHeader.vue?raw";
 import iconSource from "../AppAssetIcon.vue?raw";
+import source from "./tabHeader.vue?raw";
 
 function compileComponent(source: string, services: Record<string, unknown> = {}) {
   const { descriptor } = parse(source);
@@ -34,7 +34,7 @@ it.skipIf(typeof document === "undefined").each([false, true])(
     const tabs = Vue.ref([
       { id: "linux", assetName: "Linux", assetType: "linux", group },
       { id: "mysql", assetName: "MySQL", assetType: "mysql", group },
-      { id: "other", assetName: "Other", assetType: "windows" }
+      { id: "cisco", assetName: "Cisco", assetType: "cisco" }
     ]);
     const activeTabId = Vue.ref("mysql");
     const component = compileComponent(source, {
@@ -92,6 +92,7 @@ it.skipIf(typeof document === "undefined").each([false, true])(
       await Vue.nextTick();
       const images = [...host.querySelectorAll("img")];
       expect(images).toHaveLength(3);
+      expect(host.querySelector('[data-tab-id="cisco"] img')?.getAttribute("src")).toBe("/icons/cisco.svg");
       const capsule = host.querySelector<HTMLElement>(".workspace-tab-capsule")!;
       const expandedWidth = getComputedStyle(capsule).width;
       for (let i = 0; i < 3; i++) {

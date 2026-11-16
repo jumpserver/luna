@@ -152,7 +152,13 @@ describe("unwrapTypeTreeRoot", () => {
   });
 });
 
-const userInfoStore = reactive({ loggedIn: true, orgId: "org-1", currentSite: "site-1", currentAccountId: "user-1" });
+const userInfoStore = reactive({
+  loggedIn: true,
+  orgId: "org-1",
+  currentSite: "site-1",
+  currentAccountId: "user-1",
+  getConnectionInfoForAsset: () => undefined
+});
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => userInfoStore }));
 
 describe("asset tree search", () => {
@@ -398,5 +404,16 @@ describe("asset tree search", () => {
     );
     expect(page.nodes).toHaveLength(1);
     expect(page.nextPage).toEqual({ phase: "assets", assetOffset: 100 });
+  });
+
+  it("preserves the platform name when opening a connection for a generic device", () => {
+    const { treeNodeToAsset } = useAssetTree();
+    const asset = treeNodeToAsset({
+      id: "asset-1",
+      name: "Network device",
+      meta: { data: { platform_name: "Cisco", platform_type: "general" } }
+    });
+
+    expect(asset).toMatchObject({ platform: "Cisco", type: "general" });
   });
 });

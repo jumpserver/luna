@@ -43,5 +43,12 @@ const maskColor = computed(() => {
   >
     <img :src="src" alt="" class="block size-full opacity-0" @error="imageFailed = true" />
   </span>
-  <img v-else :src="src" alt="" class="app-tree-icon sidebar-icon-img" @error="imageFailed = true" />
+  <img
+    v-else
+    :src="src"
+    alt=""
+    class="app-tree-icon sidebar-icon-img"
+    :class="{ 'app-tree-icon--wide': filename === 'cisco.svg' || filename === 'h3c.png' }"
+    @error="imageFailed = true"
+  />
 </template>
