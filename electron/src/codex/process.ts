@@ -4,6 +4,7 @@ import { access, readFile, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { homedir } from "node:os";
+import { LocalAiError } from "../../../ui/shared/codex/errorProtocol";
 
 function terminate(child: ChildProcess, force = false) {
   if (!child.pid) return;
@@ -29,7 +30,7 @@ function terminate(child: ChildProcess, force = false) {
 export async function codexCommand(executable = "codex", platform = process.platform) {
   const windows = platform === "win32";
   executable = executable.trim() || "codex";
-  if (/[\0\r\n]/.test(executable)) throw new Error("Invalid Codex executable");
+  if (/[\0\r\n]/.test(executable)) throw new LocalAiError("LOCAL_AI_EXECUTABLE_INVALID", "Invalid Codex executable");
   const candidates =
     path.isAbsolute(executable) || /[/\\]/.test(executable)
       ? [path.resolve(executable)]
@@ -51,7 +52,7 @@ export async function codexCommand(executable = "codex", platform = process.plat
       /* Try the next PATH entry. */
     }
   }
-  if (!command) throw new Error(`Codex executable not found: ${executable}`);
+  if (!command) throw new LocalAiError("LOCAL_AI_EXECUTABLE_NOT_FOUND", `Codex executable not found: ${executable}`);
   if (!windows || !/\.(cmd|bat)$/i.test(command)) return { command, args: [] as string[] };
 
   // npm's Windows shims cannot be spawned without cmd.exe. Resolve the package's
@@ -77,7 +78,10 @@ export async function codexCommand(executable = "codex", platform = process.plat
       /* Not an npm installation of this agent. */
     }
   }
-  throw new Error("Unsupported Windows command shim; select the agent executable or its npm installation");
+  throw new LocalAiError(
+    "LOCAL_AI_EXECUTABLE_INVALID",
+    "Unsupported Windows command shim; select the agent executable or its npm installation"
+  );
 }
 
 export async function probeCodex(executable: string): Promise<{ version: string }> {
@@ -93,7 +97,7 @@ export async function probeCodex(executable: string): Promise<{ version: string 
     let output = "";
     const timer = setTimeout(() => {
       terminate(child, true);
-      reject(new Error("Agent version check timed out"));
+      reject(new LocalAiError("LOCAL_AI_TIMEOUT", "Agent version check timed out"));
     }, 10_000);
     child.stdout.setEncoding("utf8").on("data", (chunk) => {
       output = (output + chunk).slice(0, 4096);
@@ -101,11 +105,12 @@ export async function probeCodex(executable: string): Promise<{ version: string 
     child.stderr.resume();
     child.once("error", (error) => {
       clearTimeout(timer);
-      reject(error);
+      reject(LocalAiError.from(error, "LOCAL_AI_RUNTIME_FAILED"));
     });
     child.once("close", (code) => {
       clearTimeout(timer);
-      if (code !== 0 || !output.trim()) reject(new Error("Agent version check failed"));
+      if (code !== 0 || !output.trim())
+        reject(new LocalAiError("LOCAL_AI_RUNTIME_FAILED", "Agent version check failed"));
       else resolve({ version: output.trim().slice(0, 512) });
     });
   });

@@ -8,6 +8,8 @@ import type {
   LocalCodexSettingsInput
 } from "~/shared/codex/types";
 import { localAiMessages } from "~/shared/codex/messages";
+import { formatLocalAiError } from "~/shared/codex/errors";
+import { LocalAiError } from "~/shared/codex/errorProtocol";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
@@ -16,7 +18,17 @@ export const localCodexSettings = shallowRef<LocalCodexSettings>({ ...DEFAULT_CO
 export const localCodexRevision = shallowRef(0);
 export const localCodexRuntime = shallowRef<CodexRuntimeStatus | null>(null);
 export function useLocalAiMessages() {
-  return useI18n({ useScope: "local", messages: localAiMessages, fallbackLocale: "en" });
+  const i18n = useI18n({ useScope: "local", messages: localAiMessages, fallbackLocale: "en" });
+  return {
+    ...i18n,
+    // Only the four configuration IPC commands return this structured error type.
+    formatError: (error: unknown) =>
+      error instanceof LocalAiError
+        ? formatLocalAiError(error, i18n.locale.value)
+        : error instanceof Error
+          ? error.message
+          : i18n.t("failed")
+  };
 }
 let settingsContext = "";
 function apply(settings: LocalCodexSettings) {

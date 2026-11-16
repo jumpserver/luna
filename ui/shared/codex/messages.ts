@@ -62,7 +62,46 @@ const en = {
   connected: "Model connection verified",
   saved: "Saved. Existing AI conversations have been reset.",
   reset: "Saving changes stops active AI tasks and starts new conversations.",
-  failed: "Local AI configuration failed"
+  failed: "Local AI configuration failed",
+  errors: {
+    modelUnavailable:
+      "The selected model is unavailable. Refresh the model list, or check the model ID and your access to it.",
+    reasoningAllowed:
+      "The model does not support the selected reasoning effort. Choose one of these levels and retry: {levels}.",
+    reasoningUnsupported:
+      "The model does not support the selected reasoning effort. Choose a level supported by your model service and retry.",
+    executableNotFound:
+      "Codex was not found. Enter the absolute path to your installed Codex, or choose Client-managed version and download it.",
+    executableInvalid: "Enter a Codex command or absolute executable path without command arguments.",
+    engineNotInstalled:
+      "The Codex engine is not installed. Click Download and install, then check the installation again.",
+    apiKeyRequired:
+      "Enter an API key for this model service. If you changed the Base URL, enter the matching key again.",
+    modelRequired: "Select or enter a model ID before enabling local AI or testing the connection.",
+    baseUrlInvalid: "The Base URL is invalid. Enter the full model service URL starting with http:// or https://.",
+    baseUrlUnsupported:
+      "Use an HTTP or HTTPS Base URL without a username, password, query parameters (?) or fragment (#).",
+    authenticationFailed:
+      "Model service authentication failed. Check that the API key is valid and matches the Base URL. If you use an existing Codex configuration, check its sign-in status.",
+    settingsInvalid:
+      "The local AI settings are invalid. Check the installation and connection settings, then save again.",
+    engineUnavailable: "The managed Codex engine is unavailable. Restart the client and check the installation again.",
+    engineVersionUnsupported:
+      "This Codex version is not supported. Update to codex-cli 0.167.0 or newer, or use the client-managed version.",
+    credentialStorageUnavailable:
+      "Encrypted key storage is unavailable on this device. Use an existing Codex configuration instead.",
+    disabled: "Local AI is disabled. Check the local AI switch and the administrator's AI Assistant setting.",
+    busy: "A local AI operation is already running. Wait for it to finish or cancel it before retrying.",
+    timeout: "The local AI operation timed out. Check the engine and model service connection, then retry.",
+    responseInvalid: "The AI engine or model service returned an invalid response. Check compatibility and retry.",
+    runtimeFailed: "The local AI engine stopped or failed to start. Check the installation and retry.",
+    permissionDenied: "The model service denied access. Check the account and API key permissions.",
+    rateLimited: "The model service is receiving too many requests. Wait a moment and retry.",
+    serviceUnavailable: "The model service is temporarily unavailable. Retry later or choose another service.",
+    requestInvalid:
+      "The model service rejected the request. Check the model ID, reasoning effort and API compatibility.",
+    failed: "The local AI request failed. Check your configuration and retry."
+  }
 };
 
 const zh = {
@@ -124,7 +163,35 @@ const zh = {
   connected: "模型连接正常",
   saved: "已保存，原有 AI 对话已重置。",
   reset: "保存更改会停止正在运行的 AI 任务，并开始新的对话。",
-  failed: "本地 AI 配置失败"
+  failed: "本地 AI 配置失败",
+  errors: {
+    modelUnavailable: "所选模型不可用。请刷新模型列表重新选择，或检查模型 ID 及访问权限。",
+    reasoningAllowed: "当前模型不支持所选推理强度。请改为以下档位后重试：{levels}。",
+    reasoningUnsupported: "当前模型不支持所选推理强度。请根据模型服务的要求选择支持的档位后重试。",
+    executableNotFound: "未找到 Codex 程序。请填写已安装 Codex 的绝对路径，或选择“客户端管理版本”下载并安装。",
+    executableInvalid: "请填写 Codex 命令或可执行文件的绝对路径，不要包含命令参数。",
+    engineNotInstalled: "尚未安装 Codex 引擎。请点击“下载并安装”，完成后重新检测。",
+    apiKeyRequired: "请填写该模型服务的 API Key。若修改了 Base URL，请重新填写对应服务的密钥。",
+    modelRequired: "请先选择或输入模型 ID，再启用本地 AI 或测试连接。",
+    baseUrlInvalid: "Base URL 无效。请输入以 http:// 或 https:// 开头的完整模型服务地址。",
+    baseUrlUnsupported: "Base URL 仅支持 HTTP/HTTPS 地址，不能包含用户名、密码、查询参数（?）或片段（#）。",
+    authenticationFailed:
+      "模型服务认证失败。请检查 API Key 是否有效，以及 Base URL 是否与密钥所属服务一致。沿用已有 Codex 配置时，请检查本机 Codex 的登录状态。",
+    settingsInvalid: "本地 AI 配置无效，请检查引擎安装和模型服务设置后重新保存。",
+    engineUnavailable: "客户端管理的 Codex 引擎暂不可用，请重启客户端后重新检测安装。",
+    engineVersionUnsupported: "当前 Codex 版本不受支持，请升级到 codex-cli 0.167.0 或更高版本，或使用客户端管理版本。",
+    credentialStorageUnavailable: "当前设备无法安全加密保存密钥，请改用“沿用已有 Codex 配置”。",
+    disabled: "本地 AI 未启用，请检查本地 AI 开关及管理员的“AI 助手”设置。",
+    busy: "已有本地 AI 操作正在进行，请等待完成或取消后重试。",
+    timeout: "本地 AI 操作超时，请检查引擎及模型服务连接后重试。",
+    responseInvalid: "AI 引擎或模型服务返回的数据无效，请检查兼容性后重试。",
+    runtimeFailed: "本地 AI 引擎启动失败或已退出，请检测安装后重试。",
+    permissionDenied: "模型服务拒绝访问，请检查账号及 API Key 的访问权限。",
+    rateLimited: "模型服务请求过于频繁，请稍后重试。",
+    serviceUnavailable: "模型服务暂时不可用，请稍后重试或更换服务。",
+    requestInvalid: "模型服务拒绝了该请求，请检查模型 ID、推理强度及 API 兼容性。",
+    failed: "本地 AI 请求失败，请检查配置后重试。"
+  }
 };
 
 export const localAiMessages = {

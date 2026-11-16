@@ -8,7 +8,7 @@ export function useLocalCodexModels(
 ) {
   const models = shallowRef<LocalCodexModel[]>([]);
   const loading = shallowRef(false);
-  const error = shallowRef("");
+  const error = shallowRef<unknown>(null);
   let generation = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   async function refresh() {
@@ -17,12 +17,12 @@ export function useLocalCodexModels(
     const current = ++generation;
     if (!draft) return;
     loading.value = true;
-    error.value = "";
+    error.value = null;
     try {
       const result = await fetchModels(draft);
       if (current === generation) models.value = result;
     } catch (cause) {
-      if (current === generation) error.value = cause instanceof Error ? cause.message : String(cause);
+      if (current === generation) error.value = cause;
     } finally {
       if (current === generation) loading.value = false;
     }
@@ -33,7 +33,7 @@ export function useLocalCodexModels(
       ++generation;
       clearTimeout(timer);
       models.value = [];
-      error.value = "";
+      error.value = null;
       loading.value = false;
       if (draft) timer = setTimeout(() => void refresh(), 500);
     },

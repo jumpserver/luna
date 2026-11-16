@@ -11,6 +11,7 @@ import type {
 import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
 import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
 import { cancelHttpLoginConfirmation, requestHttpConnectionConfirmation } from "./httpConfirmation";
+import { isLocalAiSettingsCommand, unwrapLocalAiResult } from "../codex/errorProtocol";
 
 export interface DesktopEvent<T> {
   event?: string;
@@ -116,6 +117,7 @@ export async function desktopInvoke<T>(command: string, args: Record<string, unk
   const generation = loginGeneration;
   const requestArgs = { ...args };
   const result = await requireElectron().invoke<T>(command, requestArgs);
+  if (isLocalAiSettingsCommand(command)) return unwrapLocalAiResult(result);
   if (command !== "auth_login" && command !== "bootstrap_auth_session") return result;
   const response = result as { status?: string; origin?: string } | null;
   if (response?.status !== "http-confirmation-required") return result;
