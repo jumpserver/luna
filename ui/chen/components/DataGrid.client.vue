@@ -30,7 +30,8 @@ import {
   createChenInsertSql,
   createChenUpdateSql,
   formatChenTsv,
-  hasChenPrimaryKey
+  hasChenPrimaryKey,
+  resolveChenCopyMeta
 } from "~/chen/utils/dataGridCopy";
 import {
   emptyChenGridSelection,
@@ -299,10 +300,12 @@ function copySelection() {
   void copyText(formatChenTsv(selected.rows, selected.fields), t("Chen.SelectionCopied"));
 }
 
+const copyMeta = computed(() => resolveChenCopyMeta(props.meta, props.dataset?.fields || []));
+
 function copyInsertSql() {
-  if (!currentRow.value || !props.meta) return;
+  if (!currentRow.value || !copyMeta.value) return;
   try {
-    const sql = createChenInsertSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
+    const sql = createChenInsertSql(props.dbType, copyMeta.value, props.dataset?.fields || [], currentRow.value);
     void copyText(sql, t("Chen.InsertSqlCopied"));
   } catch {
     addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
@@ -310,9 +313,9 @@ function copyInsertSql() {
 }
 
 function copyUpdateSql() {
-  if (!currentRow.value || !props.meta) return;
+  if (!currentRow.value || !copyMeta.value) return;
   try {
-    const sql = createChenUpdateSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
+    const sql = createChenUpdateSql(props.dbType, copyMeta.value, props.dataset?.fields || [], currentRow.value);
     void copyText(sql, t("Chen.UpdateSqlCopied"));
   } catch {
     addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
@@ -320,7 +323,7 @@ function copyUpdateSql() {
 }
 
 const canCopyInsert = computed(() =>
-  Boolean(props.dbType && props.meta?.schema && props.meta.table && props.dataset?.fields.length && currentRow.value)
+  Boolean(props.dbType && copyMeta.value && props.dataset?.fields.length && currentRow.value)
 );
 const canCopyUpdate = computed(() => canCopyInsert.value && hasChenPrimaryKey(props.dataset?.fields || []));
 const canSetCurrentCellNull = computed(() =>

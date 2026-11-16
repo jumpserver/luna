@@ -64,6 +64,37 @@ export function formatChenTsv(rows: ChenDataRow[], fields: Pick<ChenDataViewFiel
   return rows.map((row) => fields.map((field) => formatChenTsvValue(row[field.name])).join("\t")).join("\n");
 }
 
+export function resolveChenCopyMeta(
+  meta: ChenDataViewMeta | null | undefined,
+  fields: ChenDataViewField[]
+): ChenDataViewMeta | null {
+  if (!meta) return null;
+  if (meta.schema && meta.table) return meta;
+  if (!fields.length) return null;
+
+  // QueryConsole supplies table provenance on fields, while new_data_view only
+  // carries the result ID and title. Require every column to share that source.
+  const first = fields[0]!;
+  const schema = first.sourceSchema || first.schema;
+  const table = first.sourceTable;
+  if (!schema?.trim() || !table?.trim()) return null;
+  if ((meta.schema && meta.schema !== schema) || (meta.table && meta.table !== table)) return null;
+
+  const columns = new Set<string>();
+  for (const field of fields) {
+    if (
+      (field.sourceSchema || field.schema) !== schema ||
+      field.sourceTable !== table ||
+      !field.sourceColumn?.trim() ||
+      columns.has(field.sourceColumn)
+    ) {
+      return null;
+    }
+    columns.add(field.sourceColumn);
+  }
+  return { ...meta, schema, table };
+}
+
 function quoteTable(dbType: string, meta: ChenDataViewMeta) {
   if (!meta.schema || !meta.table) {
     throw new Error("DataView schema and table metadata are required");
@@ -72,7 +103,7 @@ function quoteTable(dbType: string, meta: ChenDataViewMeta) {
 }
 
 function fieldColumn(field: ChenDataViewField) {
-  return field.columnName || field.name;
+  return field.sourceColumn || field.columnName || field.name;
 }
 
 function isPrimaryKey(field: ChenDataViewField) {
