@@ -1,11 +1,28 @@
-import type { GoDownloadTicket } from "./api";
+import type { ChenGoApi, GoDownloadTicket, GoExport } from "./api";
 import { desktopDialog, desktopInvoke } from "~/shared/desktop/bridge";
 import { isDesktopRuntime } from "~/utils/runtime";
 
-export async function downloadGoExport(
-  getTicket: () => Promise<GoDownloadTicket>,
-  fileName: string
-): Promise<"started" | "saved" | "cancelled"> {
+type DownloadResult = "started" | "saved" | "cancelled";
+const inFlight = new WeakMap<ChenGoApi, Map<string, Promise<DownloadResult>>>();
+
+export async function downloadGoExportFile(api: ChenGoApi, job: GoExport, assertReady: () => void) {
+  assertReady();
+  const jobs = inFlight.get(api) || new Map<string, Promise<DownloadResult>>();
+  const existing = jobs.get(job.id);
+  if (existing) return existing;
+  const fileName = job.filename || `chen-${job.id.replace(/[^\w-]/g, "_")}.${job.format}`;
+  const result = downloadGoExport(async () => {
+    assertReady();
+    const ticket = await api.exportDownloadTicket(job.id);
+    assertReady();
+    return ticket;
+  }, fileName).finally(() => jobs.delete(job.id));
+  inFlight.set(api, jobs);
+  jobs.set(job.id, result);
+  return result;
+}
+
+async function downloadGoExport(getTicket: () => Promise<GoDownloadTicket>, fileName: string): Promise<DownloadResult> {
   if (isDesktopRuntime()) {
     // Choosing a path may take longer than the ticket's short lifetime. Mint it only after confirmation.
     const filePath = await desktopDialog.save({ defaultPath: fileName });

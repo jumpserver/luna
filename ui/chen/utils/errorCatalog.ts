@@ -288,6 +288,7 @@ export const chenErrorCatalog: Record<string, readonly string[]> = {
     "The database operation failed. Check the diagnostics and connection state."
   ],
   diagnostic_hidden: ["Database diagnostic details are hidden by the data masking policy."],
+  clickhouse_unsupported: ["ClickHouse does not support this operation."],
   database_syntax: ["The SQL syntax is invalid. Check the statement."],
   database_missing_table: ["The table or view does not exist. Check its name, schema and current database."],
   database_missing_column: ["The column does not exist or cannot be resolved. Check its name and alias."],

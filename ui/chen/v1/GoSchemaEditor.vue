@@ -6,7 +6,7 @@ import type { ChenCreateTableColumn } from "~/chen/types";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { onBeforeRouteLeave } from "vue-router";
-import { chenCreateTableTypes } from "~/chen/utils/createTableSql";
+import { chenCreateTableTypes, createTableSizeArity } from "~/chen/utils/createTableSql";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import {
   buildChenCreateIndexSql,
@@ -116,6 +116,10 @@ const currentDefinition = computed(() => {
     return { sql: "", error: chenErrorText(cause, t) };
   }
 });
+function setCreateColumnType(column: ChenCreateTableColumn, next: string) {
+  column.type = next;
+  if (!createTableSizeArity(props.session.dialect, next)) column.size = "";
+}
 function addColumn(initial = false) {
   columns.value.push({
     id: newChenRequestId(),
@@ -407,8 +411,21 @@ defineExpose({ dirty, confirmDiscard });
                 <tbody>
                   <tr v-for="column in columns" :key="column.id">
                     <td class="py-1 pr-2"><UInput v-model="column.name" size="xs" /></td>
-                    <td class="pr-2"><USelect v-model="column.type" :items="types" size="xs" /></td>
-                    <td class="pr-2"><UInput v-model="column.size" size="xs" /></td>
+                    <td class="pr-2">
+                      <USelect
+                        :model-value="column.type"
+                        :items="types"
+                        size="xs"
+                        @update:model-value="setCreateColumnType(column, $event)"
+                      />
+                    </td>
+                    <td class="pr-2">
+                      <UInput
+                        v-model="column.size"
+                        size="xs"
+                        :disabled="!createTableSizeArity(session.dialect, column.type)"
+                      />
+                    </td>
                     <td class="pr-2"><UCheckbox v-model="column.nullable" :disabled="column.primaryKey" /></td>
                     <td class="pr-2">
                       <UCheckbox

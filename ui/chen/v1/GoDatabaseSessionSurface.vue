@@ -60,6 +60,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { ChenGoError, createChenGoApi, executionActive, executionCanCancel } from "./api";
 import { acceptEditExecution, createEditDraft, editDirty } from "./dataEditing";
 import { readChenEvents } from "./events";
+import { downloadGoExportFile } from "./exportDownload";
 import GoCatalogTree from "./GoCatalogTree.vue";
 import GoObjectPane from "./GoObjectPane.vue";
 import GoOverviewPane from "./GoOverviewPane.vue";
@@ -105,6 +106,7 @@ const logs = ref<ChenLogConsoleEntry[]>([]);
 const logsOpen = ref(false);
 const unreadLogErrors = ref(0);
 const loggedExecutions = new Map<string, string>();
+const requestedDownloads = new WeakMap<QueryWorkspaceTab, string>();
 function appendLog(sourceId: string, sourceTitle: string, level: ChenLogConsoleEntry["level"], message: string) {
   logs.value.push({ id: newChenRequestId(), timestamp: Date.now(), sourceId, sourceTitle, level, message });
   if (logs.value.length > 200) logs.value.shift();
@@ -800,16 +802,35 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     );
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
-  if (!isCurrent(query) || query.exportJob?.id !== value.id) return;
-  query.exportJob = reconcileExport(query.exportJob, value);
+  if (!isCurrent(query) || (query.exportJob?.id ?? query.execution?.export_id) !== value.id) return;
+  const job = query.exportJob ? reconcileExport(query.exportJob, value) : value;
+  query.exportJob = job;
+  if (requestedDownloads.get(query) !== job.id || exportActive(job)) return;
+  requestedDownloads.delete(query);
+  if (job.status !== "succeeded" || !job.ready) return;
+  const sessionApi = api;
+  void downloadGoExportFile(sessionApi, job, () => {
+    if (
+      !isCurrent(query) ||
+      api !== sessionApi ||
+      !sessionReady.value ||
+      !session.value?.permissions.can_download ||
+      query.console?.state !== "ready" ||
+      query.exportJob?.id !== job.id ||
+      editDirty(query.edit) ||
+      query.edit.busy
+    )
+      throw new Error(t("Chen.GoV1ExportUnavailable"));
+  }).catch((cause) => {
+    if (isCurrent(query) && api === sessionApi && query.exportJob?.id === job.id) query.error = failureText(cause);
+  });
 }
 async function syncExport(query: QueryWorkspaceTab, id = query.exportJob?.id) {
   if (!id || session.value?.state === "closed") return;
   const expectedId = query.exportJob?.id;
   const current = await api.getExport(id);
   if (!isCurrent(query) || session.value?.state === "closed" || query.exportJob?.id !== expectedId) return;
-  if (!query.exportJob && query.execution?.export_id === id) query.exportJob = current;
-  else acceptExport(query, current);
+  acceptExport(query, current);
 }
 function loseConsole(query: QueryWorkspaceTab) {
   interruptQueryPlans(query);
@@ -843,7 +864,7 @@ function acceptEvent(event: GoEvent) {
   }
   if (event.type === "export.updated") {
     const value = event.data as GoExport;
-    const query = queries.value.find((query) => query.exportJob?.id === value.id);
+    const query = queries.value.find((query) => (query.exportJob?.id ?? query.execution?.export_id) === value.id);
     if (query) acceptExport(query, value);
   }
   if (event.type === "session.updated") session.value = event.data as GoSession;
@@ -1552,7 +1573,10 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
         : undefined;
     query.executionBrowse = pending.browse;
     query.executionQueryPage = pending.queryPage;
-    if (value.export_id) query.exportJob = null;
+    if (value.export_id) {
+      query.exportJob = null;
+      if (pending.exportFormat) requestedDownloads.set(query, value.export_id);
+    }
     // A close event may precede the HTTP response. Do not revive a running spinner after SSE has ended.
     if (session.value?.state === "closed" || (query.console as GoConsole).state === "closed") {
       closeQuerySession(query);
@@ -1733,7 +1757,7 @@ async function cancel(query: QueryWorkspaceTab) {
   }
 }
 
-const closeDialog = ref<(ReturnType<typeof closeWarnings> & { keepConnection?: boolean }) | null>(null);
+const closeDialog = ref<{ keepConnection: boolean; changes: boolean; rollback: boolean } | null>(null);
 let closeResolver: ((value: boolean) => void) | undefined;
 function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false, keepConnection = false) {
   if (session.value?.can_cancel === false) {
@@ -1750,7 +1774,18 @@ function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false, keep
   if (preserveSqlDrafts) warnings.dirty = list.some((query) => editDirty(query.edit));
   if (!Object.values(warnings).some(Boolean)) return Promise.resolve(true);
   if (closeResolver) return Promise.resolve(false);
-  closeDialog.value = { ...warnings, keepConnection };
+  const transactions = keepConnection
+    ? []
+    : list.flatMap((query) => (query.console && query.console.state !== "closed" ? [query.console.transaction] : []));
+  closeDialog.value = {
+    keepConnection,
+    changes:
+      warnings.dirty ||
+      warnings.running ||
+      warnings.unknown ||
+      transactions.some((tx) => !tx?.manual || tx.state === "unknown"),
+    rollback: transactions.some((tx) => tx?.manual && tx.state === "active")
+  };
   return new Promise<boolean>((resolve) => {
     closeResolver = resolve;
   });
@@ -2413,9 +2448,9 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
       "
     >
       <template #body>
-        <p class="text-sm">{{ t("Chen.GoV1CloseDescription") }}</p>
-        <p v-if="closeDialog?.transaction" class="mt-2 text-sm text-warning">
-          {{ t("Chen.Transaction.RollbackOnClose") }}
+        <p class="text-sm">
+          {{ closeDialog?.changes ? `${t("Chen.GoV1CloseDescription")} ` : "" }}
+          <span v-if="closeDialog?.rollback" class="text-warning">{{ t("Chen.Transaction.RollbackOnClose") }}</span>
         </p>
       </template>
       <template #footer>

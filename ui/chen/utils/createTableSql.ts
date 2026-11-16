@@ -1,4 +1,4 @@
-import { chenSqlDialect } from "~/chen/utils/sqlDialect";
+import { canonicalChenDialect, chenSqlDialect } from "~/chen/utils/sqlDialect";
 import type { ChenCreateTableColumn } from "~/chen/types";
 
 const COMMON_TYPES = ["INTEGER", "BIGINT", "VARCHAR", "TEXT", "DECIMAL", "BOOLEAN", "DATE", "TIMESTAMP"];
@@ -21,6 +21,24 @@ export function chenCreateTableTypes(dbType: string) {
     return ["Int32", "Int64", "UInt32", "UInt64", "String", "Decimal", "Boolean", "Date", "DateTime", "UUID"];
   }
   return COMMON_TYPES;
+}
+
+// The form exposes numeric length/precision only. Type parameters such as
+// a timezone name are not numeric sizes.
+export function createTableSizeArity(dbType: string, type: string): number {
+  const dialect = canonicalChenDialect(dbType);
+  const name = type.toUpperCase();
+  if (!dialect) return 2;
+  if (["DECIMAL", "NUMERIC", "NUMBER"].includes(name)) return 2;
+  if (["VARCHAR", "NVARCHAR", "VARCHAR2", "NVARCHAR2", "TIMESTAMP", "DATETIME2"].includes(name)) return 1;
+  if (
+    ["mysql", "mariadb", "oceanbase-mysql"].includes(dialect) &&
+    ["INT", "INTEGER", "BIGINT", "TEXT", "DATETIME"].includes(name)
+  )
+    return 1;
+  if (dialect === "clickhouse" && ["INT32", "INT64", "UINT32", "UINT64", "STRING", "DATETIME"].includes(name)) return 1;
+  if (dialect === "dameng" && name === "CLOB") return 1;
+  return 0;
 }
 
 function quoteIdentifier(value: string, dbType: string) {
@@ -55,7 +73,8 @@ export function buildChenCreateTableSql(tableName: string, columns: ChenCreateTa
     const type = allowedTypes.get(column.type.toLowerCase());
     if (!type) throw new Error(`Column “${name}” has an unsupported type`);
     const size = column.size.trim();
-    if (size && !/^\d+(?:\s*,\s*\d+)?$/.test(size)) {
+    const arity = createTableSizeArity(dbType, type);
+    if (size && (!/^\d+(?:\s*,\s*\d+)?$/.test(size) || size.split(",").length > arity)) {
       throw new Error(`Column “${name}” has an invalid length or precision`);
     }
 

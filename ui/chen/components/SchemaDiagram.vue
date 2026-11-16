@@ -572,6 +572,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
                 </div>
               </div>
             </button>
+            <slot name="column-action" :table="entity" />
             <UButton
               v-if="openable && entity.openable !== false"
               icon="i-lucide-external-link"
