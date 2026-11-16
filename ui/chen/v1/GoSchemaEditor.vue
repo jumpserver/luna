@@ -3,9 +3,10 @@ import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoSession } from "./
 import type { GoColumnAction } from "./schemaSql";
 import type { QueryContext } from "./workspace";
 import type { ChenCreateTableColumn } from "~/chen/types";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { onBeforeRouteLeave } from "vue-router";
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import { chenCreateTableTypes, createTableSizeArity } from "~/chen/utils/createTableSql";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import {
@@ -175,6 +176,7 @@ function stageChange() {
   resetColumnInput();
 }
 const confirming = ref(false);
+const discardDescriptionId = useId();
 const editorBody = ref<HTMLElement>();
 const keepEditingButton = ref<{ $el: HTMLButtonElement }>();
 let previousFocus: HTMLElement | null = null;
@@ -613,23 +615,23 @@ defineExpose({ dirty, confirmDiscard });
       </div>
     </template>
   </UModal>
-  <UModal
+  <ChenWorkspaceModal
     :open="confirming"
+    portal
     :title="t('Chen.DiscardUnsavedChanges')"
-    :description="t('Chen.GoSchemaCloseHint')"
     :content="{
+      'aria-describedby': discardDescriptionId,
       onOpenAutoFocus: focusKeepEditing,
       onCloseAutoFocus: restoreFocus,
       onEscapeKeyDown: (event: KeyboardEvent) => event.stopPropagation()
     }"
-    @update:open="
-      (value) => {
-        if (!value) finishDiscard(false);
-      }
-    "
+    @update:open="!$event && finishDiscard(false)"
   >
+    <template #body>
+      <p :id="discardDescriptionId" class="text-sm text-muted">{{ t("Chen.GoSchemaCloseHint") }}</p>
+    </template>
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
+      <div class="flex w-full flex-wrap justify-end gap-2">
         <UButton
           ref="keepEditingButton"
           color="neutral"
@@ -637,8 +639,8 @@ defineExpose({ dirty, confirmDiscard });
           :label="t('Chen.GoSchemaCloseKeepEditing')"
           @click="finishDiscard(false)"
         />
-        <UButton color="error" :label="t('Chen.Discard')" @click="finishDiscard(true)" />
+        <UButton color="error" icon="i-lucide-trash-2" :label="t('Chen.Discard')" @click="finishDiscard(true)" />
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

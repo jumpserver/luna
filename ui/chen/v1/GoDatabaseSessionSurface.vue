@@ -45,6 +45,7 @@ import {
 import { useI18n } from "vue-i18n";
 import { parseKokoMcpFrame } from "#koko/composables/agent/types";
 import LogConsolePanel from "~/chen/components/LogConsolePanel.vue";
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import {
   getChenSqlAiSession,
   handleChenSqlAiError,
@@ -1274,7 +1275,7 @@ async function confirmSchemaDiscard() {
 async function confirmSessionLeave(preserveSqlDrafts = false) {
   const target = schemaEdit.value;
   const scope = connection;
-  if (!(await confirmSchemaDiscard()) || !(await confirmClose(queries.value, preserveSqlDrafts))) return false;
+  if (!(await confirmSchemaDiscard()) || !(await confirmClose(queries.value, { preserveSqlDrafts }))) return false;
   return !disposed && connection === scope && schemaEdit.value === target;
 }
 async function openSchemaEditor(
@@ -1773,9 +1774,31 @@ async function cancel(query: QueryWorkspaceTab) {
   }
 }
 
-const closeDialog = ref<{ keepConnection: boolean; changes: boolean; rollback: boolean } | null>(null);
+const closeTitles = {
+  connection: "Chen.GoV1ConfirmClose",
+  table: "Chen.GoV1ConfirmCloseTable",
+  query: "Chen.GoV1ConfirmCloseQuery",
+  console: "Chen.GoV1ConfirmCloseConsole",
+  tabs: "Chen.GoV1ConfirmCloseTabs",
+  reconnect: "Chen.GoV1ConfirmReconnect"
+} as const;
+const closeDescriptionId = useId();
+// A hidden session or a pane covered by connection progress must show its close prompt above the workspace.
+const portalCloseDialog = computed(() => workspaceWidth.value === 0 || !!props.tab?.connectionProgress);
+const closeDialog = ref<(ReturnType<typeof closeWarnings> & { title: string }) | null>(null);
 let closeResolver: ((value: boolean) => void) | undefined;
-function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false, keepConnection = false) {
+function confirmClose(
+  list: QueryWorkspaceTab[],
+  {
+    preserveSqlDrafts = false,
+    keepConnection = false,
+    target = "connection"
+  }: {
+    preserveSqlDrafts?: boolean;
+    keepConnection?: boolean;
+    target?: keyof typeof closeTitles;
+  } = {}
+) {
   if (session.value?.can_cancel === false) {
     const running = list.filter(
       (query) => executionActive(query.execution) && query.execution?.status !== "waiting_review"
@@ -1786,22 +1809,11 @@ function confirmClose(list: QueryWorkspaceTab[], preserveSqlDrafts = false, keep
     }
   }
   const warnings = closeWarnings(list);
-  if (keepConnection) warnings.transaction = false;
-  if (preserveSqlDrafts) warnings.dirty = list.some((query) => editDirty(query.edit));
+  if (keepConnection) warnings.transaction = warnings.transactionUnknown = false;
+  if (preserveSqlDrafts) warnings.sql = false;
   if (!Object.values(warnings).some(Boolean)) return Promise.resolve(true);
   if (closeResolver) return Promise.resolve(false);
-  const transactions = keepConnection
-    ? []
-    : list.flatMap((query) => (query.console && query.console.state !== "closed" ? [query.console.transaction] : []));
-  closeDialog.value = {
-    keepConnection,
-    changes:
-      warnings.dirty ||
-      warnings.running ||
-      warnings.unknown ||
-      transactions.some((tx) => !tx?.manual || tx.state === "unknown"),
-    rollback: transactions.some((tx) => tx?.manual && tx.state === "active")
-  };
+  closeDialog.value = { ...warnings, title: keepConnection ? "Chen.UnpinResult" : closeTitles[target] };
   return new Promise<boolean>((resolve) => {
     closeResolver = resolve;
   });
@@ -1843,7 +1855,7 @@ async function closePinned(owner: QueryWorkspaceTab, query: QueryWorkspaceTab) {
     !owner.pinnedResults.includes(query) ||
     query.busy ||
     query.exportBusy ||
-    !(await confirmClose([query], false, true))
+    !(await confirmClose([query], { keepConnection: true }))
   )
     return;
   try {
@@ -1870,7 +1882,7 @@ async function closePinned(owner: QueryWorkspaceTab, query: QueryWorkspaceTab) {
 }
 async function closeTabs(list: ChenWorkspaceTab[]) {
   const queries = workspaceQueries(list);
-  if (queries.some((query) => query.busy) || !(await confirmClose(queries))) return;
+  if (queries.some((query) => query.busy) || !(await confirmClose(queries, { target: "tabs" }))) return;
   for (const tab of list) await closeTab(tab, true);
 }
 async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
@@ -1878,7 +1890,10 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
   if (query) {
     if (
       [query, ...query.pinnedResults].some((item) => item.busy || item.exportBusy) ||
-      (!confirmed && !(await confirmClose([query, ...query.pinnedResults]))) ||
+      (!confirmed &&
+        !(await confirmClose([query, ...query.pinnedResults], {
+          target: tab.kind === "object" || query.kind === "preview" ? "table" : query.kind
+        }))) ||
       !isCurrent(query)
     )
       return;
@@ -1918,7 +1933,12 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
 async function reconnect(query: QueryWorkspaceTab): Promise<void> {
   const owner = queries.value.find((item) => item.pinnedResults.includes(query));
   if (owner) return reconnect(owner);
-  if (!sessionReady.value || query.busy || !(await confirmClose([query, ...query.pinnedResults])) || !isCurrent(query))
+  if (
+    !sessionReady.value ||
+    query.busy ||
+    !(await confirmClose([query, ...query.pinnedResults], { preserveSqlDrafts: true, target: "reconnect" })) ||
+    !isCurrent(query)
+  )
     return;
   try {
     if (query.console) await api.closeConsole(query.console.id);
@@ -2106,7 +2126,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
 <template>
   <section
     :data-chen-session-state="session?.state || 'connecting'"
-    class="flex h-full min-h-0 flex-col bg-[var(--workspace-surface-main)] text-[var(--app-fg)]"
+    class="relative flex h-full min-h-0 flex-col bg-[var(--workspace-surface-main)] text-[var(--app-fg)]"
     @copy.capture="preventCopy"
     @cut.capture="preventCopy"
   >
@@ -2448,33 +2468,34 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         </div>
       </template>
     </UModal>
-    <UModal
+    <ChenWorkspaceModal
       :open="!!closeDialog"
-      :title="t(closeDialog?.keepConnection ? 'Chen.UnpinResult' : 'Chen.GoV1ConfirmClose')"
-      :ui="{
-        content: 'sm:max-w-sm',
-        header: 'px-4 py-3 sm:px-4',
-        body: 'px-4 py-1 sm:p-4 sm:py-1',
-        footer: 'px-4 py-3 sm:px-4'
-      }"
-      @update:open="
-        (value) => {
-          if (!value) finishClose(false);
-        }
-      "
+      :portal="portalCloseDialog"
+      :title="closeDialog ? t(closeDialog.title) : ''"
+      :content="{ 'aria-describedby': closeDescriptionId }"
+      @update:open="!$event && finishClose(false)"
     >
       <template #body>
-        <p class="text-sm">
-          {{ closeDialog?.changes ? `${t("Chen.GoV1CloseDescription")} ` : "" }}
-          <span v-if="closeDialog?.rollback" class="text-warning">{{ t("Chen.Transaction.RollbackOnClose") }}</span>
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton :label="t('Common.Cancel')" color="neutral" variant="ghost" @click="finishClose(false)" />
-          <UButton :label="t('Chen.GoV1ConfirmDiscardClose')" color="warning" @click="finishClose(true)" />
+        <div :id="closeDescriptionId" class="space-y-2 text-sm text-muted">
+          <p v-if="closeDialog?.sql">{{ t("Chen.GoV1CloseSqlDraft") }}</p>
+          <p v-if="closeDialog?.data">{{ t("Chen.DiscardDataViewEditsMessage") }}</p>
+          <p v-if="closeDialog?.running">{{ t("Chen.GoV1CloseRunning") }}</p>
+          <p v-if="closeDialog?.unknown">{{ t("Chen.GoV1CloseUnknown") }}</p>
+          <p v-if="closeDialog?.transaction">{{ t("Chen.Transaction.RollbackOnClose") }}</p>
+          <p v-if="closeDialog?.transactionUnknown">{{ t("Chen.GoV1CloseDescription") }}</p>
         </div>
       </template>
-    </UModal>
+      <template #footer>
+        <div class="flex w-full flex-wrap justify-end gap-2">
+          <UButton :label="t('Common.Cancel')" color="neutral" variant="soft" @click="finishClose(false)" />
+          <UButton
+            :label="t('Chen.GoV1ConfirmDiscardClose')"
+            color="error"
+            icon="i-lucide-trash-2"
+            @click="finishClose(true)"
+          />
+        </div>
+      </template>
+    </ChenWorkspaceModal>
   </section>
 </template>

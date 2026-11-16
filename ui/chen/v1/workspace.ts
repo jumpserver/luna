@@ -349,8 +349,11 @@ export function mergeCatalogNodes<T extends { id: string; label: string; detail?
   return append ? [...previous, ...merged.filter((item) => !byId.has(item.id))] : merged;
 }
 export function closeWarnings(queries: QueryWorkspaceTab[]) {
+  queries = queries.flatMap((query) => [query, ...query.pinnedResults]);
+  const connected = queries.filter((query) => query.console && query.console.state !== "closed");
   return {
-    dirty: queries.some(queryDirty),
+    sql: queries.some((query) => query.kind !== "preview" && query.sql !== query.baselineSql),
+    data: queries.some((query) => editDirty(query.edit)),
     running: queries.some(
       (query) =>
         executionActive(query.execution) ||
@@ -363,12 +366,19 @@ export function closeWarnings(queries: QueryWorkspaceTab[]) {
     unknown: queries.some(
       (query) => !!query.pending || !!query.pendingCachedExport || query.execution?.status === "unknown"
     ),
-    transaction: queries.some(
-      (query) =>
-        query.console &&
-        query.console.state !== "closed" &&
-        (!query.console.transaction?.manual || query.console.transaction.state !== "idle")
-    )
+    transaction: connected.some(
+      (query) => query.console!.transaction?.manual && query.console!.transaction.state === "active"
+    ),
+    transactionUnknown: connected.some((query) => {
+      const transaction = query.console!.transaction;
+      // Automatic-mode SQL can contain BEGIN without appearing in the managed transaction snapshot.
+      // Only a controlled table preview with a known idle state can safely skip this warning.
+      return (
+        !transaction ||
+        transaction.state === "unknown" ||
+        (!transaction.manual && (query.kind !== "preview" || transaction.state !== "idle"))
+      );
+    })
   };
 }
 export function exportActive(job: GoExport | null) {
