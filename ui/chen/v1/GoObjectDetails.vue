@@ -75,7 +75,11 @@ const current = computed(() =>
       ? undefined
       : data.value?.sections[active.value]
 );
-const columns = computed(() => sectionColumns[active.value] || []);
+const columns = computed(() =>
+  (sectionColumns[active.value] || []).filter((column) =>
+    current.value?.items?.some((row) => Object.hasOwn(row, column))
+  )
+);
 const sectionError = computed(() =>
   current.value?.error ? chenErrorText(current.value.error, t, "catalog_failed") : ""
 );
@@ -90,7 +94,7 @@ const labels: Record<string, string> = {
   referenced_schema: "Chen.Schema",
   referenced_table: "Chen.References",
   referenced_column: "Chen.GoV1ReferencedColumn",
-  expression: "Chen.Definition",
+  expression: "Chen.GoOverviewExpression",
   type: "Chen.Type",
   definition: "Chen.Definition"
 };

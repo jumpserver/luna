@@ -77,9 +77,9 @@ const emit = defineEmits<{
     snapshot: { sql: string; resultId: string; version: number; rows?: number },
     target?: QueryWorkspaceTab
   ];
-  exportSync: [target?: QueryWorkspaceTab];
-  exportCancel: [target?: QueryWorkspaceTab];
-  exportDelete: [target?: QueryWorkspaceTab];
+  exportSync: [id: string, target?: QueryWorkspaceTab];
+  exportCancel: [id: string, target?: QueryWorkspaceTab];
+  exportDelete: [id: string, target?: QueryWorkspaceTab];
   ai: [operation: ChenSqlAiOperation];
   recover: [target?: QueryWorkspaceTab];
   reconnect: [target?: QueryWorkspaceTab];
@@ -536,7 +536,7 @@ const showExportJobStatus = computed(
   () =>
     !props.dataOnly &&
     !pinnedResult.value &&
-    !!props.query.exportJob &&
+    props.query.exportJobs.length > 0 &&
     (props.query.resultPane !== "results" || !props.query.rows)
 );
 const resultTabList = useTemplateRef<HTMLElement>("resultTabList");
@@ -1409,9 +1409,9 @@ defineExpose({
             :api="api"
             :ready="ready && !editDirty(query.edit) && !query.edit.busy"
             @start="(mode, format, snapshot) => emit('export', mode, format, snapshot)"
-            @sync="emit('exportSync')"
-            @cancel="emit('exportCancel')"
-            @remove="emit('exportDelete')"
+            @sync="emit('exportSync', $event)"
+            @cancel="emit('exportCancel', $event)"
+            @remove="emit('exportDelete', $event)"
           />
         </DefineExportAction>
         <div
@@ -1606,9 +1606,9 @@ defineExpose({
               "
               @transaction="(request, target) => emit('transaction', request, target || pinnedQuery)"
               @confirm-implicit="(executionId, target) => emit('confirmImplicit', executionId, target || pinnedQuery)"
-              @export-sync="(target) => emit('exportSync', target || pinnedQuery)"
-              @export-cancel="(target) => emit('exportCancel', target || pinnedQuery)"
-              @export-delete="(target) => emit('exportDelete', target || pinnedQuery)"
+              @export-sync="(id, target) => emit('exportSync', id, target || pinnedQuery)"
+              @export-cancel="(id, target) => emit('exportCancel', id, target || pinnedQuery)"
+              @export-delete="(id, target) => emit('exportDelete', id, target || pinnedQuery)"
               @recover="(target) => emit('recover', target || pinnedQuery)"
               @reconnect="(target) => emit('reconnect', target || pinnedQuery)"
               @rows="(id, offset, target) => emit('rows', id, offset, target || pinnedQuery)"
@@ -1683,7 +1683,7 @@ defineExpose({
                 </UPopover>
               </template>
               <template #actions>
-                <ExportAction v-if="query.resultId || query.exportJob" />
+                <ExportAction v-if="query.resultId || query.exportJobs.length" />
               </template>
             </GoWritePanel>
             <GoBrowseFooter

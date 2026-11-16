@@ -76,6 +76,7 @@ import {
   closeWarnings,
   createQueryTab,
   exportActive,
+  exportNeedsSync,
   hasMoreResultRows,
   interruptQueryPlans,
   isQueryWorkspaceTab,
@@ -106,7 +107,7 @@ const logs = ref<ChenLogConsoleEntry[]>([]);
 const logsOpen = ref(false);
 const unreadLogErrors = ref(0);
 const loggedExecutions = new Map<string, string>();
-const requestedDownloads = new WeakMap<QueryWorkspaceTab, string>();
+const requestedDownloads = new WeakMap<QueryWorkspaceTab, Set<string>>();
 function appendLog(sourceId: string, sourceTitle: string, level: ChenLogConsoleEntry["level"], message: string) {
   logs.value.push({ id: newChenRequestId(), timestamp: Date.now(), sourceId, sourceTitle, level, message });
   if (logs.value.length > 200) logs.value.shift();
@@ -805,12 +806,16 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     );
 }
 function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
-  if (!isCurrent(query) || (query.exportJob?.id ?? query.execution?.export_id) !== value.id) return;
-  const job = query.exportJob ? reconcileExport(query.exportJob, value) : value;
-  query.exportJob = job;
-  if (requestedDownloads.get(query) !== job.id || exportActive(job)) return;
-  requestedDownloads.delete(query);
-  if (job.status !== "succeeded" || !job.ready) return;
+  if (!isCurrent(query)) return;
+  const requested = requestedDownloads.get(query);
+  const index = query.exportJobs.findIndex((job) => job.id === value.id);
+  if (index < 0 && !requested?.has(value.id)) return;
+  const job = index < 0 ? value : reconcileExport(query.exportJobs[index]!, value);
+  if (index < 0) query.exportJobs.unshift(job);
+  else query.exportJobs[index] = job;
+  if (!requested?.has(job.id) || exportActive(job) || (job.status === "succeeded" && !job.ready)) return;
+  requested.delete(job.id);
+  if (job.status !== "succeeded") return;
   const sessionApi = api;
   void downloadGoExportFile(sessionApi, job, () => {
     if (
@@ -819,21 +824,20 @@ function acceptExport(query: QueryWorkspaceTab, value: GoExport) {
       !sessionReady.value ||
       !session.value?.permissions.can_download ||
       query.console?.state !== "ready" ||
-      query.exportJob?.id !== job.id ||
+      !query.exportJobs.some((item) => item.id === job.id) ||
       editDirty(query.edit) ||
       query.edit.busy
     )
       throw new Error(t("Chen.GoV1ExportUnavailable"));
   }).catch((cause) => {
-    if (isCurrent(query) && api === sessionApi && query.exportJob?.id === job.id) query.error = failureText(cause);
+    if (isCurrent(query) && api === sessionApi && query.exportJobs.some((item) => item.id === job.id))
+      query.error = failureText(cause);
   });
 }
-async function syncExport(query: QueryWorkspaceTab, id = query.exportJob?.id) {
-  if (!id || session.value?.state === "closed") return;
-  const expectedId = query.exportJob?.id;
+async function syncExport(query: QueryWorkspaceTab, id: string) {
+  if (session.value?.state === "closed") return;
   const current = await api.getExport(id);
-  if (!isCurrent(query) || session.value?.state === "closed" || query.exportJob?.id !== expectedId) return;
-  acceptExport(query, current);
+  if (session.value?.state !== "closed") acceptExport(query, current);
 }
 function loseConsole(query: QueryWorkspaceTab) {
   interruptQueryPlans(query);
@@ -867,7 +871,9 @@ function acceptEvent(event: GoEvent) {
   }
   if (event.type === "export.updated") {
     const value = event.data as GoExport;
-    const query = queries.value.find((query) => (query.exportJob?.id ?? query.execution?.export_id) === value.id);
+    const query = queries.value.find(
+      (query) => query.exportJobs.some((job) => job.id === value.id) || requestedDownloads.get(query)?.has(value.id)
+    );
     if (query) acceptExport(query, value);
   }
   if (event.type === "session.updated") session.value = event.data as GoSession;
@@ -929,7 +935,13 @@ async function watchEvents(scope: SessionConnection) {
       if (!isConnectionCurrent(scope) || controller.signal.aborted) break;
       eventConnected.value = true;
       // State reads must not delay lock/close events already available on the stream.
-      void Promise.allSettled(queries.value.flatMap((query) => [syncExecution(query), syncExport(query)]));
+      void Promise.allSettled(
+        queries.value.flatMap((query) => {
+          const ids = new Set(requestedDownloads.get(query));
+          for (const job of query.exportJobs) if (exportNeedsSync(job)) ids.add(job.id);
+          return [syncExecution(query), ...Array.from(ids, (id) => syncExport(query, id))];
+        })
+      );
       delay = 1000;
       await readChenEvents(
         stream,
@@ -1170,12 +1182,13 @@ async function refreshData(query: QueryWorkspaceTab, targetOffset?: number, afte
   if (query.browseObject)
     await browseTable(
       query,
-      targetOffset === undefined
-        ? undefined
-        : {
+      query.rows.browse?.supported
+        ? {
             source_result_id: query.rows.id,
-            offset: targetOffset
-          },
+            action: !afterSave && session.value?.dialect === "sqlserver" ? "refresh" : "page",
+            offset: targetOffset ?? query.rows.browse.offset
+          }
+        : undefined,
       true
     );
   else if (!afterSave && !query.rows.query_page?.supported && !query.edit.metadata?.supported)
@@ -1576,9 +1589,10 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
         : undefined;
     query.executionBrowse = pending.browse;
     query.executionQueryPage = pending.queryPage;
-    if (value.export_id) {
-      query.exportJob = null;
-      if (pending.exportFormat) requestedDownloads.set(query, value.export_id);
+    if (value.export_id && pending.exportFormat) {
+      const requested = requestedDownloads.get(query) || new Set<string>();
+      requested.add(value.export_id);
+      requestedDownloads.set(query, requested);
     }
     // A close event may precede the HTTP response. Do not revive a running spinner after SSE has ended.
     if (session.value?.state === "closed" || (query.console as GoConsole).state === "closed") {
@@ -1620,8 +1634,7 @@ async function startExport(
     query.exportBusy ||
     editDirty(query.edit) ||
     query.edit.busy ||
-    query.pending ||
-    exportActive(query.exportJob)
+    query.pending
   )
     return;
   if (mode === "query") {
@@ -1666,7 +1679,7 @@ async function startExport(
     const value = await api.exportCached(pending.resultId, pending.format, pending.id, pending.rows);
     if (!isCurrent(query) || session.value?.state === "closed") return;
     query.pendingCachedExport = null;
-    query.exportJob = value;
+    query.exportJobs.unshift(value);
   } catch (cause) {
     if (isCurrent(query)) {
       if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) query.pendingCachedExport = null;
@@ -1678,26 +1691,26 @@ async function startExport(
     if (isCurrent(query)) query.exportBusy = false;
   }
 }
-async function cancelExport(query: QueryWorkspaceTab) {
-  if (!sessionReady.value || !query.exportJob || !exportActive(query.exportJob)) return;
+async function cancelExport(query: QueryWorkspaceTab, id: string) {
+  if (!sessionReady.value || !query.exportJobs.some((job) => job.id === id && exportActive(job))) return;
   try {
-    acceptExport(query, await api.cancelExport(query.exportJob.id));
+    acceptExport(query, await api.cancelExport(id));
   } catch (cause) {
     if (isCurrent(query)) query.error = failureText(cause);
   }
 }
-async function deleteExport(query: QueryWorkspaceTab) {
-  const id = query.exportJob?.id;
-  if (!id || !isCurrent(query) || query.exportBusy) return;
-  if (session.value?.state === "closed") {
-    query.exportJob = null;
-    return;
-  }
-  if (exportActive(query.exportJob)) return;
+async function deleteExport(query: QueryWorkspaceTab, id: string) {
+  const job = query.exportJobs.find((item) => item.id === id);
+  if (!job || !isCurrent(query) || query.exportBusy) return;
+  const closed = session.value?.state === "closed";
+  if (!closed && exportActive(job)) return;
   query.exportBusy = true;
   try {
-    await api.deleteExport(id);
-    if (isCurrent(query) && query.exportJob?.id === id) query.exportJob = null;
+    if (!closed) await api.deleteExport(id);
+    if (isCurrent(query)) {
+      requestedDownloads.get(query)?.delete(id);
+      query.exportJobs = query.exportJobs.filter((item) => item.id !== id);
+    }
   } catch (cause) {
     if (isCurrent(query)) query.error = failureText(cause);
   } finally {
@@ -1835,7 +1848,7 @@ async function closePinned(owner: QueryWorkspaceTab, query: QueryWorkspaceTab) {
     return;
   try {
     if (executionActive(query.execution)) await api.cancel(query.execution!.id);
-    if (exportActive(query.exportJob)) await api.cancelExport(query.exportJob!.id);
+    for (const job of query.exportJobs.filter(exportActive)) await api.cancelExport(job.id);
   } catch (cause) {
     query.error = failureText(cause);
     return;
@@ -1882,7 +1895,7 @@ async function closeTab(tab: ChenWorkspaceTab, confirmed = false) {
     try {
       for (const item of [query, ...query.pinnedResults]) {
         if (item.execution && executionActive(item.execution)) await queryApi.cancel(item.execution.id);
-        if (exportActive(item.exportJob)) await queryApi.cancelExport(item.exportJob!.id);
+        for (const job of item.exportJobs.filter(exportActive)) await queryApi.cancelExport(job.id);
       }
       if (query.console && query.console.state !== "closed" && session.value?.state !== "closed")
         await queryApi.closeConsole(query.console.id);
@@ -2372,13 +2385,13 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @confirm-implicit="(id, target) => confirmImplicitCommit(target || query, id)"
               @export="(mode, format, snapshot, target) => startExport(target || query, mode, format, snapshot)"
               @export-sync="
-                (target) =>
-                  syncExport(target || query).catch((cause) => {
+                (id, target) =>
+                  syncExport(target || query, id).catch((cause) => {
                     (target || query).error = failureText(cause);
                   })
               "
-              @export-cancel="(target) => cancelExport(target || query)"
-              @export-delete="(target) => deleteExport(target || query)"
+              @export-cancel="(id, target) => cancelExport(target || query, id)"
+              @export-delete="(id, target) => deleteExport(target || query, id)"
               @recover="(target) => recoverSubmission(target || query)"
               @reconnect="(target) => reconnect(target || query)"
               @rows="(id, offset, target) => loadRows(target || query, id, offset)"

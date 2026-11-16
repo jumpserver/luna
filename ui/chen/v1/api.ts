@@ -152,7 +152,7 @@ export interface GoBrowseRequest {
   schema?: string;
   table?: string;
   source_result_id?: string;
-  action?: "page" | "append" | "count" | "export";
+  action?: "page" | "refresh" | "append" | "count" | "export";
   where?: string;
   filter?: GoBrowseFilter;
   sort?: GoBrowseOrder[];
