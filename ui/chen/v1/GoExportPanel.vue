@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoExport, GoExportFormat, GoSession } from "./api";
-import type { QueryWorkspaceTab } from "./workspace";
-import { useIntervalFn } from "@vueuse/core";
+import type { GoExport, GoExportFormat, GoSession } from "./api";
+import type { ExportTaskAction, QueryWorkspaceTab } from "./workspace";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { editDirty } from "./dataEditing";
-import { downloadGoExportFile } from "./exportDownload";
-import { exportActive, exportNeedsSync } from "./workspace";
+import { exportActive } from "./workspace";
 const props = defineProps<{
   query: QueryWorkspaceTab;
   session: GoSession;
-  api: ChenGoApi;
   ready: boolean;
   iconOnly?: boolean;
 }>();
@@ -22,20 +19,16 @@ const emit = defineEmits<{
     format: GoExportFormat,
     snapshot: { sql: string; resultId: string; version: number; rows?: number }
   ];
-  sync: [id: string];
-  cancel: [id: string];
-  remove: [id: string];
+  action: [id: string, action: ExportTaskAction];
 }>();
 const { t } = useI18n();
-const open = ref(false);
+const configOpen = ref(false);
+const historyOpen = ref(false);
 const mode = ref<"cached" | "query">("cached");
 const format = ref<GoExportFormat>("csv");
 const snapshot = ref({ sql: "", resultId: "", version: 0, rows: 0, truncated: false });
-const downloading = ref<string | null>(null);
-const submittedFull = ref(false);
-const notice = ref("");
-const failure = ref("");
 const jobs = computed(() => props.query.exportJobs);
+const activeCount = computed(() => jobs.value.filter(exportActive).length);
 const closed = computed(() => props.session.state === "closed");
 const unavailableMessage = computed(() =>
   props.session.state !== "ready" || props.query.console?.state !== "ready"
@@ -66,7 +59,7 @@ function cancelSupported(job: GoExport) {
   );
 }
 function show() {
-  if (!props.session.permissions.can_download || (!props.ready && !jobs.value.length)) return;
+  if (!props.session.permissions.can_download || !props.ready) return;
   snapshot.value = {
     sql: props.query.rows?.browse?.supported ? props.query.rows.browse.full_sql : props.query.resultSql,
     resultId: props.query.resultId,
@@ -77,70 +70,28 @@ function show() {
         : props.query.rows?.total_rows) || 0,
     truncated: !!props.query.rows?.truncated
   };
-  submittedFull.value = false;
   mode.value = "cached";
-  notice.value = "";
-  failure.value = "";
-  open.value = true;
-  if (props.ready) jobs.value.filter(exportNeedsSync).forEach((job) => emit("sync", job.id));
+  configOpen.value = true;
 }
 function start() {
-  if (!canStart.value) return;
-  notice.value = "";
-  failure.value = "";
-  submittedFull.value = mode.value === "query";
+  if (!configOpen.value || !canStart.value) return;
+  configOpen.value = false;
   emit("start", mode.value, format.value, { ...snapshot.value });
 }
-// Confirmation, review and submission errors use the query's existing controls.
 watch(
-  () =>
-    props.query.error ||
-    props.query.execution?.confirmation ||
-    ["failed", "waiting_review", "unknown"].includes(props.query.execution?.status || ""),
-  (needsAttention) => {
-    if (submittedFull.value && needsAttention) open.value = false;
+  () => jobs.value.length,
+  (count) => {
+    if (!count) historyOpen.value = false;
   }
 );
-async function download(job: GoExport) {
-  if (!job.ready || job.status !== "succeeded" || downloading.value || !props.ready) return;
-  const retained = () => jobs.value.some((item) => item.id === job.id);
-  downloading.value = job.id;
-  notice.value = "";
-  failure.value = "";
-  try {
-    const result = await downloadGoExportFile(props.api, job, () => {
-      if (!props.ready || !props.session.permissions.can_download || !retained())
-        throw new Error(unavailableMessage.value || t("Chen.GoV1SessionClosed"));
-    });
-    if (!retained()) return;
-    notice.value = t(
-      result === "saved"
-        ? "Chen.ExportDownloaded"
-        : result === "cancelled"
-          ? "Chen.ExportCanceled"
-          : "Chen.GoV1ExportDownloadStarted"
-    );
-  } catch (cause) {
-    if (retained()) failure.value = chenErrorText(cause, t);
-  } finally {
-    downloading.value = null;
-  }
-}
 function size(bytes: number) {
   return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
 }
-// Recover missed SSE updates while viewing a job; the event stream remains the normal progress path.
-useIntervalFn(() => {
-  if (open.value && props.ready) {
-    for (const job of jobs.value) {
-      if (exportNeedsSync(job)) emit("sync", job.id);
-    }
-  }
-}, 3000);
 </script>
 
 <template>
   <UButton
+    v-if="query.resultId || query.resultSql"
     icon="i-lucide-download"
     :label="iconOnly ? undefined : t('Chen.ExportData')"
     :aria-label="t('Chen.ExportData')"
@@ -148,11 +99,26 @@ useIntervalFn(() => {
     color="neutral"
     variant="ghost"
     :class="workspaceButtonClass"
-    :disabled="!session.permissions.can_download || (!ready && !jobs.length)"
+    :loading="query.exportBusy"
+    :disabled="!session.permissions.can_download || !ready"
     :title="!ready ? unavailableMessage : t('Chen.ExportData')"
     @click="show"
   />
-  <UModal v-model:open="open" :title="t('Chen.ExportData')" :ui="{ content: 'sm:max-w-2xl' }">
+  <UButton
+    v-if="jobs.length"
+    :icon="activeCount ? 'i-lucide-loader-circle' : 'i-lucide-history'"
+    :ui="{ leadingIcon: activeCount ? 'animate-spin' : '' }"
+    :label="activeCount ? String(activeCount) : iconOnly ? undefined : t('Chen.GoV1ExportTask')"
+    :aria-label="t('Chen.GoV1ExportTask')"
+    :title="t('Chen.GoV1ExportTask')"
+    size="xs"
+    color="neutral"
+    variant="ghost"
+    :class="workspaceButtonClass"
+    :disabled="!session.permissions.can_download"
+    @click="historyOpen = true"
+  />
+  <UModal v-model:open="configOpen" :title="t('Chen.ExportData')" :ui="{ content: 'sm:max-w-2xl' }">
     <template #body>
       <div class="space-y-4 text-sm" data-chen-export-panel>
         <p v-if="!ready" class="text-warning">{{ unavailableMessage }}</p>
@@ -241,6 +207,13 @@ useIntervalFn(() => {
             @click="start"
           />
         </template>
+      </div>
+    </template>
+  </UModal>
+  <UModal v-model:open="historyOpen" :title="t('Chen.GoV1ExportTask')" :ui="{ content: 'sm:max-w-2xl' }">
+    <template #body>
+      <div class="max-h-[65vh] space-y-3 overflow-y-auto text-sm" data-chen-export-history>
+        <p v-if="!ready" class="text-warning">{{ unavailableMessage }}</p>
         <div v-for="job in jobs" :key="job.id" class="space-y-2 rounded border border-default p-3" aria-live="polite">
           <div class="flex items-center gap-2">
             <UIcon
@@ -263,11 +236,14 @@ useIntervalFn(() => {
             {{ t("Chen.GoV1ExportDuration", { seconds: job.limits.max_duration_seconds }) }}
           </p>
           <p v-if="job.truncated" class="text-warning">{{ t("Chen.GoV1ExportIncomplete") }}</p>
-          <p v-if="job.error" class="whitespace-pre-wrap break-words text-error">
+          <p v-if="job.error && job.status !== 'canceled'" class="whitespace-pre-wrap break-words text-error">
             {{ chenErrorText(job.error, t) }}
           </p>
           <p v-if="job.expires_at" class="text-xs text-muted">
             {{ t("Chen.GoV1ExportExpires", { time: new Date(job.expires_at).toLocaleString() }) }}
+          </p>
+          <p v-if="query.exportActions[job.id]?.error" role="alert" class="whitespace-pre-wrap break-words text-error">
+            {{ query.exportActions[job.id]?.error }}
           </p>
           <div class="flex gap-2">
             <UButton
@@ -275,30 +251,34 @@ useIntervalFn(() => {
               :label="t('Common.Cancel')"
               color="neutral"
               variant="soft"
-              :disabled="!ready || !cancelSupported(job) || job.status === 'cancel_requested'"
+              :disabled="
+                !ready ||
+                !!query.exportActions[job.id]?.busy ||
+                !cancelSupported(job) ||
+                job.status === 'cancel_requested'
+              "
               :title="!cancelSupported(job) ? t('Chen.GoV1CancelUnsupported') : undefined"
-              @click="emit('cancel', job.id)"
+              @click="emit('action', job.id, 'cancel')"
             />
             <UButton
               v-if="job.ready && job.status === 'succeeded'"
               icon="i-lucide-download"
               :label="t('Chen.GoV1ExportDownload')"
-              :disabled="!ready || !!downloading"
-              :loading="downloading === job.id"
-              @click="download(job)"
+              :disabled="!ready || !session.permissions.can_download || !!query.exportActions[job.id]?.busy"
+              :loading="query.exportActions[job.id]?.busy === 'download'"
+              @click="emit('action', job.id, 'download')"
             />
             <UButton
               v-if="!exportActive(job) || closed"
-              :label="t(closed ? 'Chen.GoV1ExportClear' : 'Chen.GoV1ExportRelease')"
+              :label="t(closed || !job.ready ? 'Chen.GoV1ExportClear' : 'Chen.GoV1ExportRelease')"
               color="neutral"
               variant="ghost"
-              :disabled="query.exportBusy"
-              @click="emit('remove', job.id)"
+              :loading="query.exportActions[job.id]?.busy === 'remove'"
+              :disabled="!!query.exportActions[job.id]?.busy"
+              @click="emit('action', job.id, 'remove')"
             />
           </div>
         </div>
-        <p v-if="notice" class="text-muted">{{ notice }}</p>
-        <p v-if="failure" class="text-error">{{ failure }}</p>
       </div>
     </template>
   </UModal>

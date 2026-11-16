@@ -4,6 +4,7 @@ import { isDesktopRuntime } from "~/utils/runtime";
 
 type DownloadResult = "started" | "saved" | "cancelled";
 const inFlight = new WeakMap<ChenGoApi, Map<string, Promise<DownloadResult>>>();
+const exportFileLifetimeMs = 15 * 60 * 1000;
 
 export async function downloadGoExportFile(api: ChenGoApi, job: GoExport, assertReady: () => void) {
   assertReady();
@@ -32,42 +33,37 @@ async function downloadGoExport(getTicket: () => Promise<GoDownloadTicket>, file
   }
   const ticket = await getTicket();
   // The native download streams straight to disk. No file-sized Blob, arrayBuffer or renderer buffer.
-  let frame = document.querySelector<HTMLIFrameElement>("iframe[data-chen-export-download]");
-  if (!frame) {
-    frame = document.createElement("iframe");
-    frame.name = "chen-export-download";
-    frame.hidden = true;
-    frame.dataset.chenExportDownload = "";
-    document.body.appendChild(frame);
-  }
-  const frameDocument = frame.contentDocument;
-  if (!frameDocument) throw new Error("Browser download frame is unavailable; reload the page and retry");
-  // A form POST from a no-referrer document sends Origin: null. Keep the
-  // application's strict policy and isolate an origin-only policy in this
-  // download-only document so the connector's origin check remains effective.
-  let policy = frameDocument.querySelector<HTMLMetaElement>('meta[name="referrer"]');
-  if (!policy) {
-    policy = frameDocument.createElement("meta");
-    policy.name = "referrer";
-    frameDocument.head.appendChild(policy);
-  }
-  policy.content = "strict-origin";
-  const form = frameDocument.createElement("form");
-  form.method = "POST";
-  form.action = ticket.download_url;
-  form.target = "_self";
-  form.hidden = true;
-  const input = frameDocument.createElement("input");
-  input.type = "hidden";
-  input.name = "ticket";
-  input.value = ticket.fields.ticket;
-  form.appendChild(input);
-  frameDocument.body.appendChild(form);
+  // Each POST needs its own frame. A second navigation can cancel a pending response.
+  const frame = document.createElement("iframe");
+  frame.hidden = true;
+  frame.dataset.chenExportDownload = "";
+  document.body.appendChild(frame);
   try {
+    const frameDocument = frame.contentDocument;
+    if (!frameDocument) throw new Error("Browser download frame is unavailable; reload the page and retry");
+    // The download document needs an origin-only referrer policy for the connector's origin check.
+    const policy = frameDocument.createElement("meta");
+    policy.name = "referrer";
+    policy.content = "strict-origin";
+    frameDocument.head.appendChild(policy);
+    const form = frameDocument.createElement("form");
+    form.method = "POST";
+    form.action = ticket.download_url;
+    form.target = "_self";
+    form.hidden = true;
+    const input = frameDocument.createElement("input");
+    input.type = "hidden";
+    input.name = "ticket";
+    input.value = ticket.fields.ticket;
+    form.appendChild(input);
+    frameDocument.body.appendChild(form);
     form.submit();
-  } finally {
     form.remove();
+  } catch (error) {
+    frame.remove();
+    throw error;
   }
-  // Browser downloads do not report completion to the page. Do not present this as a saved file.
+  // Native downloads have no completion event. Keep the frame for the server file's full lifetime.
+  window.setTimeout(() => frame.remove(), exportFileLifetimeMs);
   return "started";
 }

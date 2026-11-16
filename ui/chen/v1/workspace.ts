@@ -37,6 +37,8 @@ export interface QueryPlanRun {
   plan: GoPlan | null;
   error: string;
 }
+export type ExportTaskAction = "download" | "cancel" | "remove";
+
 export interface QueryWorkspaceTab {
   id: string;
   kind: "query" | "preview" | "console";
@@ -81,6 +83,7 @@ export interface QueryWorkspaceTab {
   executionQueryPage?: GoQueryPageRequest;
   queryCount?: GoExecution["query_count"] | null;
   exportJobs: GoExport[];
+  exportActions: Record<string, { busy?: ExportTaskAction; error?: string }>;
   exportBusy: boolean;
   pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
@@ -205,6 +208,7 @@ export function createQueryTab(
     browseDraft: { where: "", sort: [], page_size: 50 },
     browseCount: null,
     exportJobs: [],
+    exportActions: {},
     exportBusy: false,
     pendingCachedExport: null,
     resultExecution: null,
