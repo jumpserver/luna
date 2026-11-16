@@ -52,6 +52,7 @@ export interface ChenSqlEditorContext {
   dialect: string;
   database?: string;
   schema?: string;
+  table?: string;
   nodeKey: string;
   consoleId: string;
   paneId: string;
@@ -182,6 +183,7 @@ export interface ChenSqlAiSession {
   closedProposalRequestIds: Set<string>;
   pendingProposalCalls: Map<string, PendingChenSqlProposalCall>;
   requestContext: ChenSqlRequestContext | null;
+  supportsSelectedTable: boolean;
   contextProvider: () => ChenSqlEditorContext | null;
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
   targetNextRequestToEditor: () => void;
@@ -396,6 +398,7 @@ function sameSqlRequestContext(bound: ChenSqlEditorContext, current: ChenSqlEdit
     "dialect",
     "database",
     "schema",
+    "table",
     "currentContext",
     "revision",
     "documentSql"
@@ -409,7 +412,7 @@ export function invalidateChenSqlAiContext(paneId: string) {
   const bound = session.requestContext;
   // Go exposes query contexts. Legacy console/database requests may deliberately
   // generate a new query in the background and retain their original scope.
-  if (bound.workspaceTabKind !== "query") return false;
+  if (bound.workspaceTabKind !== "query" && bound.workspaceTabKind !== "data-view") return false;
   // Cursor movement retains the original selection target; document and scope
   // changes invalidate the request even if the user later switches back.
   if (sameSqlRequestContext(bound, session.contextProvider())) return false;
@@ -791,6 +794,7 @@ function createSession(
     closedProposalRequestIds: new Set<string>(),
     pendingProposalCalls: new Map<string, PendingChenSqlProposalCall>(),
     requestContext: null,
+    supportsSelectedTable: false,
     contextProvider: markRaw(contextProvider),
     proposalApplier: markRaw(proposalApplier),
     targetNextRequestToEditor: () => {
@@ -911,6 +915,7 @@ export function handleChenSqlAiWireMessage(paneId: string, value: unknown) {
   if (frame.type === "mcp.manifest") {
     if (frame.data.profile !== "sql") return false;
     session.resourceSessionId = frame.resource_session_id;
+    session.supportsSelectedTable = frame.data.context?.supports_selected_table === true;
     void session.agent.actions.attachManifest(manifestFromFrame(frame)).catch((cause) => {
       session.enabled = false;
       session.errorCode = "agent_unavailable";
@@ -1009,6 +1014,8 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     const context = session.requestContext || session.contextProvider();
     const query = String(argumentsValue.query || "").slice(0, 1024);
     const tables = boundedStringArray(argumentsValue.tables, 8);
+    if (!query.trim() && !tables.length && context?.workspaceTabKind === "data-view" && context.table)
+      tables.push(context.table);
     const expiresAt = Date.parse(String(approval?.expires_at || ""));
     session.metadataApproval = {
       approvalId: String(approval?.approvalId || approval?.id || ""),

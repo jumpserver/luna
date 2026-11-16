@@ -272,11 +272,13 @@ function sqlAiContext(): ChenSqlEditorContext | null {
   if (active?.kind === "preview") return null;
   const query = active ? workspaceQuery(active) : null;
   const editor = active && (active.kind === "query" || active.kind === "console");
-  if ((editor || active?.kind === "object") && query?.console?.state !== "ready") return null;
+  const catalogTable = active?.kind === "object" && getChenSqlAiSession(props.tab.id)?.supportsSelectedTable;
+  if ((editor || (active?.kind === "object" && !catalogTable)) && query?.console?.state !== "ready") return null;
   const snapshot = editor ? queryPanes.get(active.id)?.snapshot() : null;
   if (editor && !snapshot) return null;
   const context = tabContext(active, defaultContext.value);
-  const consoleId = query?.console?.id || "";
+  // An object tab identifies a catalog relation even before its data grid loads.
+  const consoleId = catalogTable ? "" : query?.console?.id || "";
   return {
     documentSql: "",
     selectedSql: "",
@@ -287,6 +289,7 @@ function sqlAiContext(): ChenSqlEditorContext | null {
     dialect: session.value.dialect,
     database: context.database,
     schema: context.schema,
+    table: catalogTable ? active.object.name : undefined,
     nodeKey: consoleId || JSON.stringify([session.value.id, context.database, context.schema]),
     consoleId,
     paneId: props.tab.id,
