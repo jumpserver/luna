@@ -64,6 +64,7 @@ function databaseErrorCode(code: string): string | undefined {
       "ORA_12899"
     ],
     database_deadlock: ["40P01", "40001", "MYSQL_1213", "MYSQL_1205", "OCEANBASE_1213", "MSSQL_1205", "ORA_00060"],
+    database_lock_timeout: ["MSSQL_1222"],
     database_transaction_failed: ["25P02"]
   };
   for (const [category, codes] of Object.entries(categories)) if (codes.includes(code)) return category;

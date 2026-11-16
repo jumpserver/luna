@@ -80,7 +80,7 @@ export interface QueryWorkspaceTab {
   executionBrowse?: GoBrowseRequest;
   executionQueryPage?: GoQueryPageRequest;
   queryCount?: GoExecution["query_count"] | null;
-  exportJob: GoExport | null;
+  exportJobs: GoExport[];
   exportBusy: boolean;
   pendingCachedExport: { resultId: string; format: GoExportFormat; id: string; rows?: number } | null;
   resultExecution: GoExecution | null;
@@ -204,7 +204,7 @@ export function createQueryTab(
     loadMoreFailed: false,
     browseDraft: { where: "", sort: [], page_size: 50 },
     browseCount: null,
-    exportJob: null,
+    exportJobs: [],
     exportBusy: false,
     pendingCachedExport: null,
     resultExecution: null,
@@ -358,7 +358,7 @@ export function closeWarnings(queries: QueryWorkspaceTab[]) {
         query.busy ||
         query.exportBusy ||
         !!query.pendingCachedExport ||
-        exportActive(query.exportJob)
+        query.exportJobs.some(exportActive)
     ),
     unknown: queries.some(
       (query) => !!query.pending || !!query.pendingCachedExport || query.execution?.status === "unknown"
@@ -374,9 +374,15 @@ export function closeWarnings(queries: QueryWorkspaceTab[]) {
 export function exportActive(job: GoExport | null) {
   return !!job && ["queued", "running", "waiting_review", "cancel_requested"].includes(job.status);
 }
+export function exportNeedsSync(job: GoExport) {
+  return (
+    exportActive(job) ||
+    (job.status === "succeeded" && (!job.ready || (!!job.expires_at && Date.parse(job.expires_at) <= Date.now())))
+  );
+}
 export function reconcileExport(current: GoExport, value: GoExport): GoExport {
   if (current.id !== value.id) return current;
-  if (current.status === "expired") return current;
+  if (current.status === "expired" || (current.ready && value.status === "succeeded" && !value.ready)) return current;
   if (!exportActive(current) && exportActive(value)) return current;
   const rank: Record<string, number> = { queued: 0, waiting_review: 1, running: 2, cancel_requested: 3 };
   if (exportActive(current) && exportActive(value) && rank[value.status]! < rank[current.status]!) return current;

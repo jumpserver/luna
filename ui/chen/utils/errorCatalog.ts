@@ -298,6 +298,7 @@ export const chenErrorCatalog: Record<string, readonly string[]> = {
   ],
   database_permission: ["The database denied access. Check the account permissions on the target object."],
   database_type: ["A data type or format is invalid. Check the column type and input value."],
+  database_lock_timeout: ["Another transaction holds a lock. Retry after it commits or rolls back."],
   database_deadlock: [
     "A deadlock or concurrency conflict occurred. Check transaction state before deciding whether to retry."
   ],
