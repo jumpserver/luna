@@ -1,3 +1,4 @@
+import { LocalAiError } from "../../../ui/shared/codex/errorProtocol";
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -32,6 +33,8 @@ interface Options {
   assertEnabled?: () => Promise<void>;
   assertOwner(ownerId: number, organizationId: string): void;
   emit(ownerId: number, event: AgentEvent): void;
+  // Settings probes capture structured failures without changing ordinary session events.
+  onProbeError?: (error: unknown) => void;
   launch?: (
     settings: LocalCodexSettings,
     receive: (message: any) => void,
@@ -87,6 +90,25 @@ function serialized(value: unknown, limit = MAX_VALUE) {
   if (!json || Buffer.byteLength(json) > limit) throw new Error("Codex input or result exceeds the size limit");
   return json;
 }
+async function modelResponseBody(response: Response) {
+  const reader = response.body?.getReader();
+  if (!reader) throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Empty model list response");
+  let bytes = 0;
+  const chunks: Uint8Array[] = [];
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_VALUE) throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Model list exceeds the size limit");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel();
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
 export function validateCodexSettings(value: unknown): LocalCodexSettings {
   if (
     !record(value) ||
@@ -94,21 +116,36 @@ export function validateCodexSettings(value: unknown): LocalCodexSettings {
     !bounded(value.executable, 4096) ||
     !bounded(value.model, 256)
   )
-    throw new Error("Invalid local Codex settings");
+    throw new LocalAiError("LOCAL_AI_INVALID_SETTINGS", "Invalid local Codex settings");
   const executable = value.executable.trim();
   if (!executable || (!path.isAbsolute(executable) && !/^[a-zA-Z0-9_.-]+$/.test(executable)))
-    throw new Error("Choose a Codex executable path without command arguments");
+    throw new LocalAiError("LOCAL_AI_EXECUTABLE_INVALID", "Choose a Codex executable path without command arguments");
   const runtime = value.runtime ?? "system";
   const connection = value.connection ?? "existing";
   if (!["managed", "system"].includes(runtime) || !["api", "existing"].includes(connection))
-    throw new Error("Invalid local AI installation or connection mode");
+    throw new LocalAiError("LOCAL_AI_INVALID_SETTINGS", "Invalid local AI installation or connection mode");
   const reasoningEffort = value.reasoningEffort ?? (connection === "api" ? "medium" : "");
-  if (!bounded(reasoningEffort, 64)) throw new Error("Invalid local AI reasoning effort");
-  const baseUrl = value.baseUrl ?? DEFAULT_CODEX_SETTINGS.baseUrl;
-  if (!bounded(baseUrl, 2048)) throw new Error("Invalid model service URL");
-  const url = new URL(baseUrl);
-  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-    throw new Error("Use an HTTP or HTTPS model service URL without credentials, query or fragment");
+  if (!bounded(reasoningEffort, 64))
+    throw new LocalAiError("LOCAL_AI_INVALID_SETTINGS", "Invalid local AI reasoning effort");
+  let baseUrl = value.baseUrl ?? DEFAULT_CODEX_SETTINGS.baseUrl;
+  if (!bounded(baseUrl, 2048)) throw new LocalAiError("LOCAL_AI_BASE_URL_INVALID", "Invalid model service URL");
+  let url: URL | undefined;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    if (connection === "api") throw new LocalAiError("LOCAL_AI_BASE_URL_INVALID", "Invalid model service URL");
+  }
+  if (url) {
+    if (
+      connection === "api" &&
+      (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+    )
+      throw new LocalAiError(
+        "LOCAL_AI_BASE_URL_UNSUPPORTED",
+        "Use an HTTP or HTTPS model service URL without credentials, query or fragment"
+      );
+    baseUrl = url.href.replace(/\/+$/, "");
+  }
   return {
     enabled: value.enabled,
     executable,
@@ -116,7 +153,7 @@ export function validateCodexSettings(value: unknown): LocalCodexSettings {
     reasoningEffort: reasoningEffort.trim(),
     runtime,
     connection,
-    baseUrl: url.href.replace(/\/+$/, ""),
+    baseUrl,
     hasApiKey: false
   };
 }
@@ -125,7 +162,8 @@ export function codexModelConfiguration(settings: LocalCodexSettings, directory:
   const env = { ...process.env };
   const overrides: string[] = [];
   if (settings.connection === "api") {
-    if (!apiKey) throw new Error("An API key is required for the configured model service");
+    if (!apiKey)
+      throw new LocalAiError("LOCAL_AI_API_KEY_REQUIRED", "An API key is required for the configured model service");
     env.CODEX_HOME = path.join(directory, "codex-home");
     env.LUNA_CODEX_API_KEY = apiKey;
     delete env.OPENAI_API_KEY;
@@ -163,7 +201,8 @@ async function launch(
   apiKey = ""
 ) {
   const detected = await probeCodex(settings.executable);
-  if (!versionSupported(detected.version)) throw new Error("Local AI requires codex-cli 0.167.0 or newer");
+  if (!versionSupported(detected.version))
+    throw new LocalAiError("LOCAL_AI_ENGINE_VERSION_UNSUPPORTED", "Local AI requires codex-cli 0.167.0 or newer");
   const plan = await codexCommand(settings.executable);
   const model = codexModelConfiguration(settings, directory, apiKey);
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -266,17 +305,25 @@ export class LocalCodexService {
     await this.configuration();
     const settings = validateCodexSettings(value);
     const input = value as Record<string, unknown>;
-    if (input.apiKey !== undefined && !bounded(input.apiKey, 16384)) throw new Error("Invalid API key");
+    if (input.apiKey !== undefined && !bounded(input.apiKey, 16384))
+      throw new LocalAiError("LOCAL_AI_INVALID_SETTINGS", "Invalid API key");
     if (input.clearApiKey !== undefined && typeof input.clearApiKey !== "boolean")
-      throw new Error("Invalid key removal setting");
+      throw new LocalAiError("LOCAL_AI_INVALID_SETTINGS", "Invalid key removal setting");
     let encryptedApiKey = input.clearApiKey || settings.baseUrl !== this.settings.baseUrl ? "" : this.encryptedApiKey;
     const apiKey = typeof input.apiKey === "string" ? input.apiKey.trim() : "";
     if (apiKey) {
-      if (!this.options.secrets) throw new Error("Encrypted credential storage is unavailable");
+      if (!this.options.secrets)
+        throw new LocalAiError(
+          "LOCAL_AI_CREDENTIAL_STORAGE_UNAVAILABLE",
+          "Encrypted credential storage is unavailable"
+        );
       encryptedApiKey = this.options.secrets.encrypt(apiKey);
     }
-    if (settings.enabled && settings.connection === "api" && (!settings.model || !encryptedApiKey))
-      throw new Error("Configure the API key and model before enabling local AI");
+    if (settings.enabled && settings.connection === "api") {
+      if (!encryptedApiKey)
+        throw new LocalAiError("LOCAL_AI_API_KEY_REQUIRED", "An API key is required for the configured model service");
+      if (!settings.model) throw new LocalAiError("LOCAL_AI_MODEL_REQUIRED", "Choose a model before enabling local AI");
+    }
     return { settings, encryptedApiKey };
   }
   async configure(value: unknown) {
@@ -301,13 +348,26 @@ export class LocalCodexService {
   }
   private async executable(settings: LocalCodexSettings) {
     if (settings.runtime === "system") return settings.executable;
-    if (!this.options.runtime) throw new Error("The managed Codex engine is unavailable");
-    return this.options.runtime.executable();
+    if (!this.options.runtime)
+      throw new LocalAiError("LOCAL_AI_ENGINE_UNAVAILABLE", "The managed Codex engine is unavailable");
+    try {
+      return await this.options.runtime.executable();
+    } catch (error) {
+      throw LocalAiError.from(error, "LOCAL_AI_ENGINE_NOT_INSTALLED");
+    }
   }
   async probe(value: unknown) {
-    const settings = validateCodexSettings(value);
+    const settings = validateCodexSettings({
+      ...(record(value) ? value : {}),
+      enabled: false,
+      connection: "existing",
+      model: "",
+      reasoningEffort: "",
+      baseUrl: DEFAULT_CODEX_SETTINGS.baseUrl
+    });
     const result = await probeCodex(await this.executable(settings));
-    if (!versionSupported(result.version)) throw new Error("Local AI requires codex-cli 0.167.0 or newer");
+    if (!versionSupported(result.version))
+      throw new LocalAiError("LOCAL_AI_ENGINE_VERSION_UNSUPPORTED", "Local AI requires codex-cli 0.167.0 or newer");
     return result;
   }
   async models(ownerId: number, organizationId: string, value: unknown): Promise<LocalCodexModel[]> {
@@ -321,42 +381,49 @@ export class LocalCodexService {
     this.modelRequests.set(ownerId, controller);
     const timer = setTimeout(() => controller.abort(), 15_000);
     let probe: LocalCodexService | undefined;
+    let failure: LocalAiError | undefined;
     let apiKey = "";
     try {
       let entries: unknown[] = [];
       if (settings.connection === "api") {
         apiKey = encryptedApiKey ? this.options.secrets?.decrypt(encryptedApiKey) || "" : "";
-        if (!apiKey) throw new Error("Enter an API key to fetch models");
+        if (!apiKey) throw new LocalAiError("LOCAL_AI_API_KEY_REQUIRED", "Enter an API key to fetch models");
         const response = await (this.options.fetch || fetch)(`${settings.baseUrl}/models`, {
           headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
           redirect: "error",
           signal: controller.signal
         });
         if (!response.ok) {
-          await response.body?.cancel();
-          throw new Error(`Model list request failed (HTTP ${response.status})`);
-        }
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("Empty model list response");
-        let bytes = 0;
-        const chunks: Uint8Array[] = [];
-        try {
-          for (;;) {
-            const { done, value: chunk } = await reader.read();
-            if (done) break;
-            bytes += chunk.byteLength;
-            if (bytes > MAX_VALUE) throw new Error("Model list exceeds the size limit");
-            chunks.push(chunk);
+          let error: unknown;
+          try {
+            error = JSON.parse(await modelResponseBody(response));
+          } catch {
+            // HTTP status remains useful when the error body is empty, invalid or oversized.
           }
-        } finally {
-          await reader.cancel();
-          reader.releaseLock();
+          throw LocalAiError.from(
+            { status: response.status, message: `Model list request failed (HTTP ${response.status})`, error },
+            "LOCAL_AI_PROVIDER_ERROR",
+            apiKey
+          );
         }
-        const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-        if (!record(result) || !Array.isArray(result.data)) throw new Error("Invalid model list response");
+        let result: unknown;
+        try {
+          result = JSON.parse(await modelResponseBody(response));
+        } catch (error) {
+          if (error instanceof LocalAiError) throw error;
+          throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Invalid model list response");
+        }
+        if (!record(result) || !Array.isArray(result.data))
+          throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Invalid model list response");
         entries = result.data;
       } else {
-        probe = new LocalCodexService({ ...this.options, emit() {} });
+        probe = new LocalCodexService({
+          ...this.options,
+          emit() {},
+          onProbeError(error) {
+            failure ??= LocalAiError.from(error, "LOCAL_AI_PROVIDER_ERROR");
+          }
+        });
         probe.settings = { ...settings, enabled: true };
         probe.initialized = Promise.resolve();
         controller.signal.addEventListener("abort", () => probe?.close(new Error("Model discovery cancelled")), {
@@ -367,19 +434,22 @@ export class LocalCodexService {
         let pages = 0;
         const cursors = new Set<string>();
         do {
-          if (++pages > 20) throw new Error("Model list exceeded the page limit");
+          if (++pages > 20) throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Model list exceeded the page limit");
           const page = await probe.request("model/list", { limit: 100, includeHidden: false, cursor });
-          if (!Array.isArray(page?.data)) throw new Error("Invalid Codex model list");
+          if (!Array.isArray(page?.data))
+            throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Invalid Codex model list");
           entries.push(...page.data);
-          if (entries.length > 2000) throw new Error("Too many models returned");
+          if (entries.length > 2000) throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Too many models returned");
           cursor = page.nextCursor || undefined;
-          if (cursor && (!bounded(cursor, 2048) || cursors.has(cursor))) throw new Error("Invalid model list cursor");
+          if (cursor && (!bounded(cursor, 2048) || cursors.has(cursor)))
+            throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Invalid model list cursor");
           if (cursor) cursors.add(cursor);
         } while (cursor);
       }
-      if (controller.signal.aborted) throw new Error("Model discovery cancelled or timed out");
+      if (controller.signal.aborted)
+        throw new LocalAiError("LOCAL_AI_TIMEOUT", "Model discovery cancelled or timed out");
       this.options.assertOwner(ownerId, organizationId);
-      if (entries.length > 2000) throw new Error("Too many models returned");
+      if (entries.length > 2000) throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Too many models returned");
       const models = new Map<string, LocalCodexModel>();
       for (const entry of entries) {
         const id = record(entry)
@@ -387,7 +457,8 @@ export class LocalCodexService {
             ? entry.model || entry.id
             : entry.id
           : undefined;
-        if (!bounded(id, 256) || !id.trim()) throw new Error("Invalid model identifier returned");
+        if (!bounded(id, 256) || !id.trim())
+          throw new LocalAiError("LOCAL_AI_INVALID_RESPONSE", "Invalid model identifier returned");
         const name = record(entry) && bounded(entry.displayName, 256) ? entry.displayName : id;
         const model: LocalCodexModel = { id, name, isDefault: record(entry) && entry.isDefault === true };
         if (record(entry) && Array.isArray(entry.supportedReasoningEfforts))
@@ -403,8 +474,9 @@ export class LocalCodexService {
       }
       return [...models.values()];
     } catch (error) {
-      const message = (error as Error).message;
-      throw new Error(apiKey ? message.split(apiKey).join("[redacted]") : message);
+      if (controller.signal.aborted)
+        throw new LocalAiError("LOCAL_AI_TIMEOUT", "Model discovery cancelled or timed out");
+      throw failure || LocalAiError.from(error, "LOCAL_AI_PROVIDER_ERROR", apiKey);
     } finally {
       clearTimeout(timer);
       probe?.close();
@@ -413,10 +485,10 @@ export class LocalCodexService {
   }
   async testConnection(ownerId: number, organizationId: string, value: unknown) {
     await this.assertEnabled();
-    if (this.connectionTest) throw new Error("A model connection test is already running");
+    if (this.connectionTest) throw new LocalAiError("LOCAL_AI_BUSY", "A model connection test is already running");
     this.options.assertOwner(ownerId, organizationId);
     const { settings, encryptedApiKey } = await this.candidate({ ...(record(value) ? value : {}), enabled: true });
-    if (this.connectionTest) throw new Error("A model connection test is already running");
+    if (this.connectionTest) throw new LocalAiError("LOCAL_AI_BUSY", "A model connection test is already running");
     let complete!: () => void;
     let reject!: (error: Error) => void;
     const finished = new Promise<void>((resolve, fail) => {
@@ -425,12 +497,23 @@ export class LocalCodexService {
     });
     // Attach immediately: an early process failure can precede the first awaited send.
     void finished.catch(() => {});
+    let failure: LocalAiError | undefined;
     const probe = new LocalCodexService({
       ...this.options,
+      onProbeError(error) {
+        failure ??= LocalAiError.from(error, "LOCAL_AI_PROVIDER_ERROR", probe.activeApiKey);
+      },
       emit: (_ownerId, event) => {
         if (event.type === "run.completed") complete();
         else if (["run.failed", "run.interrupted", "session.closed"].includes(event.type))
-          reject(new Error(String(event.payload?.reason || "Model connection test failed")));
+          reject(
+            failure ||
+              LocalAiError.from(
+                String(event.payload?.reason || "Model connection test failed"),
+                "LOCAL_AI_PROVIDER_ERROR",
+                probe.activeApiKey
+              )
+          );
       }
     });
     probe.settings = settings;
@@ -438,7 +521,7 @@ export class LocalCodexService {
     probe.initialized = Promise.resolve();
     this.connectionTest = probe;
     const timer = setTimeout(() => {
-      const error = new Error("Model connection test timed out");
+      const error = new LocalAiError("LOCAL_AI_TIMEOUT", "Model connection test timed out");
       reject(error);
       probe.close(error);
     }, 30_000);
@@ -462,6 +545,8 @@ export class LocalCodexService {
       await finished;
       this.options.assertOwner(ownerId, organizationId);
       return { connected: true };
+    } catch (error) {
+      throw failure || error;
     } finally {
       clearTimeout(timer);
       this.connectionTest = undefined;
@@ -515,6 +600,7 @@ export class LocalCodexService {
     try {
       await starting;
     } catch (error) {
+      this.options.onProbeError?.(error);
       const failure = new Error(this.safeMessage((error as Error).message));
       if (generation === this.processGeneration) this.fail(failure);
       throw failure;
@@ -752,6 +838,7 @@ export class LocalCodexService {
     if (message.id !== undefined && !message.method) {
       const pending = this.pending.get(String(message.id));
       if (pending) {
+        if (message.error) this.options.onProbeError?.(message.error);
         clearTimeout(pending.timer);
         this.pending.delete(String(message.id));
         message.error
@@ -863,7 +950,8 @@ export class LocalCodexService {
         { content: p.item.text || "" },
         { message_id: p.item.id || session.messageId }
       );
-    else if (message.method === "turn/completed")
+    else if (message.method === "turn/completed") {
+      if (p.turn?.error) this.options.onProbeError?.(p.turn.error);
       this.finish(
         session,
         p.turn?.status === "completed"
@@ -873,8 +961,10 @@ export class LocalCodexService {
             : "run.failed",
         p.turn?.error?.message
       );
-    else if (message.method === "error" && !p.willRetry)
+    } else if (message.method === "error" && !p.willRetry) {
+      this.options.onProbeError?.(p.error);
       this.finish(session, "run.failed", p.error?.message || "Codex turn failed");
+    }
   }
   async result(ownerId: number, organizationId: string, args: CodexCommand) {
     await this.assertEnabled();
@@ -1070,6 +1160,7 @@ export class LocalCodexService {
     if (!this.sessions.size) this.close();
   }
   private fail(error: Error) {
+    this.options.onProbeError?.(error);
     const reason = this.safeMessage(error.message);
     for (const session of this.sessions.values()) this.finish(session, "run.failed", reason);
     this.close(new Error(reason));

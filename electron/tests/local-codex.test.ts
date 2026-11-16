@@ -11,6 +11,7 @@ import {
   validateCodexSettings
 } from "../src/codex/service";
 import { DEFAULT_CODEX_SETTINGS } from "../../ui/shared/codex/types";
+import { LocalAiError } from "../../ui/shared/codex/errorProtocol";
 import type { CodexSessionRequest } from "../../ui/shared/codex/types";
 import { MCP_FINAL_RESULT_META_KEY } from "../../ui/koko/composables/agent/types";
 import type { AgentEvent, AgentMcpManifest } from "../../ui/koko/composables/agent/types";
@@ -315,14 +316,21 @@ test("API connections retain reasoning overrides and surface unsupported-effort 
   await r.send(session);
   assert.equal(r.writes.find((write) => write.method === "turn/start").params.effort, "high");
   const checking = r.service.testConnection(1, "org-a", settings);
-  const rejected = assert.rejects(checking, /Unsupported reasoning effort: high/);
+  const rejected = assert.rejects(checking, {
+    code: "LOCAL_AI_PROVIDER_ERROR",
+    details: { codexCode: "badRequest" }
+  });
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(r.writes.filter((write) => write.method === "turn/start").at(-1).params.effort, "high");
   r.receive({
     method: "turn/completed",
     params: {
       threadId: "thread-2",
-      turn: { id: "turn-2", status: "failed", error: { message: "Unsupported reasoning effort: high" } }
+      turn: {
+        id: "turn-2",
+        status: "failed",
+        error: { message: "Unsupported reasoning effort: high", codexErrorInfo: "badRequest" }
+      }
     }
   });
   await rejected;
@@ -766,14 +774,38 @@ test("legacy settings retain the user's CLI, while API credentials remain encryp
   assert.equal(launch.env.CODEX_HOME, path.join(directory, "codex-home"));
   assert.ok(!launch.overrides.join(" ").includes(secret));
   assert.equal((await service.configure({ ...saved, apiKey: "" })).hasApiKey, true);
+  const reused = await service.configure({ ...saved, connection: "existing", baseUrl: `${saved.baseUrl}/` });
+  assert.equal(reused.hasApiKey, true);
+  assert.equal(reused.baseUrl, saved.baseUrl);
   await assert.rejects(
     service.configure({ ...saved, enabled: true, baseUrl: "https://another-service.test/v1" }),
     /API key/
   );
+  await assert.rejects(service.configure({ ...input, enabled: true, clearApiKey: true, apiKey: "" }), {
+    code: "LOCAL_AI_API_KEY_REQUIRED"
+  });
+  await assert.rejects(service.configure({ ...input, enabled: true, model: "" }), { code: "LOCAL_AI_MODEL_REQUIRED" });
   assert.equal((await service.configure({ ...saved, clearApiKey: true })).hasApiKey, false);
   assert.throws(() => validateCodexSettings({ ...input, baseUrl: "https://user:secret@model.test/v1" }));
+  assert.throws(() => validateCodexSettings({ ...input, baseUrl: "invalid" }), { code: "LOCAL_AI_BASE_URL_INVALID" });
   for (const reasoningEffort of [123, {}, "x".repeat(65), "high\nlow"])
     assert.throws(() => validateCodexSettings({ ...input, reasoningEffort }), /reasoning effort/);
+});
+
+test("installation checks do not require API connection fields", async () => {
+  const service = new LocalCodexService({
+    directory: "",
+    runtime: {
+      executable: async () => {
+        throw new LocalAiError("LOCAL_AI_ENGINE_NOT_INSTALLED", "Not installed");
+      }
+    },
+    assertOwner() {},
+    emit() {}
+  });
+  await assert.rejects(service.probe({ ...DEFAULT_CODEX_SETTINGS, baseUrl: "" }), {
+    code: "LOCAL_AI_ENGINE_NOT_INSTALLED"
+  });
 });
 
 test("connection tests use an ephemeral thread with no workspace tools and preserve the current conversation", async (t) => {
@@ -875,6 +907,7 @@ test("API model discovery uses draft credentials without an installed runtime or
   const directory = await mkdtemp(path.join(tmpdir(), "luna-codex-models-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const key = "private-model-list-key";
+  let unauthorized = false;
   const service = new LocalCodexService({
     directory,
     assertOwner() {},
@@ -887,6 +920,8 @@ test("API model discovery uses draft credentials without an installed runtime or
       assert.equal(url, "https://models.test/v1/models");
       assert.equal(new Headers(init.headers).get("Authorization"), `Bearer ${key}`);
       assert.equal(init.redirect, "error");
+      if (unauthorized)
+        return Response.json({ error: { code: "invalid_api_key", message: `Rejected ${key}` } }, { status: 401 });
       return Response.json({ data: [{ id: "service-model" }, { id: "service-model" }, { id: "another-model" }] });
     }
   });
@@ -898,6 +933,12 @@ test("API model discovery uses draft credentials without an installed runtime or
   ]);
   assert.equal((await service.configuration()).hasApiKey, false);
   await assert.rejects(readFile(path.join(directory, "settings.json")), { code: "ENOENT" });
+  unauthorized = true;
+  await assert.rejects(service.models(1, "org", draft), {
+    code: "LOCAL_AI_PROVIDER_ERROR",
+    message: "Rejected [redacted]",
+    details: { status: 401, providerCode: "invalid_api_key" }
+  });
 });
 
 test("model discovery does not forward a saved key to a different endpoint and redacts failures", async (t) => {

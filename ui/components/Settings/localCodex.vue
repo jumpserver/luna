@@ -7,7 +7,7 @@ import { serverWorkspaceAiEnabled } from "~/shared/aiAvailability";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
-const { t } = useLocalAiMessages();
+const { t, formatError } = useLocalAiMessages();
 const toast = useToast();
 const user = useUserInfoStore();
 const codex = useLocalCodex();
@@ -55,12 +55,13 @@ const disabled = computed(
   () => !serverWorkspaceAiEnabled.value || busy.value || codex.runtime.value?.installing === true
 );
 const notice = shallowRef("");
-const error = shallowRef("");
+const error = shallowRef<unknown>(null);
+const errorText = computed(() => (error.value ? formatError(error.value) : ""));
 async function run(action: SettingsAction) {
   if (!serverWorkspaceAiEnabled.value) return;
   activeAction.value = action;
   notice.value = "";
-  error.value = "";
+  error.value = null;
   try {
     const settings = { ...draft, apiKey: apiKey.value, clearApiKey: clearApiKey.value };
     if (action === "check") {
@@ -79,15 +80,15 @@ async function run(action: SettingsAction) {
       notice.value = t("saved");
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : t("failed");
-    if (action === "check") toast.add({ title: t("failed"), description: error.value, color: "error" });
+    error.value = cause;
+    if (action === "check") toast.add({ title: t("failed"), description: errorText.value, color: "error" });
   } finally {
     activeAction.value = null;
   }
 }
 onMounted(() => {
   void codex.refreshRuntime().catch((cause) => {
-    error.value = cause instanceof Error ? cause.message : t("failed");
+    error.value = cause;
   });
 });
 </script>
@@ -127,7 +128,7 @@ onMounted(() => {
     <div class="space-y-2 text-xs text-muted">
       <p>{{ t("reset") }}</p>
       <p>{{ t("testHint") }}</p>
-      <p v-if="error" role="alert" class="text-error">{{ error }}</p>
+      <p v-if="errorText" role="alert" class="text-error">{{ errorText }}</p>
       <p v-else-if="notice" role="status">{{ notice }}</p>
       <div class="flex gap-2">
         <UButton :label="t('save')" :loading="busy" :disabled="disabled" @click="run('save')" />

@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { effectScope, reactive, shallowRef } from "vue";
-import { localCodexRevision, localCodexSettings, useLocalCodex } from "./useLocalCodex";
+import { localCodexRevision, localCodexSettings, useLocalAiMessages, useLocalCodex } from "./useLocalCodex";
 import { DEFAULT_CODEX_SETTINGS } from "~/shared/codex/types";
+import { LocalAiError } from "~/shared/codex/errorProtocol";
+import { localAiMessages } from "~/shared/codex/messages";
 import { setWorkspaceAiEnabled, workspaceAiEnabled } from "~/shared/aiAvailability";
 const mock = vi.hoisted(() => ({ invoke: vi.fn(), desktop: true, store: {} as any }));
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: mock.invoke, desktopListen: async () => () => {} }));
@@ -24,6 +26,24 @@ beforeEach(() => {
 afterEach(() => {
   for (const scope of scopes.splice(0)) scope.stop();
   setWorkspaceAiEnabled(false);
+});
+it("localizes coded configuration errors and preserves installation and runtime-status failures", () => {
+  const locale = shallowRef("zh");
+  vi.stubGlobal("useI18n", () => ({ locale, t: (key: string) => key }));
+  try {
+    const { formatError } = useLocalAiMessages();
+    for (const message of [
+      "Error invoking remote method 'jms:invoke': Error: Codex download failed: HTTP 401",
+      "Error invoking remote method 'jms:invoke': Error: Local AI requires a current login"
+    ])
+      expect(formatError(new Error(message))).toBe(message);
+    const failure = new LocalAiError("LOCAL_AI_PROVIDER_ERROR", "Future provider wording", { status: 401 });
+    expect(formatError(failure)).toBe(localAiMessages.zh.errors.authenticationFailed);
+    locale.value = "en";
+    expect(formatError(failure)).toBe(localAiMessages.en.errors.authenticationFailed);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
 it("opening settings does not reset an already configured local runtime", async () => {
   setWorkspaceAiEnabled(true);

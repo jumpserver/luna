@@ -79,6 +79,7 @@ import { chenExportTarget, saveChenDownload } from "./chen-export";
 import { createHash } from "node:crypto";
 import { LocalCodexService } from "../codex/service";
 import { CodexInstallation } from "../codex/installation";
+import { isLocalAiSettingsCommand, LocalAiError, withLocalAiErrors } from "../../../ui/shared/codex/errorProtocol";
 import type { ClientSessionBinding } from "../auth/service";
 import { ClipboardHistoryService } from "./clipboard-history";
 import { ClientPolicyNoticeLayers } from "./client-policy-notices";
@@ -142,7 +143,10 @@ function requireCodexKeyStorage() {
     !safeStorage.isEncryptionAvailable() ||
     (process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text")
   )
-    throw new Error("OS encrypted credential storage is unavailable; use your existing Codex configuration");
+    throw new LocalAiError(
+      "LOCAL_AI_CREDENTIAL_STORAGE_UNAVAILABLE",
+      "OS encrypted credential storage is unavailable; use your existing Codex configuration"
+    );
 }
 const subscriptions = new Map();
 const stores = new Map();
@@ -1451,7 +1455,8 @@ async function handleInvoke(event, request) {
             { method: "GET", path: "/api/v1/settings/public/", timeoutMs: 15_000 },
             binding
           );
-          if (settings?.CHAT_AI_ENABLED !== true) throw new Error("AI Assistant is disabled in enterprise settings");
+          if (settings?.CHAT_AI_ENABLED !== true)
+            throw new LocalAiError("LOCAL_AI_DISABLED", "AI Assistant is disabled in enterprise settings");
         },
         secrets: {
           encrypt(value) {
@@ -2222,7 +2227,11 @@ app.whenReady().then(async () => {
     (payload, label) => emitDesktopEvent("transcode-progress", payload, label),
     ffmpegPlugin
   );
-  ipcMain.handle("jms:invoke", handleInvoke);
+  ipcMain.handle("jms:invoke", (event, request) =>
+    isLocalAiSettingsCommand(request?.command)
+      ? withLocalAiErrors(() => handleInvoke(event, request))
+      : handleInvoke(event, request)
+  );
   clipboardHistory.start();
   if (process.platform === "darwin") {
     const icon = loadAppIcon();

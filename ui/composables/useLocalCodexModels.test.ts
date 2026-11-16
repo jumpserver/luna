@@ -3,6 +3,7 @@ import { computed, effectScope, shallowRef } from "vue";
 import { useLocalCodexModels } from "./useLocalCodexModels";
 import { DEFAULT_CODEX_SETTINGS } from "~/shared/codex/types";
 import type { LocalCodexModel } from "~/shared/codex/types";
+import { LocalAiError } from "~/shared/codex/errorProtocol";
 
 const scopes: ReturnType<typeof effectScope>[] = [];
 afterEach(() => {
@@ -33,7 +34,11 @@ it("waits for a ready connection, allows refresh after failure, and stops on dis
   vi.useFakeTimers();
   const ready = shallowRef(false);
   const draft = computed(() => (ready.value ? { ...DEFAULT_CODEX_SETTINGS } : null));
-  const fetchModels = vi.fn().mockRejectedValueOnce(new Error("HTTP 404")).mockResolvedValueOnce([entry]);
+  const failure = new LocalAiError("LOCAL_AI_PROVIDER_ERROR", "Future provider wording", {
+    status: 401,
+    providerCode: "invalid_api_key"
+  });
+  const fetchModels = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce([entry]);
   const scope = effectScope();
   scopes.push(scope);
   const catalog = scope.run(() => useLocalCodexModels(() => draft.value, fetchModels))!;
@@ -41,7 +46,7 @@ it("waits for a ready connection, allows refresh after failure, and stops on dis
   expect(fetchModels).not.toHaveBeenCalled();
   ready.value = true;
   await vi.advanceTimersByTimeAsync(500);
-  expect(catalog.error.value).toBe("HTTP 404");
+  expect(catalog.error.value).toBe(failure);
   await catalog.refresh();
   expect(catalog.models.value).toEqual([entry]);
   ready.value = false;

@@ -6,7 +6,7 @@ const props = defineProps<{
   hasApiKey: boolean;
   models: LocalCodexModel[];
   modelsLoading: boolean;
-  modelsError: string;
+  modelsError: unknown;
   modelsReady: boolean;
 }>();
 defineEmits<{ refreshModels: [] }>();
@@ -31,7 +31,7 @@ const selectedModel = computed({
     model.value = value || "";
   }
 });
-const { t } = useLocalAiMessages();
+const { t, formatError } = useLocalAiMessages();
 const connections = computed(() => [
   { label: t("api"), value: "api" },
   { label: t("existing"), value: "existing" }
@@ -154,7 +154,7 @@ function selectCustomModel(value: string) {
           />
         </div>
         <p v-if="modelsError" role="alert" class="max-w-md text-xs text-error">
-          {{ t("modelsFailed") }} {{ modelsError }}
+          {{ t("modelsFailed") }} {{ formatError(modelsError) }}
         </p>
         <p v-else-if="connection === 'api' && !modelsReady" class="text-xs text-muted">{{ t("modelsNeedKey") }}</p>
         <p v-else-if="models.length" role="status" class="text-xs text-muted">
