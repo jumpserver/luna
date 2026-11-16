@@ -297,7 +297,6 @@ interface AssetTreeNodeData {
   type?: string | AssetTreeChoice;
   category?: string | AssetTreeChoice;
   platform?: string | AssetTreeChoice;
-  platform_name?: string;
   platform_type?: string;
   zone?: string | AssetTreeChoice;
   is_active?: boolean;

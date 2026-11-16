@@ -341,14 +341,11 @@ export const useAssetTree = () => {
       address: String(data.address || ""),
       org_id: typeof data.org_id === "string" ? data.org_id : undefined,
       platform: String(
-        data.platform_name ||
-          (typeof data.platform === "object" ? data.platform?.name : data.platform) ||
-          data.platform_type ||
-          ""
+        (typeof data.platform === "object" ? data.platform?.name : data.platform) || data.platform_type || ""
       ),
       zone: String((typeof data.zone === "object" ? data.zone?.name : data.zone) || ""),
       category: normalizeChoice(data.category),
-      type: normalizeChoice(data.type) || String(data.platform_type || ""),
+      type: String(data.platform_type || normalizeChoice(data.type)),
       isActive: data.is_active !== false && !node.chkDisabled,
       comment: String(data.comment || node.title || ""),
       permedProtocols: protocols,
