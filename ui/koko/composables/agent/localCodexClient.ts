@@ -193,6 +193,11 @@ export function useDesktopCodexSession(
       ? localOptions()
       : { ...options, enabled: computed(() => serverWorkspaceAiEnabled.value && current.value) };
   const controller = shallowRef(create(selected()));
+  async function replaceController() {
+    const next = create(selected());
+    await next.actions.setApprovalMode(controller.value.state.approvalMode);
+    controller.value = next;
+  }
   let manifest: AgentMcpManifest | undefined;
   let disposed = false;
   let generation = 0;
@@ -208,7 +213,7 @@ export function useDesktopCodexSession(
             if (disposed || current !== generation) return;
             await controller.value.actions.dispose();
             if (disposed || current !== generation) return;
-            controller.value = create(selected());
+            await replaceController();
             if (manifest) await controller.value.actions.attachManifest(manifest);
           });
         void switching.catch(() => {});
@@ -228,7 +233,7 @@ export function useDesktopCodexSession(
         if (current !== generation) return;
         // SFTP and terminal connections reuse their controller after disconnecting.
         if (disposed) {
-          controller.value = create(selected());
+          await replaceController();
           disposed = false;
           stop = watchSettings();
         }
@@ -247,7 +252,10 @@ export function useDesktopCodexSession(
       receiveKokoFrame: (value) => controller.value.actions.receiveKokoFrame(value),
       cancel: () => controller.value.actions.cancel(),
       newSession: () => controller.value.actions.newSession(),
-      setApprovalMode: (mode) => controller.value.actions.setApprovalMode(mode),
+      async setApprovalMode(mode) {
+        await switching;
+        await controller.value.actions.setApprovalMode(mode);
+      },
       async dispose() {
         disposed = true;
         manifest = undefined;

@@ -601,6 +601,83 @@ it("rejects a non-advancing replay cursor instead of polling indefinitely", asyn
   expect(native.listeners.size).toBe(0);
 });
 
+it("sends an approval mode selected during initial creation to Codex before the first query", async () => {
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const created = Promise.withResolvers<{ session_id: string }>();
+  native.invoke.mockImplementationOnce(() => created.promise);
+  const onApprovalMode = vi.fn();
+  const controller = useAgentSession({
+    domain: "terminal",
+    relay: new AgentToolRelay({ resourceSessionId: () => manifest.resourceSessionId, sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onAvailability: vi.fn(),
+    onApprovalMode,
+    onMessage: vi.fn()
+  });
+  controllers.push(controller);
+  const attaching = controller.actions.attachManifest({ ...manifest, profile: "terminal" });
+  await vi.waitFor(() => expect(native.invoke).toHaveBeenCalledWith("local_codex_create", expect.any(Object)));
+  const updating = controller.actions.setApprovalMode("never");
+  created.resolve({ session_id: "native-session" });
+  await Promise.all([attaching, updating]);
+  await controller.actions.sendMessage({
+    id: "disk-query",
+    role: "user",
+    parts: [{ type: "text", text: "Check disk usage with df and lsblk" }]
+  });
+
+  expect(native.invoke).toHaveBeenCalledWith("local_codex_mode", {
+    sessionId: "native-session",
+    resourceSessionId: manifest.resourceSessionId,
+    mode: "never"
+  });
+  const commands = native.invoke.mock.calls.map(([command]) => command);
+  expect(commands.indexOf("local_codex_mode")).toBeLessThan(commands.indexOf("local_codex_send"));
+  expect(onApprovalMode).toHaveBeenLastCalledWith("never");
+});
+
+it.each(["never", "always"] as const)("keeps %s approval mode when the desktop agent is recreated", async (mode) => {
+  const harness = installAgentSessionHarness();
+  localCodexSettings.value = { ...DEFAULT_CODEX_SETTINGS, enabled: true };
+  const terminalManifest = { ...manifest, profile: "terminal" as const };
+  const controller = useAgentSession({
+    domain: "terminal",
+    relay: new AgentToolRelay({ resourceSessionId: () => manifest.resourceSessionId, sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onAvailability: vi.fn(),
+    onMessage: vi.fn()
+  });
+  controllers.push(controller);
+  await controller.actions.attachManifest(terminalManifest);
+  await vi.waitFor(() => expect(controller.state.status).toBe("connected"));
+  await controller.actions.setApprovalMode(mode);
+
+  for (const enabled of [true, false, true]) {
+    native.invoke.mockClear();
+    harness.createSession.mockClear();
+    localCodexSettings.value = { ...localCodexSettings.value, enabled };
+    localCodexRevision.value++;
+    await vi.waitFor(() => {
+      if (enabled) {
+        expect(native.invoke).toHaveBeenCalledWith("local_codex_create", {
+          input: expect.objectContaining({ approvalMode: mode })
+        });
+      } else {
+        expect(harness.createSession).toHaveBeenCalledWith(terminalManifest, mode, expect.any(Object));
+      }
+    });
+    expect(controller.state.approvalMode).toBe(mode);
+  }
+
+  await controller.actions.dispose();
+  native.invoke.mockClear();
+  await controller.actions.attachManifest(terminalManifest);
+  expect(native.invoke).toHaveBeenCalledWith("local_codex_create", {
+    input: expect.objectContaining({ approvalMode: mode })
+  });
+  expect(controller.state.approvalMode).toBe(mode);
+});
+
 it("changing the selected backend disposes the previous controller and rebinds its manifest", async () => {
   const created: Array<{ options: AgentSessionOptions; controller: AgentSessionController }> = [];
   const factory = (options: AgentSessionOptions): AgentSessionController => {
