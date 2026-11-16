@@ -206,6 +206,14 @@ function resultSummary(result: ChenConsoleTimelineResult) {
   return total > shown ? t("Chen.RowsShownTotal", { shown, total }) : t("Chen.RowCount", { count: shown });
 }
 
+// Only suppress clearly ineligible commands. Chen validates the full SQL per dialect.
+function canOfferPlan(sql: string) {
+  const command = sql.replace(/^(?:[\s;]|--[^\r\n]*|#[^\r\n]*|\/\*(?!!)[\s\S]*?\*\/)*/, "");
+  return !/^(?:SHOW|DESC|DESCRIBE|EXPLAIN|SET|USE|BEGIN|COMMIT|ROLLBACK|INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE)\b/i.test(
+    command
+  );
+}
+
 function elapsed(entry: ChenConsoleTimelineEntry) {
   if (!entry.completedAt) return "";
   const milliseconds = Math.max(0, entry.completedAt - entry.startedAt);
@@ -305,7 +313,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
                 {{ t("Chen.Stop") }}
               </UButton>
               <UButton
-                v-else
+                v-else-if="canOfferPlan(entry.sql)"
                 size="xs"
                 color="neutral"
                 variant="ghost"

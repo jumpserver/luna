@@ -35,6 +35,9 @@ const statisticLabels: Record<string, string> = {
   tablespace: "Tablespace",
   status: "Status"
 };
+const visibleStatistics = computed(() =>
+  Object.entries(statisticLabels).filter(([key]) => statistics.value?.fields[key])
+);
 function statisticValue(key: string) {
   const field = statistics.value?.fields[key];
   if (!field || field.value === null) return field ? t(`Chen.GoOverview${field.state}`) : "—";
@@ -256,7 +259,7 @@ onBeforeUnmount(() => {
           <dd class="break-words text-sm">{{ item.value || "—" }}</dd>
         </div>
         <div
-          v-for="(label, key) in statisticLabels"
+          v-for="[key, label] in visibleStatistics"
           :key="key"
           class="rounded border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2"
           :title="statistics?.fields[key]?.source"

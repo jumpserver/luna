@@ -772,7 +772,7 @@ defineExpose({
 
 <template>
   <div class="relative h-full min-h-0 w-full">
-    <div ref="host" class="chen-sql-editor h-full min-h-0 w-full" />
+    <div ref="host" class="monaco-component chen-sql-editor h-full min-h-0 w-full" />
     <div
       v-if="statementFrame"
       class="pointer-events-none absolute inset-y-0 right-0 overflow-hidden"

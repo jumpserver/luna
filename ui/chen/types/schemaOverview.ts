@@ -29,7 +29,7 @@ export interface ChenSchemaDiagramTable {
   // Explicit scoped identities override the legacy schema/name identity.
   id?: string;
   database?: string;
-  metadataStatus?: "Current" | "NotLoaded" | "External" | "Unknown";
+  metadataStatus?: "Current" | "NotLoaded" | "External" | "Unknown" | "Partial" | "Complete";
   schema: string;
   name: string;
   columns: ChenSchemaDiagramColumn[];

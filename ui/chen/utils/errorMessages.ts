@@ -11,6 +11,7 @@ for (const [code, aliases] of Object.entries(chenErrorCatalog)) {
 // vendor details intact, alongside a localized explanation of the error class.
 function databaseErrorCode(code: string): string | undefined {
   const categories: Record<string, readonly string[]> = {
+    clickhouse_unsupported: ["CLICKHOUSE_48"],
     database_syntax: [
       "42601",
       "MYSQL_1064",
@@ -89,10 +90,12 @@ export function chenErrorText(cause: unknown, t: Translate, fallback = "unexpect
     );
   if (partial)
     return `${translate("partial_statements", { count: partial[1]! })}\n${chenErrorText(partial[2], t, code || "database_error")}`;
-  if (message === "Database diagnostic details are hidden by the data masking policy")
-    return translate("diagnostic_hidden");
-
   const native = databaseErrorCode(code);
+  if (message === "Database diagnostic details are hidden by the data masking policy") {
+    const hidden = translate("diagnostic_hidden");
+    return native ? `${translate(native)} (${code})\n${hidden}` : hidden;
+  }
+
   if (native) return `${translate(native)}${message ? `\n${translate("original_detail")} (${code}): ${message}` : ""}`;
 
   if (["execution_unknown", "edit_commit_unknown", "edit_rollback_unknown"].includes(code)) {

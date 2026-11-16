@@ -7,7 +7,7 @@ import { useI18n } from "vue-i18n";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { editDirty } from "./dataEditing";
-import { downloadGoExport } from "./exportDownload";
+import { downloadGoExportFile } from "./exportDownload";
 import { exportActive } from "./workspace";
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -32,6 +32,7 @@ const mode = ref<"cached" | "query">("cached");
 const format = ref<GoExportFormat>("csv");
 const snapshot = ref({ sql: "", resultId: "", version: 0, rows: 0, truncated: false });
 const downloading = ref(false);
+const submittedFull = ref(false);
 const notice = ref("");
 const failure = ref("");
 const job = computed(() => props.query.exportJob);
@@ -80,6 +81,7 @@ function show() {
         : props.query.rows?.total_rows) || 0,
     truncated: !!props.query.rows?.truncated
   };
+  submittedFull.value = false;
   mode.value = "cached";
   notice.value = "";
   failure.value = "";
@@ -88,26 +90,30 @@ function show() {
 }
 function start() {
   if (!canStart.value) return;
+  submittedFull.value = mode.value === "query";
   emit("start", mode.value, format.value, { ...snapshot.value });
-  // Command confirmation/review remains in the query's standard control banner.
-  if (mode.value === "query") open.value = false;
 }
+// Confirmation, review and submission errors use the query's existing controls.
+watch(
+  () =>
+    props.query.error ||
+    props.query.execution?.confirmation ||
+    ["failed", "waiting_review", "unknown"].includes(props.query.execution?.status || ""),
+  (needsAttention) => {
+    if (submittedFull.value && needsAttention) open.value = false;
+  }
+);
 async function download() {
   if (!job.value?.ready || job.value.status !== "succeeded" || downloading.value || !props.ready) return;
   const id = job.value.id;
-  const fileName = job.value.filename || `chen-${id.replace(/[^\w-]/g, "_")}.${job.value.format}`;
   downloading.value = true;
   notice.value = "";
   failure.value = "";
   try {
-    const result = await downloadGoExport(async () => {
-      if (!props.ready || job.value?.id !== id)
+    const result = await downloadGoExportFile(props.api, job.value, () => {
+      if (!props.ready || !props.session.permissions.can_download || job.value?.id !== id)
         throw new Error(unavailableMessage.value || t("Chen.GoV1SessionClosed"));
-      const ticket = await props.api.exportDownloadTicket(id);
-      if (!props.ready || job.value?.id !== id)
-        throw new Error(unavailableMessage.value || t("Chen.GoV1SessionClosed"));
-      return ticket;
-    }, fileName);
+    });
     if (job.value?.id !== id) return;
     notice.value = t(
       result === "saved"
@@ -262,11 +268,16 @@ useIntervalFn(() => {
               @click="format = item"
             />
           </div>
-          <p class="text-xs text-muted">{{ t("Chen.GoV1ExportLimits") }}</p>
-          <p v-if="format === 'csv'" class="text-xs text-muted">{{ t("Chen.GoV1ExportCsvCells") }}</p>
-          <p v-if="format === 'csv'" class="text-xs text-muted">{{ t("Chen.GoV1ExportCsvFormat") }}</p>
-          <p v-if="format === 'xlsx'" class="text-xs text-muted">{{ t("Chen.GoV1ExportXlsxLimits") }}</p>
-          <p v-if="format === 'xlsx'" class="text-xs text-muted">{{ t("Chen.GoV1ExportXlsxPrecision") }}</p>
+          <details class="text-xs text-muted">
+            <summary class="w-fit cursor-pointer">{{ t("Common.More") }}</summary>
+            <div class="mt-2 space-y-2">
+              <p>{{ t("Chen.GoV1ExportLimits") }}</p>
+              <p v-if="format === 'csv'">{{ t("Chen.GoV1ExportCsvCells") }}</p>
+              <p v-if="format === 'csv'">{{ t("Chen.GoV1ExportCsvFormat") }}</p>
+              <p v-if="format === 'xlsx'">{{ t("Chen.GoV1ExportXlsxLimits") }}</p>
+              <p v-if="format === 'xlsx'">{{ t("Chen.GoV1ExportXlsxPrecision") }}</p>
+            </div>
+          </details>
           <p v-if="query.pendingCachedExport" class="text-warning">{{ t("Chen.GoV1SubmissionUnknown") }}</p>
           <UButton
             :label="
