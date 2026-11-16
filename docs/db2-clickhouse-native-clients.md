@@ -46,13 +46,18 @@ Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX and the
 standard ClickHouse driver used when configuring DBeaver manually use HTTP.
 DBeaver's bundled Magnus plugin and `clickhouse-client` use Native TCP.
 
-Configure the ClickHouse asset backend port to match its client transport:
-**8123** (HTTP) for DBX or DBeaver's standard HTTP driver, **9000** (Native TCP)
-for the DBeaver plugin or native CLI.
-Custom ports and backend HTTPS/native TLS use the asset's explicit port and TLS
-settings. No backend port is guessed or silently retried. If both transports are
-needed, configure separate asset entries pointing at their respective service
-ports. Clients always connect to the **Magnus** host/port.
+Keep the ClickHouse asset protocol port as the **Native TCP** port (usually
+**9000**). In the platform's ClickHouse protocol settings, configure the independent
+`http_port` (**8123** by default) for DBX and DBeaver's standard HTTP driver.
+Magnus selects the backend port for each connection before creating an SSH gateway
+forward. Native clients keep using the asset protocol port, so both transports can
+share one asset and token. Custom service ports are supported explicitly; clients
+always connect to the **Magnus** host/port.
+
+For an existing platform, edit and save its HTTP port to enable dual-port routing.
+A missing `http_port` preserves the legacy single-port HTTP configuration; no
+existing asset port is rewritten or guessed. Frontend TLS remains disabled and
+backend TLS continues to use the asset's configuration.
 
 Enable DBX under application settings → ClickHouse. Explicit saved DBX selections
 are preserved; existing DBeaver defaults are retained on upgrade. The launcher

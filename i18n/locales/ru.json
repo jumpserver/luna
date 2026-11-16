@@ -1271,7 +1271,7 @@
   },
   "ConnectionGuide": {
     "DB2NativeHelp": "DB2 использует JCC securityMechanism=3 (USRIDPWD). Для команды CLI требуется usql с драйвером DB2. Отключите SSL между клиентом и Magnus; используйте доверенную сеть или защищённый туннель.",
-    "ClickHouseNativeHelp": "DBeaver с вручную настроенным стандартным драйвером ClickHouse и DBX используют HTTP: выберите актив с HTTP-портом сервера (обычно 8123). DBeaver Native, запущенный из клиента, и clickhouse-client используют Native TCP и требуют Native-порт сервера (обычно 9000). Укажите показанные здесь хост и порт Magnus и отключите TLS/SSL в клиенте. TLS сервера актива настраивается отдельно.",
+    "ClickHouseNativeHelp": "В протоколе платформы ClickHouse сохраните порт Native (обычно 9000) и задайте http_port (по умолчанию 8123). DBX и стандартный драйвер DBeaver используют HTTP, DBeaver Native и clickhouse-client — Native TCP. Magnus выбирает соответствующий порт сервера для одного актива. Подключайтесь к указанным здесь хосту и порту Magnus с отключённым TLS/SSL клиента. TLS сервера настраивается отдельно.",
     "ClientTransport": "Клиент → Magnus",
     "DatabaseTransport": "Настройки TLS к базе данных",
     "TLSUnknown": "Настройки недоступны",
