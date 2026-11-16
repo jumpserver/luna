@@ -58,4 +58,24 @@ describe("asset icon URLs", () => {
     });
     expect(resolveAssetIconSrc("database")).toBe("");
   });
+
+  it.each([
+    ["H3C", "h3c", "h3c.png"],
+    ["Cisco", "cisco", "cisco.svg"],
+    ["Huawei", "huawei", "huawei.png"]
+  ])("uses the %s brand icon for the device type or platform", (platform, type, filename) => {
+    const icon = { src: `/luna/icons/${filename}`, fallback: "i-lucide-router" };
+    expect(resolveAssetIconFromFields({ type, category: "device" }, "/luna/")).toEqual(icon);
+    expect(resolveAssetIconFromFields({ platform, type: "general", category: "device" }, "/luna/")).toEqual(icon);
+    expect(resolveAssetIconFromCandidates([type, "switch"], "/luna/")).toEqual(icon);
+    expect(resolveAssetIconSrc(type, "/luna/")).toBe(icon.src);
+  });
+
+  it("uses brand icons only for exact asset metadata", () => {
+    expect(resolveAssetIconFromCandidates(["device"], "/", ["Cisco"])).toEqual({
+      src: "",
+      fallback: "i-lucide-router"
+    });
+    expect(resolveAssetIconFromFields({ platform: "Huawei Cloud", category: "cloud" }).src).toBe("");
+  });
 });

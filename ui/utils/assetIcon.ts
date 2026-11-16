@@ -1,5 +1,11 @@
 import { withBase } from "ufo";
 
+const networkDeviceIcons: Record<string, string> = {
+  h3c: "/icons/h3c.png",
+  cisco: "/icons/cisco.svg",
+  huawei: "/icons/huawei.png"
+};
+
 const iconMap: Record<string, string> = {
   windows: "/icons/windows.svg",
   linux: "/icons/linux.svg",
@@ -27,6 +33,13 @@ const iconMap: Record<string, string> = {
 
 const withAppBase = (src: string, baseURL: string) => (src ? withBase(src, baseURL) : "");
 
+function networkDeviceIcon(type?: string) {
+  const key = String(type || "")
+    .trim()
+    .toLowerCase();
+  return Object.hasOwn(networkDeviceIcons, key) ? networkDeviceIcons[key] : undefined;
+}
+
 function resolveAssetIconPath(type?: string) {
   const key = String(type || "linux").toLowerCase();
   if (Object.hasOwn(iconMap, key)) return iconMap[key]!;
@@ -50,7 +63,7 @@ function resolveAssetIconPath(type?: string) {
 }
 
 export function resolveAssetIconSrc(type?: string, baseURL = "/") {
-  return withAppBase(resolveAssetIconPath(type), baseURL);
+  return withAppBase(networkDeviceIcon(type) || resolveAssetIconPath(type), baseURL);
 }
 
 export function resolveAssetIconFallback(type?: string) {
@@ -67,11 +80,17 @@ export function resolveAssetIconFromFields(
   return resolveAssetIconFromCandidates([fields.platform, fields.type, fields.category], baseURL);
 }
 
-export function resolveAssetIconFromCandidates(values: (string | undefined)[], baseURL = "/") {
-  const candidates = values.map((value) => String(value || "").toLowerCase()).filter(Boolean);
-
-  const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
+export function resolveAssetIconFromCandidates(
+  values: (string | undefined)[],
+  baseURL = "/",
+  treeHints: (string | undefined)[] = []
+) {
   const resolve = (src: string, fallback: string) => ({ src: withAppBase(src, baseURL), fallback });
+  const deviceIcon = values.map(networkDeviceIcon).find(Boolean);
+  if (deviceIcon) return resolve(deviceIcon, "i-lucide-router");
+
+  const candidates = [...values, ...treeHints].map((value) => String(value || "").toLowerCase()).filter(Boolean);
+  const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
 
   if (has("k8s") || has("kubernetes")) return resolve(iconMap.kubernetes!, "i-lucide-container");
   if (has("macos")) return resolve(iconMap.macos!, "i-tabler-brand-apple");
@@ -92,8 +111,8 @@ export function resolveAssetIconFromCandidates(values: (string | undefined)[], b
   if (has("device")) return { src: "", fallback: "i-lucide-router" };
 
   for (const candidate of candidates) {
-    const src = resolveAssetIconSrc(candidate, baseURL);
-    if (src) return { src, fallback: resolveAssetIconFallback(candidate) };
+    const src = resolveAssetIconPath(candidate);
+    if (src) return resolve(src, resolveAssetIconFallback(candidate));
   }
 
   return { src: "", fallback: "i-lucide-terminal" };
