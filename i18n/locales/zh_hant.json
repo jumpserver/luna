@@ -1271,7 +1271,7 @@
   },
   "ConnectionGuide": {
     "DB2NativeHelp": "DB2 使用 JCC securityMechanism=3（USRIDPWD）；命令列需使用包含 DB2 驅動的 usql。用戶端到 Magnus 不啟用 SSL，請使用可信網路或安全通道。",
-    "ClickHouseNativeHelp": "DBX 使用 HTTP（資產後端連接埠通常為 8123）；DBeaver Native 和 clickhouse-client 使用 Native TCP（通常為 9000）。請選擇設定了對應後端連接埠的資產。用戶端連線至 Magnus 連接埠，不啟用 SSL。",
+    "ClickHouseNativeHelp": "手動設定 DBeaver 預設 ClickHouse 驅動和 DBX 均使用 HTTP：請選擇已設定 HTTP 後端連接埠（通常為 8123）的資產。用戶端啟動的 DBeaver Native 和 clickhouse-client 使用 Native TCP，需要 Native 後端連接埠（通常為 9000）。用戶端主機和連接埠使用本頁顯示的 Magnus 位址和連接埠，並關閉 TLS/SSL；資產後端 TLS 另行設定。",
     "ClientTransport": "用戶端 → Magnus",
     "DatabaseTransport": "後端 TLS 設定",
     "TLSUnknown": "未取得設定",

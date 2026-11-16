@@ -53,7 +53,7 @@ const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
-const showDatabaseTLS = computed(() => ["mysql", "postgresql"].includes(clientProtocol.value));
+const showDatabaseTLS = computed(() => ["mysql", "postgresql", "clickhouse"].includes(clientProtocol.value));
 const nativeDatabaseHelp = computed(() => {
   if (protocol.value === "db2") return t("ConnectionGuide.DB2NativeHelp");
   if (protocol.value === "clickhouse") return t("ConnectionGuide.ClickHouseNativeHelp");
