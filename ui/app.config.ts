@@ -63,7 +63,7 @@ export default defineAppConfig({
           color: "neutral",
           variant: "ghost",
           class:
-            "bg-transparent text-(--app-fg) hover:bg-(--app-surface-canvas) active:bg-(--app-surface-canvas) focus-visible:bg-(--app-surface-canvas)"
+            "bg-transparent text-(--app-fg) hover:bg-(--app-hover-soft) active:bg-(--app-hover-strong) focus-visible:bg-(--app-hover-strong)"
         }
       ]
     },

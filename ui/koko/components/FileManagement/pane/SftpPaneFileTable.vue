@@ -305,8 +305,8 @@ onUnmounted(() => {
             <td class="h-8.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1 text-[12px] text-(--app-fg)">
               <button
                 type="button"
-                class="flex min-w-0 w-full items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-                :class="draggable && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
+                class="flex min-w-0 w-full cursor-pointer items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+                :class="draggable && entry.name !== '..' ? 'active:cursor-grabbing' : ''"
                 :draggable="draggable && entry.name !== '..'"
                 @dblclick.stop="entry.is_dir && emit('open', entry)"
                 @dragstart="emit('dragStart', $event, entry)"

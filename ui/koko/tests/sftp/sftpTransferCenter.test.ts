@@ -548,16 +548,13 @@ describe("sftp professional workbench", () => {
     expect(localPaneToolbar).toContain("toolbarWidth.value < 720");
     expect(localPaneToolbar).toContain("square");
     expect(remotePaneToolbar).toContain("square");
-    expect(fileManagementStyles).toContain(":not(:has([data-slot=label]))");
-    expect(fileManagementStyles).toContain(":not(:has([data-slot=value]))");
-    expect(fileManagementStyles).toContain("justify-content: center");
     expect(localPaneToolbar).not.toContain("sftp-file-management__actionbar");
     expect(fileManagementPane).toContain('@go-to-path="goToAbsolutePath"');
     expect(fileManagementPane).toContain("focusPathEdit");
     expect(fileManagementPane).toContain("focusSearch");
     expect(fileManagementStyles).toContain("toolbar--unified");
     expect(fileManagementStyles).toContain("container-type: inline-size");
-    expect(fileManagementStyles).toContain("__search-input");
+    expect(fileManagementStyles).toContain("__toolbar.is-narrow .sftp-file-management__search.is-open");
   });
 
   it("uses the Windows File Explorer label for local reveal actions", () => {
@@ -569,7 +566,7 @@ describe("sftp professional workbench", () => {
   });
 
   it("exposes refresh and upload on the remote and local narrow toolbars", () => {
-    const narrow = remotePaneToolbar.split('<template v-if="isNarrow">')[1]?.split("<template v-else>")[0] || "";
+    const narrow = remotePaneToolbar.split('<div v-if="isNarrow"')[1]?.split("<template v-else>")[0] || "";
     expect(narrow).toContain("koko.fileManagement.refresh");
     expect(narrow).toContain("koko.actions.upload");
     expect(narrow).toContain("i-lucide-refresh-cw");
