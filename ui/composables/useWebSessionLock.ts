@@ -1,4 +1,9 @@
-import { apiRequest, deferAuthFailureUntil, notifyWebSessionClose } from "~/composables/useApiRequest";
+import {
+  apiRequest,
+  deferAuthFailureUntil,
+  notifyWebSessionClose,
+  setWebSessionAuthState
+} from "~/composables/useApiRequest";
 import { isDesktopRuntime, redirectToWebLogin, redirectToWebLogout } from "~/utils/runtime";
 import { createWebSessionLock, describeWebSessionError } from "~/utils/webSessionLock";
 
@@ -23,6 +28,7 @@ interface WebLockState {
   ready: boolean;
   locked: boolean;
   pending: boolean;
+  loggingOut: boolean;
   logoutAt: number;
   attemptsRemaining: number | null;
   idleRemaining: number | null;
@@ -45,6 +51,7 @@ export function useWebSessionLock() {
     ready: false,
     locked: true,
     pending: false,
+    loggingOut: false,
     logoutAt: 0,
     attemptsRemaining: null,
     idleRemaining: null,
@@ -62,6 +69,7 @@ export function useWebSessionLock() {
           request: (method: "GET" | "POST", path: string, body?: unknown, headers?: Record<string, string>) =>
             apiRequest({ method, path, headers, ...(body === undefined ? {} : { body }), timeoutMs: 10000 }),
           onChange: (next: Omit<WebLockState, "error" | "errorInfo"> & { error: unknown }) => {
+            setWebSessionAuthState(next);
             if (next.logoutAt) deferAuthFailureUntil(next.logoutAt);
             if (next.error) console.error("Web session status check failed");
             state.value = {

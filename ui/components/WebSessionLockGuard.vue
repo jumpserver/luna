@@ -116,7 +116,7 @@ onMounted(() => {
     <WebSessionCountdownNotices :idle-remaining="state.idleRemaining" :expiry-remaining="state.expiryRemaining" />
   </Teleport>
   <div
-    v-if="!desktop && !state.ready"
+    v-if="!desktop && !state.ready && !state.loggingOut"
     class="fixed inset-0 z-[700] grid place-items-center bg-[var(--app-surface-canvas)]"
     role="status"
   >
@@ -129,10 +129,10 @@ onMounted(() => {
     v-if="!desktop"
     ref="dialog"
     class="web-session-lock-shield"
-    :aria-label="t('ScreenLock.Title')"
+    :aria-label="t(state.loggingOut ? 'ScreenLock.Logout' : 'ScreenLock.Title')"
     @cancel.prevent
   >
-    <div class="screen-lock-surface">
+    <div v-show="!state.loggingOut" class="screen-lock-surface">
       <div class="screen-lock-brand">
         <BrandLogo class="screen-lock-brand-mark" />
         <span>JumpServer</span>

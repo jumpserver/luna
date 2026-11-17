@@ -181,5 +181,6 @@ export const redirectToWebLogout = () => {
   const location = pageLocation();
   const logoutUrl = new URL(withWebSitePrefix("/core/auth/logout/"), location.origin);
   if (logoutUrl.origin !== location.origin) return;
+  window.dispatchEvent(new Event("jms:web-session-logout"));
   location.assign(logoutUrl.pathname);
 };
