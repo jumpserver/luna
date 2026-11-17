@@ -484,6 +484,23 @@ function clearReviewApprovedTimer(group: AclDialogGroup) {
   group.reviewApprovedCountdown = undefined;
 }
 
+function continueAfterReview(group: AclDialogGroup) {
+  if (
+    !groups.value.includes(group) ||
+    !group.reviewApprovedTimer ||
+    isCollecting(group) ||
+    isConnectionUnavailable(group) ||
+    hasPendingReview(group)
+  )
+    return;
+  for (const candidate of relatedGroups(group)) {
+    if (!candidate.reviewApprovedTimer) continue;
+    clearReviewApprovedTimer(candidate);
+    candidate.reviewApprovedShown = true;
+  }
+  resumeConnections(group);
+}
+
 function pauseAfterReview(group: AclDialogGroup) {
   if (group.reviewApprovedShown) return false;
   if (group.reviewApprovedTimer) return true;
@@ -504,9 +521,7 @@ function pauseAfterReview(group: AclDialogGroup) {
     }
     group.reviewApprovedCountdown = (group.reviewApprovedCountdown || 1) - 1;
     if (group.reviewApprovedCountdown > 0) return;
-    clearReviewApprovedTimer(group);
-    group.reviewApprovedShown = true;
-    resumeConnections(group);
+    continueAfterReview(group);
   }, 1000);
   return true;
 }
@@ -928,6 +943,7 @@ export function useAclDialog() {
       group.reasonForAll = enabled;
     },
     submit,
+    continueAfterReview,
     close,
     closeScope: closeAclScope,
     retryFace: submit,

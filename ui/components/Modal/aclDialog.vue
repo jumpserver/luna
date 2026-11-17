@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
-const { globalGroup, isOpen, submit, close } = useAclDialog();
+const { globalGroup, isOpen, submit, continueAfterReview, close } = useAclDialog();
 const { t } = useI18n();
 const {
   canSubmit,
@@ -56,7 +56,12 @@ const handleSubmit = () => {
           t(isActionable && !isPushFailed && !isUnavailable && !isReviewDeclined ? "Common.Cancel" : "ToolTips.Close")
         }}
       </UButton>
-      <UButton v-if="isReviewApproved" class="shrink-0 tabular-nums" disabled aria-live="polite">
+      <UButton
+        v-if="isReviewApproved"
+        class="shrink-0 tabular-nums"
+        aria-live="polite"
+        @click="continueAfterReview(globalGroup)"
+      >
         {{ reviewContinueLabel }} ({{ globalGroup.reviewApprovedCountdown }})
       </UButton>
       <UButton
