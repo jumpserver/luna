@@ -190,7 +190,23 @@ const useSharedDocumentFullscreen = createSharedComposable(() => {
 let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
-const sessionCloseGuards = new Map<string, () => boolean | Promise<boolean>>();
+export interface WorkspaceCloseReview {
+  messages: string[];
+  current: () => boolean;
+}
+
+interface SessionCloseGuard {
+  confirm: () => boolean | Promise<boolean>;
+  review?: () => Promise<WorkspaceCloseReview | false>;
+}
+
+export const workspaceCloseSummary = shallowRef<{
+  tabCount: number;
+  items: { id: string; title: string; messages: string[] }[];
+  finish: (accepted: boolean) => void;
+} | null>(null);
+
+const sessionCloseGuards = new Map<string, SessionCloseGuard>();
 let aiTaskTabCloseConfirm: ((tabIds: string[]) => Promise<boolean>) | null = null;
 
 export const registerAiTaskTabCloseConfirm = (confirm: ((tabIds: string[]) => Promise<boolean>) | null) => {
@@ -200,7 +216,12 @@ export const registerAiTaskTabCloseConfirm = (confirm: ((tabIds: string[]) => Pr
   };
 };
 
-export const registerWorkspaceSessionCloseGuard = (sessionId: string, guard: () => boolean | Promise<boolean>) => {
+export const registerWorkspaceSessionCloseGuard = (
+  sessionId: string,
+  confirm: SessionCloseGuard["confirm"],
+  review?: SessionCloseGuard["review"]
+) => {
+  const guard = { confirm, review };
   sessionCloseGuards.set(sessionId, guard);
   return () => {
     if (sessionCloseGuards.get(sessionId) === guard) sessionCloseGuards.delete(sessionId);
@@ -422,7 +443,7 @@ const canCloseWorkspaceSession = async (id: string) => {
   if (!guard) return true;
 
   try {
-    return (await guard()) !== false;
+    return (await guard.confirm()) !== false;
   } catch {
     return false;
   }
@@ -763,11 +784,59 @@ export const useWorkspaceTabs = () => {
     return true;
   }
 
-  async function canCloseTab(tab: WorkspaceSessionTab) {
-    for (const pane of tab.panes) {
-      if (!(await canCloseWorkspaceSession(pane.id))) return false;
+  async function canCloseTabs(targets: WorkspaceSessionTab[]) {
+    const panes = targets.flatMap((tab) =>
+      tab.panes.map((pane) => ({ tab, pane, guard: sessionCloseGuards.get(pane.id) }))
+    );
+    if (panes.length === 1) return canCloseWorkspaceSession(panes[0]!.pane.id);
+    if (workspaceCloseSummary.value) return false;
+    // Connectors with an interactive-only guard keep their existing close checks.
+    for (const { pane, guard } of panes) {
+      if (!guard?.review && !(await canCloseWorkspaceSession(pane.id))) return false;
     }
-    return true;
+    const reviews = await Promise.all(
+      panes.map(async ({ guard }) => {
+        try {
+          return await guard?.review?.();
+        } catch {
+          return false as const;
+        }
+      })
+    );
+    if (reviews.includes(false)) return false;
+    const items = panes.flatMap(({ pane, tab }, i) => {
+      const review = reviews[i];
+      if (!review || !review.messages.length) return [];
+      return [
+        {
+          id: pane.id,
+          title: (tab.panes.length === 1 && tab.title) || pane.assetName || tab.title || pane.protocol,
+          messages: review.messages
+        }
+      ];
+    });
+    if (items.length) {
+      if (workspaceCloseSummary.value) return false;
+      const accepted = await new Promise<boolean>((resolve) => {
+        workspaceCloseSummary.value = {
+          tabCount: targets.length,
+          items,
+          finish(accepted) {
+            workspaceCloseSummary.value = null;
+            resolve(accepted);
+          }
+        };
+      });
+      if (!accepted) return false;
+    }
+    return (
+      targets.every((tab) => tabs.value.includes(tab)) &&
+      targets.reduce((count, tab) => count + tab.panes.length, 0) === panes.length &&
+      panes.every(
+        ({ tab, pane, guard }, i) =>
+          tab.panes.includes(pane) && sessionCloseGuards.get(pane.id) === guard && (!reviews[i] || reviews[i].current())
+      )
+    );
   }
 
   async function closeSession(id: string, assertCurrent: () => void = () => {}) {
@@ -779,7 +848,7 @@ export const useWorkspaceTabs = () => {
     const tab = tabs.value[index]!;
     if (aiTaskTabCloseConfirm && !(await aiTaskTabCloseConfirm([tab.id]))) return false;
     const originalPanes = [...tab.panes];
-    if (!(await canCloseTab(tab))) return false;
+    if (!(await canCloseTabs([tab]))) return false;
     assertCurrent();
     if (
       tabs.value.find((item) => item.id === id) !== tab ||
@@ -822,9 +891,7 @@ export const useWorkspaceTabs = () => {
   const closeTabs = async (targets: WorkspaceSessionTab[]) => {
     if (aiTaskTabCloseConfirm && targets.length && !(await aiTaskTabCloseConfirm(targets.map((tab) => tab.id))))
       return false;
-    for (const tab of targets) {
-      if (!(await canCloseTab(tab))) return false;
-    }
+    if (!(await canCloseTabs(targets))) return false;
     for (const tab of targets) removeSession(tab);
     return true;
   };

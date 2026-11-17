@@ -365,7 +365,7 @@ const reviewRequired = computed(
 );
 const warningRequired = computed(
   () =>
-    props.query.execution?.confirmation?.kind === "warning" ||
+    (props.query.execution?.status === "waiting_review" && props.query.execution.confirmation?.kind === "warning") ||
     (props.query.execution?.status === "failed" &&
       props.query.execution.error?.code === "command_warning_confirmation_required")
 );
@@ -448,13 +448,45 @@ function cancelWarning() {
   warningDialog.value = null;
   if (pending?.confirmationId) emit("policyCancel", pending.id, pending.confirmationId);
 }
+let shownWarningId: string | undefined;
 watch(
-  () => [props.query.execution?.id, props.query.execution?.confirmation?.id],
-  () => {
-    warningDialog.value = null;
-  }
+  [() => props.query.execution, () => props.visible, canPolicySubmit, ready],
+  ([execution, visible, canRespond, connected]) => {
+    const confirmation = execution?.confirmation;
+    if (
+      !visible ||
+      !connected ||
+      !warningRequired.value ||
+      warningDialog.value?.id !== execution?.id ||
+      warningDialog.value?.confirmationId !== confirmation?.id
+    )
+      warningDialog.value = null;
+    if (
+      visible &&
+      canRespond &&
+      warningRequired.value &&
+      confirmation?.kind === "warning" &&
+      confirmation.id !== shownWarningId
+    ) {
+      shownWarningId = confirmation.id;
+      openWarning();
+    }
+  },
+  { immediate: true }
 );
 const cancellationUnsupported = computed(() => props.session.can_cancel === false && !waitingReview.value);
+const refreshOutcomeLabel = computed(() => {
+  switch (props.query.edit.status) {
+    case "committed":
+      return t("Chen.GoSavedRefreshFailed");
+    case "staged":
+      return t("Chen.GoStagedRefreshFailed");
+    case "rolled_back":
+      return t("Chen.Transaction.RolledBack");
+    default:
+      return t("Chen.Transaction.OutcomeUnknown");
+  }
+});
 const ticketUrl = computed(() => reviewTicketUrl(props.query.execution?.review?.ticket_url, props.reviewCoreSite));
 const now = ref(Date.now());
 const clock = useIntervalFn(
@@ -1020,7 +1052,29 @@ defineExpose({
       {{ editorError }}
     </div>
     <div
-      v-if="query.error"
+      v-if="query.edit.refreshError"
+      role="alert"
+      class="flex max-h-32 shrink-0 items-start gap-2 overflow-auto border-b border-default px-3 py-2 text-xs"
+    >
+      <div class="min-w-0 flex-1">
+        <p class="text-warning">{{ refreshOutcomeLabel }}</p>
+        <details class="mt-1 text-muted">
+          <summary class="cursor-pointer">{{ t("Chen.Errors.original_detail") }}</summary>
+          <p class="mt-1 whitespace-pre-wrap break-words">{{ query.edit.refreshError }}</p>
+        </details>
+      </div>
+      <UButton
+        :label="t('Chen.GoV1Refresh')"
+        icon="i-lucide-refresh-cw"
+        size="xs"
+        color="neutral"
+        variant="soft"
+        :disabled="!ready || query.busy || query.loadingRows || active"
+        @click="emit('refreshData')"
+      />
+    </div>
+    <div
+      v-if="query.error && query.error !== query.edit.refreshError"
       role="alert"
       class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words border-b border-default px-3 py-2 text-xs text-error"
     >
@@ -1061,7 +1115,7 @@ defineExpose({
     <UModal
       :open="!!warningDialog"
       :title="t('Chen.GoV1WarningReview')"
-      :description="t('Chen.GoV1WarningDescription')"
+      :description="t(query.executionEditPlan ? 'Chen.GoEditWarningDescription' : 'Chen.GoV1WarningDescription')"
       @update:open="
         (value) => {
           if (!value) cancelWarning();
@@ -1468,14 +1522,16 @@ defineExpose({
           </div>
         </div>
         <div
-          v-if="query.execution?.error && !reviewRequired && !implicitRequired && !query.error"
+          v-if="
+            query.execution?.error && !reviewRequired && !implicitRequired && !query.error && !query.edit.refreshError
+          "
           role="alert"
           class="max-h-32 shrink-0 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-xs text-error"
         >
           {{ chenErrorText(query.execution.error, t) }}
         </div>
         <div
-          v-if="query.resultPane === 'results' && query.resultLoadError"
+          v-if="query.resultPane === 'results' && query.resultLoadError && !query.edit.refreshError"
           role="alert"
           class="flex max-h-32 shrink-0 items-start gap-2 overflow-auto border-b border-default px-3 py-2 text-xs text-warning"
         >

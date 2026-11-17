@@ -72,8 +72,7 @@ export interface QueryWorkspaceTab {
   executionRefresh?: {
     viewId: string;
     offset: number;
-    status: GoEditDraft["status"];
-    saveError?: GoExecution["error"];
+    transactionRevision?: number;
     retryOffset?: number;
   };
   resultViewId?: string;
@@ -352,7 +351,18 @@ export function mergeCatalogNodes<T extends { id: string; label: string; detail?
   });
   return append ? [...previous, ...merged.filter((item) => !byId.has(item.id))] : merged;
 }
-export function closeWarnings(queries: QueryWorkspaceTab[]) {
+export function needsCloseTransactionCheck(query: QueryWorkspaceTab): boolean {
+  const console = query.console;
+  return (
+    !!console &&
+    console.state !== "closed" &&
+    !console.transaction?.manual &&
+    query.kind !== "preview" &&
+    query.execution?.console_id === console.id
+  );
+}
+
+export function closeWarnings(queries: QueryWorkspaceTab[], transactions = new Map<string, string>()) {
   queries = queries.flatMap((query) => [query, ...query.pinnedResults]);
   const connected = queries.filter((query) => query.console && query.console.state !== "closed");
   return {
@@ -364,24 +374,23 @@ export function closeWarnings(queries: QueryWorkspaceTab[]) {
         !!query.pending ||
         query.busy ||
         query.exportBusy ||
+        Object.values(query.exportActions).some((action) => action.busy) ||
         !!query.pendingCachedExport ||
         query.exportJobs.some(exportActive)
     ),
     unknown: queries.some(
       (query) => !!query.pending || !!query.pendingCachedExport || query.execution?.status === "unknown"
     ),
-    transaction: connected.some(
-      (query) => query.console!.transaction?.manual && query.console!.transaction.state === "active"
-    ),
+    transaction: connected.some((query) => {
+      const console = query.console!;
+      const state = transactions.get(console.id) ?? console.transaction?.state;
+      return state === "active" || state === "failed";
+    }),
     transactionUnknown: connected.some((query) => {
       const transaction = query.console!.transaction;
-      // Automatic-mode SQL can contain BEGIN without appearing in the managed transaction snapshot.
-      // Only a controlled table preview with a known idle state can safely skip this warning.
-      return (
-        !transaction ||
-        transaction.state === "unknown" ||
-        (!transaction.manual && (query.kind !== "preview" || transaction.state !== "idle"))
-      );
+      const state = transactions.get(query.console!.id);
+      if (state) return state === "unknown";
+      return transaction?.state === "unknown" || needsCloseTransactionCheck(query);
     })
   };
 }

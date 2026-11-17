@@ -557,6 +557,7 @@ onBeforeUnmount(() => {
             </UButton>
           </template>
         </UModal>
+        <WorkspaceCloseSummaryDialog />
         <AppWatermark />
       </UApp>
     </Body>

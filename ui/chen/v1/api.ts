@@ -450,6 +450,13 @@ export function createChenGoApi(
     openConsole: (sessionId: string, context: { database?: string; schema?: string } = {}) =>
       request<GoConsole>(`/sessions/${id(sessionId)}/consoles`, "POST", context),
     closeConsole: (consoleId: string) => request<void>(`/consoles/${id(consoleId)}`, "DELETE"),
+    transactionState: (consoleId: string) =>
+      request<{ state: "idle" | "active" | "failed" | "unknown" }>(
+        `/consoles/${id(consoleId)}/transaction-state`,
+        "GET",
+        undefined,
+        AbortSignal.timeout(4000)
+      ),
     execute: (
       consoleId: string,
       sql: string,

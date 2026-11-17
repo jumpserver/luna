@@ -176,7 +176,7 @@ async function reconnect() {
     v-show="!dismissed"
     :role="failed ? 'alert' : 'status'"
     aria-live="polite"
-    class="absolute inset-0 z-20 grid place-items-center overflow-y-auto bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
+    class="connection-progress-overlay absolute inset-0 z-20 grid place-items-center overflow-y-auto bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
     :class="{ 'connection-progress-overlay--face': group?.faceUrl }"
   >
     <UButton
@@ -316,6 +316,10 @@ async function reconnect() {
 </template>
 
 <style scoped>
+[data-pane-id]:has([data-pane-close-confirmation]) > .connection-progress-overlay {
+  visibility: hidden;
+}
+
 .connection-progress-overlay--face {
   display: flex;
   overflow: auto;
