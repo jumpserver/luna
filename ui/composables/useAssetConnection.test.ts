@@ -51,7 +51,7 @@ const info: ConnectionFormInfo = {
   preserveStoredSelection: true
 };
 
-describe("hosted personal credential connections", () => {
+describe("connection credentials", () => {
   const connect = vi.fn();
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,6 +62,50 @@ describe("hosted personal credential connections", () => {
     vi.stubGlobal("useSettingManager", () => ({ appConfig: ref({}) }));
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  const manualInfo: ConnectionFormInfo = {
+    ...info,
+    account: "@INPUT",
+    accountId: undefined,
+    accountMode: "manual",
+    manualUsername: "user",
+    personalCredentialId: undefined,
+    personalCredentialVersion: undefined,
+    personalCredentialSecretType: "password"
+  };
+  const manualAsset = {
+    ...asset,
+    permedAccounts: [{ ...account, id: "", alias: "@INPUT", username: "@INPUT" }]
+  };
+
+  it.each(["ssh", "redis"])("submits an empty manual %s password", async (protocol) => {
+    await useAssetConnection().confirmConnection(
+      { ...manualAsset, permedProtocols: [{ name: protocol, port: 22, public: true }] },
+      { ...manualInfo, protocol }
+    );
+    expect(connect).toHaveBeenCalledWith(
+      "@INPUT",
+      asset.id,
+      protocol,
+      manualAsset.permedAccounts,
+      undefined,
+      expect.objectContaining({ accountMode: "manual", manualUsername: "user", manualPassword: "" })
+    );
+  });
+
+  it.each([{ personalCredentialSecretType: "ssh_key" }, { protocol: "k8s" }, { savePersonalCredential: true }])(
+    "rejects incomplete manual credentials after normalization: %j",
+    async (changes) => {
+      const protocol = changes.protocol || "ssh";
+      await expect(
+        useAssetConnection().confirmConnection(
+          { ...manualAsset, permedProtocols: [{ name: protocol, port: 22, public: true }] },
+          { ...manualInfo, ...changes }
+        )
+      ).rejects.toThrow("ConnectError.SecretRequired");
+      expect(connect).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([false, true])("does not restore hidden protocols from cached choices (desktop=%s)", async (desktop) => {
     vi.stubGlobal("isDesktopRuntime", () => desktop);
