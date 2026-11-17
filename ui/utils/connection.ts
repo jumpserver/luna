@@ -11,6 +11,22 @@ export const resolvePersonalCredentialSecretType = (protocol: string, fallback =
   return fallback || "password";
 };
 
+export const isManualCredentialReady = (input: {
+  protocol: string;
+  manualUsername: string;
+  manualPassword: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
+  savePersonalCredential?: boolean;
+}) => {
+  if (input.personalCredentialId && !input.savePersonalCredential) return true;
+  if (input.personalCredentialId && input.personalCredentialVersion === undefined) return false;
+  if (!input.manualUsername.trim()) return false;
+  const secretType = resolvePersonalCredentialSecretType(input.protocol, input.personalCredentialSecretType);
+  return (secretType === "password" && !input.savePersonalCredential) || !!input.manualPassword.trim();
+};
+
 export const findMatchingPersonalCredential = (
   credentials: PersonalAssetCredential[],
   username: string,
