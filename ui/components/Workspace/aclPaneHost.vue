@@ -3,7 +3,7 @@ import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
 const props = defineProps<{ scopeId: string }>();
 const { t } = useI18n();
-const { groupForScope, submit, close, closeScope } = useAclDialog();
+const { groupForScope, submit, continueAfterReview, close, closeScope } = useAclDialog();
 const { closePane, tabs } = useWorkspaceTabs();
 const group = groupForScope(props.scopeId);
 const {
@@ -75,7 +75,12 @@ onBeforeUnmount(() => {
           t(isActionable && !isPushFailed && !isUnavailable && !isReviewDeclined ? "Common.Cancel" : "ToolTips.Close")
         }}
       </UButton>
-      <UButton v-if="isReviewApproved" class="shrink-0 tabular-nums" disabled aria-live="polite">
+      <UButton
+        v-if="isReviewApproved"
+        class="shrink-0 tabular-nums"
+        aria-live="polite"
+        @click="continueAfterReview(group)"
+      >
         {{ reviewContinueLabel }} ({{ group.reviewApprovedCountdown }})
       </UButton>
       <UButton

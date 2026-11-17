@@ -6,6 +6,7 @@ import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { activeRequest, settle } = useConnectionFormModal();
+const { isOpen: isAclOpen } = useAclDialog();
 const { confirmConnection } = useAssetConnection();
 const {
   buildConnectionInfo,
@@ -102,7 +103,8 @@ watch(
 
 <template>
   <UModal
-    :open="!!activeRequest"
+    :open="!!activeRequest && !(downloadingRdp && isAclOpen)"
+    :unmount-on-hide="false"
     :dismissible="false"
     :title="modalTitle"
     :ui="{
