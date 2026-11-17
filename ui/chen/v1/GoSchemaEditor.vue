@@ -360,7 +360,13 @@ function execute() {
   if (!preview.value || !definition.value.sql || busy.value || confirming.value) return;
   transfer(definition.value.sql, true);
 }
-defineExpose({ dirty, confirmDiscard });
+defineExpose({
+  dirty,
+  confirmDiscard,
+  get canLeave() {
+    return current() && !discardResolver;
+  }
+});
 </script>
 
 <template>

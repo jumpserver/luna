@@ -83,6 +83,7 @@ import {
   interruptQueryPlans,
   isQueryWorkspaceTab,
   loadQueryPlan,
+  needsCloseTransactionCheck,
   normalizeResultLoading,
   objectSelect,
   objectWorkspaceKey,
@@ -612,13 +613,20 @@ async function loadRows(
       if (page.query_page?.mode === "database") {
         query.loadingSettings = { mode: "page", batchSize: page.query_page.page_size };
       }
+      const refresh = refreshing ? query.executionRefresh : undefined;
+      const resultRevision =
+        execution.transaction?.revision ?? refresh?.transactionRevision ?? query.console?.transaction?.revision;
       if (changedResult) {
-        const refresh = refreshing ? query.executionRefresh : undefined;
+        const previousEdit = query.edit;
         query.resultViewId = refresh?.viewId || id;
         query.edit = createEditDraft();
         if (refresh) {
-          query.edit.status = refresh.status;
-          query.edit.saveError = refresh.saveError;
+          query.edit.status = previousEdit.status;
+          query.edit.saveError = previousEdit.saveError;
+          if (previousEdit.transactionStale && (query.console?.transaction?.revision ?? 0) > (resultRevision ?? -1)) {
+            query.edit.transactionStale = true;
+            query.edit.refreshRequired = true;
+          }
           const currentOffset = page.browse?.supported
             ? page.browse.offset
             : page.query_page?.mode === "database"
@@ -629,7 +637,7 @@ async function loadRows(
         }
       }
       query.resultId = id;
-      query.resultTransactionRevision = execution.transaction?.revision ?? query.console?.transaction?.revision;
+      query.resultTransactionRevision = resultRevision;
       // Row loading may finish after more statements or audit updates arrive.
       // Retain the latest snapshot for this execution without changing its SQL source.
       query.resultExecution = {
@@ -701,7 +709,13 @@ async function loadRows(
             peer.executionEditPlan = undefined;
             peer.executionPlanNumber = undefined;
           }
-          peer.edit = { ...createEditDraft(), status: query.edit.status, saveError: query.edit.saveError };
+          peer.edit = {
+            ...createEditDraft(),
+            status: query.edit.status,
+            saveError: query.edit.saveError,
+            refreshRequired: query.edit.refreshRequired,
+            transactionStale: query.edit.transactionStale
+          };
         }
       }
       if (query.kind !== "console") {
@@ -720,6 +734,8 @@ async function loadRows(
   } catch (cause) {
     if (isCurrent(query) && generation === query.loadGeneration) {
       query.resultLoadError = { message: failureText(cause), id, offset, execution, sql, append };
+      if (query.executionRefresh && execution.id === query.execution?.id)
+        recordSavedRefreshError(query, query.resultLoadError.message);
       if (append) query.loadMoreFailed = true;
     }
   } finally {
@@ -729,6 +745,10 @@ async function loadRows(
 function retryRows(query: QueryWorkspaceTab) {
   const failed = query.resultLoadError;
   if (failed) void loadRows(query, failed.id, failed.offset, failed.execution, failed.sql, failed.append);
+}
+function recordSavedRefreshError(query: QueryWorkspaceTab, message: string) {
+  if (query.edit.refreshRequired && (query.edit.status === "committed" || query.edit.status === "staged"))
+    query.edit.refreshError = message;
 }
 function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (!isCurrent(query) || !acceptQueryExecution(query, value)) return;
@@ -778,6 +798,11 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
   )
     query.queryCount = value.query_count;
   const execution = query.execution!;
+  if (query.executionRefresh && ["failed", "unknown", "canceled"].includes(execution.status))
+    recordSavedRefreshError(
+      query,
+      execution.error ? failureText(execution.error) : t(`Chen.GoV1Status_${execution.status}`)
+    );
   const run = query.planRuns.find((item) => item.number === query.executionPlanNumber);
   if (run && run.state === "pending" && !executionActive(execution)) {
     if (execution.plan) {
@@ -1202,6 +1227,11 @@ async function applyEdits(query: QueryWorkspaceTab, plan: GoEditPlan) {
   await recoverSubmission(query);
 }
 async function refreshData(query: QueryWorkspaceTab, targetOffset?: number, afterSave = false) {
+  if (query.edit.refreshError) {
+    if (query.pending?.refresh) return recoverSubmission(query);
+    if (query.resultLoadError) return retryRows(query);
+    afterSave = true;
+  }
   if (!isCurrent(query) || !sessionReady.value || resultLoadingLocked(query, true) || !query.rows) return;
   if (query.browseObject)
     await browseTable(
@@ -1295,11 +1325,8 @@ async function confirmSchemaDiscard() {
   const confirmed = await schemaEditor.value?.confirmDiscard();
   return !!confirmed && !disposed && schemaEdit.value === target;
 }
-async function confirmSessionLeave(preserveSqlDrafts = false) {
-  const target = schemaEdit.value;
-  const scope = connection;
-  if (!(await confirmSchemaDiscard()) || !(await confirmClose(queries.value, { preserveSqlDrafts }))) return false;
-  return !disposed && connection === scope && schemaEdit.value === target;
+function confirmSessionLeave(preserveSqlDrafts = false) {
+  return confirmClose(queries.value, { preserveSqlDrafts, includeSchema: true });
 }
 async function openSchemaEditor(
   mode: "create" | "alter" | "index",
@@ -1527,6 +1554,7 @@ async function explainQuery(query: QueryWorkspaceTab, sql: string, version: numb
 async function recoverSubmission(query: QueryWorkspaceTab) {
   const pending = query.pending;
   if (!pending || !sessionReady.value || query.console?.state !== "ready" || query.busy) return;
+  const transactionRevision = query.console.transaction?.revision;
   const run = query.planRuns.find((item) => item.number === pending.planNumber);
   if (run) {
     run.state = "pending";
@@ -1537,6 +1565,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
   }
   query.busy = true;
   query.error = "";
+  query.edit.refreshError = undefined;
   try {
     const value = pending.queryPage
       ? await api.queryPage(
@@ -1607,8 +1636,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
         ? {
             viewId: query.resultViewId || query.rows.id,
             offset: query.rows.browse?.supported || query.rows.query_page?.mode === "database" ? 0 : query.rows.offset,
-            status: query.edit.status,
-            saveError: query.edit.saveError
+            transactionRevision
           }
         : undefined;
     query.executionBrowse = pending.browse;
@@ -1632,6 +1660,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
       query.pendingLoading = null;
     }
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
+    if (pending.refresh) recordSavedRefreshError(query, query.error);
     if (run && !run.executionId) {
       run.state = "failed";
       run.error = query.error;
@@ -1828,40 +1857,105 @@ const closeTitles = {
   reconnect: "Chen.GoV1ConfirmReconnect"
 } as const;
 const closeDescriptionId = useId();
-// A hidden session or a pane covered by connection progress must show its close prompt above the workspace.
-const portalCloseDialog = computed(() => workspaceWidth.value === 0 || !!props.tab?.connectionProgress);
-const closeDialog = ref<(ReturnType<typeof closeWarnings> & { title: string }) | null>(null);
+// Hidden tabs and in-progress connections still need a reachable confirmation.
+const portalCloseDialog = computed(
+  () => workspaceWidth.value === 0 || (!!props.tab?.connectionProgress && props.tab.status !== "disconnected")
+);
+const closeWarningText = {
+  sql: "Chen.GoV1CloseSqlDraft",
+  data: "Chen.DiscardDataViewEditsMessage",
+  schema: "Chen.DiscardTableStructureChangesMessage",
+  running: "Chen.GoV1CloseRunning",
+  unknown: "Chen.GoV1CloseUnknown",
+  transaction: "Chen.Transaction.RollbackOnClose",
+  transactionUnknown: "Chen.GoV1CloseDescription"
+} as const;
+const closeDialog = ref<{ title: string; messages: string[] } | null>(null);
 let closeResolver: ((value: boolean) => void) | undefined;
-function confirmClose(
-  list: QueryWorkspaceTab[],
-  {
-    preserveSqlDrafts = false,
-    keepConnection = false,
-    target = "connection"
-  }: {
-    preserveSqlDrafts?: boolean;
-    keepConnection?: boolean;
-    target?: keyof typeof closeTitles;
-  } = {}
-) {
+interface CloseOptions {
+  preserveSqlDrafts?: boolean;
+  keepConnection?: boolean;
+  includeSchema?: boolean;
+  target?: keyof typeof closeTitles;
+}
+async function reviewClose(list: QueryWorkspaceTab[], options: CloseOptions = {}) {
+  if (disposed || closeResolver || (options.includeSchema && schemaEdit.value && !schemaEditor.value?.canLeave))
+    return false;
   if (session.value?.can_cancel === false) {
     const running = list.filter(
       (query) => executionActive(query.execution) && query.execution?.status !== "waiting_review"
     );
     if (running.length) {
       for (const query of running) query.error = t("Chen.GoV1CloseCancelUnsupported");
-      return Promise.resolve(false);
+      return false;
     }
   }
-  const warnings = closeWarnings(list);
-  if (keepConnection) warnings.transaction = warnings.transactionUnknown = false;
-  if (preserveSqlDrafts) warnings.sql = false;
-  if (!Object.values(warnings).some(Boolean)) return Promise.resolve(true);
-  if (closeResolver) return Promise.resolve(false);
-  closeDialog.value = { ...warnings, title: keepConnection ? "Chen.UnpinResult" : closeTitles[target] };
-  return new Promise<boolean>((resolve) => {
+  const scope = connection;
+  const source = options.includeSchema ? () => queries.value : () => list;
+  const signature = () =>
+    JSON.stringify(
+      source().map((q) => [
+        q.id,
+        q.console?.id,
+        q.console?.state,
+        q.console?.transaction?.revision,
+        q.execution?.id,
+        q.pending?.id,
+        q.pendingCachedExport?.id,
+        q.busy,
+        q.exportBusy,
+        Object.entries(q.exportActions).filter(([, action]) => action.busy),
+        q.exportJobs.filter(exportActive).map((job) => job.id),
+        q.sql !== q.baselineSql,
+        editDirty(q.edit),
+        executionActive(q.execution),
+        q.execution?.status === "unknown",
+        session.value?.can_cancel === false && q.execution?.status === "waiting_review"
+      ])
+    );
+  const before = signature();
+  const schema = options.includeSchema ? schemaEdit.value : null;
+  const dirtySchema = !!(schema && schemaEditor.value?.dirty);
+  const current = () =>
+    !disposed &&
+    scope === connection &&
+    before === signature() &&
+    (!options.includeSchema ||
+      (schema === schemaEdit.value && dirtySchema === !!(schema && schemaEditor.value?.dirty)));
+  const states = new Map<string, string>();
+  if (!options.keepConnection) {
+    const ids = new Set(list.filter(needsCloseTransactionCheck).map((query) => query.console!.id));
+    await Promise.all(
+      [...ids].map(async (id) => {
+        try {
+          states.set(id, (await api.transactionState(id)).state);
+        } catch {
+          states.set(id, "unknown");
+        }
+      })
+    );
+  }
+  if (!current()) return false;
+  const warnings = { ...closeWarnings(list, states), schema: dirtySchema };
+  if (options.keepConnection) warnings.transaction = warnings.transactionUnknown = false;
+  if (options.preserveSqlDrafts) warnings.sql = false;
+  const messages = (Object.keys(closeWarningText) as (keyof typeof closeWarningText)[])
+    .filter((key) => warnings[key])
+    .map((key) => t(closeWarningText[key]));
+  return { messages, current };
+}
+async function confirmClose(list: QueryWorkspaceTab[], options: CloseOptions = {}) {
+  const review = await reviewClose(list, options);
+  if (!review || closeResolver) return false;
+  if (!review.messages.length) return review.current();
+  closeDialog.value = {
+    title: options.keepConnection ? "Chen.UnpinResult" : closeTitles[options.target ?? "connection"],
+    messages: review.messages
+  };
+  const accepted = await new Promise<boolean>((resolve) => {
     closeResolver = resolve;
   });
+  return accepted && review.current();
 }
 function finishClose(value: boolean) {
   closeDialog.value = null;
@@ -2140,7 +2234,11 @@ function preventCopy(event: ClipboardEvent) {
   if (session.value && !session.value.permissions.can_copy) event.preventDefault();
 }
 const unregisterCloseGuard = props.tab
-  ? registerWorkspaceSessionCloseGuard(props.tab.id, () => confirmSessionLeave())
+  ? registerWorkspaceSessionCloseGuard(
+      props.tab.id,
+      () => confirmSessionLeave(),
+      () => reviewClose(queries.value, { includeSchema: true })
+    )
   : undefined;
 onMounted(() => {
   window.addEventListener("beforeunload", beforeUnload);
@@ -2171,6 +2269,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
 <template>
   <section
     :data-chen-session-state="session?.state || 'connecting'"
+    :data-pane-close-confirmation="closeDialog && !portalCloseDialog ? '' : undefined"
     class="relative flex h-full min-h-0 flex-col bg-[var(--workspace-surface-main)] text-[var(--app-fg)]"
     @copy.capture="preventCopy"
     @cut.capture="preventCopy"
@@ -2425,7 +2524,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               :session="session"
               :api="api"
               :single="single"
-              :visible="queryVisible(query)"
+              :visible="workspaceWidth > 0 && queryVisible(query)"
               :review-core-site="reviewCoreSite"
               :ai-available="aiAvailable"
               :sql-keyword-case="workspacePreferences.sqlKeywordCase"
@@ -2515,12 +2614,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
     >
       <template #body>
         <div :id="closeDescriptionId" class="space-y-2 text-sm text-muted">
-          <p v-if="closeDialog?.sql">{{ t("Chen.GoV1CloseSqlDraft") }}</p>
-          <p v-if="closeDialog?.data">{{ t("Chen.DiscardDataViewEditsMessage") }}</p>
-          <p v-if="closeDialog?.running">{{ t("Chen.GoV1CloseRunning") }}</p>
-          <p v-if="closeDialog?.unknown">{{ t("Chen.GoV1CloseUnknown") }}</p>
-          <p v-if="closeDialog?.transaction">{{ t("Chen.Transaction.RollbackOnClose") }}</p>
-          <p v-if="closeDialog?.transactionUnknown">{{ t("Chen.GoV1CloseDescription") }}</p>
+          <p v-for="message in closeDialog?.messages" :key="message">{{ message }}</p>
         </div>
       </template>
       <template #footer>

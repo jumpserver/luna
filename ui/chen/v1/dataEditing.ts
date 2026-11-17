@@ -14,6 +14,7 @@ export interface GoEditDraft {
   source: "grid" | "csv";
   busy: boolean;
   refreshRequired: boolean;
+  refreshError?: string;
   transactionStale?: boolean;
   saveError?: GoExecution["error"];
   status: "" | "committed" | "staged" | "rolled_back" | "unknown";
