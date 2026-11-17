@@ -1,5 +1,27 @@
 // Browser Session coordination. Keep API and storage keys aligned between Lina and Luna.
 // No credentials enter browser storage.
+const LOGOUT_WAIT_MS = 15000;
+const logoutKey = (scope) => `jms-screen-lock:${scope}:logout`;
+
+function readLogout(scope, env) {
+  if (typeof scope !== "string" || !/^[a-f0-9]{40}$/.test(scope)) return null;
+  try {
+    const marker = JSON.parse(env.localStorage.getItem(logoutKey(scope)) || "null");
+    return marker?.scope === scope &&
+      Number.isFinite(marker.startedAt) &&
+      marker.startedAt >= 0 &&
+      marker.startedAt <= Date.now()
+      ? marker
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isWebSessionLoggingOut(scope, env = globalThis) {
+  return Boolean(readLogout(scope, env));
+}
+
 export function describeWebSessionError(error) {
   const status = Number(error?.response?.status ?? error?.status ?? error?.statusCode);
   /** @type {Record<string, number>} */
@@ -48,6 +70,7 @@ export function createWebSessionLock({
     error: null,
     session: null,
     logoutAt: 0,
+    loggingOut: false,
     attemptsRemaining: null,
     idleRemaining: null,
     expiryRemaining: null
@@ -69,6 +92,10 @@ export function createWebSessionLock({
   let lastSignal = "";
   let stopped = false;
   let logoutTimer;
+  let logoutCheckTimer;
+  let logoutDeadlineTimer;
+  let logoutMarker;
+  let ignoredLogoutAt;
   let pageId = newId();
   let pageHidden = false;
   let pageEntering = true;
@@ -89,7 +116,7 @@ export function createWebSessionLock({
     onChange({ ...state });
   };
   function updateCountdowns(notify = false) {
-    const applicable = !stopped && !pageHidden && state.ready && state.session && !state.logoutAt;
+    const applicable = !stopped && !pageHidden && state.ready && state.session && !state.logoutAt && !state.loggingOut;
     const remaining = (deadline, warningSeconds) => {
       const seconds = Math.max(0, Math.ceil((deadline - now()) / 1000));
       return Number.isFinite(deadline) && seconds <= warningSeconds ? seconds : null;
@@ -139,6 +166,102 @@ export function createWebSessionLock({
     env.clearTimeout(retryTimer);
     retryTimer = undefined;
   }
+  function clearLogoutTimers() {
+    env.clearTimeout(logoutCheckTimer);
+    env.clearTimeout(logoutDeadlineTimer);
+  }
+  function recoverLogout(error) {
+    if (!state.loggingOut) return;
+    clearLogoutTimers();
+    ignoredLogoutAt = logoutMarker?.startedAt;
+    logoutMarker = null;
+    state.loggingOut = false;
+    lifecycle++;
+    state.locked = true;
+    state.error = error;
+    publish();
+  }
+  function restoreLogout() {
+    const marker = readLogout(state.session?.scope, env);
+    if (!marker || marker.startedAt === ignoredLogoutAt) return false;
+    return beginLogout(marker);
+  }
+  function beginLogout(marker, confirm = true) {
+    if (stopped || marker.scope !== state.session?.scope) return false;
+    if (state.loggingOut) return true;
+    logoutMarker = marker;
+    cancelRetry();
+    pendingLock = null;
+    syncAgain = false;
+    confirmingState = false;
+    lifecycle++;
+    state.loggingOut = true;
+    state.locked = true;
+    state.pending = false;
+    state.error = null;
+    publish();
+    // The initiating tab follows Core's logout / SSO redirects itself.
+    if (!confirm) return true;
+    // Keep the old page shielded until Core confirms logout; a login redirect before
+    // the Cookie is cleared can otherwise log another tab straight back in.
+    const deadline = Math.max(now() + 1000, marker.startedAt + LOGOUT_WAIT_MS);
+    logoutDeadlineTimer = env.setTimeout(() => {
+      recoverLogout(Object.assign(new Error("Logout confirmation timed out"), { name: "TimeoutError" }));
+    }, deadline - now());
+    const generation = lifecycle;
+    const check = async () => {
+      if (generation !== lifecycle || stopped || pageHidden || !state.loggingOut) return;
+      try {
+        const data = validate(await request("GET", "/api/v1/authentication/web-session/status/"));
+        if (generation !== lifecycle || stopped || pageHidden) return;
+        if (data.scope !== marker.scope) {
+          recoverLogout(null);
+          onSessionChanged?.();
+          return;
+        }
+        if (now() + 500 >= marker.startedAt + LOGOUT_WAIT_MS) {
+          recoverLogout(null);
+          try {
+            env.localStorage.removeItem(logoutKey(marker.scope));
+          } catch {
+            /* Storage can be unavailable. */
+          }
+          apply(data, true);
+          return;
+        }
+      } catch (error) {
+        if (generation !== lifecycle || stopped || pageHidden) return;
+        const status = error?.status || error?.response?.status;
+        const detail = error?.data || error?.response?.data;
+        if (status === 401 || (status === 403 && detail?.code === "not_authenticated")) {
+          clearLogoutTimers();
+          lifecycle++;
+          onUnauthenticated?.(detail?.login_url);
+          return;
+        }
+        if (status === 409 && detail?.code === "web_session_changed") {
+          recoverLogout(null);
+          onSessionChanged?.();
+          return;
+        }
+        if (status >= 400 && status < 500 && ![408, 429].includes(status)) {
+          recoverLogout(error);
+          return;
+        }
+      }
+      logoutCheckTimer = env.setTimeout(check, 500);
+    };
+    void check();
+    return true;
+  }
+  function logout() {
+    if (!state.session || state.loggingOut) return;
+    const marker = { scope: state.session.scope, startedAt: now() };
+    write(logoutKey(marker.scope), marker);
+    ignoredLogoutAt = undefined;
+    beginLogout(marker, false);
+    emit("logout_pending", { startedAt: marker.startedAt });
+  }
   function retryLock(intent, error) {
     const status = Number(error?.response?.status ?? error?.status ?? error?.statusCode);
     const temporary =
@@ -150,7 +273,8 @@ export function createWebSessionLock({
       intent.retries >= delays.length ||
       stopped ||
       pageHidden ||
-      state.logoutAt
+      state.logoutAt ||
+      state.loggingOut
     ) {
       return;
     }
@@ -158,7 +282,7 @@ export function createWebSessionLock({
     retryTimer = env.setTimeout(
       () => {
         retryTimer = undefined;
-        if (pendingLock === intent && !stopped && !pageHidden && !state.logoutAt) {
+        if (pendingLock === intent && !stopped && !pageHidden && !state.logoutAt && !state.loggingOut) {
           void flushLock().catch((error) => fail(error));
         }
       },
@@ -215,7 +339,7 @@ export function createWebSessionLock({
     if (configSnapshot) state.session = { ...state.session, ...configSnapshot.config };
   }
   function activity(force = false) {
-    if (!prefix || (state.locked && !force)) return;
+    if (!prefix || state.loggingOut || (state.locked && !force)) return;
     if (!force && acceptConfig(read(`${prefix}:config`))) publish();
     if (!force && idleExpired()) {
       void lock();
@@ -240,6 +364,16 @@ export function createWebSessionLock({
   }
   function receive(message) {
     if (!message || message.scope !== state.session?.scope) return;
+    if (
+      message.type === "logout_pending" &&
+      Number.isFinite(message.startedAt) &&
+      message.startedAt >= 0 &&
+      message.startedAt <= now()
+    ) {
+      if (message.startedAt !== ignoredLogoutAt) beginLogout(message);
+      return;
+    }
+    if (state.loggingOut) return;
     if (message.type === "activity") {
       acceptActivity(message.at);
       updateCountdowns(true);
@@ -317,7 +451,7 @@ export function createWebSessionLock({
     return data;
   }
   function apply(data, confirmedRead = false, checkIdle = true) {
-    if (state.logoutAt) return false;
+    if (state.logoutAt || state.loggingOut) return false;
     validate(data);
     if (state.session && state.session.scope !== data.scope) {
       cancelRetry();
@@ -352,6 +486,18 @@ export function createWebSessionLock({
       cancelRetry();
     }
     state.session = data;
+    const logout = readLogout(data.scope, env);
+    if (
+      logout &&
+      confirmedRead &&
+      (logout.startedAt === ignoredLogoutAt || now() >= logout.startedAt + LOGOUT_WAIT_MS)
+    ) {
+      try {
+        env.localStorage.removeItem(logoutKey(data.scope));
+      } catch {
+        /* Storage can be unavailable. */
+      }
+    } else if (restoreLogout()) return false;
     // Only Core's fixed login deadline is authoritative; a sliding expires_at is not a limit.
     const expiryDuration = Date.parse(data.max_expires_at) - Date.parse(data.server_time);
     expiryDeadline = data.sliding_expiry === false && Number.isFinite(expiryDuration) ? now() + expiryDuration : null;
@@ -386,7 +532,7 @@ export function createWebSessionLock({
     return true;
   }
   function fail(error, initial = false) {
-    if (state.logoutAt) return;
+    if (state.logoutAt || state.loggingOut) return;
     const status = error?.status || error?.response?.status;
     if (status === 409 && (error?.data?.code || error?.response?.data?.code) === "web_session_changed") {
       cancelRetry();
@@ -395,7 +541,10 @@ export function createWebSessionLock({
       return;
     }
     const detail = error?.data || error?.response?.data;
-    if (status === 401 && detail?.code === "authentication_required" && typeof detail.login_url === "string") {
+    if (
+      (status === 401 && detail?.code === "authentication_required" && typeof detail.login_url === "string") ||
+      ([401, 403].includes(status) && detail?.code === "not_authenticated")
+    ) {
       cancelRetry();
       lifecycle++;
       state.ready = false;
@@ -423,7 +572,7 @@ export function createWebSessionLock({
     publish();
   }
   function active(generation, id) {
-    return generation === lifecycle && id === pageId && !stopped && !pageHidden && !state.logoutAt;
+    return generation === lifecycle && id === pageId && !stopped && !pageHidden && !state.logoutAt && !state.loggingOut;
   }
   function conflict(error) {
     const detail = error?.data || error?.response?.data;
@@ -438,7 +587,7 @@ export function createWebSessionLock({
     return true;
   }
   async function flushLock() {
-    if (!pendingLock || !state.session) return;
+    if (!pendingLock || !state.session || state.loggingOut) return;
     if (locking) {
       const running = locking;
       await running.promise;
@@ -482,7 +631,7 @@ export function createWebSessionLock({
       await promise;
     } finally {
       if (locking === operation) locking = null;
-      if (pendingLock && pendingLock !== intent && !stopped && !pageHidden && !state.logoutAt) {
+      if (pendingLock && pendingLock !== intent && !stopped && !pageHidden && !state.logoutAt && !state.loggingOut) {
         // A newer user intent may have queued behind this request. Advance it once,
         // without turning failure of the original intent into an unbounded retry loop.
         void flushLock().catch((error) => fail(error));
@@ -490,7 +639,7 @@ export function createWebSessionLock({
     }
   }
   async function sync(fresh = false) {
-    if (stopped || pageHidden || state.logoutAt) return;
+    if (stopped || pageHidden || state.logoutAt || state.loggingOut) return;
     // Explicit refresh/recovery starts a fresh bounded retry budget, never a periodic API loop.
     cancelRetry();
     if (pendingLock) pendingLock.retries = 0;
@@ -531,12 +680,14 @@ export function createWebSessionLock({
     } finally {
       if (syncing === promise) syncing = null;
       // BFCache/start may request a new registration while an old page's request is finishing.
-      if (syncAgain && !stopped && !pageHidden && !state.logoutAt) void sync();
+      if (syncAgain && !stopped && !pageHidden && !state.logoutAt && !state.loggingOut) void sync();
     }
   }
   async function lock() {
     if (!state.session) await sync();
-    if (!state.session || state.locked || stopped || pageHidden || state.logoutAt) return;
+    if (!state.session || state.locked || stopped || pageHidden || state.logoutAt || state.loggingOut) {
+      return;
+    }
     setPendingLock(true);
     state.error = null;
     publish();
@@ -547,7 +698,7 @@ export function createWebSessionLock({
     }
   }
   async function unlock(password) {
-    if (state.logoutAt || state.pending || stopped || pageHidden) return;
+    if (state.logoutAt || state.loggingOut || state.pending || stopped || pageHidden) return;
     if (!state.session) throw new Error("No Web Session available");
     const generation = lifecycle;
     const id = pageId;
@@ -604,7 +755,9 @@ export function createWebSessionLock({
     return state.session?.idle_lock_time > 0 && now() - lastActivity >= state.session.idle_lock_time * 60000;
   }
   function tick() {
-    if (stopped || pageHidden || state.logoutAt || !state.ready || !state.session) return;
+    if (stopped || pageHidden || state.logoutAt || state.loggingOut || !state.ready || !state.session) {
+      return;
+    }
     // Each page checks the shared activity locally; no leader lease or periodic API polling.
     if (acceptConfig(read(`${prefix}:config`))) publish();
     if (!state.locked && idleExpired()) {
@@ -617,6 +770,12 @@ export function createWebSessionLock({
     cleanup.push(() => target.removeEventListener(name, handler, options));
   }
   function resume() {
+    if (state.loggingOut) {
+      clearLogoutTimers();
+      state.loggingOut = false;
+      lifecycle++;
+    }
+    if (restoreLogout()) return;
     tick();
     void sync(true);
   }
@@ -668,10 +827,12 @@ export function createWebSessionLock({
       pageHidden = false;
       state.ready = false;
       state.locked = true;
+      state.loggingOut = false;
       publish();
     }
     lifecycle++;
     listen(env, "storage", (event) => {
+      if (event.key === logoutKey(state.session?.scope)) restoreLogout();
       if (event.key === `${prefix}:signal`) receive(read(event.key));
       if (event.key === `${prefix}:activity`) {
         acceptActivity(read(event.key));
@@ -682,17 +843,20 @@ export function createWebSessionLock({
       }
     });
     listen(env, "jms:web-session-locked", () => {
+      if (state.loggingOut) return;
       confirmingState = true;
       state.locked = true;
       publish();
       void sync(true);
     });
+    listen(env, "jms:web-session-logout", logout);
     listen(doc, "visibilitychange", () => {
       if (!doc.hidden) resume();
     });
     listen(env, "online", resume);
     listen(env, "pagehide", () => {
       cancelRetry();
+      clearLogoutTimers();
       lifecycle++;
       pageHidden = true;
       updateCountdowns(true);
@@ -726,6 +890,7 @@ export function createWebSessionLock({
     updateCountdowns(true);
     env.clearInterval(interval);
     env.clearTimeout(logoutTimer);
+    clearLogoutTimers();
     channel?.close();
     channel = null;
     for (const remove of cleanup.splice(0)) remove();
@@ -738,6 +903,7 @@ export function createWebSessionLock({
     sync,
     lock,
     unlock,
+    logout,
     get state() {
       return { ...state };
     }

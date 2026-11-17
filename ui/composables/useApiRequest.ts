@@ -14,6 +14,7 @@ import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { compactApiErrorBody } from "~/utils/apiError";
 import { pageLocation } from "~/utils/runtime";
+import { isWebSessionLoggingOut } from "~/utils/webSessionLock";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
@@ -151,6 +152,15 @@ export interface PublicSettings {
 let lastAuthFailureAt = 0;
 let webAuthFailurePromise: Promise<void> | null = null;
 let lockSignOutUntil = 0;
+let webSessionScope: string | undefined;
+let webSessionLoggingOut = false;
+
+export function setWebSessionAuthState(state: { session: { scope: string } | null; loggingOut: boolean }) {
+  webSessionScope = state.session?.scope;
+  webSessionLoggingOut = state.loggingOut;
+}
+
+const isWebLogoutPending = () => webSessionLoggingOut || isWebSessionLoggingOut(webSessionScope);
 
 export function deferAuthFailureUntil(at: number) {
   if (Number.isFinite(at)) lockSignOutUntil = Math.max(lockSignOutUntil, Math.min(at, Date.now() + 5000));
@@ -266,6 +276,7 @@ const isAuthFailure = (error: unknown) => {
 
 const handleApiAuthFailure = () => {
   if (import.meta.server) return;
+  if (isWebLogoutPending()) return;
   if (lockSignOutUntil > Date.now()) return;
 
   const userInfoStore = useUserInfoStore();
@@ -282,6 +293,7 @@ const handleApiAuthFailure = () => {
 
 const handleWebApiAuthFailure = () => {
   if (import.meta.server) return;
+  if (isWebLogoutPending()) return;
   const userInfoStore = useUserInfoStore();
   if (!userInfoStore.loggedIn) return;
   if (webAuthFailurePromise) return webAuthFailurePromise;
@@ -291,6 +303,7 @@ const handleWebApiAuthFailure = () => {
   webAuthFailurePromise = (async () => {
     const profile = await getWebSessionProfile().catch(() => null);
     if (
+      isWebLogoutPending() ||
       !userInfoStore.loggedIn ||
       userInfoStore.currentAccountId !== accountId ||
       userInfoStore.currentUser?.userId !== userId
