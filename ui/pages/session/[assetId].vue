@@ -59,7 +59,9 @@ watch(
       window.close();
       if (!window.closed) await navigateTo("/");
     }
-  }
+  },
+  // Let the last pane remove its beforeunload listener before closing the window.
+  { flush: "post" }
 );
 
 useHead(() => ({ title: assetName.value || "JumpServer" }));
