@@ -73,10 +73,10 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>): Session
   };
 
   const copyShareURL = () => {
-    const { shareURL, enableShare } = shareInfo.value;
+    const { shareURL, shareCode, enableShare } = shareInfo.value;
     if (!shareURL || !enableShare) return;
 
-    writeText(shareURL)
+    writeText(`${t("RightPanel.ShareLink")}: ${shareURL}\n${t("RightPanel.VerifyCode")}: ${shareCode}`)
       .then(() => toast.add({ title: t("koko.terminal.shareLinkCopied"), color: "success" }))
       .catch((error) => addErrorToast({ title: String(error) }));
   };
