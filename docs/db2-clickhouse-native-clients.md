@@ -31,13 +31,12 @@ If DBeaver cannot resolve `com.ibm.db2:jcc:RELEASE`, install a fixed JCC version
 (e.g. `com.ibm.db2:jcc:11.5.9.0`) or add its JAR in Driver Manager. Maven download
 failures occur before any connection reaches Magnus.
 
-The connection guide's CLI uses a build of **usql with the DB2 driver**:
-`db2://<encoded-token>:<encoded-secret>@<endpoint>:<magnus-port>/<database>?secmec=3&ssl=false`.
-Credentials/database names must be URI encoded, then the entire URI shell quoted.
-The generated command includes `--no-password`: a rejected connection token
-ends the attempt without asking for another password. Create a new valid token
-before reconnecting. This does not change usql's standalone password prompt defaults.
-It does not catalog persistent IBM CLP aliases or change the local DB2 catalog.
+For manual setup, copy the host, port, database, and temporary username/password
+from a fresh connection guide. In DBX select IBM DB2 and enter
+`securityMechanism=3;sslConnection=false;` in Connection Parameters → Configure →
+Raw text. In DBeaver set `securityMechanism=3` and `sslConnection=false` in
+Driver Properties. Do not enable SSL on the client-to-Magnus leg; use a trusted
+network or secure tunnel. The guide does not generate a DB2 CLI command.
 
 ## ClickHouse
 
@@ -46,7 +45,9 @@ Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX uses HTTP
 as before. When Core advertises a configured HTTP route, DBeaver uses its
 built-in official ClickHouse JDBC driver (`com_clickhouse`) over HTTP, avoiding
 the legacy Native driver's shared-socket contention during metadata reads.
-`clickhouse-client` still uses Native TCP.
+`clickhouse-client` still uses Native TCP. For a manual DBeaver connection use the
+official ClickHouse HTTP driver and the proxy endpoint shown in the guide; no
+JDBC session properties need to be entered or removed.
 
 In the asset's **Protocols** section, enter **ClickHouse Native** (default **9000**)
 and **ClickHouse HTTP** (default **8123**). The HTTP row is stored as
@@ -78,8 +79,10 @@ compression and disabled `async_insert=0` are supported. Its result-format heade
 and response format/timezone/exception metadata are preserved, including binary
 results. Async insert, compressed request bodies and binary bulk inserts remain
 unsupported, so SQL can be inspected before execution. Only the SQL endpoint is
-exposed, with a bounded setting allowlist. Persistent
-HTTP sessions, external tables, compressed input, and query bindings are rejected.
+exposed, with a bounded setting allowlist. DBeaver's automatic `session_id` is
+mapped to an isolated backend ID for the authenticated JumpServer session.
+Requests without `session_id` remain stateless. External tables, compressed
+input, query bindings, and client-controlled session timeouts remain rejected.
 Mandatory masking rejects execution. Backend POSTs use fresh connections with no
 redirects, credential forwarding, automatic fallback or write replay.
 

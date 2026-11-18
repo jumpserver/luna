@@ -1270,8 +1270,8 @@
     "StartFaceVerify": "Démarrer la vérification"
   },
   "ConnectionGuide": {
-    "DB2NativeHelp": "DB2 utilise JCC securityMechanism=3 (USRIDPWD). La commande CLI nécessite usql avec le pilote DB2. Désactivez SSL entre le client et Magnus ; utilisez un réseau de confiance ou un tunnel sécurisé.",
-    "ClickHouseNativeHelp": "Dans le protocole de la plateforme ClickHouse, conservez le port Native (généralement 9000) et configurez http_port (8123 par défaut). DBX et le pilote DBeaver par défaut utilisent HTTP ; DBeaver Native et clickhouse-client utilisent Native TCP. Magnus choisit le port serveur adapté pour partager un actif. Connectez-vous à l’hôte et au port Magnus affichés ici, sans TLS/SSL côté client. Le TLS serveur se configure séparément.",
+    "DB2NativeHelp": "Dans DBX, sélectionnez IBM DB2 et saisissez securityMechanism=3;sslConnection=false; dans Paramètres de connexion → Configurer → Texte brut. Dans DBeaver, définissez securityMechanism=3 et sslConnection=false dans les propriétés du pilote. Utilisez les informations de cette page. Désactivez SSL entre le client et Magnus et utilisez un réseau de confiance ou un tunnel sécurisé.",
+    "ClickHouseNativeHelp": "Sélectionnez le pilote officiel ClickHouse HTTP dans DBeaver, ou ClickHouse dans DBX. Utilisez l’hôte et le port du proxy affichés ici, pas les ports 8123 ou 9000 de la base. Désactivez SSL côté client. DBeaver envoie session_id automatiquement. Les clients Native peuvent utiliser le même port proxy. Les ports et le TLS du serveur se configurent sur l’actif.",
     "ClientTransport": "Client → Magnus",
     "DatabaseTransport": "Configuration TLS du serveur de base de données",
     "TLSUnknown": "Configuration indisponible",

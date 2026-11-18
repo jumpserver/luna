@@ -1270,8 +1270,8 @@
     "StartFaceVerify": "인증 시작"
   },
   "ConnectionGuide": {
-    "DB2NativeHelp": "DB2는 JCC securityMechanism=3 (USRIDPWD)을 사용합니다. CLI에는 DB2 드라이버가 포함된 usql이 필요합니다. 클라이언트와 Magnus 간 SSL을 끄고 신뢰할 수 있는 네트워크나 보안 터널을 사용하세요.",
-    "ClickHouseNativeHelp": "ClickHouse 플랫폼 프로토콜 설정에서 Native 포트(보통 9000)를 유지하고 http_port(기본값 8123)를 설정하세요. DBX와 기본 DBeaver 드라이버는 HTTP를, DBeaver Native와 clickhouse-client는 Native TCP를 사용합니다. Magnus가 해당 백엔드 포트를 선택하므로 같은 자산을 공유할 수 있습니다. 여기에 표시된 Magnus 호스트와 포트로 연결하고 클라이언트 TLS/SSL을 끄세요. 백엔드 TLS는 별도로 설정합니다.",
+    "DB2NativeHelp": "DBX에서 IBM DB2를 선택하고 연결 매개변수 → 구성 → 원본 텍스트에 securityMechanism=3;sslConnection=false;를 입력하세요. DBeaver의 드라이버 속성에는 securityMechanism=3과 sslConnection=false를 설정하세요. 이 페이지의 연결 정보를 사용하세요. 클라이언트와 Magnus 사이의 SSL은 끄고 신뢰할 수 있는 네트워크나 보안 터널을 사용하세요.",
+    "ClickHouseNativeHelp": "DBeaver에서는 공식 ClickHouse HTTP 드라이버를, DBX에서는 ClickHouse를 선택하세요. 데이터베이스 포트 8123이나 9000이 아닌 이 페이지의 프록시 호스트와 포트를 사용하세요. 클라이언트 SSL을 끄세요. DBeaver는 session_id를 자동으로 전송합니다. Native 클라이언트도 같은 프록시 포트를 사용할 수 있으며 백엔드 포트와 TLS는 자산에서 설정합니다.",
     "ClientTransport": "클라이언트 → Magnus",
     "DatabaseTransport": "백엔드 TLS 설정",
     "TLSUnknown": "설정을 가져올 수 없음",

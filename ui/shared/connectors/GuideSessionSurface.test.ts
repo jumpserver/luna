@@ -80,6 +80,7 @@ function mountGuide(
     database: Ref<string>;
     rows: Ref<Array<{ name: string; value: unknown }>>;
     commands: Ref<Array<{ value: string }>>;
+    nativeDatabaseHelp: Ref<string>;
     copiedKey: Ref<string>;
     copy: (value: unknown, key: string) => Promise<void>;
   };
@@ -109,14 +110,23 @@ function mountGuide(
   return { state, token, getAssetDetailRequest, toast, writeText };
 }
 
-it.each(["db2", "clickhouse"])("uses the Magnus port and asset database for %s guides", async (protocol) => {
+it.each([
+  ["db2", "DB2NativeHelp"],
+  ["clickhouse", "ClickHouseNativeHelp"]
+])("uses the Magnus port, database and manual settings for %s guides", async (protocol, helpKey) => {
   const { state } = mountGuide({ protocol, detail: { spec_info: { db_name: "ANALYTICS" } } });
   await vi.waitFor(() => expect(state.loading.value).toBe(false));
   expect(state.rows.value.find((row) => row.name === "port")?.value).toBe("5525");
   expect(state.rows.value.find((row) => row.name === "database")?.value).toBe("ANALYTICS");
   expect(state.rows.value.find((row) => row.name === "username")?.value).toBe("token-id");
-  expect(state.commands.value[0]?.value).toContain("5525");
-  expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+  expect(state.rows.value.find((row) => row.name === "password")?.value).toBe("secret");
+  expect(state.nativeDatabaseHelp.value).toBe(`ConnectionGuide.${helpKey}`);
+  if (protocol === "db2") {
+    expect(state.commands.value).toEqual([]);
+  } else {
+    expect(state.commands.value[0]?.value).toContain("5525");
+    expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+  }
 });
 
 it("loads MongoDB's default database from asset details for display, copy and mongosh", async () => {

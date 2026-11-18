@@ -1270,8 +1270,8 @@
     "StartFaceVerify": "開始核驗"
   },
   "ConnectionGuide": {
-    "DB2NativeHelp": "DB2 使用 JCC securityMechanism=3（USRIDPWD）；命令列需使用包含 DB2 驅動的 usql。用戶端到 Magnus 不啟用 SSL，請使用可信網路或安全通道。",
-    "ClickHouseNativeHelp": "在 ClickHouse 平台協定設定中保留 Native 連接埠（通常 9000），並設定 HTTP 連接埠 http_port（預設 8123）。DBX 和 DBeaver 預設驅動使用 HTTP；DBeaver Native 和 clickhouse-client 使用 Native TCP。Magnus 自動選擇對應後端連接埠，同一資產可供兩類用戶端使用。用戶端使用本頁 Magnus 主機和連接埠，關閉 TLS/SSL；後端 TLS 另行設定。",
+    "DB2NativeHelp": "DBX：選擇 IBM DB2，在「連線參數 → 設定 → 原始文字」填入 securityMechanism=3;sslConnection=false;。DBeaver：在「驅動程式屬性」設定 securityMechanism=3 和 sslConnection=false。使用本頁連線資訊，用戶端到 Magnus 不啟用 SSL，請透過可信網路或安全通道連線。",
+    "ClickHouseNativeHelp": "在 DBeaver 選擇官方 ClickHouse（HTTP）驅動程式，在 DBX 選擇 ClickHouse。使用本頁的代理主機和連接埠，不要填寫資料庫的 8123 或 9000。關閉用戶端 SSL；DBeaver 自動提供的 session_id 無需手動填寫。Native 用戶端仍可使用同一代理連接埠，後端連接埠與 TLS 在資產上設定。",
     "ClientTransport": "用戶端 → Magnus",
     "DatabaseTransport": "後端 TLS 設定",
     "TLSUnknown": "未取得設定",
