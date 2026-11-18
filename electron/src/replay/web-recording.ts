@@ -207,7 +207,7 @@ export class WebVideoRecording {
     this.options.webContents.setBackgroundThrottling(false);
     const timer = setTimeout(
       () => this.rejectInitialized(new Error("Website video encoder startup timed out")),
-      30_000
+      60_000
     );
     try {
       await this.window.webContents.session.protocol.handle(
