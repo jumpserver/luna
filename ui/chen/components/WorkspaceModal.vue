@@ -12,8 +12,11 @@ const workspaceUi = computed(
   () =>
     ({
       ...props.ui,
-      overlay: [!props.portal && "!absolute z-40 bg-elevated/75", "backdrop-blur-none", props.ui?.overlay],
-      content: [!props.portal && "!absolute z-40 !w-[calc(100%-2rem)] !max-h-[calc(100%-2rem)]", props.ui?.content]
+      overlay: [props.portal ? "z-50" : "!absolute z-40 bg-elevated/75", "backdrop-blur-none", props.ui?.overlay],
+      content: [
+        props.portal ? "z-50" : "!absolute z-40 !w-[calc(100%-2rem)] !max-h-[calc(100%-2rem)]",
+        props.ui?.content
+      ]
     }) as ModalProps["ui"]
 );
 </script>

@@ -1325,8 +1325,8 @@ async function confirmSchemaDiscard() {
   const confirmed = await schemaEditor.value?.confirmDiscard();
   return !!confirmed && !disposed && schemaEdit.value === target;
 }
-function confirmSessionLeave(preserveSqlDrafts = false) {
-  return confirmClose(queries.value, { preserveSqlDrafts, includeSchema: true });
+function confirmSessionLeave(options?: Pick<CloseOptions, "preserveSqlDrafts" | "portal">) {
+  return confirmClose(queries.value, { ...options, includeSchema: true });
 }
 async function openSchemaEditor(
   mode: "create" | "alter" | "index",
@@ -1857,9 +1857,13 @@ const closeTitles = {
   reconnect: "Chen.GoV1ConfirmReconnect"
 } as const;
 const closeDescriptionId = useId();
-// Hidden tabs and in-progress connections still need a reachable confirmation.
+const closeDialogPortal = ref(false);
+// The workspace close prompt must stay reachable even if a pane is hidden or covered.
 const portalCloseDialog = computed(
-  () => workspaceWidth.value === 0 || (!!props.tab?.connectionProgress && props.tab.status !== "disconnected")
+  () =>
+    closeDialogPortal.value ||
+    workspaceWidth.value === 0 ||
+    (!!props.tab?.connectionProgress && props.tab.status !== "disconnected")
 );
 const closeWarningText = {
   sql: "Chen.GoV1CloseSqlDraft",
@@ -1876,6 +1880,7 @@ interface CloseOptions {
   preserveSqlDrafts?: boolean;
   keepConnection?: boolean;
   includeSchema?: boolean;
+  portal?: boolean;
   target?: keyof typeof closeTitles;
 }
 async function reviewClose(list: QueryWorkspaceTab[], options: CloseOptions = {}) {
@@ -1948,6 +1953,7 @@ async function confirmClose(list: QueryWorkspaceTab[], options: CloseOptions = {
   const review = await reviewClose(list, options);
   if (!review || closeResolver) return false;
   if (!review.messages.length) return review.current();
+  closeDialogPortal.value = options.portal === true;
   closeDialog.value = {
     title: options.keepConnection ? "Chen.UnpinResult" : closeTitles[options.target ?? "connection"],
     messages: review.messages
@@ -2117,7 +2123,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   const request = ++replacement;
   if (!nextCredential || connection?.identity === identity) return;
   // SQL drafts survive reconnect. Server-bound edits, pending submissions and transactions do not.
-  const confirmation = (replacementConfirmation ||= confirmSessionLeave(true));
+  const confirmation = (replacementConfirmation ||= confirmSessionLeave({ preserveSqlDrafts: true }));
   const confirmed = await confirmation;
   if (replacementConfirmation === confirmation) replacementConfirmation = null;
   if (!confirmed) {
@@ -2236,7 +2242,7 @@ function preventCopy(event: ClipboardEvent) {
 const unregisterCloseGuard = props.tab
   ? registerWorkspaceSessionCloseGuard(
       props.tab.id,
-      () => confirmSessionLeave(),
+      () => confirmSessionLeave({ portal: true }),
       () => reviewClose(queries.value, { includeSchema: true })
     )
   : undefined;
