@@ -22,10 +22,7 @@ export async function runRecordingChecks() {
       }).outputText
     );
   }
-  const chunks: Buffer[] = [];
-  let format = "";
-  let resized = false;
-  let retried = false;
+  const videos = new Map<string, { format: string; chunks: Buffer[]; resized: boolean; retried: boolean }>();
   const server = createServer(async (request, response) => {
     if (request.url === "/asset") {
       response.setHeader("content-type", "text/html");
@@ -41,17 +38,20 @@ export async function runRecordingChecks() {
     response.setHeader("content-type", "application/json");
     if (request.url === "/_jumpserver/web-recordings") {
       const data = JSON.parse(body.toString());
-      format = data.format;
-      assert.ok(["mp4", "webm"].includes(format));
+      assert.ok(["mp4", "webm"].includes(data.format));
       assert.ok(data.width <= 1920 && data.height <= 1080);
-      response.end(JSON.stringify({ id: "video-test", format }));
+      videos.set(data.session_id, { format: data.format, chunks: [], resized: false, retried: false });
+      response.end(JSON.stringify({ id: data.session_id, format: data.format }));
     } else if (request.url?.includes("/chunks?")) {
+      const id = request.url.split("/")[3];
+      const video = videos.get(id)!;
+      const { chunks, format } = video;
       const query = new URL(request.url, "http://localhost").searchParams;
       const sequence = Number(query.get("sequence"));
-      resized ||= query.get("resized") === "1";
+      video.resized ||= query.get("resized") === "1";
       if (sequence === chunks.length) {
         chunks.push(body);
-        await appendFile(path.join(directory, `video.${format}`), body);
+        await appendFile(path.join(directory, `${id}.${format}`), body);
         // Verify an ambiguous network failure retries without duplicating bytes.
         if (sequence === 0) {
           request.socket.destroy();
@@ -60,7 +60,7 @@ export async function runRecordingChecks() {
       } else {
         assert.equal(sequence, chunks.length - 1);
         assert.deepEqual(body, chunks[sequence]);
-        retried = true;
+        video.retried = true;
       }
       response.end(JSON.stringify({ chunk_count: chunks.length }));
     } else response.end(JSON.stringify({ path: "" }));
@@ -68,46 +68,77 @@ export async function runRecordingChecks() {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const baseUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const host = new BrowserWindow({ show: true, width: 700, height: 500, webPreferences: { sandbox: true } });
-  const view = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true } });
-  host.contentView.addChildView(view);
-  view.setBounds({ x: 0, y: 0, width: 640, height: 360 });
-  let recording: WebVideoRecording;
+  const views = Array.from({ length: 3 }, (_, index) => {
+    const view = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true } });
+    host.contentView.addChildView(view);
+    view.setBounds({ x: 0, y: 0, width: 640, height: 360 });
+    view.setVisible(index === 0);
+    return view;
+  });
+  const [view] = views;
+  const recordings: WebVideoRecording[] = [];
+  let startedAt = 0;
   try {
     await host.loadURL("data:text/html,<body style='background:red'>Host shell must not be captured</body>");
-    await view.webContents.loadURL(`${baseUrl}/asset`);
-    recording = await WebVideoRecording.start(
-      {
-        label: "web-proxy-video-test",
-        sessionId: "test-session",
-        targetUrl: `${baseUrl}/asset`,
-        proxyUrl: baseUrl,
-        proxyAuth: { username: "session", password: "ticket" },
-        webContents: view.webContents,
-        width: 640,
-        height: 360,
-        getPauseReasons: () => [],
-        emit: () => {}
-      },
-      preload
+    await Promise.all(views.map((view) => view.webContents.loadURL(`${baseUrl}/asset`)));
+    await Promise.all(
+      views.map(async (view, index) => {
+        recordings[index] = await WebVideoRecording.start(
+          {
+            label: `web-proxy-video-test-${index}`,
+            sessionId: `video-${index}`,
+            targetUrl: `${baseUrl}/asset`,
+            proxyUrl: baseUrl,
+            proxyAuth: { username: "session", password: "ticket" },
+            webContents: view.webContents,
+            width: 640,
+            height: 360,
+            getPauseReasons: () => (index ? ["inactive"] : []),
+            emit: () => {}
+          },
+          preload
+        );
+        if (index === 0) startedAt = Date.now();
+        assert.equal(recordings[index].pauseReasons.size, 0, "background tabs must start recording normally");
+        assert.equal(view.webContents.getBackgroundThrottling(), false);
+      })
     );
+    const [recording] = recordings;
     await delay(1400);
+    view.setVisible(false);
+    host.minimize();
+    recording.setPaused("inactive", true, "background");
+    await recording.capturePending;
+    const backgroundAt = (Date.now() - startedAt) / 1000 + 0.3;
+    await delay(700);
     recording.setPaused("autofill", true, "paused");
     await recording.capturePending;
+    recording.setPaused("inactive", false, "foreground");
+    assert.equal(recording.pauseReasons.has("autofill"), true, "tab activation must not resume credential capture");
+    const pausedAt = (Date.now() - startedAt) / 1000 + 0.3;
     await delay(700);
     recording.setPaused("autofill", false, "resumed");
     await recording.capturePending;
+    host.restore();
+    view.setVisible(true);
     await delay(400);
     view.setBounds({ x: 0, y: 0, width: 320, height: 240 });
+    const resizedAt = (Date.now() - startedAt) / 1000 + 0.7;
+    host.contentView.removeChildView(views[2]);
+    await recordings[2].finish();
+    assert.equal(WebVideoRecording.hasActiveRecordings(), true, "finishing one tab must leave the others recording");
     await delay(1500);
     await WebVideoRecording.finishAll();
     assert.equal(WebVideoRecording.hasActiveRecordings(), false);
+    views.forEach((view) => assert.equal(view.webContents.getBackgroundThrottling(), true));
+    const { chunks, format, resized, retried } = videos.get("video-0")!;
     assert.ok(chunks.length >= 3);
     assert.ok(retried);
     if (process.env.WEB_RECORDING_TEST_FFPROBE) {
       const info = JSON.parse(
         execFileSync(
           process.env.WEB_RECORDING_TEST_FFPROBE,
-          ["-v", "error", "-show_streams", "-show_format", "-of", "json", path.join(directory, `video.${format}`)],
+          ["-v", "error", "-show_streams", "-show_format", "-of", "json", path.join(directory, `video-0.${format}`)],
           { encoding: "utf8", timeout: 10_000 }
         )
       );
@@ -133,7 +164,7 @@ export async function runRecordingChecks() {
       );
     }
     if (process.env.WEB_RECORDING_TEST_FFMPEG) {
-      const frame = (at: string) =>
+      const frame = (at: number, index = 0) =>
         execFileSync(
           process.env.WEB_RECORDING_TEST_FFMPEG,
           [
@@ -142,25 +173,41 @@ export async function runRecordingChecks() {
             "-threads",
             "1",
             "-ss",
-            at,
+            at.toFixed(2),
             "-i",
-            path.join(directory, `video.${format}`),
+            path.join(directory, `video-${index}.${videos.get(`video-${index}`)!.format}`),
+            "-filter_threads",
+            "1",
             "-frames:v",
             "1",
             "-f",
             "rawvideo",
             "-pix_fmt",
             "rgb24",
+            "-threads",
+            "1",
             "-"
           ],
           { timeout: 10_000, maxBuffer: 1 << 20 }
         );
-      const paused = frame("1.7");
+      for (let index = 0; index < views.length; index++) {
+        const background = frame(backgroundAt, index);
+        assert.equal(background.length, 640 * 360 * 3);
+        assert.ok(background[2] > 50 && background[0] < 40, `background tab ${index} must retain its asset pixels`);
+        assert.ok(
+          !background.equals(frame(backgroundAt + 0.15, index)),
+          `background tab ${index} must keep updating while the host is minimized`
+        );
+      }
+      const paused = frame(pausedAt);
+      assert.equal(paused.length, 640 * 360 * 3);
       assert.ok(
         paused.every((value) => value <= 3),
         "credential pause must encode black pixels"
       );
-      const afterResize = frame("3.4");
+      const afterResize = frame(resizedAt);
+      const remaining = frame(resizedAt, 1);
+      assert.ok(remaining[2] > 50 && remaining[0] < 40, "finishing one tab must not blank another tab");
       const pixel = (x: number, y: number) => [...afterResize.subarray((y * 640 + x) * 3, (y * 640 + x) * 3 + 3)];
       assert.ok(
         pixel(10, 340).every((value) => value <= 3),
@@ -172,8 +219,10 @@ export async function runRecordingChecks() {
       );
     }
   } finally {
-    recording?.dispose();
-    if (!view.webContents.isDestroyed()) view.webContents.close();
+    recordings.forEach((recording) => recording.dispose());
+    views.forEach((view) => {
+      if (!view.webContents.isDestroyed()) view.webContents.close();
+    });
     host.destroy();
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));

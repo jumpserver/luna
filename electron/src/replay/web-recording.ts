@@ -45,6 +45,7 @@ export class WebVideoRecording {
   private startedAt = Date.now();
   private agent = new Agent({ keepAlive: true, maxSockets: 1, maxFreeSockets: 1 });
   private recorderSession: Session;
+  private sourceBackgroundThrottling: boolean | undefined;
   private slot = Array.from({ length: 8 }, (_, index) => index).find(
     (slot) => ![...activeRecorders].some((recording) => recording.slot === slot)
   );
@@ -150,7 +151,7 @@ export class WebVideoRecording {
         this.id = result.id;
         if (result.format !== this.format)
           throw new Error("Koko does not support website video recording; upgrade Koko");
-        this.pauseReasons = new Set(this.options.getPauseReasons());
+        this.pauseReasons = new Set(this.options.getPauseReasons().filter((reason) => reason !== "inactive"));
         this.startedAt = Date.now();
         return { paused: this.pauseReasons.size > 0 };
       }
@@ -202,6 +203,8 @@ export class WebVideoRecording {
   }
 
   private async initialize() {
+    this.sourceBackgroundThrottling = this.options.webContents.getBackgroundThrottling();
+    this.options.webContents.setBackgroundThrottling(false);
     const timer = setTimeout(
       () => this.rejectInitialized(new Error("Website video encoder startup timed out")),
       30_000
@@ -230,7 +233,8 @@ export class WebVideoRecording {
   }
 
   setPaused(reason: string, paused: boolean, message: string) {
-    if (this.stopped) return;
+    // A background tab is still an audited session; credential masking remains independent.
+    if (this.stopped || reason === "inactive") return;
     const before = this.pauseReasons.size > 0;
     if (paused) this.pauseReasons.add(reason);
     else this.pauseReasons.delete(reason);
@@ -279,6 +283,7 @@ export class WebVideoRecording {
     for (const control of this.controls.values()) control.reject(error);
     // A failed pause acknowledgement must stop native capture before autofill proceeds.
     if (!this.window.isDestroyed()) this.window.destroy();
+    this.restoreSourceBackgroundThrottling();
   }
 
   private async request(suffix: string, method: string, data?: any, timeout = 15_000): Promise<any> {
@@ -310,6 +315,7 @@ export class WebVideoRecording {
       if (!this.id) return this.state("finished", "WebProxy.RecordingTooShort");
       await this.capturePending.catch(() => undefined);
       await this.control("stop").catch((error) => this.fail(error));
+      this.restoreSourceBackgroundThrottling();
       this.options.emit(this.state("finishing", "WebProxy.PreparingWebRecording"));
       if (!this.frameCount) {
         await this.request("", "DELETE");
@@ -331,9 +337,17 @@ export class WebVideoRecording {
     }
   }
 
+  private restoreSourceBackgroundThrottling() {
+    if (this.sourceBackgroundThrottling === undefined) return;
+    if (!this.options.webContents.isDestroyed())
+      this.options.webContents.setBackgroundThrottling(this.sourceBackgroundThrottling);
+    this.sourceBackgroundThrottling = undefined;
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.restoreSourceBackgroundThrottling();
     this.rejectInitialized(new Error("Website recorder disposed"));
     activeRecorders.delete(this);
     this.agent.destroy();
