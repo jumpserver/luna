@@ -42,22 +42,26 @@ It does not catalog persistent IBM CLP aliases or change the local DB2 catalog.
 ## ClickHouse
 
 Select DBeaver under application settings → ClickHouse and configure its executable.
-Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX and the
-standard ClickHouse driver used when configuring DBeaver manually use HTTP.
-DBeaver's bundled Magnus plugin and `clickhouse-client` use Native TCP.
+Magnus accepts both Native TCP and HTTP SQL on its shared port. DBX uses HTTP
+as before. When Core advertises a configured HTTP route, DBeaver uses its
+built-in official ClickHouse JDBC driver (`com_clickhouse`) over HTTP, avoiding
+the legacy Native driver's shared-socket contention during metadata reads.
+`clickhouse-client` still uses Native TCP.
 
-Keep the ClickHouse asset protocol port as the **Native TCP** port (usually
-**9000**). In the platform's ClickHouse protocol settings, configure the independent
-`http_port` (**8123** by default) for DBX and DBeaver's standard HTTP driver.
+In the asset's **Protocols** section, enter **ClickHouse Native** (default **9000**)
+and **ClickHouse HTTP** (default **8123**). The HTTP row is stored as
+`clickhouse_http` on the asset; it is a backend endpoint, not a separate
+connection method or authorization protocol.
 Magnus selects the backend port for each connection before creating an SSH gateway
 forward. Native clients keep using the asset protocol port, so both transports can
 share one asset and token. Custom service ports are supported explicitly; clients
 always connect to the **Magnus** host/port.
 
-For an existing platform, edit and save its HTTP port to enable dual-port routing.
-A missing `http_port` preserves the legacy single-port HTTP configuration; no
-existing asset port is rewritten or guessed. Frontend TLS remains disabled and
-backend TLS continues to use the asset's configuration.
+The platform no longer stores an HTTP port. The upgrade moves non-default legacy
+ports to individual assets without overwriting existing asset choices. If an
+asset has no HTTP row, Core passes **8123** to Magnus at connection time. The
+Native port remains unchanged. Frontend TLS remains disabled and backend TLS
+continues to use the asset's configuration.
 
 Enable DBX under application settings → ClickHouse. Explicit saved DBX selections
 are preserved; existing DBeaver defaults are retained on upgrade. The launcher
@@ -79,8 +83,10 @@ HTTP sessions, external tables, compressed input, and query bindings are rejecte
 Mandatory masking rejects execution. Backend POSTs use fresh connections with no
 redirects, credential forwarding, automatic fallback or write replay.
 
-The launcher provisions only a driver definition in the client configuration
-directory's `dbeaver-clickhouse-native/.metadata/.config/drivers.xml` and supplies
+On older Core versions that do not advertise an HTTP route, DBeaver
+keeps using the Native TCP driver. In that case, the launcher provisions only a
+driver definition in `dbeaver-clickhouse-native/.metadata/.config/drivers.xml`
+under the client configuration directory and supplies
 `-data` for this separate workspace. The custom driver ID is
 `jumpserver-clickhouse-native`, class `com.github.housepower.jdbc.ClickHouseDriver`,
 with the tested `com.github.housepower:clickhouse-native-jdbc-shaded:2.5.6` artifact.
