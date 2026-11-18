@@ -8,6 +8,7 @@ const props = defineProps<{
 }>();
 
 const terminalRef = shallowRef<HTMLElement | null>(null);
+const controlBar = shallowRef<HTMLElement | null>(null);
 const speed = ref(1);
 let playerInstance: Player | null = null;
 let resizeObserver: ResizeObserver | null = null;
@@ -26,6 +27,7 @@ function resolveCastSource() {
 }
 
 function destroyPlayer() {
+  controlBar.value = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
   playerInstance?.dispose?.();
@@ -46,6 +48,7 @@ function mountPlayer() {
     startAt: resumeAt,
     speed: speed.value
   });
+  controlBar.value = mountTarget.querySelector(".ap-control-bar");
   void playerInstance.play();
 }
 
@@ -84,11 +87,13 @@ onBeforeUnmount(destroyPlayer);
 </script>
 
 <template>
-  <div class="terminal-root relative">
+  <div class="terminal-root">
     <div ref="terminalRef" class="terminal-host" />
-    <div class="absolute right-3 bottom-3 z-20">
-      <VideoPlayerSpeedControl v-model="speed" />
-    </div>
+    <Teleport v-if="controlBar" :to="controlBar">
+      <div class="terminal-speed-control" @keydown.stop>
+        <VideoPlayerSpeedControl v-model="speed" :portal="false" />
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -99,6 +104,21 @@ onBeforeUnmount(destroyPlayer);
   height: 100%;
   min-height: 0;
   min-width: 0;
+}
+
+.terminal-speed-control {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+:deep(.ap-kbd-button),
+:deep(.ap-fullscreen-button) {
+  order: 1;
+}
+
+:deep(.ap-control-bar:focus-within) {
+  opacity: 1;
 }
 
 :deep(.ap-wrapper) {
