@@ -2,6 +2,9 @@ import { prepareClickHouseWorkspace } from "./native.mjs";
 
 export default async function prepareDBeaverConnection(context) {
   if (context.command) throw new Error("DBeaver does not accept terminal commands");
+  // DBeaver can load metadata concurrently with SQL results. Prefer its
+  // official HTTP driver when Magnus has a configured HTTP backend route.
+  const clickHouseNative = context.protocol === "clickhouse" && context.connect_options?.clickhouse_http !== true;
   const fields = {
     name: context.name,
     driver: context.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : context.protocol,
@@ -21,14 +24,14 @@ export default async function prepareDBeaverConnection(context) {
     fields["prop.securityMechanism"] = "3";
     fields["prop.sslConnection"] = "false";
   }
-  if (context.protocol === "clickhouse") fields.driver = "jumpserver-clickhouse-native";
+  if (context.protocol === "clickhouse") fields.driver = clickHouseNative ? "jumpserver-clickhouse-native" : "com_clickhouse";
   if (Object.values(fields).some((value) => /[|\0]/.test(String(value)))) {
     throw new Error("DBeaver connection values contain a reserved delimiter");
   }
   return {
     type: "args",
     args: [
-      ...(context.protocol === "clickhouse" ? ["-data", await prepareClickHouseWorkspace(context.config_dir)] : []),
+      ...(clickHouseNative ? ["-data", await prepareClickHouseWorkspace(context.config_dir)] : []),
       "-con",
       Object.entries(fields)
         .map(([key, value]) => `${key}=${value}`)

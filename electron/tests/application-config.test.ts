@@ -244,6 +244,7 @@ for (const platform of ["macos", "linux", "windows"]) {
         name: "测试 DBX &连接",
         endpoint: { host: "2001:db8::1", port: 5525 },
         token: { id: "token&+/*'\"\\中文", value: " secret &one_time=false+?#%/*'\"\\中文 ", protocol },
+        ...(protocol === "clickhouse" ? { connect_options: { clickhouse_http: true } } : {}),
         asset: { info: { db_name: protocol === "redis" ? "0" : "库 名&+/*'\"\\" } }
       };
       let launches = 0;
@@ -305,7 +306,7 @@ for (const platform of ["macos", "linux", "windows"]) {
 }
 
 for (const platform of ["macos", "linux", "windows"]) {
-  test(`${platform} launches DB2 and ClickHouse through Native TCP without splitting credentials`, async (context) => {
+  test(`${platform} launches DBeaver for DB2 and both ClickHouse transports without splitting credentials`, async (context) => {
     const appData = await mkdtemp(path.join(os.tmpdir(), "jms native databases "));
     context.after(() => rm(appData, { recursive: true, force: true }));
     const app = { getPath: () => appData, isPackaged: false };
@@ -314,7 +315,11 @@ for (const platform of ["macos", "linux", "windows"]) {
     await service.initialize();
     const config = await service.getConfig();
     assert.ok(config.databases.find((item) => item.name === "dbx").protocol.includes("clickhouse"));
-    for (const protocol of ["db2", "clickhouse"]) {
+    for (const { protocol, http } of [
+      { protocol: "db2", http: true },
+      { protocol: "clickhouse", http: false },
+      { protocol: "clickhouse", http: true }
+    ]) {
       await service.updateSelection({
         category: "databases",
         protocol,
@@ -328,6 +333,7 @@ for (const platform of ["macos", "linux", "windows"]) {
         name: "Native test",
         endpoint: { host: "gateway.example.com", port: 15525 },
         token: { id: "selector-token", value: " secret ' &+=中文 " },
+        ...(http ? { connect_options: { clickhouse_http: true } } : {}),
         asset: { info: { db_name: "ANALYTICS" } }
       };
       let launched = 0;
@@ -335,12 +341,12 @@ for (const platform of ["macos", "linux", "windows"]) {
         assert.equal(selected.name, "dbeaver");
         const expected =
           `name=Nativetest|driver=${
-            protocol === "db2" ? "db2" : "jumpserver-clickhouse-native"
+            protocol === "db2" ? "db2" : http ? "com_clickhouse" : "jumpserver-clickhouse-native"
           }|user=selector-token|password= secret ' &+=中文 |database=ANALYTICS` +
           `|host=gateway.example.com|port=15525|save=false|connect=true${
             protocol === "db2" ? "|prop.securityMechanism=3|prop.sslConnection=false" : ""
           }`;
-        if (protocol === "db2") assert.deepEqual(args, ["-con", expected]);
+        if (protocol === "db2" || http) assert.deepEqual(args, ["-con", expected]);
         else {
           const workspace = path.join(service.configDir, "dbeaver-clickhouse-native");
           assert.deepEqual(args, ["-data", workspace, "-con", expected]);
