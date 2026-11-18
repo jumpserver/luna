@@ -121,7 +121,9 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Sess
   const copyShareURL = async () => {
     if (!shareURL.value || !shareCode.value) return;
     try {
-      await writeClipboardText(shareURL.value);
+      await writeClipboardText(
+        `${t("RightPanel.ShareLink")}: ${shareURL.value}\n${t("RightPanel.VerifyCode")}: ${shareCode.value}`
+      );
       toast.add({ title: t("RightPanel.ShareCopySuccess"), color: "success" });
     } catch (error) {
       addErrorToast({ title: t("RightPanel.ShareCopyFailed"), description: String(error) });
