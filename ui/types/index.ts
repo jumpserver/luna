@@ -294,6 +294,7 @@ interface AssetTreeNodeData {
   name?: string;
   address?: string;
   comment?: string;
+  nodes?: AssetNode[];
   type?: string | AssetTreeChoice;
   category?: string | AssetTreeChoice;
   platform?: string | AssetTreeChoice;

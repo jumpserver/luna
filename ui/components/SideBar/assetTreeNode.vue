@@ -105,16 +105,27 @@ const isFolderIcon = computed(() => icon.value === "i-tabler-folder" || icon.val
 const assetCountTitle = computed(() =>
   t(props.node.id === "ungrouped" ? "Tree.UngroupedAssetCount" : "Tree.AuthorizationAssetCount")
 );
+const parentNodeNames = computed(() =>
+  props.searchMode && !isParent.value
+    ? (props.node.meta?.data?.nodes || [])
+        .map((node) => node.name?.trim())
+        .filter(Boolean)
+        .join("、")
+    : ""
+);
 const assetTooltip = computed(() => {
   if (isParent.value) return undefined;
   const { title, name, meta } = props.node;
 
   const address = meta?.data?.address?.trim();
   const comment = meta?.data?.comment?.trim();
-  if (!comment) return title?.trim() || address || name;
-  // Recent connections may have stored the full tree title as the comment.
-  if (!address || comment === address || comment.startsWith(`${address}\n`)) return comment;
-  return `${address}\n${comment}`;
+  let details = title?.trim() || address || name;
+  if (comment) {
+    // Recent connections may have stored the full tree title as the comment.
+    const includesAddress = comment === address || comment.startsWith(`${address}\n`);
+    details = address && !includesAddress ? `${address}\n${comment}` : comment;
+  }
+  return [details, parentNodeNames.value].filter(Boolean).join("\n\n");
 });
 
 const activate = () => {
@@ -181,6 +192,7 @@ watch(
       class="app-tree-row sidebar-row group relative flex w-full items-center gap-1 pr-1"
       :class="[
         node.chkDisabled ? 'opacity-40' : '',
+        searchMode ? '!min-w-0' : '',
         node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
         isAutomationFocused ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''
       ]"
@@ -225,8 +237,11 @@ watch(
           :is="batchLeaf ? 'label' : 'button'"
           :for="batchLeaf && canCheck ? checkboxId : undefined"
           :type="batchLeaf ? undefined : 'button'"
-          class="flex h-full min-w-min flex-1 items-center gap-1 rounded-(--app-radius) text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--app-focus-ring)"
-          :class="{ 'cursor-pointer': !batchLeaf || (canCheck && !batchCheckPending) }"
+          class="flex h-full flex-1 items-center gap-1 rounded-(--app-radius) text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--app-focus-ring)"
+          :class="[
+            searchMode ? 'min-w-0' : 'min-w-min',
+            { 'cursor-pointer': !batchLeaf || (canCheck && !batchCheckPending) }
+          ]"
           :title="isParent ? node.title || node.name : undefined"
           :aria-current="isAutomationFocused ? 'true' : undefined"
           :aria-expanded="isParent && !searchMode ? isOpen : undefined"
@@ -242,8 +257,8 @@ watch(
           <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
           <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
           <span
-            class="inline-flex min-w-min flex-1 items-center font-medium"
-            :class="!isParent ? 'tracking-[0.01em]' : ''"
+            class="inline-flex flex-1 items-center font-medium"
+            :class="[searchMode ? 'min-w-0' : 'min-w-min', !isParent ? 'tracking-[0.01em]' : '']"
           >
             <span class="sidebar-tree-label truncate" :title="isParent ? node.name : undefined">{{ node.name }}</span>
             <span
@@ -253,6 +268,9 @@ watch(
             >
               ({{ node.assetCount }})
             </span>
+          </span>
+          <span v-if="parentNodeNames" class="ml-2 max-w-[45%] truncate text-xs text-(--app-muted)">
+            {{ parentNodeNames }}
           </span>
         </component>
       </UTooltip>
