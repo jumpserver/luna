@@ -435,11 +435,67 @@ test("script supports explicit SSO origins without an asset allowlist and valida
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
-  const promise = new Promise<T>((complete) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((complete, fail) => {
     resolve = complete;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
+
+test("closing a recorded tab leaves finalization in the background and preserves other sessions", async (t) => {
+  const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
+  const source = main.slice(main.indexOf("async function closeWebProxyView("), main.indexOf("async function invoke("));
+  for (const failed of [false, true]) {
+    await t.test(failed ? "failed finalization" : "successful finalization", async () => {
+      const finished = deferred<void>();
+      const released = deferred<void>();
+      const contents = { isDestroyed: () => false, close: mock.fn() };
+      const recording = { finish: () => finished.promise, dispose: mock.fn() };
+      const managed = {
+        label: "web-proxy-closing",
+        webContents: contents,
+        view: { setVisible() {} },
+        host: { contentView: { removeChildView: mock.fn() } },
+        recording,
+        proxyUrl: "http://localhost:5001",
+        proxySessionId: "closing-session",
+        proxyAuth: { username: "session", password: "ticket" }
+      };
+      const other = { recording: { finish: mock.fn() } };
+      const views = new Map<string, any>([
+        [managed.label, managed],
+        ["web-proxy-other", other]
+      ]);
+      const closeSession = mock.fn(async () => released.resolve());
+      const scope = {
+        webProxyView: (_event, label) => views.get(label),
+        webProxyViews: views,
+        electronLog: { info() {}, warn() {} },
+        clearInterval,
+        clearWebProxyAutofillWait() {},
+        removeWebProxyInputShield() {},
+        closeWebProxySession: closeSession
+      };
+      const close = new Function(...Object.keys(scope), `${source}\nreturn closeWebProxyView;`)(
+        ...Object.values(scope)
+      );
+      await close({}, managed.label);
+      assert.equal(views.has(managed.label), false);
+      assert.equal(managed.host.contentView.removeChildView.mock.callCount(), 1);
+      assert.equal(contents.close.mock.callCount(), 0, "capture source must survive until recorder finalization");
+      assert.equal(closeSession.mock.callCount(), 0, "upload authentication must survive until finalization");
+      assert.equal(views.get("web-proxy-other"), other);
+      assert.equal(other.recording.finish.mock.callCount(), 0);
+      if (failed) finished.reject(new Error("upload failed"));
+      else finished.resolve();
+      await released.promise;
+      assert.equal(recording.dispose.mock.callCount(), 1);
+      assert.equal(contents.close.mock.callCount(), 1);
+      assert.equal(managed.proxyAuth, null);
+    });
+  }
+});
 
 test("interactive optional accepts only booleans and preserves required verification", () => {
   const step = { step: 1, command: "interactive", target: "id=mfa" };

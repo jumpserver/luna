@@ -841,17 +841,22 @@ export function createWebProxyManager({
     clearWebProxyAutofillWait(managed);
     managed.view.setVisible(false);
     removeWebProxyInputShield(managed);
-    try {
-      await managed.recording?.finish();
-    } catch (error) {
-      electronLog.warn(`failed to finish Web recording for ${label}`, error);
-    }
-    managed.recording?.dispose();
     managed.credentialSession?.dispose?.();
     managed.credentialSession = null;
     managed.host.contentView.removeChildView(managed.view);
-    managed.view.webContents.close();
-    await releaseWebProxyAuthentication(managed);
+    // The desktop tracks native recorders through app exit. Let the next tab
+    // activate while uploads finish, keeping the capture source alive until stop.
+    const finishing = (async () => {
+      try {
+        await managed.recording?.finish();
+      } catch (error) {
+        electronLog.warn(`failed to finish Web recording for ${label}`, error);
+      }
+      managed.recording?.dispose();
+      if (!managed.webContents.isDestroyed()) managed.webContents.close();
+      await releaseWebProxyAuthentication(managed);
+    })();
+    if (!managed.recording) await finishing;
   }
 
   async function releaseWebProxyAuthentication(managed) {
@@ -975,7 +980,7 @@ export function createWebProxyManager({
           emit: (state) => emitWebProxyRecordingState(managed, state)
         });
         if (webProxyViews.get(managed.label) !== managed) {
-          recording.setPaused("inactive", true, "WebProxy.TabClosed");
+          recording.setPaused("closed", true, "WebProxy.TabClosed");
           try {
             await recording.finish();
           } finally {
