@@ -1270,8 +1270,8 @@
     "StartFaceVerify": "Iniciar verificação"
   },
   "ConnectionGuide": {
-    "DB2NativeHelp": "DB2 usa JCC securityMechanism=3 (USRIDPWD). O comando CLI exige usql com o driver DB2. Desative SSL entre o cliente e o Magnus e use uma rede confiável ou um túnel seguro.",
-    "ClickHouseNativeHelp": "No protocolo da plataforma ClickHouse, mantenha a porta Native (geralmente 9000) e configure http_port (8123 por padrão). DBX e o driver DBeaver padrão usam HTTP; DBeaver Native e clickhouse-client usam Native TCP. Magnus escolhe a porta do servidor correspondente para compartilhar um ativo. Conecte ao host e à porta Magnus exibidos aqui com TLS/SSL do cliente desativado. O TLS do servidor é configurado separadamente.",
+    "DB2NativeHelp": "No DBX, selecione IBM DB2 e informe securityMechanism=3;sslConnection=false; em Parâmetros da conexão → Configurar → Texto original. No DBeaver, defina securityMechanism=3 e sslConnection=false nas propriedades do driver. Use os dados desta página. Desative o SSL entre o cliente e o Magnus e use uma rede confiável ou um túnel seguro.",
+    "ClickHouseNativeHelp": "Selecione o driver oficial ClickHouse HTTP no DBeaver ou ClickHouse no DBX. Use o host e a porta do proxy mostrados aqui, não as portas 8123 ou 9000 do banco. Desative SSL no cliente. O DBeaver envia session_id automaticamente. Clientes Native podem usar a mesma porta do proxy. As portas e o TLS do servidor são configurados no ativo.",
     "ClientTransport": "Cliente → Magnus",
     "DatabaseTransport": "Configuração TLS do backend",
     "TLSUnknown": "Configuração indisponível",
