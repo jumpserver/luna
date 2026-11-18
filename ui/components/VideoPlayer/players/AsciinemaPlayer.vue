@@ -106,7 +106,9 @@ onBeforeUnmount(destroyPlayer);
   min-width: 0;
 }
 
-.terminal-speed-control {
+.ap-control-bar .terminal-speed-control {
+  /* Keep Nuxt UI descendants from inheriting asciinema's content-box sizing. */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   flex-shrink: 0;
