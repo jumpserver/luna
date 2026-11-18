@@ -443,6 +443,54 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+test("capture startup retries only source timeouts and requests a fresh source ID", async (t) => {
+  const preload = await readFile(new URL("../src/replay/web-recording-preload.ts", import.meta.url), "utf8");
+  // Exercise acquisition before the separate codec probing and upload stages.
+  const source = stripTypeScriptTypes(
+    `${preload.slice(
+      preload.indexOf("async function start()"),
+      preload.indexOf("  const track = stream.getVideoTracks()[0];")
+    )}return stream; }`
+  );
+  const timeout = new DOMException("Timeout starting video source", "AbortError");
+  for (const [name, errors] of [
+    ["first attempt succeeds", [undefined]],
+    ["timeout then success", [timeout, undefined]],
+    ["two timeouts then success", [timeout, timeout, undefined]],
+    ["repeated timeout", [timeout, timeout, timeout]],
+    ["permission denied", [new DOMException("Permission denied", "NotAllowedError")]],
+    ["other abort", [new DOMException("Capture aborted", "AbortError")]]
+  ] as const) {
+    await t.test(name, { timeout: 1000 }, async () => {
+      const ids: string[] = [];
+      const stream = {};
+      let requests = 0;
+      const started = runInNewContext(`let stream; ${source}; start();`, {
+        channel: "test",
+        ipcRenderer: { invoke: async () => ({ sourceId: `source-${++requests}`, width: 640, height: 360 }) },
+        navigator: {
+          mediaDevices: {
+            getUserMedia: async ({ video }) => {
+              ids.push(video.mandatory.chromeMediaSourceId);
+              const error = errors[ids.length - 1];
+              if (error) throw error;
+              return stream;
+            }
+          }
+        },
+        setTimeout: (callback) => queueMicrotask(callback)
+      });
+      const error = errors.at(-1);
+      if (error) await assert.rejects(started, (cause) => cause === error);
+      else assert.equal(await started, stream);
+      assert.deepEqual(
+        ids,
+        Array.from({ length: errors.length }, (_, index) => `source-${index + 1}`)
+      );
+    });
+  }
+});
+
 test("closing a recorded tab leaves finalization in the background and preserves other sessions", async (t) => {
   const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = main.slice(main.indexOf("async function closeWebProxyView("), main.indexOf("async function invoke("));

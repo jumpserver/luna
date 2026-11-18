@@ -83,22 +83,32 @@ ipcRenderer.on(channel, async (_event, { id, command, paused }) => {
 });
 
 async function start() {
-  const { sourceId, width, height } = await ipcRenderer.invoke(channel, "bootstrap");
-  stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    // Chromium performs the scaling and letterboxing; no Canvas or pixel IPC.
-    video: {
-      mandatory: {
-        chromeMediaSource: "tab",
-        chromeMediaSourceId: sourceId,
-        minWidth: width,
-        maxWidth: width,
-        minHeight: height,
-        maxHeight: height,
-        maxFrameRate: 25
-      }
-    } as MediaTrackConstraints
-  });
+  for (let attemptsLeft = 3; attemptsLeft > 0; attemptsLeft--) {
+    // Source IDs expire; request a fresh one after a capture startup timeout.
+    const { sourceId, width, height } = await ipcRenderer.invoke(channel, "bootstrap");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        // Chromium performs the scaling and letterboxing; no Canvas or pixel IPC.
+        video: {
+          mandatory: {
+            chromeMediaSource: "tab",
+            chromeMediaSourceId: sourceId,
+            minWidth: width,
+            maxWidth: width,
+            minHeight: height,
+            maxHeight: height,
+            maxFrameRate: 25
+          }
+        } as MediaTrackConstraints
+      });
+      break;
+    } catch (error) {
+      if (attemptsLeft === 1 || error?.name !== "AbortError" || error.message !== "Timeout starting video source")
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
   const track = stream.getVideoTracks()[0];
   track.enabled = false;
   track.contentHint = "detail";
