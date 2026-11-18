@@ -317,6 +317,34 @@ export const useAssetTree = () => {
     search?: string,
     options?: { orgId?: string; isCurrent?: () => boolean }
   ) => {
+    if (kind === "search") {
+      const assets: Record<string, unknown>[] = [];
+      // ponytail: Keep the tree search's 999-result ceiling; use paged UI if it needs to grow.
+      do {
+        const page = await getAuthorizedAssets(
+          {
+            search: search || "",
+            limit: 999 - assets.length,
+            offset: assets.length,
+            fields: "id,name,address,comment,org_id,is_active,platform,category,type,nodes"
+          },
+          options?.orgId
+        );
+        if (options?.isCurrent && !options.isCurrent()) return [];
+        assets.push(...page.results);
+        if (!page.next || !page.results.length) break;
+      } while (assets.length < 999);
+
+      return normalizeTreeNodes(
+        assets.map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          isParent: false,
+          chkDisabled: asset.is_active === false,
+          meta: { type: "asset", data: asset }
+        }))
+      );
+    }
     if (kind === "authorization") {
       return (await fetchAuthorizationTreePage(parent, undefined, options)).nodes;
     }
@@ -403,7 +431,7 @@ export const useAssetTreeSearch = (
       let active = true;
       const timer = setTimeout(async () => {
         try {
-          const results = await fetchTree("search", undefined, query);
+          const results = await fetchTree("search", undefined, query, { isCurrent: () => active });
           if (!active) return;
           nodes.value = results;
           completedQuery.value = query;

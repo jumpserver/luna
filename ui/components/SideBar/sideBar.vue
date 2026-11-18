@@ -353,7 +353,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
+        <div class="px-2.5 py-1.5">
           <SideBarSearchInput ref="assetSearchInputRef" v-model="sidebarSearch" :placeholder="t('Operation.Search')" />
         </div>
 

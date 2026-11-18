@@ -866,11 +866,8 @@ defineExpose({
     </div>
 
     <template v-else-if="search.trim()">
-      <div
-        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-sm font-medium dark:border-white/10"
-      >
-        <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
-        <span class="truncate">{{ t("Operation.Search") }}</span>
+      <div class="flex h-7 shrink-0 items-center px-2.5 text-xs text-(--app-muted)">
+        <span class="truncate">{{ t("AddSession.SearchResults") }}</span>
       </div>
       <div class="sidebar-tree-scroll min-h-0 flex-1 overflow-x-auto overflow-y-auto py-0">
         <Transition appear name="tree-appear" mode="out-in">
