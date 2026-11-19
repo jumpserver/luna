@@ -52,7 +52,27 @@ beforeEach(async () => {
     setUserLoggedIn: vi.fn((loggedIn: boolean) => {
       mocks.store.loggedIn = loggedIn;
     }),
-    markSessionExpired: vi.fn((accountId: string) => {
+    deleteUserData: vi.fn(async (accountId: string, options?: { removeExpiredAccounts?: boolean }) => {
+      delete userMapRef.value[accountId];
+      if (accountId === currentAccountIdRef.value) {
+        currentAccountIdRef.value = "";
+        mocks.store.currentAccountId = "";
+        mocks.store.currentUser = null;
+        mocks.store.loggedIn = false;
+        if (options?.removeExpiredAccounts) {
+          for (const [id, account] of Object.entries(userMapRef.value)) {
+            if (account.sessionExpired) delete userMapRef.value[id];
+          }
+        }
+      }
+    }),
+    markSessionExpired: vi.fn((accountId: string, reason?: string) => {
+      const account = userMapRef.value[accountId] || {};
+      userMapRef.value[accountId] = {
+        ...account,
+        sessionExpired: true,
+        sessionExpiredReason: reason || account.sessionExpiredReason
+      };
       if (accountId === currentAccountIdRef.value) mocks.store.loggedIn = false;
     })
   };
@@ -90,7 +110,8 @@ afterEach(() => {
 });
 
 describe("desktop session expiry", () => {
-  it("reauthenticates only the expired current account from every layout", async () => {
+  it("retains the current account expiry notice until confirmation removes that login and starts handoff", async () => {
+    vi.useFakeTimers();
     const order: string[] = [];
     const emit = vi.fn((event: string) => order.push(event));
     const navigateTo = vi.fn(async () => {
@@ -103,23 +124,54 @@ describe("desktop session expiry", () => {
     mocks.store.loggedIn = true;
     const auth = useAuthSession();
 
-    await expect(auth.handleDesktopAuthExpired("account-2")).resolves.toBe(false);
-    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-2");
+    await expect(auth.handleDesktopAuthExpired("account-2", "idle_timeout")).resolves.toBe(false);
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-2", "idle_timeout", undefined);
     expect(mocks.store.setUserLoggedIn).not.toHaveBeenCalled();
+    expect(auth.expiredSessionNotice.value).toBeNull();
 
-    await expect(auth.handleDesktopAuthExpired("account-1")).resolves.toBe(true);
-    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-1");
+    await expect(auth.handleDesktopAuthExpired("account-1", "policy_changed")).resolves.toBe(true);
+    expect(mocks.store.markSessionExpired).toHaveBeenCalledWith("account-1", "policy_changed", undefined);
     expect(mocks.store.loggedIn).toBe(false);
+    expect(auth.expiredSessionNotice.value).toBe("account-1");
+    expect(auth.expiredSessionDescription.value).toBe("Login.ExpiredPolicyChanged");
+    expect(navigateTo).not.toHaveBeenCalled();
+    expect(order).toEqual(["clearAssets"]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(auth.expiredSessionNotice.value).toBe("account-1");
+
+    await auth.dismissExpiredSessionNotice();
+    expect(auth.expiredSessionNotice.value).toBeNull();
+    expect(mocks.store.loggedIn).toBe(false);
+    expect(navigateTo).not.toHaveBeenCalled();
+    expect(order).toEqual(["clearAssets"]);
+    await auth.handleDesktopAuthExpired("account-1", "policy_changed");
+    expect(auth.expiredSessionNotice.value).toBeNull();
+
+    userMapRef.value["account-1"].sessionExpired = false;
+    mocks.store.loggedIn = true;
+    order.length = 0;
+    await auth.handleDesktopAuthExpired("account-1", "absolute_timeout");
+    expect(auth.expiredSessionDescription.value).toBe("Login.ExpiredLifetime");
+    expect(navigateTo).not.toHaveBeenCalled();
+    await auth.dismissExpiredSessionNotice(true);
+    expect(auth.expiredSessionNotice.value).toBeNull();
+    expect(mocks.store.deleteUserData).toHaveBeenCalledWith("account-1", {
+      alreadyLoggedOut: true,
+      removeExpiredAccounts: true
+    });
     expect(navigateTo).toHaveBeenCalledWith({ path: "/" });
-    expect(order).toEqual(["clearAssets", "navigate", "login"]);
+    expect(order).toEqual(["clearAssets", "navigate"]);
 
     mocks.pathname = "/auth/browser";
+    currentAccountIdRef.value = "account-1";
+    userMapRef.value["account-1"] = { sessionExpired: false };
     mocks.store.loggedIn = true;
     order.length = 0;
     navigateTo.mockClear();
     await expect(auth.handleDesktopAuthExpired("account-1")).resolves.toBe(true);
-    expect(navigateTo).not.toHaveBeenCalled();
-    expect(order).toEqual(["clearAssets"]);
+    await auth.dismissExpiredSessionNotice(true);
+    expect(navigateTo).toHaveBeenCalledWith({ path: "/" });
+    expect(order).toEqual(["clearAssets", "navigate"]);
   });
 });
 
@@ -161,6 +213,7 @@ describe("desktop compatibility during startup", () => {
 
       await expect(auth.bootstrapPersistedSession()).resolves.toBe(false);
       expect(mocks.desktopInvoke.mock.calls).toEqual([
+        ["client_lock_state"],
         ["bootstrap_auth_session", { site: "https://site.test/prefix", sessionId: "account-1" }]
       ]);
       expect(mocks.store.setUserData).not.toHaveBeenCalled();
@@ -177,7 +230,9 @@ describe("desktop compatibility during startup", () => {
         compatibilityConfirmationId: 1
       });
       expect(mocks.desktopInvoke.mock.calls.map(([command]) => command)).toEqual([
+        "client_lock_state",
         "bootstrap_auth_session",
+        "client_lock_state",
         "bootstrap_auth_session",
         "set_api_session"
       ]);

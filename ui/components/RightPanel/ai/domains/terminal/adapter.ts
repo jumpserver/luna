@@ -45,7 +45,11 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
   if (!decisionId || session.decisions.has(decisionId)) return;
 
   const override = session.executionOverrides.get(decisionId);
-  const execution = terminalExecutionMode(override || action.data.execution, session);
+  const selected = terminalExecutionMode(session.executionMode, session);
+  const execution = terminalExecutionMode(
+    override || (selected === "auto" ? action.data.execution : selected),
+    session
+  );
   const toolCallId = String(action.data.toolCallId || "");
   if (action.approved && toolCallId && (override || execution !== "auto")) {
     session.executionOverrides.set(toolCallId, execution);

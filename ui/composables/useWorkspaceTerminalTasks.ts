@@ -109,7 +109,7 @@ export function createWorkspaceTerminalTasks(options: {
   const bindings = new Map<string, TargetBinding>();
   const stops = new Map<string, () => void>();
   const taskBindings = new Map<string, TargetBinding>();
-  const id = () => globalThis.crypto.randomUUID();
+  const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const allowedPanes = () => options.panes().filter((pane) => !pane.orgId || pane.orgId === options.organizationId);
   function current(binding: TargetBinding) {
     return (

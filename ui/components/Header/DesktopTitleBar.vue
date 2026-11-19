@@ -14,6 +14,7 @@ const props = withDefaults(
 );
 
 const { t } = useI18n();
+const shortcuts = useAppShortcuts();
 const { isLoading, isMacOS } = usePlatform();
 const { openSettings } = useSettingsWindow();
 const {
@@ -116,7 +117,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       {
         label: t("TabMenu.FocusCurrent"),
         type: "checkbox",
-        kbds: ["ctrl", "shift", "p"],
+        kbds: shortcuts.kbds("focus"),
         checked: focusMode.value,
         disabled: !activeTabId.value,
         onSelect: toggleFocusMode
@@ -129,6 +130,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       },
       {
         label: t("DesktopMenu.RightPanel"),
+        kbds: shortcuts.kbds("rightPanel"),
         type: "checkbox",
         checked: rightPanelOpen.value,
         onSelect: toggleRightPanel
@@ -149,7 +151,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       {
         label: t("DesktopMenu.Fullscreen"),
         type: "checkbox",
-        kbds: ["ctrl", "shift", "f"],
+        kbds: shortcuts.kbds("fullscreen"),
         checked: workspaceFullscreen.value,
         disabled: !activeTabId.value,
         onSelect: toggleFullscreenMode

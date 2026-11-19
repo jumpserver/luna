@@ -10,6 +10,7 @@ import {
   syncXtermBackground,
   unregisterLocalShellTerminalSession
 } from "#koko";
+import { registerWorkspaceClipboardSurface } from "~/composables/useWorkspaceClipboardPaste";
 import { desktopLocalShell } from "~/shared/desktop/bridge";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
@@ -78,8 +79,9 @@ async function start() {
     })
   );
 
+  let lastInputWrite: Promise<void> | undefined;
   instance.onData((data) => {
-    void desktopLocalShell.write(props.tab.id, data);
+    lastInputWrite = desktopLocalShell.write(props.tab.id, data);
   });
   instance.onResize(({ cols, rows }) => {
     void resize(cols, rows);
@@ -101,6 +103,28 @@ async function start() {
       instance
     );
     markSessionConnected(props.tab.id);
+    unlisteners.push(
+      registerWorkspaceClipboardSurface(containerRef.value!, () => {
+        const available = () => started && terminal.value === instance;
+        return {
+          terminal: true,
+          mode: "paste",
+          async paste(text) {
+            if (!available() || !text) return "unavailable";
+            const previousWrite = lastInputWrite;
+            // xterm emits onData synchronously, preserving its bracketed-paste handling.
+            instance.paste(text);
+            const pasteWrite = lastInputWrite;
+            if (!pasteWrite || pasteWrite === previousWrite) return "unavailable";
+            await pasteWrite;
+            return "pasted";
+          },
+          focus: () => {
+            if (available()) instance.focus();
+          }
+        };
+      })
+    );
     instance.focus();
   } catch (error) {
     markSessionFailed(

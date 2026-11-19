@@ -19,6 +19,7 @@ export default eslintConfig(
     typescript: true,
     vue: true,
     stylistic: false,
+    ignores: ["**/.codex-tests/**"],
     rules: {
       curly: "off",
       "eol-last": "off",

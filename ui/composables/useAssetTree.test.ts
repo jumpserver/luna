@@ -1,8 +1,84 @@
 import type { EffectScope } from "vue";
-import type { AssetTreeNode } from "~/types";
+import type { AssetItem, AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { applyAssetRename, hasAssetName, unwrapTypeTreeRoot, useAssetTree, useAssetTreeSearch } from "./useAssetTree";
+import {
+  applyAssetRename,
+  assetTreeCheckStates,
+  collectAssetTreeBranch,
+  hasAssetName,
+  unwrapTypeTreeRoot,
+  useAssetTree,
+  useAssetTreeSearch
+} from "./useAssetTree";
+
+describe("batch selection", () => {
+  const leaf = (id: string, data = { id }) => ({ id, name: id, meta: { data } });
+  const branch = (id: string, children?: AssetTreeNode[]): AssetTreeNode => ({
+    id,
+    name: id,
+    isParent: true,
+    open: false,
+    loaded: Boolean(children),
+    children
+  });
+  const selection = (...ids: string[]) => new Map(ids.map((id) => [id, { id } as AssetItem]));
+
+  it("collects a collapsed subtree across pages and counts duplicate assets once", async () => {
+    const child = branch("child");
+    const root = branch("root", [child, leaf("one")]);
+    root.nextPage = { phase: "assets", assetOffset: 1 };
+    const loadPage = vi.fn(async (node: AssetTreeNode) => {
+      node.children = [
+        ...(node.children || []),
+        ...(node === child ? [leaf("alias", { id: "one" }), { ...leaf("disabled"), chkDisabled: true }] : [leaf("two")])
+      ];
+      node.loaded = true;
+      node.nextPage = null;
+    });
+
+    expect(assetTreeCheckStates([root], selection("one")).get(root)).toBe("indeterminate");
+    const assets = await collectAssetTreeBranch(root, loadPage, () => true);
+    expect([...assets!.keys()]).toEqual(["one", "two"]);
+    expect(loadPage.mock.calls.map(([node]) => node.id)).toEqual(["child", "root"]);
+    expect(root.open).toBe(false);
+    expect(child.open).toBe(false);
+    expect(assetTreeCheckStates([root], selection("one", "two")).get(root)).toBe(true);
+    expect(assetTreeCheckStates([root], selection("two")).get(root)).toBe("indeterminate");
+  });
+
+  it("continues loading the group after more than 20 assets have been selected", async () => {
+    const root = branch(
+      "large",
+      Array.from({ length: 21 }, (_, index) => leaf(`asset-${index}`))
+    );
+    root.nextPage = { phase: "assets", assetOffset: 21 };
+    const loadPage = vi.fn(async (node: AssetTreeNode) => {
+      node.children?.push(leaf("last"));
+      node.nextPage = null;
+    });
+
+    const assets = await collectAssetTreeBranch(root, loadPage, () => true);
+
+    expect(loadPage).toHaveBeenCalledExactlyOnceWith(root);
+    expect(assets?.size).toBe(22);
+    expect(assets?.has("last")).toBe(true);
+  });
+
+  it("discards an in-flight selection when the batch context changes", async () => {
+    const root = branch("root");
+    let active = true;
+    const loadPage = vi.fn(async () => {
+      await Promise.resolve();
+      root.loaded = true;
+      root.children = [leaf("one")];
+    });
+    const pending = collectAssetTreeBranch(root, loadPage, () => active);
+    active = false;
+    expect(await pending).toBeNull();
+    expect(loadPage).toHaveBeenCalledOnce();
+  });
+});
 
 describe("applyAssetRename", () => {
   it("renames matching leaves in place and leaves parents open", () => {
@@ -76,12 +152,19 @@ describe("unwrapTypeTreeRoot", () => {
   });
 });
 
-const userInfoStore = reactive({ loggedIn: true, orgId: "org-1", currentSite: "site-1", currentAccountId: "user-1" });
+const userInfoStore = reactive({
+  loggedIn: true,
+  orgId: "org-1",
+  currentSite: "site-1",
+  currentAccountId: "user-1",
+  getConnectionInfoForAsset: () => undefined
+});
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => userInfoStore }));
 
 describe("asset tree search", () => {
   let scope: EffectScope;
   const getAssetTree = vi.fn();
+  const getAuthorizedAssets = vi.fn();
   const getUserAssetTreeMetrics = vi.fn();
   const onResults = vi.fn();
   const onError = vi.fn();
@@ -96,9 +179,10 @@ describe("asset tree search", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     vi.stubGlobal("getAssetTree", getAssetTree);
+    vi.stubGlobal("getAuthorizedAssets", getAuthorizedAssets);
     vi.stubGlobal("getUserAssetTreeMetrics", getUserAssetTreeMetrics);
     Object.assign(userInfoStore, { loggedIn: true, orgId: "org-1", currentSite: "site-1", currentAccountId: "user-1" });
-    getAssetTree.mockResolvedValue([{ id: "asset-1", name: "Production" }]);
+    getAuthorizedAssets.mockResolvedValue({ results: [{ id: "asset-1", name: "Production" }], next: null });
     scope = effectScope();
   });
 
@@ -114,7 +198,15 @@ describe("asset tree search", () => {
 
     await vi.advanceTimersByTimeAsync(250);
 
-    expect(getAssetTree).toHaveBeenCalledExactlyOnceWith("search", { search: "production" }, undefined);
+    expect(getAuthorizedAssets).toHaveBeenCalledExactlyOnceWith(
+      {
+        search: "production",
+        limit: 999,
+        offset: 0,
+        fields: "id,name,address,comment,org_id,is_active,platform,category,type,nodes"
+      },
+      undefined
+    );
     expect(onResults).toHaveBeenCalledExactlyOnceWith("production", search.nodes.value);
     expect(search.nodes.value).toMatchObject([{ id: "asset-1" }]);
     expect(search.completedQuery.value).toBe("production");
@@ -129,7 +221,7 @@ describe("asset tree search", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(250);
 
-    expect(getAssetTree).not.toHaveBeenCalled();
+    expect(getAuthorizedAssets).not.toHaveBeenCalled();
     expect(search.loading.value).toBe(false);
     expect(search.nodes.value).toEqual([]);
   });
@@ -137,19 +229,19 @@ describe("asset tree search", () => {
   it("ignores an older response without clearing the current search's loading state", async () => {
     const oldRequest = Promise.withResolvers<unknown>();
     const newRequest = Promise.withResolvers<unknown>();
-    getAssetTree.mockReturnValueOnce(oldRequest.promise).mockReturnValueOnce(newRequest.promise);
+    getAuthorizedAssets.mockReturnValueOnce(oldRequest.promise).mockReturnValueOnce(newRequest.promise);
     const search = startSearch();
     await vi.advanceTimersByTimeAsync(250);
     search.query.value = "staging";
     await nextTick();
     await vi.advanceTimersByTimeAsync(250);
 
-    oldRequest.resolve([{ id: "old-asset" }]);
+    oldRequest.resolve({ results: [{ id: "old-asset" }], next: null });
     await vi.advanceTimersByTimeAsync(0);
     expect(onResults).not.toHaveBeenCalled();
     expect(search.loading.value).toBe(true);
 
-    newRequest.resolve([{ id: "new-asset" }]);
+    newRequest.resolve({ results: [{ id: "new-asset" }], next: null });
     await vi.advanceTimersByTimeAsync(0);
     expect(search.nodes.value).toMatchObject([{ id: "new-asset" }]);
     expect(search.completedQuery.value).toBe("staging");
@@ -160,7 +252,7 @@ describe("asset tree search", () => {
     "repeats the search after %s changes and ignores stale failures",
     async (key) => {
       const oldRequest = Promise.withResolvers<unknown>();
-      getAssetTree.mockReturnValueOnce(oldRequest.promise);
+      getAuthorizedAssets.mockReturnValueOnce(oldRequest.promise);
       const search = startSearch();
       await vi.advanceTimersByTimeAsync(250);
       userInfoStore[key] = "changed";
@@ -168,7 +260,7 @@ describe("asset tree search", () => {
       oldRequest.reject(new Error("Previous context failed"));
       await vi.advanceTimersByTimeAsync(250);
 
-      expect(getAssetTree).toHaveBeenCalledTimes(2);
+      expect(getAuthorizedAssets).toHaveBeenCalledTimes(2);
       expect(onError).not.toHaveBeenCalled();
       expect(onResults).toHaveBeenCalledOnce();
       expect(search.loading.value).toBe(false);
@@ -184,18 +276,18 @@ describe("asset tree search", () => {
     expect(search.nodes.value).toEqual([]);
     expect(search.completedQuery.value).toBe("");
     expect(search.loading.value).toBe(false);
-    expect(getAssetTree).toHaveBeenCalledOnce();
+    expect(getAuthorizedAssets).toHaveBeenCalledOnce();
 
     userInfoStore.loggedIn = true;
     await nextTick();
     await vi.advanceTimersByTimeAsync(250);
-    expect(getAssetTree).toHaveBeenCalledTimes(2);
+    expect(getAuthorizedAssets).toHaveBeenCalledTimes(2);
     expect(search.nodes.value).toMatchObject([{ id: "asset-1" }]);
   });
 
   it("reports a failed request and stops loading", async () => {
     const error = new Error("Search request failed");
-    getAssetTree.mockRejectedValueOnce(error);
+    getAuthorizedAssets.mockRejectedValueOnce(error);
     const search = startSearch();
     await vi.advanceTimersByTimeAsync(250);
 
@@ -207,14 +299,76 @@ describe("asset tree search", () => {
 
   it("ignores an in-flight request after the tree is unmounted", async () => {
     const request = Promise.withResolvers<unknown>();
-    getAssetTree.mockReturnValueOnce(request.promise);
+    getAuthorizedAssets.mockReturnValueOnce(request.promise);
     const search = startSearch();
     await vi.advanceTimersByTimeAsync(250);
     scope.stop();
-    request.resolve([{ id: "asset-1" }]);
+    request.resolve({ results: [{ id: "asset-1" }], next: null });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(onResults).not.toHaveBeenCalled();
+    expect(search.nodes.value).toEqual([]);
+  });
+
+  it("keeps all parent nodes and connection fields when searching across server pages", async () => {
+    const asset = {
+      id: "asset-1",
+      name: "web-1",
+      address: "10.0.0.1",
+      comment: "Production web server",
+      org_id: "org-1",
+      is_active: false,
+      platform: { id: 1, name: "Ubuntu" },
+      category: { value: "host" },
+      type: { value: "linux" },
+      nodes: [
+        { id: "node-1", name: "Production" },
+        { id: "node-2", name: "Web" }
+      ]
+    };
+    getAuthorizedAssets
+      .mockResolvedValueOnce({ results: [asset], next: "/next" })
+      .mockResolvedValueOnce({ results: [{ id: "asset-2", name: "web-2" }], next: null });
+    const { fetchTree, treeNodeToAsset } = useAssetTree();
+    const nodes = await fetchTree("search", undefined, "web");
+
+    expect(getAuthorizedAssets).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ limit: 998, offset: 1 }),
+      undefined
+    );
+    expect(nodes).toHaveLength(2);
+    expect(nodes[0]).toMatchObject({
+      level: 0,
+      isParent: false,
+      chkDisabled: true,
+      meta: { data: { nodes: asset.nodes } }
+    });
+    expect(treeNodeToAsset(nodes[0]!)).toMatchObject({
+      id: "asset-1",
+      name: "web-1",
+      address: "10.0.0.1",
+      comment: asset.comment,
+      org_id: "org-1",
+      isActive: false,
+      platform: "Ubuntu",
+      category: "host",
+      type: "linux"
+    });
+    expect(nodes[1]?.meta?.data?.nodes).toBeUndefined();
+    expect(getAssetTree).not.toHaveBeenCalled();
+  });
+
+  it("does not fetch another page when an old search completes", async () => {
+    const pending = Promise.withResolvers<unknown>();
+    getAuthorizedAssets.mockReturnValueOnce(pending.promise);
+    const search = startSearch();
+    await vi.advanceTimersByTimeAsync(250);
+    search.query.value = "";
+    await nextTick();
+    pending.resolve({ results: [{ id: "old-asset" }], next: "/next" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getAuthorizedAssets).toHaveBeenCalledOnce();
     expect(search.nodes.value).toEqual([]);
   });
 
@@ -322,5 +476,16 @@ describe("asset tree search", () => {
     );
     expect(page.nodes).toHaveLength(1);
     expect(page.nextPage).toEqual({ phase: "assets", assetOffset: 100 });
+  });
+
+  it("uses the explicit platform type when opening a connection", () => {
+    const { treeNodeToAsset } = useAssetTree();
+    const asset = treeNodeToAsset({
+      id: "asset-1",
+      name: "Network device",
+      meta: { data: { platform: "Cisco", platform_type: "general", type: { value: "cisco" } } }
+    });
+
+    expect(asset).toMatchObject({ platform: "Cisco", type: "general" });
   });
 });

@@ -1,0 +1,824 @@
+--- a/modules/SessionRecording.js
++++ b/modules/SessionRecording.js
+@@ -62,6 +62,12 @@
+      */
+     var tunnel = null;
+ 
++    // JumpServer: async sources retain only frame offsets, never the full recording payload.
++    var recordingSource = null;
++    var sourceController = null;
++    var disposed = false;
++    var activeReaders = [];
++
+     /**
+      * The number of bytes that this Guacamole.SessionRecording should attempt
+      * to read from the given blob in each read operation. Larger blocks will
+@@ -102,6 +108,47 @@
+      */
+     var frames = [];
+ 
++    // JumpServer: bound optional snapshots while retaining frame zero for backward seeks.
++    // ponytail: the anchor may exceed this budget; a strict total cap requires a full blank-state reset.
++    var SNAPSHOT_BYTE_LIMIT = 32 * 1024 * 1024;
++    var SNAPSHOT_COUNT_LIMIT = 32;
++    var cachedSnapshots = [];
++    var cachedSnapshotBytes = 0;
++
++    var touchSnapshot = function touchSnapshot(frame) {
++        var index = cachedSnapshots.indexOf(frame);
++        if (index !== -1) {
++            cachedSnapshots.splice(index, 1);
++            cachedSnapshots.push(frame);
++        }
++    };
++
++    var storeSnapshot = function storeSnapshot(frame, state) {
++        if (disposed)
++            return;
++        var snapshot = new Blob([JSON.stringify(state)]);
++
++        if (frame === frames[0]) {
++            frame.clientState = snapshot;
++            return;
++        }
++
++        // A single oversized snapshot must not displace usable cached states.
++        if (snapshot.size > SNAPSHOT_BYTE_LIMIT)
++            return;
++
++        while (cachedSnapshots.length >= SNAPSHOT_COUNT_LIMIT
++                || cachedSnapshotBytes + snapshot.size > SNAPSHOT_BYTE_LIMIT) {
++            var evicted = cachedSnapshots.shift();
++            cachedSnapshotBytes -= evicted.clientState.size;
++            evicted.clientState = null;
++        }
++
++        frame.clientState = snapshot;
++        cachedSnapshots.push(frame);
++        cachedSnapshotBytes += snapshot.size;
++    };
++
+     /**
+      * The timestamp of the last frame which was flagged for use as a keyframe.
+      * If no timestamp has yet been flagged, this will be 0.
+@@ -155,6 +202,10 @@
+      * @type {number}
+      */
+     var startRealTimestamp = null;
++
++    // JumpServer: preserve the playback clock when changing speed or pausing.
++    var playbackRate = 1;
++    var pausedTimestamp = null;
+ 
+     /**
+      * An object containing a single "aborted" property which is set to
+@@ -165,6 +216,23 @@
+      * @type {object}
+      */
+     var activeSeek = null;
++
++    // JumpServer: finish one asynchronous frame/import before starting the latest seek.
++    var playbackBusy = false;
++    var pendingPlayback = null;
++
++    var finishPlaybackOperation = function finishPlaybackOperation(callback) {
++        playbackBusy = false;
++        if (disposed)
++            return;
++        if (pendingPlayback) {
++            var next = pendingPlayback;
++            pendingPlayback = null;
++            next();
++        }
++        else
++            callback();
++    };
+ 
+     /**
+      * The byte offset within the recording blob of the first character of
+@@ -210,6 +278,17 @@
+      * @type {function}
+      */
+     var seekCallback = null;
++
++    var failRecording = function failRecording(error) {
++        if (disposed)
++            return;
++        var onerror = recording.onerror;
++        recording.pause();
++        // Failed caches cannot be replayed. Release partial storage and pending work immediately.
++        recording.dispose();
++        if (onerror)
++            onerror(error && error.message || String(error));
++    };
+ 
+     /**
+      * Parses all Guacamole instructions within the given blob, invoking
+@@ -236,7 +315,7 @@
+     var parseBlob = function parseBlob(blob, instructionCallback, completionCallback) {
+ 
+         // Do not read any further blocks if loading has been aborted
+-        if (aborted && blob === recordingBlob)
++        if (disposed || (aborted && blob === recordingBlob))
+             return;
+ 
+         // Prepare a parser to handle all instruction data within the blob,
+@@ -247,6 +326,20 @@
+ 
+         var offset = 0;
+         var reader = new FileReader();
++        activeReaders.push(reader);
++        var releaseReader = function releaseReader() {
++            var index = activeReaders.indexOf(reader);
++            if (index !== -1)
++                activeReaders.splice(index, 1);
++            reader.onload = reader.onerror = reader.onabort = null;
++        };
++        reader.onerror = function readFailed() {
++            releaseReader();
++            failRecording(reader.error || new Error('Unable to read recording data.'));
++        };
++        reader.onabort = releaseReader;
++        // JumpServer: preserve UTF-8 characters split across Blob read boundaries.
++        var decoder = new TextDecoder('utf-8');
+ 
+         /**
+          * Reads the block of data at offset bytes within the blob. If no
+@@ -258,19 +351,20 @@
+         var readNextBlock = function readNextBlock() {
+ 
+             // Do not read any further blocks if loading has been aborted
+-            if (aborted && blob === recordingBlob)
++            if (disposed || (aborted && blob === recordingBlob)) {
++                releaseReader();
+                 return;
++            }
+ 
+             // Parse all instructions within the block, invoking the
+             // onerror handler if a parse error occurs
+             if (reader.readyState === 2 /* DONE */) {
+                 try {
+-                    parser.receive(reader.result);
++                    parser.receive(decoder.decode(reader.result, { stream: offset < blob.size }));
+                 }
+                 catch (parseError) {
+-                    if (recording.onerror) {
+-                        recording.onerror(parseError.message);
+-                    }
++                    releaseReader();
++                    failRecording(parseError);
+                     return;
+                 }
+             }
+@@ -278,15 +372,18 @@
+             // If no data remains, the read operation is complete and no
+             // further blocks need to be read
+             if (offset >= blob.size) {
++                releaseReader();
+                 if (completionCallback)
+                     completionCallback();
+             }
+ 
+             // Otherwise, read the next block
+             else {
+-                var block = blob.slice(offset, offset + BLOCK_SIZE);
++                // JumpServer: small frames can be read directly without another Blob wrapper.
++                var block = offset === 0 && blob.size <= BLOCK_SIZE
++                    ? blob : blob.slice(offset, offset + BLOCK_SIZE);
+                 offset += block.size;
+-                reader.readAsText(block);
++                reader.readAsArrayBuffer(block);
+             }
+ 
+         };
+@@ -299,7 +396,7 @@
+ 
+     /**
+      * Calculates the size of the given Guacamole instruction element, in
+-     * Unicode characters. The size returned includes the characters which
++     * UTF-8 bytes. The size returned includes the characters which
+      * make up the length, the "." separator between the length and the
+      * element itself, and the "," or ";" terminator which follows the
+      * element.
+@@ -310,25 +407,21 @@
+      *     the initial length, "." separator, and "," or ";" terminator).
+      *
+      * @returns {!number}
+-     *     The number of Unicode characters which would make up the given
++     *     The number of UTF-8 bytes which would make up the given
+      *     element within a Guacamole instruction.
+      */
+     var getElementSize = function getElementSize(value) {
+ 
+-        var valueLength = value.length;
+-
+-        // Calculate base size, assuming at least one digit, the "."
+-        // separator, and the "," or ";" terminator
+-        var protocolSize = valueLength + 3;
+-
+-        // Add one character for each additional digit that would occur
+-        // in the element length prefix
+-        while (valueLength >= 10) {
+-            protocolSize++;
+-            valueLength = Math.floor(valueLength / 10);
+-        }
+-
+-        return protocolSize;
++        // JumpServer: prefixes count codepoints, while Blob.slice() uses bytes.
++        var bytes = 0;
++        for (var i = 0; i < value.length; i++) {
++            var codepoint = value.codePointAt(i);
++            bytes += codepoint < 0x80 ? 1 : codepoint < 0x800 ? 2 : codepoint < 0x10000 ? 3 : 4;
++            if (codepoint >= 0x10000)
++                i++;
++        }
++
++        return bytes + String(Guacamole.Parser.codePointCount(value)).length + 2;
+ 
+     };
+ 
+@@ -349,8 +442,14 @@
+      *
+      * @param {!string[]} args
+      *     The arguments of the received instruction, if any.
+-     */
+-    var loadInstruction = function loadInstruction(opcode, args) {
++     *
++     * @param {Blob} [frameBlob]
++     *     The complete frame received from a tunnel, when opcode is sync.
++     */
++    var loadInstruction = function loadInstruction(opcode, args, frameBlob) {
++
++        if (disposed || aborted)
++            return;
+ 
+         // Advance end of frame by overall length of parsed instruction
+         frameEnd += getElementSize(opcode);
+@@ -366,6 +465,7 @@
+ 
+             // Add a new frame containing the instructions read since last frame
+             var frame = new Guacamole.SessionRecording._Frame(timestamp, frameStart, frameEnd);
++            frame.blob = frameBlob || null;
+             frames.push(frame);
+             frameStart = frameEnd;
+ 
+@@ -393,7 +493,7 @@
+      * @private
+      */
+     var notifyLoaded = function notifyLoaded() {
+-        if (recording.onload)
++        if (!disposed && !aborted && recording.onload)
+             recording.onload();
+     };
+ 
+@@ -403,34 +503,65 @@
+         parseBlob(recordingBlob, loadInstruction, notifyLoaded);
+     }
+ 
++    // JumpServer: commit/read coordination belongs to the source. Scanning only builds an index.
++    else if (source && typeof source.stream === 'function' && typeof source.read === 'function') {
++        recordingSource = source;
++        sourceController = new AbortController();
++        Promise.resolve().then(async function loadSource() {
++            if (disposed || aborted)
++                return;
++            var parser = new Guacamole.Parser();
++            var decoder = new TextDecoder('utf-8');
++            parser.oninstruction = loadInstruction;
++            try {
++                for await (var chunk of recordingSource.stream(sourceController.signal)) {
++                    if (disposed || aborted)
++                        return;
++                    parser.receive(decoder.decode(chunk, { stream: true }));
++                }
++                if (!disposed && !aborted) {
++                    parser.receive(decoder.decode());
++                    notifyLoaded();
++                }
++            }
++            catch (error) {
++                if (!disposed && !aborted)
++                    failRecording(error);
++            }
++        });
++    }
++
+     // If tunnel provided instead of Blob, extract frames, etc. as instructions
+-    // are received, buffering things into a Blob for future seeks
++    // are received, retaining each complete frame for future seeks
+     else {
+ 
+         tunnel = source;
+-        recordingBlob = new Blob();
+ 
+         var errorEncountered = false;
+         var instructionBuffer = '';
++        var instructionParts = [];
+ 
+         // Read instructions from provided tunnel, extracting each frame
+         tunnel.oninstruction = function handleInstruction(opcode, args) {
+ 
+             // Reconstitute received instruction
+-            instructionBuffer += opcode.length + '.' + opcode;
+-            args.forEach(function appendArg(arg) {
+-                instructionBuffer += ',' + arg.length + '.' + arg;
+-            });
+-            instructionBuffer += ';';
+-
+-            // Append to Blob (creating a new Blob in the process)
+-            if (instructionBuffer.length >= BLOCK_SIZE) {
+-                recordingBlob = new Blob([recordingBlob, instructionBuffer]);
++            instructionBuffer += Guacamole.Parser.toInstruction([opcode].concat(args));
++
++            // JumpServer: keep independent frame Blobs, avoiding a growing prefix Blob at every sync.
++            if (opcode === 'sync' || instructionBuffer.length >= BLOCK_SIZE) {
++                instructionParts.push(new Blob([instructionBuffer]));
+                 instructionBuffer = '';
+             }
+ 
++            // Publish a frame only after all its bytes are available for playback.
++            var frameBlob = null;
++            if (opcode === 'sync') {
++                frameBlob = instructionParts.length === 1 ? instructionParts[0] : new Blob(instructionParts);
++                instructionParts = [];
++            }
++
+             // Load parsed instruction into recording
+-            loadInstruction(opcode, args);
++            loadInstruction(opcode, args, frameBlob);
+ 
+         };
+ 
+@@ -444,11 +575,9 @@
+         tunnel.onstatechange = function tunnelStateChanged(state) {
+             if (state === Guacamole.Tunnel.State.CLOSED) {
+ 
+-                // Append any remaining instructions
+-                if (instructionBuffer.length) {
+-                    recordingBlob = new Blob([recordingBlob, instructionBuffer]);
+-                    instructionBuffer = '';
+-                }
++                // JumpServer: a trailing partial frame cannot be played; release its buffered data.
++                instructionBuffer = '';
++                instructionParts = [];
+ 
+                 // Consider recording loaded if tunnel has closed without errors
+                 if (!errorEncountered)
+@@ -458,6 +587,9 @@
+ 
+     }
+ 
++    // All retained source references are explicit, so dispose() can release them.
++    source = null;
++
+     /**
+      * Converts the given absolute timestamp to a timestamp which is relative
+      * to the first frame in the recording.
+@@ -537,30 +669,65 @@
+      *
+      * @param {function} callback
+      *     The callback to invoke once replay of the frame has completed.
+-     */
+-    var replayFrame = function replayFrame(index, callback) {
++     *
++     * @param {!object} seek
++     *     The seek operation whose destination and playback mode determine
++     *     whether this frame should retain a snapshot.
++     */
++    var replayFrame = function replayFrame(index, callback, seek) {
+ 
+         var frame = frames[index];
+-
+-        // Replay all instructions within the retrieved frame
+-        parseBlob(recordingBlob.slice(frame.start, frame.end), function handleInstruction(opcode, args) {
+-            playbackTunnel.receiveInstruction(opcode, args);
+-        }, function replayCompleted() {
+-
+-            // Store client state if frame is flagged as a keyframe
+-            if (frame.keyframe && !frame.clientState) {
+-                playbackClient.exportState(function storeClientState(state) {
+-                    frame.clientState = new Blob([JSON.stringify(state)]);
+-                });
+-            }
+-
+-            // Update state to correctly represent the current frame
+-            currentFrame = index;
+-
+-            if (callback)
+-                callback();
+-
+-        });
++        playbackBusy = true;
++
++        var renderFrame = function renderFrame(blob) {
++            if (disposed)
++                return;
++
++            // Replay all instructions within the retrieved frame.
++            parseBlob(blob, function handleInstruction(opcode, args) {
++                if (!disposed)
++                    playbackTunnel.receiveInstruction(opcode, args);
++            }, function replayCompleted() {
++
++                var frameRendered = function frameRendered() {
++                    if (disposed)
++                        return;
++                    currentFrame = index;
++                    finishPlaybackOperation(callback);
++                };
++
++                // JumpServer: explicit seeks cache their destination, not every crossed keyframe.
++                // Keep the first frame even if this operation was replaced while reading it.
++                var saveSnapshot = index === 0 || (!seek.aborted
++                    && (seek.playback ? frame.keyframe : index === seek.index));
++                if (saveSnapshot && !frame.clientState) {
++                    playbackClient.exportState(function storeClientState(state) {
++                        storeSnapshot(frame, state);
++                        frameRendered();
++                    });
++                }
++                else
++                    playbackClient.getDisplay().flush(frameRendered);
++
++            });
++        };
++
++        if (recordingSource) {
++            Promise.resolve().then(function readFrame() {
++                if (!disposed)
++                    return recordingSource.read(frame.start, frame.end);
++            }).then(function frameReady(blob) {
++                if (disposed)
++                    return;
++                // No instructions have been applied yet, so a cancelled read can be skipped safely.
++                if (seek.aborted)
++                    finishPlaybackOperation(function() {});
++                else
++                    renderFrame(blob);
++            }).catch(failRecording);
++        }
++        else
++            renderFrame(frame.blob || recordingBlob.slice(frame.start, frame.end));
+ 
+     };
+ 
+@@ -591,13 +758,20 @@
+ 
+         // Note that a new seek operation is in progress
+         var thisSeek = activeSeek = {
+-            aborted : false
++            aborted : false,
++            timeout : null,
++            index : index,
++            playback : nextRealTimestamp !== undefined
+         };
+ 
+         var startIndex = index;
+ 
+         // Replay any applicable incremental frames
+         var continueReplay = function continueReplay() {
++
++            // JumpServer: cancelled reads must not publish stale seek events.
++            if (thisSeek.aborted)
++                return;
+ 
+             // Notify of changes in position
+             if (recording.onseek && currentFrame > startIndex) {
+@@ -605,54 +779,79 @@
+                     currentFrame - startIndex, index - startIndex);
+             }
+ 
+-            // Cancel seek if aborted
++            // A position handler may pause or replace this seek.
+             if (thisSeek.aborted)
+                 return;
+ 
+             // If frames remain, replay the next frame
+             if (currentFrame < index)
+-                replayFrame(currentFrame + 1, continueReplay);
++                replayFrame(currentFrame + 1, continueReplay, thisSeek);
+ 
+             // Otherwise, the seek operation is completed
+-            else
++            else {
++                activeSeek = null;
+                 callback();
++            }
+ 
+         };
+ 
+         // Continue replay after requested delay has elapsed, or
+         // immediately if no delay was requested
+         var continueAfterRequiredDelay = function continueAfterRequiredDelay() {
++            if (thisSeek.aborted)
++                return;
+             var delay = nextRealTimestamp ? Math.max(nextRealTimestamp - new Date().getTime(), 0) : 0;
+             if (delay)
+-                window.setTimeout(continueReplay, delay);
++                thisSeek.timeout = window.setTimeout(function delayElapsed() {
++                    thisSeek.timeout = null;
++                    continueReplay();
++                }, delay);
+             else
+                 continueReplay();
+         };
+ 
+-        // Back up until startIndex represents current state
+-        for (; startIndex >= 0; startIndex--) {
+-
+-            var frame = frames[startIndex];
+-
+-            // If we've reached the current frame, startIndex represents
+-            // current state by definition
+-            if (startIndex === currentFrame)
+-                break;
+-
+-            // If frame has associated absolute state, make that frame the
+-            // current state
+-            if (frame.clientState) {
+-                frame.clientState.text().then(function textReady(text) {
+-                    playbackClient.importState(JSON.parse(text));
+-                    currentFrame = startIndex;
+-                    continueAfterRequiredDelay();
+-                });
++        var startSeek = function startSeek() {
++            if (thisSeek.aborted)
+                 return;
+-            }
+-
+-        }
+-
+-        continueAfterRequiredDelay();
++
++            // Back up until startIndex represents current state
++            for (; startIndex >= 0; startIndex--) {
++
++                var frame = frames[startIndex];
++
++                // If we've reached the current frame, startIndex represents
++                // current state by definition
++                if (startIndex === currentFrame)
++                    break;
++
++                // If frame has associated absolute state, make that frame the
++                // current state
++                if (frame.clientState) {
++                    touchSnapshot(frame);
++                    playbackBusy = true;
++                    frame.clientState.text().then(function textReady(text) {
++                        if (disposed || thisSeek.aborted) {
++                            finishPlaybackOperation(function() {});
++                            return;
++                        }
++                        playbackClient.importState(JSON.parse(text), function imported() {
++                            if (disposed)
++                                return;
++                            currentFrame = startIndex;
++                            finishPlaybackOperation(continueAfterRequiredDelay);
++                        });
++                    }).catch(failRecording);
++                    return;
++                }
++            }
++
++            continueAfterRequiredDelay();
++        };
++
++        if (playbackBusy)
++            pendingPlayback = startSeek;
++        else
++            startSeek();
+         
+     };
+ 
+@@ -663,8 +862,11 @@
+      * @private
+      */
+     var abortSeek = function abortSeek() {
++        pendingPlayback = null;
+         if (activeSeek) {
+             activeSeek.aborted = true;
++            if (activeSeek.timeout !== null)
++                window.clearTimeout(activeSeek.timeout);
+             activeSeek = null;
+         }
+     };
+@@ -678,6 +880,9 @@
+      */
+     var continuePlayback = function continuePlayback() {
+ 
++        if (!recording.isPlaying())
++            return;
++
+         // If frames remain after advancing, schedule next frame
+         if (currentFrame + 1 < frames.length) {
+ 
+@@ -686,7 +891,7 @@
+ 
+             // Calculate the real timestamp corresponding to when the next
+             // frame begins
+-            var nextRealTimestamp = next.timestamp - startVideoTimestamp + startRealTimestamp;
++            var nextRealTimestamp = (next.timestamp - startVideoTimestamp) / playbackRate + startRealTimestamp;
+ 
+             // Advance to next frame after enough time has elapsed
+             seekToFrame(currentFrame + 1, function frameDelayElapsed() {
+@@ -786,7 +991,7 @@
+      *     The data to send to the tunnel when connecting.
+      */
+     this.connect = function connect(data) {
+-        if (tunnel)
++        if (!disposed && tunnel)
+             tunnel.connect(data);
+     };
+ 
+@@ -796,7 +1001,9 @@
+      * function has no effect.
+      */
+     this.disconnect = function disconnect() {
+-        if (tunnel)
++        if (recordingSource)
++            recording.abort();
++        else if (tunnel)
+             tunnel.disconnect();
+     };
+ 
+@@ -809,6 +1016,8 @@
+         if (!aborted) {
+ 
+             aborted = true;
++            if (sourceController)
++                sourceController.abort();
+             if (recording.onabort)
+                 recording.onabort();
+ 
+@@ -816,6 +1025,53 @@
+                 tunnel.disconnect();
+ 
+         }
++    };
++
++    /**
++     * Permanently releases this recording, its source cache, rendering tasks,
++     * frame data, and client resources. JumpServer extension.
++     */
++    this.dispose = function dispose() {
++        if (disposed)
++            return;
++        disposed = true;
++        aborted = true;
++        abortSeek();
++        seekCallback = null;
++        startVideoTimestamp = startRealTimestamp = pausedTimestamp = null;
++        if (sourceController)
++            sourceController.abort();
++        if (recordingSource) {
++            try {
++                recordingSource.close();
++            }
++            catch (error) {
++                // A custom source must not prevent releasing the client and frame resources.
++            }
++            recordingSource = null;
++        }
++        if (tunnel) {
++            tunnel.oninstruction = tunnel.onerror = tunnel.onstatechange = null;
++            tunnel.disconnect();
++            tunnel = null;
++        }
++        activeReaders.splice(0).forEach(function cancelReader(reader) {
++            reader.onload = reader.onerror = reader.onabort = null;
++            if (reader.readyState === FileReader.LOADING)
++                reader.abort();
++        });
++        playbackClient.disconnect();
++        playbackClient.getDisplay().cancel();
++        playbackTunnel.oninstruction = null;
++        playbackClient = playbackTunnel = null;
++        frames = [];
++        cachedSnapshots = [];
++        cachedSnapshotBytes = 0;
++        recordingBlob = null;
++        currentFrame = -1;
++        playbackBusy = false;
++        recording.onload = recording.onerror = recording.onabort = recording.onprogress = null;
++        recording.onplay = recording.onpause = recording.onseek = null;
+     };
+ 
+     /**
+@@ -839,7 +1095,7 @@
+      *     true if playback is currently in progress, false otherwise.
+      */
+     this.isPlaying = function isPlaying() {
+-        return !!startVideoTimestamp;
++        return startVideoTimestamp !== null;
+     };
+ 
+     /**
+@@ -877,6 +1133,30 @@
+         // Recording duration is simply the timestamp of the last frame
+         return toRelativeTimestamp(frames[frames.length - 1].timestamp);
+ 
++    };
++
++    // JumpServer: change speed without skipping the remainder of the current frame delay.
++    this.getPlaybackRate = function getPlaybackRate() {
++        return playbackRate;
++    };
++
++    this.setPlaybackRate = function setPlaybackRate(rate) {
++        var nextRate = Number(rate);
++        if (!isFinite(nextRate) || nextRate <= 0 || nextRate === playbackRate)
++            return;
++
++        if (recording.isPlaying()) {
++            var now = new Date().getTime();
++            startVideoTimestamp += (now - startRealTimestamp) * playbackRate;
++            startRealTimestamp = now;
++        }
++        playbackRate = nextRate;
++
++        // An in-progress frame finishes once and schedules the next frame at the new rate.
++        if (recording.isPlaying() && activeSeek && activeSeek.timeout !== null) {
++            abortSeek();
++            continuePlayback();
++        }
+     };
+ 
+     /**
+@@ -891,6 +1171,12 @@
+      */
+     this.play = function play() {
+ 
++        // JumpServer: settle an interrupted seek without recursively restoring playback.
++        if (seekCallback) {
++            abortSeek();
++            seekCallback(false);
++        }
++
+         // If playback is not already in progress and frames remain,
+         // begin playback
+         if (!recording.isPlaying() && currentFrame + 1 < frames.length) {
+@@ -901,8 +1187,9 @@
+ 
+             // Store timestamp of playback start for relative scheduling of
+             // future frames
+-            var next = frames[currentFrame + 1];
+-            startVideoTimestamp = next.timestamp;
++            startVideoTimestamp = pausedTimestamp !== null ? pausedTimestamp
++                : frames[Math.max(currentFrame, 0)].timestamp;
++            pausedTimestamp = null;
+             startRealTimestamp = new Date().getTime();
+ 
+             // Begin playback of video
+@@ -940,13 +1227,14 @@
+         recording.pause();
+ 
+         // Restore playback when seek is completed or cancelled
+-        seekCallback = function restorePlaybackState() {
++        seekCallback = function restorePlaybackState(resumePlayback) {
+ 
+             // Seek is no longer in progress
+             seekCallback = null;
++            pausedTimestamp = currentFrame >= 0 ? frames[currentFrame].timestamp : null;
+ 
+             // Restore playback state
+-            if (originallyPlaying) {
++            if (originallyPlaying && resumePlayback !== false) {
+                 recording.play();
+                 originallyPlaying = null;
+             }
+@@ -988,8 +1276,17 @@
+         // Abort any in-progress seek / playback
+         abortSeek();
+ 
++        // JumpServer: a paused seek must not restore an older playing state later.
++        if (seekCallback) {
++            seekCallback = null;
++            pausedTimestamp = currentFrame >= 0 ? frames[currentFrame].timestamp : null;
++        }
++
+         // Stop playback only if playback is in progress
+         if (recording.isPlaying()) {
++
++            pausedTimestamp = Math.min(frames[frames.length - 1].timestamp,
++                startVideoTimestamp + (new Date().getTime() - startRealTimestamp) * playbackRate);
+ 
+             // Notify that playback is stopping
+             if (recording.onpause)
+@@ -1063,6 +1360,9 @@
+      */
+     this.end = end;
+ 
++    // JumpServer: tunnel frames own their bytes; Blob sources retain offsets into the original Blob.
++    this.blob = null;
++
+     /**
+      * A snapshot of client state after this frame was rendered, as returned by
+      * a call to exportState(), serialized as JSON, and stored within a Blob.
+@@ -1124,4 +1424,4 @@
+             tunnel.oninstruction(opcode, args);
+     };
+ 
+-};
+\ No newline at end of file
++};

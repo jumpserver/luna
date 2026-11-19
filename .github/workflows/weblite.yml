@@ -9,6 +9,15 @@ on:
         description: WebLite version or tag (e.g., v5.1.0 or weblite-v5.1.0-rc1)
         required: true
         type: string
+      windows_sign_mode:
+        description: Windows signing policy (optional continues unsigned on signing failure).
+        required: false
+        default: optional
+        type: choice
+        options:
+          - optional
+          - required
+          - "off"
 
 env:
   RELEASE_TARGET: weblite
@@ -26,6 +35,8 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      WINDOWS_SIGN_MODE: ${{ inputs.windows_sign_mode || vars.WINDOWS_SIGN_MODE || 'optional' }}
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
@@ -62,6 +73,9 @@ jobs:
           pnpm --dir applets/weblite typecheck
 
       - name: Build WebLite installer
+        env:
+          SIGNPANEL_URL: ${{ secrets.SIGNPANEL_URL || vars.SIGNPANEL_URL }}
+          SIGNPANEL_API_TOKEN: ${{ secrets.SIGNPANEL_API_TOKEN }}
         run: pnpm weblite:package
 
       - name: Verify WebLite MSI layout and runtime
@@ -80,6 +94,19 @@ jobs:
           $executables = @(Get-ChildItem $extract -Filter weblite.exe -File -Recurse)
           if ($executables.Count -ne 1 -or !$executables[0].FullName.EndsWith('\JumpServer\WebLite\weblite.exe')) {
             throw "WebLite MSI must contain one executable directly in JumpServer\WebLite"
+          }
+          if ($env:WINDOWS_SIGN_MODE -ne "off") {
+            foreach ($file in @($installer, $executables[0].FullName)) {
+              try {
+                $signature = Get-AuthenticodeSignature -LiteralPath $file -ErrorAction Stop
+                if ($signature.Status -ne "Valid") {
+                  throw "Invalid Authenticode signature for $($file): $($signature.Status)"
+                }
+              } catch {
+                if ($env:WINDOWS_SIGN_MODE -eq "required") { throw }
+                Write-Warning "$_"
+              }
+            }
           }
           $env:WEBLITE_EXECUTABLE = $executables[0].FullName
           pnpm --dir applets/weblite test:runtime

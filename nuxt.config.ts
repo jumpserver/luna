@@ -1,10 +1,15 @@
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+const i18nRequire = createRequire(createRequire(import.meta.url).resolve("vue-i18n/package.json"));
+const i18nCoreRequire = createRequire(i18nRequire.resolve("@intlify/core-base/package.json"));
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
+const chenGoTarget = process.env.JMS_CHEN_GO_DEV_URL || chenTarget;
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
@@ -92,10 +97,10 @@ export default defineNuxtConfig({
   },
   i18n: {
     locales: [
+      { code: "en", name: "English", language: "en", file: "en.json" },
       { code: "zh", name: "简体中文", language: "zh-CN", file: "zh.json" },
       { code: "zh_hant", name: "繁體中文", language: "zh-TW", file: "zh_hant.json" },
       { code: "fr", name: "Français", language: "fr", file: "fr.json" },
-      { code: "en", name: "English", language: "en", file: "en.json" },
       { code: "ja", name: "日本語", language: "ja", file: "ja.json" },
       { code: "pt_br", name: "Português (Brasil)", language: "pt-BR", file: "pt_br.json" },
       { code: "es", name: "Español", language: "es", file: "es.json" },
@@ -148,9 +153,8 @@ export default defineNuxtConfig({
   vite: {
     clearScreen: false,
     envPrefix: ["VITE_"],
-    // Chen is loaded lazily. Pre-bundle its direct runtime dependencies together
-    // so the first workspace entry cannot re-optimize them, reload the app, or split CodeMirror
-    // across incompatible module instances.
+    // Pre-bundle shared editors and grids so lazy workspaces cannot trigger a
+    // reload or split CodeMirror across incompatible module instances.
     optimizeDeps: {
       include: [
         "@ai-sdk/vue",
@@ -233,12 +237,11 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: rewriteProxyOrigin(jumpServerTarget)
         },
-        "/chen": {
-          target: chenTarget,
+        "/chen/api/v1": {
+          target: chenGoTarget,
           secure: false,
-          ws: true,
           changeOrigin: true,
-          configure: configureHttpProxy("chen", chenTarget)
+          configure: configureHttpProxy("chen-go", chenGoTarget)
         },
         "/kael": {
           target: kaelTarget,
@@ -286,6 +289,31 @@ export default defineNuxtConfig({
     }
   },
   hooks: {
+    "vite:extendConfig": function(config, { isClient }) {
+      if (!isClient || !config.resolve) return;
+      // Keep browser translations on vue-i18n's dependency tree without replacing Nuxt's aliases.
+      const existing = config.resolve.alias;
+      config.resolve.alias = [
+        { find: "@intlify/core-base", replacement: i18nRequire.resolve("@intlify/core-base/dist/core-base.mjs") },
+        { find: "@intlify/shared", replacement: i18nRequire.resolve("@intlify/shared/dist/shared.mjs") },
+        {
+          find: "@intlify/message-compiler",
+          replacement: i18nCoreRequire.resolve("@intlify/message-compiler/dist/message-compiler.mjs")
+        },
+        ...(Array.isArray(existing)
+          ? existing
+          : Object.entries(existing || {}).map(([find, replacement]) => ({ find, replacement })))
+      ];
+    },
+    ready() {
+      execFileSync(
+        process.execPath,
+        [fileURLToPath(new URL("./packages/guacamole/scripts/build.mjs", import.meta.url))],
+        {
+          stdio: "inherit"
+        }
+      );
+    },
     "build:manifest": function (manifest) {
       for (const item of Object.values(manifest)) {
         if (!item || typeof item !== "object") continue;

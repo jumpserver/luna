@@ -97,7 +97,8 @@ export const useAiPanel = () => {
 
   const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
     if (!workspaceAiEnabled.value) return;
-    pendingTerminalPrompt.value = { id: globalThis.crypto.randomUUID(), paneId, text, ...binding };
+    const id = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    pendingTerminalPrompt.value = { id, paneId, text, ...binding };
   };
   const takeTerminalPrompt = (id: string) => {
     if (pendingTerminalPrompt.value?.id === id) pendingTerminalPrompt.value = null;

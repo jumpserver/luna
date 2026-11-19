@@ -41,10 +41,72 @@ slider.onpointerup = () => { start = null; slider.style.cursor='grab'; };
 </script></body></html>`;
 
 export async function run() {
+  await runBasicSubmitChecks();
   await runOptionalSelectorChecks();
   for (const success of ["id=success", ""]) {
     for (const challenge of ["initial", "after-failed", "none"]) await runCase(success, challenge);
   }
+}
+
+async function runBasicSubmitChecks() {
+  const host = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  const evaluate = (code: string) => host.webContents.executeJavaScript(code, true);
+  try {
+    for (const mode of ["enabled", "sync", "async", "replaced", "never"]) {
+      const selectors = {
+        username: "xpath=//input[@id='username']",
+        password: "xpath=//input[@id='password']",
+        submit: "xpath=//button[@id='submit']",
+        interactive: "",
+        success: mode === "never" ? "id=success" : ""
+      };
+      const html = `<!doctype html><form>
+        <input id="username" required><input id="password" type="password" required>
+        <button id="submit" ${mode === "enabled" ? "" : "disabled"}>Login</button>
+        </form><script>
+        globalThis.submissions = [];
+        const mode = ${JSON.stringify(mode)};
+        const username = document.querySelector('#username'), password = document.querySelector('#password');
+        document.querySelector('form').onsubmit = event => {
+          event.preventDefault();
+          submissions.push({ username: username.value, password: password.value });
+        };
+        password.oninput = () => {
+          if (!username.value || !password.value || mode === 'never') return;
+          if (mode === 'sync') document.querySelector('#submit').disabled = false;
+          if (mode === 'async' || mode === 'replaced') setTimeout(() => {
+            const button = document.querySelector('#submit');
+            if (mode === 'replaced') button.replaceWith(Object.assign(document.createElement('button'), { id: 'submit', textContent: 'Login' }));
+            else button.disabled = false;
+          }, 150);
+        };</script>`;
+      await host.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+      assert.equal(await evaluate(buildAutofillProbeScript(selectors)), true, `basic form readiness: ${mode}`);
+      const fill = evaluate(buildAutofillScript(selectors, { username: "managed-user", password: "managed-secret" }));
+      if (mode === "never") {
+        await assert.rejects(fill, /登录提交按钮不可用/);
+        assert.deepEqual(await evaluate("submissions"), [], "a disabled button must never submit");
+      } else {
+        assert.equal(await fill, true, `basic form submission: ${mode}`);
+        assert.deepEqual(await evaluate("submissions"), [{ username: "managed-user", password: "managed-secret" }]);
+      }
+      assert.equal(await evaluate("document.querySelector('#username').value"), "", `username cleanup: ${mode}`);
+      assert.equal(await evaluate("document.querySelector('#password').value"), "", `password cleanup: ${mode}`);
+      assert.equal(await evaluate("document.querySelector('[data-jms-secure-login]') === null"), true);
+      assert.equal(
+        await evaluate(`(() => {
+          const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+          document.body.dispatchEvent(event);
+          return event.defaultPrevented;
+        })()`),
+        false,
+        `input blocker cleanup: ${mode}`
+      );
+    }
+  } finally {
+    host.destroy();
+  }
+  console.log("Web Proxy basic autofill: enabled, input-enabled, delayed, replaced and disabled buttons passed");
 }
 
 async function runOptionalSelectorChecks() {

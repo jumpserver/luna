@@ -252,19 +252,25 @@ export function useSessionWindowConnect() {
         ) {
           throw new Error(t("ConnectError.AccountUnavailable"));
         }
-        if (!hostedAccount && !asset.permedAccounts?.some((account) => account.alias === "@INPUT")) {
-          throw new Error(t("ConnectError.ManualAccountDenied"));
-        }
+        const credentialAccount =
+          hostedAccount ||
+          asset.permedAccounts?.find((account) => account.alias === "@INPUT") ||
+          asset.permedAccounts?.find(
+            (account) => supportsPersonalCredential(account) && account.username === credential.username
+          );
+        if (!credentialAccount) throw new Error(t("ConnectError.AccountUnavailable"));
+        const credentialMode =
+          credentialAccount.alias === "@INPUT" ? "manual" : credentialAccount.alias === "@USER" ? "dynamic" : "hosted";
         const preferred =
           preference?.protocol === protocol ? preference : saved?.protocol === protocol ? saved : undefined;
         const connectMethod = queryValue(route.query.method) || preferred?.connectMethod || "";
         const pane = openSession(asset, { protocol, account: credential.username, connectMethod });
         await confirmConnection(asset, {
           protocol,
-          account: hostedAccount?.name || "@INPUT",
-          accountId: hostedAccount?.id,
-          accountMode: hostedAccount ? "hosted" : "manual",
-          manualUsername: hostedAccount ? "" : credential.username,
+          account: credentialMode === "hosted" ? credentialAccount.name : credentialAccount.alias,
+          accountId: credentialMode === "hosted" ? credentialAccount.id : undefined,
+          accountMode: credentialMode,
+          manualUsername: credentialMode === "manual" ? credential.username : "",
           manualPassword: "",
           personalCredentialId: credential.id,
           personalCredentialVersion: credential.version,

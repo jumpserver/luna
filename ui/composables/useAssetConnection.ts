@@ -8,7 +8,7 @@ import type {
 import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
-import { needsInputSecret, supportsPersonalCredential } from "~/utils/connection";
+import { isManualCredentialReady, needsInputSecret, supportsPersonalCredential } from "~/utils/connection";
 
 export interface ConnectionFormInfo {
   protocol: string;
@@ -111,6 +111,7 @@ export function useAssetConnection() {
     const canUsePersonalCredential =
       protocol === connectionInfo.protocol &&
       ((accountMode === "manual" && connectionInfo.accountMode === "manual") ||
+        (accountMode === "dynamic" && connectionInfo.accountMode === "dynamic") ||
         (sameHostedAccount && supportsPersonalCredential(accounts.find((item) => item.id === accountId))));
 
     return {
@@ -243,6 +244,7 @@ export function useAssetConnection() {
     const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
     if (
       !normalized.protocol ||
+      (normalized.accountMode === "manual" && !isManualCredentialReady(normalized)) ||
       (normalized.accountMode === "hosted" &&
         needsInputSecret(selectedAccount) &&
         !normalized.hostedSecret &&

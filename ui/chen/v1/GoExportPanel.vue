@@ -1,0 +1,285 @@
+<script setup lang="ts">
+import type { GoExport, GoExportFormat, GoSession } from "./api";
+import type { ExportTaskAction, QueryWorkspaceTab } from "./workspace";
+import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { chenErrorText } from "~/chen/utils/errorMessages";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
+import { editDirty } from "./dataEditing";
+import { exportActive } from "./workspace";
+const props = defineProps<{
+  query: QueryWorkspaceTab;
+  session: GoSession;
+  ready: boolean;
+  iconOnly?: boolean;
+}>();
+const emit = defineEmits<{
+  start: [
+    mode: "cached" | "query",
+    format: GoExportFormat,
+    snapshot: { sql: string; resultId: string; version: number; rows?: number }
+  ];
+  action: [id: string, action: ExportTaskAction];
+}>();
+const { t } = useI18n();
+const configOpen = ref(false);
+const historyOpen = ref(false);
+const mode = ref<"cached" | "query">("cached");
+const format = ref<GoExportFormat>("csv");
+const snapshot = ref({ sql: "", resultId: "", version: 0, rows: 0, truncated: false });
+const jobs = computed(() => props.query.exportJobs);
+const activeCount = computed(() => jobs.value.filter(exportActive).length);
+const closed = computed(() => props.session.state === "closed");
+const unavailableMessage = computed(() =>
+  props.session.state !== "ready" || props.query.console?.state !== "ready"
+    ? t("Chen.GoV1ExportUnavailable")
+    : editDirty(props.query.edit) || props.query.edit.busy
+      ? t("Chen.GoWriteExportPending")
+      : ""
+);
+const canStart = computed(
+  () =>
+    props.ready &&
+    props.session.permissions.can_download &&
+    !props.query.busy &&
+    !props.query.exportBusy &&
+    !props.query.pending &&
+    (mode.value === "cached"
+      ? !!snapshot.value.resultId
+      : (!props.query.browseObject || props.query.rows?.browse?.supported) &&
+        !!snapshot.value.sql &&
+        !["queued", "running", "waiting_review", "cancel_requested"].includes(props.query.execution?.status || ""))
+);
+function cancelSupported(job: GoExport) {
+  return (
+    job.mode === "cached" ||
+    job.status === "queued" ||
+    job.status === "waiting_review" ||
+    props.session.can_cancel !== false
+  );
+}
+function show() {
+  if (!props.session.permissions.can_download || !props.ready) return;
+  snapshot.value = {
+    sql: props.query.rows?.browse?.supported ? props.query.rows.browse.full_sql : props.query.resultSql,
+    resultId: props.query.resultId,
+    version: props.query.resultExecution?.id === props.query.execution?.id ? props.query.executionVersion : 0,
+    rows:
+      (props.query.loadingSettings.mode === "continuous"
+        ? props.query.rows?.rows.length
+        : props.query.rows?.total_rows) || 0,
+    truncated: !!props.query.rows?.truncated
+  };
+  mode.value = "cached";
+  configOpen.value = true;
+}
+function start() {
+  if (!configOpen.value || !canStart.value) return;
+  configOpen.value = false;
+  emit("start", mode.value, format.value, { ...snapshot.value });
+}
+watch(
+  () => jobs.value.length,
+  (count) => {
+    if (!count) historyOpen.value = false;
+  }
+);
+function size(bytes: number) {
+  return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
+}
+</script>
+
+<template>
+  <UButton
+    v-if="query.resultId || query.resultSql"
+    icon="i-lucide-download"
+    :label="iconOnly ? undefined : t('Chen.ExportData')"
+    :aria-label="t('Chen.ExportData')"
+    size="xs"
+    color="neutral"
+    variant="ghost"
+    :class="workspaceButtonClass"
+    :loading="query.exportBusy"
+    :disabled="!session.permissions.can_download || !ready"
+    :title="!ready ? unavailableMessage : t('Chen.ExportData')"
+    @click="show"
+  />
+  <UButton
+    v-if="jobs.length"
+    :icon="activeCount ? 'i-lucide-loader-circle' : 'i-lucide-history'"
+    :ui="{ leadingIcon: activeCount ? 'animate-spin' : '' }"
+    :label="activeCount ? String(activeCount) : iconOnly ? undefined : t('Chen.GoV1ExportTask')"
+    :aria-label="t('Chen.GoV1ExportTask')"
+    :title="t('Chen.GoV1ExportTask')"
+    size="xs"
+    color="neutral"
+    variant="ghost"
+    :class="workspaceButtonClass"
+    :disabled="!session.permissions.can_download"
+    @click="historyOpen = true"
+  />
+  <UModal v-model:open="configOpen" :title="t('Chen.ExportData')" :ui="{ content: 'sm:max-w-2xl' }">
+    <template #body>
+      <div class="space-y-4 text-sm" data-chen-export-panel>
+        <p v-if="!ready" class="text-warning">{{ unavailableMessage }}</p>
+        <template v-if="ready && (snapshot.resultId || snapshot.sql)">
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              :label="
+                t(
+                  query.loadingSettings.mode === 'continuous'
+                    ? 'Chen.GoBrowseExportLoaded'
+                    : query.rows?.browse?.supported || query.rows?.query_page?.mode === 'database'
+                      ? 'Chen.GoBrowseExportPage'
+                      : 'Chen.GoV1ExportCached'
+                )
+              "
+              :aria-pressed="mode === 'cached'"
+              :variant="mode === 'cached' ? 'soft' : 'ghost'"
+              color="neutral"
+              @click="mode = 'cached'"
+            />
+            <UButton
+              :label="
+                t(
+                  query.rows?.query_page?.mode === 'database'
+                    ? 'Chen.GoQueryPageExportFull'
+                    : query.browseObject
+                      ? 'Chen.GoBrowseExportFull'
+                      : 'Chen.GoV1ExportFull'
+                )
+              "
+              :aria-pressed="mode === 'query'"
+              :variant="mode === 'query' ? 'soft' : 'ghost'"
+              color="neutral"
+              :disabled="!!query.pendingCachedExport || (!!query.browseObject && !query.rows?.browse?.supported)"
+              @click="mode = 'query'"
+            />
+          </div>
+          <p v-if="mode === 'cached'" class="text-muted">
+            {{ t("Chen.GoV1ExportCachedRows", { rows: snapshot.rows.toLocaleString() }) }}
+          </p>
+          <p v-if="mode === 'cached' && snapshot.truncated" class="text-warning">
+            {{ t("Chen.GoV1ExportIncomplete") }}
+          </p>
+          <template v-if="mode === 'query'">
+            <p class="text-warning">
+              {{ t(query.browseObject ? "Chen.GoBrowseExportConfirm" : "Chen.GoV1ExportFullConfirm") }}
+            </p>
+            <pre
+              class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-default bg-elevated p-3 text-xs"
+              :class="{ 'select-none': !session.permissions.can_copy }"
+              >{{ snapshot.sql }}</pre>
+          </template>
+          <div class="flex items-center gap-2" role="group" :aria-label="t('Chen.GoV1ExportFormat')">
+            <span>{{ t("Chen.GoV1ExportFormat") }}</span>
+            <UButton
+              v-for="item in ['csv', 'xlsx'] as const"
+              :key="item"
+              :label="item.toUpperCase()"
+              :aria-pressed="format === item"
+              color="neutral"
+              :variant="format === item ? 'soft' : 'ghost'"
+              @click="format = item"
+            />
+          </div>
+          <details class="text-xs text-muted">
+            <summary class="w-fit cursor-pointer">{{ t("Common.More") }}</summary>
+            <div class="mt-2 space-y-2">
+              <p v-if="format === 'csv'">{{ t("Chen.GoV1ExportCsvFormat") }}</p>
+              <p v-if="format === 'xlsx'">{{ t("Chen.GoV1ExportXlsxLimits") }}</p>
+              <p v-if="format === 'xlsx'">{{ t("Chen.GoV1ExportXlsxPrecision") }}</p>
+            </div>
+          </details>
+          <p v-if="query.pendingCachedExport" class="text-warning">{{ t("Chen.GoV1SubmissionUnknown") }}</p>
+          <UButton
+            :label="
+              t(
+                query.pendingCachedExport
+                  ? 'Chen.GoV1RecoverSubmission'
+                  : mode === 'query'
+                    ? 'Chen.GoV1ExportConfirmFull'
+                    : 'Chen.GoV1ExportCreate'
+              )
+            "
+            :disabled="!canStart"
+            :loading="query.exportBusy"
+            @click="start"
+          />
+        </template>
+      </div>
+    </template>
+  </UModal>
+  <UModal v-model:open="historyOpen" :title="t('Chen.GoV1ExportTask')" :ui="{ content: 'sm:max-w-2xl' }">
+    <template #body>
+      <div class="max-h-[65vh] space-y-3 overflow-y-auto text-sm" data-chen-export-history>
+        <p v-if="!ready" class="text-warning">{{ unavailableMessage }}</p>
+        <div v-for="job in jobs" :key="job.id" class="space-y-2 rounded border border-default p-3" aria-live="polite">
+          <div class="flex items-center gap-2">
+            <UIcon
+              :name="
+                exportActive(job) ? 'i-lucide-loader-circle' : job.ready ? 'i-lucide-file-check' : 'i-lucide-file-x'
+              "
+              :class="{ 'animate-spin': exportActive(job) }"
+            />
+            <strong>
+              {{ job.format.toUpperCase() }} ·
+              {{ t(job.mode === "query" ? "Chen.GoV1ExportFull" : "Chen.GoV1ExportCached") }}
+            </strong>
+            <span class="ml-auto">
+              {{ t(job.status === "expired" ? "Chen.GoV1ExportExpired" : `Chen.GoV1Status_${job.status}`) }}
+            </span>
+          </div>
+          <p v-if="job.filename" class="break-all text-muted">{{ job.filename }}</p>
+          <p>{{ t("Chen.GoV1ExportProgress", { rows: job.rows.toLocaleString(), size: size(job.bytes) }) }}</p>
+          <p v-if="job.limits.max_duration_seconds" class="text-xs text-muted">
+            {{ t("Chen.GoV1ExportDuration", { seconds: job.limits.max_duration_seconds }) }}
+          </p>
+          <p v-if="job.truncated" class="text-warning">{{ t("Chen.GoV1ExportIncomplete") }}</p>
+          <p v-if="job.error && job.status !== 'canceled'" class="whitespace-pre-wrap break-words text-error">
+            {{ chenErrorText(job.error, t) }}
+          </p>
+          <p v-if="job.expires_at" class="text-xs text-muted">
+            {{ t("Chen.GoV1ExportExpires", { time: new Date(job.expires_at).toLocaleString() }) }}
+          </p>
+          <p v-if="query.exportActions[job.id]?.error" role="alert" class="whitespace-pre-wrap break-words text-error">
+            {{ query.exportActions[job.id]?.error }}
+          </p>
+          <div class="flex gap-2">
+            <UButton
+              v-if="exportActive(job) && !closed"
+              :label="t('Common.Cancel')"
+              color="neutral"
+              variant="soft"
+              :disabled="
+                !ready ||
+                !!query.exportActions[job.id]?.busy ||
+                !cancelSupported(job) ||
+                job.status === 'cancel_requested'
+              "
+              :title="!cancelSupported(job) ? t('Chen.GoV1CancelUnsupported') : undefined"
+              @click="emit('action', job.id, 'cancel')"
+            />
+            <UButton
+              v-if="job.ready && job.status === 'succeeded'"
+              icon="i-lucide-download"
+              :label="t('Chen.GoV1ExportDownload')"
+              :disabled="!ready || !session.permissions.can_download || !!query.exportActions[job.id]?.busy"
+              :loading="query.exportActions[job.id]?.busy === 'download'"
+              @click="emit('action', job.id, 'download')"
+            />
+            <UButton
+              v-if="!exportActive(job) || closed"
+              :label="t(closed || !job.ready ? 'Chen.GoV1ExportClear' : 'Chen.GoV1ExportRelease')"
+              color="neutral"
+              variant="ghost"
+              :loading="query.exportActions[job.id]?.busy === 'remove'"
+              :disabled="!!query.exportActions[job.id]?.busy"
+              @click="emit('action', job.id, 'remove')"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
+  </UModal>
+</template>

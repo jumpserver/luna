@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { ConfigItem } from "~/types";
+import { matchesApplicationSearch } from "~/shared/applicationSettings";
 import { desktopDialog } from "~/shared/desktop/bridge";
+
+const props = defineProps<{ management?: boolean; embedded?: boolean; search?: string }>();
 
 const { t } = useI18n();
 const toast = useToast();
@@ -31,6 +34,7 @@ const terminalItems = computed<ConfigItem[]>(() => {
 
   return list.filter((item) => {
     if (!item.use_ssh_helper) return false;
+    if (props.management && !matchesApplicationSearch(item, props.search || "")) return false;
     const key = item.plugin_id || item.name;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -50,6 +54,8 @@ const openTerminalForm = (item?: ConfigItem) => {
   customTerminalTemplate.value = item?.arg_format ?? "-e {helper} {protocol} {username}@{host} -p {port} -P {value}";
   terminalModalOpen.value = true;
 };
+
+defineExpose({ openTerminalForm });
 
 const confirmDeleteTerminal = (item: ConfigItem) => {
   terminalToDelete.value = item;
@@ -116,10 +122,23 @@ const saveTerminal = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="px-1">
+  <div class="flex flex-col gap-2">
+    <div v-if="!embedded" class="mb-2 px-1">
       <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalSettings") }}</p>
-      <p class="mt-1 text-xs text-muted">{{ t("Setting.TerminalProgramDescription") }}</p>
+      <p class="mt-1 text-xs text-muted">
+        {{ t(management ? "Setting.TerminalManagementDescription" : "Setting.TerminalHostsDescription") }}
+      </p>
+    </div>
+
+    <div v-if="management && !embedded && isDesktopRuntime()" class="mb-1 flex justify-start">
+      <UButton
+        color="neutral"
+        variant="soft"
+        size="xs"
+        icon="i-lucide-plus"
+        :label="t('Setting.AddCustomTerminal')"
+        @click="openTerminalForm()"
+      />
     </div>
 
     <template v-if="terminalItems.length">
@@ -127,18 +146,20 @@ const saveTerminal = async () => {
         v-for="item in terminalItems"
         :key="item.plugin_id || item.name"
         :item="item"
+        :mode="management ? 'application' : 'protocol'"
         protocol="ssh"
         :selected="isSelected(item)"
         @toggle="(enabled) => handleToggle(item, enabled)"
         @make-default="handleToggle(item, true, true)"
       >
-        <template v-if="isCustomTerminal(item)" #actions>
+        <template v-if="management && isCustomTerminal(item)" #actions>
           <UButton
             color="neutral"
             variant="ghost"
             size="xs"
             icon="i-lucide-pencil"
-            :label="t('ContextMenu.Edit')"
+            :aria-label="t('ContextMenu.Edit')"
+            :title="t('ContextMenu.Edit')"
             @click="openTerminalForm(item)"
           />
           <UButton
@@ -146,34 +167,15 @@ const saveTerminal = async () => {
             variant="ghost"
             size="xs"
             icon="i-lucide-trash-2"
-            :label="t('Common.Remove')"
+            :aria-label="t('Common.Remove')"
+            :title="t('Common.Remove')"
             @click="confirmDeleteTerminal(item)"
           />
         </template>
       </SettingItems>
     </template>
 
-    <UEmpty v-else icon="i-lucide-monitor" size="sm" variant="naked" :title="t('Common.NoData')" />
-
-    <SettingsGroup
-      v-if="isDesktopRuntime()"
-      :divided="false"
-      padded
-      body-class="flex flex-wrap items-center justify-between gap-3"
-    >
-      <div class="min-w-0">
-        <p class="text-sm font-medium text-highlighted">{{ t("Setting.CustomTerminal") }}</p>
-        <p class="mt-1 text-xs text-muted">{{ t("Setting.CustomTerminalDescription") }}</p>
-      </div>
-
-      <UButton
-        color="neutral"
-        variant="soft"
-        icon="i-lucide-plus"
-        :label="t('Setting.AddCustomTerminal')"
-        @click="openTerminalForm()"
-      />
-    </SettingsGroup>
+    <UEmpty v-else-if="!embedded" icon="i-lucide-monitor" size="sm" variant="naked" :title="t('Common.NoData')" />
 
     <UModal
       v-model:open="terminalModalOpen"

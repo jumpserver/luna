@@ -3,6 +3,9 @@ import type { AssetItem, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const open = ref(false);
+useEventBus().on("workspaceNewSession", () => {
+  open.value = true;
+});
 const search = ref("");
 const loading = ref(false);
 const results = ref<AssetItem[]>([]);
@@ -22,9 +25,8 @@ async function selectGroup(id: string) {
   if (failures.length)
     toast.add({ title: t("SavedGroups.OpenFailed"), description: failures.join("\n"), color: "warning" });
 }
-const { isMacOS } = usePlatform();
+const shortcuts = useAppShortcuts();
 const localShellAvailable = computed(() => isDesktopRuntime());
-const localShellShortcutModifier = computed(() => (isMacOS.value ? "meta" : "ctrl"));
 const listTitle = computed(() => (search.value.trim() ? t("AddSession.SearchResults") : t("Menu.RecentConnections")));
 const listEmpty = computed(() =>
   search.value.trim() ? t("AddSession.NoMatchingAssets") : t("RecentConnections.Empty")
@@ -70,7 +72,7 @@ watch(open, (value) => {
 
 <template>
   <UPopover v-model:open="open" :content="{ align: 'start', side: 'bottom', sideOffset: 8 }" :ui="{ content: 'p-0' }">
-    <UTooltip :text="t('AddSession.NewConnection')" :delay-duration="150">
+    <UTooltip :text="t('AddSession.NewConnection')" :kbds="shortcuts.kbds('newSession')" :delay-duration="150">
       <button
         type="button"
         data-workspace-tour="add-session"
@@ -146,10 +148,6 @@ watch(open, (value) => {
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm text-highlighted">{{ t("AddSession.LocalShell") }}</span>
                 <span class="block truncate text-[11px] text-muted">{{ t("AddSession.LocalShellHint") }}</span>
-              </span>
-              <span class="flex shrink-0 items-center gap-px">
-                <UKbd :value="localShellShortcutModifier" size="sm" />
-                <UKbd value="T" size="sm" />
               </span>
             </button>
           </template>

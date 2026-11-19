@@ -51,7 +51,7 @@ onMounted(async () => {
       height.value || window.innerHeight
     );
     const displayEl = displayRef.value;
-    if (displayEl) displayEl.appendChild(guaDisplay.value.getElement());
+    if (displayEl && guaDisplay.value) displayEl.appendChild(guaDisplay.value.getElement());
   } catch (error) {
     if (disposed) return;
     loading.value = false;

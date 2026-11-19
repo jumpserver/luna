@@ -10,8 +10,8 @@
     "required": true
   },
   "launch": {
-    "type": "args",
-    "template": "\"{dbx_url}\""
+    "type": "module",
+    "module": "scripts/launch.mjs"
   },
   "display_name": "DBX"
 }

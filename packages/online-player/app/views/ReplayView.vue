@@ -169,7 +169,7 @@ function togglePlayback() {
   if (!api) return;
 
   const nextPlaying = !playing.value;
-  if (playerType.value !== "mp4") playing.value = nextPlaying;
+  if (playerType.value !== "mp4" && playerType.value !== "guacamole") playing.value = nextPlaying;
   if (nextPlaying) api.play();
   else api.pause();
 }

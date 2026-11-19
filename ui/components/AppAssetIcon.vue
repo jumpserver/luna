@@ -16,6 +16,7 @@ const maskColor = computed(() => {
   if (filename.value === "mysql.svg") return "text-info";
   if (filename.value === "mariadb.svg") return "text-warning";
   if (filename.value === "oracle.svg" || filename.value === "sqlserver.svg") return "text-error";
+  if (filename.value === "macos.svg") return "text-(--sidebar-icon-color)";
   return "";
 });
 </script>
@@ -42,5 +43,12 @@ const maskColor = computed(() => {
   >
     <img :src="src" alt="" class="block size-full opacity-0" @error="imageFailed = true" />
   </span>
-  <img v-else :src="src" alt="" class="app-tree-icon sidebar-icon-img" @error="imageFailed = true" />
+  <img
+    v-else
+    :src="src"
+    alt=""
+    class="app-tree-icon sidebar-icon-img"
+    :class="{ 'app-tree-icon--wide': filename === 'cisco.svg' || filename === 'h3c.png' }"
+    @error="imageFailed = true"
+  />
 </template>

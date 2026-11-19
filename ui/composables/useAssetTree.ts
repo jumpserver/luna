@@ -7,8 +7,10 @@ import type {
   PermedProtocol
 } from "~/types";
 import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import { useClientSessionReady } from "~/composables/useClientLockState";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName } from "~/utils/itemName";
+import { isWorkspaceTourDemoNode } from "~/utils/workspaceTour";
 
 interface TreeQuery {
   parent_key?: string;
@@ -28,6 +30,67 @@ const TYPE_TREE_ASSET_PAGE_SIZE = 100;
 
 const treeNodeType = (node: Pick<AssetTreeNode, "isParent" | "meta">) =>
   node.meta?.type === "node" || node.isParent ? "node" : "asset";
+
+export const isAssetTreeBranch = (node: AssetTreeNode) =>
+  treeNodeType(node) === "node" || Boolean(node.children?.length);
+
+export const assetTreeAssetId = (node: AssetTreeNode) => String(node.meta?.data?.id || node.key || node.id);
+
+export const canCheckAssetTreeNode = (node: AssetTreeNode) =>
+  !node.chkDisabled && node.meta?.data?.is_active !== false && !isWorkspaceTourDemoNode(node.id);
+
+export async function collectAssetTreeBranch(
+  root: AssetTreeNode,
+  loadPage: (node: AssetTreeNode) => Promise<void>,
+  isCurrent: () => boolean
+) {
+  const assets = new Map<string, AssetTreeNode>();
+  async function visit(node: AssetTreeNode): Promise<boolean> {
+    if (!isCurrent()) return false;
+    if (!canCheckAssetTreeNode(node)) return true;
+    if (!isAssetTreeBranch(node)) {
+      assets.set(assetTreeAssetId(node), node);
+      return true;
+    }
+    if (!node.loaded) await loadPage(node);
+    let index = 0;
+    do {
+      const children = node.children || [];
+      while (index < children.length) {
+        if (!(await visit(children[index++]!))) return false;
+      }
+      if (node.loaded && !node.nextPage) return true;
+      if (isCurrent()) await loadPage(node);
+    } while (isCurrent());
+    return false;
+  }
+  return (await visit(root)) && isCurrent() ? assets : null;
+}
+
+export type AssetTreeCheckState = boolean | "indeterminate";
+
+export function assetTreeCheckStates(nodes: AssetTreeNode[], checked: ReadonlyMap<string, AssetItem>) {
+  const states = new Map<AssetTreeNode, AssetTreeCheckState>();
+  function visit(node: AssetTreeNode): AssetTreeCheckState | undefined {
+    if (!canCheckAssetTreeNode(node)) return;
+    if (!isAssetTreeBranch(node)) return checked.has(assetTreeAssetId(node));
+    let some = false;
+    let all = Boolean(node.loaded && !node.nextPage);
+    for (const child of node.children || []) {
+      const state = visit(child);
+      if (state === undefined) continue;
+      some ||= state !== false;
+      all &&= state === true;
+    }
+    const state = some ? (all ? true : "indeterminate") : false;
+    states.set(node, state);
+    // An empty, fully loaded branch has no effect on its parent's checkbox.
+    if (!some && all) return;
+    return state;
+  }
+  nodes.forEach(visit);
+  return states;
+}
 
 export const authorizationTreeMetricId = (node: AssetTreeNode) => String(node.meta?.data?.id ?? node.key ?? node.id);
 
@@ -190,10 +253,11 @@ export const useAssetTree = () => {
   const fetchAuthorizationTreePage = async (
     parent?: AssetTreeNode,
     nextPage?: AssetTreeNextPage,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ): Promise<AssetTreePage> => {
     const nodePage = await requestAuthorizationPage(parent, nextPage || { phase: "nodes" }, options);
-    if (nodePage.nextPage || !parent || nextPage?.phase === "assets") return nodePage;
+    if (nodePage.nextPage || !parent || nextPage?.phase === "assets" || options?.isCurrent?.() === false)
+      return nodePage;
 
     // A branch exposes all direct child nodes before the first direct asset
     // page, matching the regular Lina node/asset tree contract.
@@ -207,7 +271,7 @@ export const useAssetTree = () => {
   const fetchTypeTreePage = async (
     parent: AssetTreeNode,
     nextPage?: AssetTreeNextPage,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ): Promise<AssetTreePage> => {
     const query = {
       ...buildQuery("type", parent),
@@ -251,8 +315,36 @@ export const useAssetTree = () => {
     kind: AssetTreeKind,
     parent?: AssetTreeNode,
     search?: string,
-    options?: { orgId?: string }
+    options?: { orgId?: string; isCurrent?: () => boolean }
   ) => {
+    if (kind === "search") {
+      const assets: Record<string, unknown>[] = [];
+      // ponytail: Keep the tree search's 999-result ceiling; use paged UI if it needs to grow.
+      do {
+        const page = await getAuthorizedAssets(
+          {
+            search: search || "",
+            limit: 999 - assets.length,
+            offset: assets.length,
+            fields: "id,name,address,comment,org_id,is_active,platform,category,type,nodes"
+          },
+          options?.orgId
+        );
+        if (options?.isCurrent && !options.isCurrent()) return [];
+        assets.push(...page.results);
+        if (!page.next || !page.results.length) break;
+      } while (assets.length < 999);
+
+      return normalizeTreeNodes(
+        assets.map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          isParent: false,
+          chkDisabled: asset.is_active === false,
+          meta: { type: "asset", data: asset }
+        }))
+      );
+    }
     if (kind === "authorization") {
       return (await fetchAuthorizationTreePage(parent, undefined, options)).nodes;
     }
@@ -267,11 +359,12 @@ export const useAssetTree = () => {
 
   const treeNodeToAsset = (node: AssetTreeNode): AssetItem => {
     const data = node.meta?.data || {};
+    const id = assetTreeAssetId(node);
     const protocols = (data.permedProtocols || data.permed_protocols || []) as PermedProtocol[];
     const accounts = (data.permedAccounts || data.permed_accounts || []) as PermedAccount[];
 
     return {
-      id: String(data.id || node.id),
+      id,
       name: String(data.name || node.name),
       address: String(data.address || ""),
       org_id: typeof data.org_id === "string" ? data.org_id : undefined,
@@ -280,12 +373,12 @@ export const useAssetTree = () => {
       ),
       zone: String((typeof data.zone === "object" ? data.zone?.name : data.zone) || ""),
       category: normalizeChoice(data.category),
-      type: normalizeChoice(data.type) || String(data.platform_type || ""),
+      type: String(data.platform_type || normalizeChoice(data.type)),
       isActive: data.is_active !== false && !node.chkDisabled,
       comment: String(data.comment || node.title || ""),
       permedProtocols: protocols,
       permedAccounts: accounts,
-      savedConnection: userInfoStore.getConnectionInfoForAsset(String(data.id || node.id)) || undefined
+      savedConnection: userInfoStore.getConnectionInfoForAsset(id) || undefined
     };
   };
 
@@ -306,6 +399,7 @@ export const useAssetTreeSearch = (
   }
 ) => {
   const userInfoStore = useUserInfoStore();
+  const sessionReady = useClientSessionReady(() => userInfoStore.currentAccountId);
   const { fetchTree } = useAssetTree();
   const nodes = ref<AssetTreeNode[]>([]);
   const loading = shallowRef(false);
@@ -317,18 +411,27 @@ export const useAssetTreeSearch = (
       () => userInfoStore.loggedIn,
       () => userInfoStore.orgId,
       () => userInfoStore.currentSite,
-      () => userInfoStore.currentAccountId
+      () => userInfoStore.currentAccountId,
+      () => sessionReady.value
     ],
-    ([query, loggedIn], _previous, onCleanup) => {
-      nodes.value = [];
-      completedQuery.value = "";
-      loading.value = Boolean(query && loggedIn);
-      if (!query || !loggedIn) return;
+    ([query, loggedIn, orgId, site, accountId, enabled], previous, onCleanup) => {
+      const contextChanged =
+        previous?.[0] !== query ||
+        previous?.[1] !== loggedIn ||
+        previous?.[2] !== orgId ||
+        previous?.[3] !== site ||
+        previous?.[4] !== accountId;
+      if (contextChanged) {
+        nodes.value = [];
+        completedQuery.value = "";
+      }
+      loading.value = Boolean(query && loggedIn && enabled && completedQuery.value !== query);
+      if (!loading.value) return;
 
       let active = true;
       const timer = setTimeout(async () => {
         try {
-          const results = await fetchTree("search", undefined, query);
+          const results = await fetchTree("search", undefined, query, { isCurrent: () => active });
           if (!active) return;
           nodes.value = results;
           completedQuery.value = query;

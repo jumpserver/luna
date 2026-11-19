@@ -1,9 +1,12 @@
+import type { ClientLoginPolicy, ClientLoginReason, ClientLoginSession } from "./index";
+
 export type CompatibilityFailure = "client-too-old" | "core-too-old";
 export type CompatibilityUnknownReason =
   | "endpoint-missing"
   | "timeout"
   | "tls"
   | "network"
+  | "redirect"
   | "http"
   | "invalid-response"
   | "invalid-site"
@@ -21,8 +24,12 @@ export interface SiteCompatibility {
 }
 
 export interface DesktopConnectionResult {
-  status: "success" | "confirmation-required" | "stale" | "failure" | "auth-required";
+  status: "success" | "confirmation-required" | "stale" | "failure" | "auth-required" | "locked";
   compatibility?: SiteCompatibility;
   compatibility_confirmation_id?: number;
   connection_id?: number;
+  client_login_policy?: ClientLoginPolicy;
+  client_login_session?: ClientLoginSession;
+  client_login_reason?: ClientLoginReason;
+  client_locked?: boolean;
 }

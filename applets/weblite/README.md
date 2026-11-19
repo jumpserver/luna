@@ -60,6 +60,10 @@ pnpm weblite:package
 
 Windows x64 安装包输出到 `release/weblite/JumpServer-WebLite-<version>-x64.msi`。这是一个 per-machine MSI，会将完整运行时直接安装到 `C:\Program Files\JumpServer\WebLite\`，其中只有一个真实的 `weblite.exe`，没有 `app-<version>` 子目录或外层启动器。安装包保留原有 UpgradeCode，由 Windows Installer 升级旧部署；升级前关闭所有 WebLite 会话。新版 MSI 与固定路径的 applet 清单需要一起部署，旧 MSI 的根目录仍是启动器。无需预装 Chrome、ChromeDriver 或 Python。CI 只发布这个安装包，不附带 applet 的 `manifest.yml`、`setup.yml` 或独立图标文件。
 
+Windows 签名复用 `scripts/windows-sign.ts` 和 `scripts/sign-ci.ps1`，仅在 GitHub Actions 中启用，本地构建跳过签名。Action 复用 `SIGNPANEL_URL` 和 `SIGNPANEL_API_TOKEN`；手动构建通过 `windows_sign_mode` 选择模式，标签构建读取仓库变量 `WINDOWS_SIGN_MODE`，默认均为 `optional`，也支持 `required` 和 `off`。`optional` 在签名失败时警告、保留原文件并跳过后续签名，继续构建和发布；`required` 在签名或验签失败时中止；`off` 完全跳过签名。
+
+打包流程在制作 MSI 前签名 `weblite.exe`，再签名最终 MSI；下载和 Authenticode 校验通过后才替换原文件。CI 上传前会检查最终 MSI 和解包后的实际 `weblite.exe` 的签名，发布校验和从最终产物生成。
+
 ## 联合发布
 
 1. 构建并发布支持清单 `exec_type: exe` 和 `stdin: true` 的 Tinker 安装器；正式发布时同步调整 Core 的 `TINKER_VERSION`，不能仅凭旧版本号判断支持情况。

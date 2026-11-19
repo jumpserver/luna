@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
   <div
     ref="toolbarRef"
     data-sftp-tour="navigation"
-    class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex shrink-0 items-center gap-1 border-b border-(--app-border) bg-(--app-panel-bg) px-2"
+    class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex shrink-0 items-center border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     :class="{ 'is-narrow': isNarrow, 'is-compact': isCompact }"
   >
     <div class="flex shrink-0 items-center gap-0.5">
@@ -187,7 +187,7 @@ onBeforeUnmount(() => {
           icon="i-lucide-arrow-up"
           color="neutral"
           variant="ghost"
-          size="sm"
+          size="xs"
           square
           :disabled="currentPath === rootPath"
           :aria-label="t('koko.drawer.up')"
@@ -214,8 +214,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      class="sftp-file-management__path-field relative flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-[7px] border border-(--app-border) bg-(--app-input-bg)"
-      :class="pathEditing ? 'ring-2 ring-(--app-focus-ring)' : ''"
+      class="sftp-file-management__path-field sftp-file-management__toolbar-field relative flex min-w-0 flex-1 items-center overflow-hidden"
     >
       <input
         v-if="pathEditing"
@@ -246,7 +245,7 @@ onBeforeUnmount(() => {
             icon="i-lucide-search"
             color="neutral"
             variant="ghost"
-            size="sm"
+            size="xs"
             square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="openSearch"
@@ -257,10 +256,11 @@ onBeforeUnmount(() => {
           v-model="search"
           icon="i-lucide-search"
           size="sm"
+          variant="none"
           autofocus
           :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
-          class="sftp-file-management__search-input"
-          :ui="{ base: 'h-8 text-[12px]' }"
+          class="h-full min-w-0"
+          :ui="{ base: 'h-full bg-transparent text-[12px]' }"
           @keydown="onSearchKeydown"
           @blur="closeSearchIfEmpty"
         />
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
           icon="i-lucide-refresh-cw"
           color="neutral"
           variant="ghost"
-          size="sm"
+          size="xs"
           square
           :aria-label="t('koko.fileManagement.refresh')"
           @click="void emit('refresh')"
@@ -282,7 +282,7 @@ onBeforeUnmount(() => {
             icon="i-lucide-app-window"
             color="neutral"
             variant="ghost"
-            size="sm"
+            size="xs"
             square
             :aria-label="revealLabel"
             @click="void emit('reveal')"
@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
             icon="i-lucide-folder-cog"
             color="neutral"
             variant="ghost"
-            size="sm"
+            size="xs"
             square
             :aria-label="t('koko.localFile.title')"
             @click="void emit('setup')"
@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
             :icon="showHiddenFiles ? 'i-lucide-eye' : 'i-lucide-eye-off'"
             color="neutral"
             :variant="showHiddenFiles ? 'soft' : 'ghost'"
-            size="sm"
+            size="xs"
             square
             :aria-label="
               showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
@@ -320,7 +320,7 @@ onBeforeUnmount(() => {
           icon="i-lucide-ellipsis"
           color="neutral"
           variant="ghost"
-          size="sm"
+          size="xs"
           square
           :aria-label="t('Common.More')"
           :title="t('Common.More')"
@@ -328,31 +328,29 @@ onBeforeUnmount(() => {
       </UDropdownMenu>
     </div>
 
-    <div data-sftp-tour="file-actions" class="flex shrink-0 items-center gap-0.5">
-      <template v-if="!isNarrow">
-        <UTooltip :text="t('koko.fileManagement.newFolder')">
-          <UButton
-            icon="i-lucide-folder-plus"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            square
-            :aria-label="t('koko.fileManagement.newFolder')"
-            @click="void emit('create', 'folder')"
-          />
-        </UTooltip>
-        <UTooltip :text="t('koko.fileManagement.newFile')">
-          <UButton
-            icon="i-lucide-file-plus-2"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            square
-            :aria-label="t('koko.fileManagement.newFile')"
-            @click="void emit('create', 'file')"
-          />
-        </UTooltip>
-      </template>
+    <div v-if="!isNarrow" data-sftp-tour="file-actions" class="flex shrink-0 items-center gap-0.5">
+      <UTooltip :text="t('koko.fileManagement.newFolder')">
+        <UButton
+          icon="i-lucide-folder-plus"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          :aria-label="t('koko.fileManagement.newFolder')"
+          @click="void emit('create', 'folder')"
+        />
+      </UTooltip>
+      <UTooltip :text="t('koko.fileManagement.newFile')">
+        <UButton
+          icon="i-lucide-file-plus-2"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          :aria-label="t('koko.fileManagement.newFile')"
+          @click="void emit('create', 'file')"
+        />
+      </UTooltip>
     </div>
   </div>
 </template>

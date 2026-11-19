@@ -24,21 +24,3 @@ export function chenPath(path: string, endpointUrl?: string) {
 
   return new URL(connectorPath, endpoint.origin).toString();
 }
-
-export async function readJson<T>(response: Response): Promise<T> {
-  const text = await response.text();
-
-  if (!response.ok) {
-    throw new Error(text || `${response.status}`);
-  }
-
-  if (!text.trim()) {
-    return {} as T;
-  }
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new Error(text);
-  }
-}

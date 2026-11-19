@@ -10,8 +10,6 @@ const props = defineProps<{
   /** Subtle host/asset label shown before the path (not a second tab strip). */
   contextLabel?: string;
   pathSegments: string[];
-  /** Prefer denser chrome in dual-pane / compact surfaces. */
-  dense?: boolean;
   /** Session single-pane: expose add-remote + tour next to upload. */
   showWorkbenchActions?: boolean;
 }>();
@@ -228,7 +226,7 @@ defineExpose({
   <div
     ref="toolbarRef"
     data-sftp-tour="navigation"
-    class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
+    class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     :class="{ 'is-narrow': isNarrow, 'is-compact': isCompact }"
   >
     <!-- Wide: back / forward / up / home. Narrow: parent only. -->
@@ -239,7 +237,7 @@ defineExpose({
             icon="i-lucide-chevron-left"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="!manager.canGoBack.value"
             :aria-label="t('koko.fileManagement.back')"
@@ -251,7 +249,7 @@ defineExpose({
             icon="i-lucide-chevron-right"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="!manager.canGoForward.value"
             :aria-label="t('koko.fileManagement.forward')"
@@ -264,7 +262,7 @@ defineExpose({
           icon="i-lucide-arrow-up"
           color="neutral"
           variant="ghost"
-          :size="dense ? 'xs' : 'sm'"
+          size="xs"
           square
           :disabled="manager.currentPath.value === '/'"
           :aria-label="t('koko.drawer.up')"
@@ -276,7 +274,7 @@ defineExpose({
           icon="i-lucide-house"
           color="neutral"
           variant="ghost"
-          :size="dense ? 'xs' : 'sm'"
+          size="xs"
           square
           :disabled="!manager.canGoHome.value"
           :aria-label="t('koko.fileManagement.home')"
@@ -288,7 +286,7 @@ defineExpose({
     <!-- Host context: caption chip, not a second tab strip. -->
     <div
       v-if="showContextLabel"
-      class="sftp-file-management__context-label flex h-8 max-w-32 shrink-0 items-center gap-1 rounded-[7px] border border-(--app-border)/70 bg-(--app-input-bg)/60 px-1.5 text-[11px] leading-none"
+      class="sftp-file-management__context-label flex h-7 max-w-32 shrink-0 items-center gap-1 rounded-md border border-(--app-border)/70 bg-(--app-input-bg)/60 px-1.5 text-[11px] leading-none"
       :title="contextLabel"
     >
       <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-(--color-text-accent)" />
@@ -296,8 +294,7 @@ defineExpose({
     </div>
 
     <div
-      class="sftp-file-management__path-field relative flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-[7px] border border-(--app-border) bg-(--app-input-bg)"
-      :class="pathEditing ? 'ring-2 ring-(--app-focus-ring)' : ''"
+      class="sftp-file-management__path-field sftp-file-management__toolbar-field relative flex min-w-0 flex-1 items-center overflow-hidden"
     >
       <input
         v-if="pathEditing"
@@ -351,14 +348,14 @@ defineExpose({
       </div>
     </div>
 
-    <template v-if="isNarrow">
+    <div v-if="isNarrow" class="flex shrink-0 items-center gap-1">
       <div class="sftp-file-management__search flex items-center" :class="searchOpen || search ? 'is-open' : ''">
         <UTooltip v-if="!searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
           <UButton
             icon="i-lucide-search"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="openSearch"
@@ -370,10 +367,11 @@ defineExpose({
           v-model="search"
           icon="i-lucide-search"
           size="sm"
+          variant="none"
           autofocus
           :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
-          class="sftp-file-management__search-input"
-          :ui="{ base: 'h-8 text-[12px]' }"
+          class="h-full min-w-0"
+          :ui="{ base: 'h-full bg-transparent text-[12px]' }"
           @keydown="onSearchKeydown"
           @blur="closeSearchIfEmpty"
         />
@@ -383,7 +381,7 @@ defineExpose({
           icon="i-lucide-refresh-cw"
           color="neutral"
           variant="ghost"
-          :size="dense ? 'xs' : 'sm'"
+          size="xs"
           square
           :aria-label="t('koko.fileManagement.refresh')"
           @click="void manager.loadCurrentDirectory()"
@@ -394,7 +392,7 @@ defineExpose({
           icon="i-lucide-cloud-upload"
           color="neutral"
           variant="ghost"
-          :size="dense ? 'xs' : 'sm'"
+          size="xs"
           square
           :disabled="!canUpload"
           :aria-label="t('koko.actions.upload')"
@@ -407,13 +405,13 @@ defineExpose({
           icon="i-lucide-ellipsis"
           color="neutral"
           variant="ghost"
-          :size="dense ? 'xs' : 'sm'"
+          size="xs"
           square
           :title="t('Common.More')"
           :aria-label="t('Common.More')"
         />
       </UDropdownMenu>
-    </template>
+    </div>
 
     <template v-else>
       <!-- View helpers: refresh + filter (not file mutations). -->
@@ -424,7 +422,7 @@ defineExpose({
               icon="i-lucide-search"
               color="neutral"
               variant="ghost"
-              :size="dense ? 'xs' : 'sm'"
+              size="xs"
               square
               :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
               @click="openSearch"
@@ -436,10 +434,11 @@ defineExpose({
             v-model="search"
             icon="i-lucide-search"
             size="sm"
+            variant="none"
             autofocus
             :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
-            class="sftp-file-management__search-input"
-            :ui="{ base: 'h-8 text-[12px]' }"
+            class="h-full min-w-0"
+            :ui="{ base: 'h-full bg-transparent text-[12px]' }"
             @keydown="onSearchKeydown"
             @blur="closeSearchIfEmpty"
           />
@@ -449,7 +448,7 @@ defineExpose({
             icon="i-lucide-refresh-cw"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :aria-label="t('koko.fileManagement.refresh')"
             @click="void manager.loadCurrentDirectory()"
@@ -466,7 +465,7 @@ defineExpose({
             icon="i-lucide-folder-plus"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFolder')"
@@ -478,7 +477,7 @@ defineExpose({
             icon="i-lucide-file-plus-2"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFile')"
@@ -490,7 +489,7 @@ defineExpose({
             icon="i-lucide-cloud-upload"
             color="neutral"
             variant="ghost"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.actions.upload')"
@@ -507,7 +506,7 @@ defineExpose({
             icon="i-lucide-server"
             color="primary"
             variant="soft"
-            :size="dense ? 'xs' : 'sm'"
+            size="xs"
             :label="t('koko.fileManagement.addRemoteSftp')"
             :aria-label="t('koko.fileManagement.addRemoteSftp')"
             @click="void emit('addRemote')"
@@ -517,7 +516,7 @@ defineExpose({
               icon="i-lucide-circle-help"
               color="neutral"
               variant="ghost"
-              :size="dense ? 'xs' : 'sm'"
+              size="xs"
               square
               :aria-label="t('koko.fileManagement.featureTour')"
               @click="void emit('startTour')"

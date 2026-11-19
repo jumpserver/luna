@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 describe("resolveAdvancedOptionFlags", () => {
+  it.each([
+    ["rdp", "lion", true],
+    ["rdp", "razor", true],
+    ["rdp", "tinker", false],
+    ["http", "lion", false],
+    ["ssh", "koko", false]
+  ])("scopes security for %s/%s", (protocol, component, expected) => {
+    expect(resolveAdvancedOptionFlags({ protocol, component }).rdpSecurity).toBe(expected);
+  });
+
   it("shows the four v4 RDP options for Razor applications", () => {
     expect(
       resolveAdvancedOptionFlags({

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drivers>
+  <provider id="generic">
+    <driver id="jumpserver-clickhouse-native" name="ClickHouse Native (JumpServer)"
+            class="com.github.housepower.jdbc.ClickHouseDriver"
+            url="jdbc:clickhouse://{host}:{port}[/{database}]" port="9000"
+            custom="true" categories="sql,analytic" description="JumpServer Magnus Native TCP (not HTTP)">
+      <library type="jar" path="maven:/com.github.housepower:clickhouse-native-jdbc-shaded:2.5.6" custom="true"/>
+    </driver>
+  </provider>
+</drivers>

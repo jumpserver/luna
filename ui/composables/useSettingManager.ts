@@ -1,3 +1,5 @@
+import type { ShortcutOverrides } from "~/shared/shortcuts";
+import { normalizeShortcutOverrides } from "~/shared/shortcuts";
 import type { UiRadius, UserSettingPersistedState } from "~/composables/useSettingStorage";
 import type {
   AppConfigType,
@@ -343,9 +345,10 @@ export const useSettingManager = () => {
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
 
-  const setRecentSites = (sites: string[]) => {
+  const setRecentSites = (sites: string[], hiddenSites = state.hiddenRecentSites) => {
     state.recentSites = Array.isArray(sites) ? [...sites] : [];
-    persist({ recentSites: state.recentSites });
+    state.hiddenRecentSites = Array.isArray(hiddenSites) ? [...hiddenSites] : [];
+    persist({ recentSites: state.recentSites, hiddenRecentSites: state.hiddenRecentSites });
   };
 
   const setSidebarWidth = (width: number) => {
@@ -388,6 +391,14 @@ export const useSettingManager = () => {
   return {
     ...toRefs(state),
 
+    setShortcutOverrides: (value: ShortcutOverrides) => {
+      state.shortcutOverrides = normalizeShortcutOverrides(value);
+      persist({ shortcutOverrides: state.shortcutOverrides });
+    },
+    setSessionDigitShortcuts: (enabled: boolean) => {
+      state.sessionDigitShortcuts = enabled;
+      persist({ sessionDigitShortcuts: enabled });
+    },
     setLang,
     setSort,
     setTheme,
@@ -424,6 +435,14 @@ export const useSettingManager = () => {
     setModernIsland,
     setUiRadius,
     setDebugLog,
+    setSidebarAssetsOpen: (open: boolean) => {
+      state.sidebarAssetsOpen = open;
+      persist({ sidebarAssetsOpen: open });
+    },
+    setSidebarOpenPanel: (panel: UserSettingPersistedState["sidebarOpenPanel"]) => {
+      state.sidebarOpenPanel = panel;
+      persist({ sidebarOpenPanel: panel });
+    },
     setSidebarSections,
     resetSidebarSections
   };

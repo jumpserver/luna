@@ -169,6 +169,10 @@ export class AgentClient {
 
   constructor(private readonly request: AgentRequest = defaultAgentRequest) {}
 
+  getResponseLanguage() {
+    return this.responseLanguage;
+  }
+
   setResponseLanguage(language: LangType) {
     this.responseLanguage = language;
   }

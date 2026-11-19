@@ -1,5 +1,5 @@
-import type { LangType } from "../../i18n/language";
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { LangType } from "../../i18n/language";
 
 export type ActionType = "action" | "select";
 export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
@@ -79,6 +79,7 @@ export interface ConfigItem {
   builtin?: boolean;
   icon_path?: string;
   use_ssh_helper?: boolean;
+  uses_terminal_host?: boolean;
   path_display?: string;
   path_copyable?: boolean;
   path_selectable?: boolean;
@@ -174,14 +175,69 @@ export interface UserProfile {
   org_roles?: Array<RoleType & { name?: string }>;
 }
 
+export interface ClientLoginPolicy {
+  reauth_on_exit: boolean;
+  reauth_on_exit_required?: boolean;
+  reauth_on_exit_user?: boolean | null;
+  // Minutes; 0 disables the limit.
+  idle_lock_time: number;
+  idle_lock_time_limit?: number;
+  idle_lock_time_user?: number | null;
+  // Minutes; 0 disables the limit.
+  max_session_time: number;
+  max_session_time_limit?: number;
+  max_session_time_user?: number | null;
+}
+
+export interface ClientLoginSession {
+  locked?: boolean;
+  authenticated_at: string;
+  expires_at: string | null;
+  policy_expires_at?: string | null;
+  effective_expires_at?: string | null;
+  expiry_reason?: "absolute_timeout" | "policy_changed" | null;
+  server_time: string;
+}
+
+export interface ClientPolicyNotice {
+  id: string;
+  kind: "absolute_timeout" | "policy_changed" | "idle_lock";
+  at: string;
+  remainingSeconds?: number;
+}
+
+export interface ClientNoticeAppearance {
+  dark: boolean;
+  variables: Record<string, string>;
+  fontFamily: string;
+  fontSize: string;
+}
+
+export interface ClientNoticeSnapshot {
+  notices: ClientPolicyNotice[];
+  locale: string;
+  appearance?: ClientNoticeAppearance;
+}
+
+export type ClientLoginReason =
+  | "policy_changed"
+  | "absolute_timeout"
+  | "security_revoke"
+  | "app_exit"
+  | "logout"
+  | "unknown";
+
 export interface UserData {
   accountId: string;
   userId?: string;
   siteName: string;
   site: string;
   name: string;
+  username?: string;
   language?: string;
   bearerToken: string;
+  clientLoginPolicy?: ClientLoginPolicy;
+  clientLoginSession?: ClientLoginSession;
   system_roles: RoleType[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
@@ -196,6 +252,8 @@ export interface UserIntiInfo {
   version?: string;
   xpack_license_valid?: boolean;
   security_command_execution?: boolean;
+  client_login_policy?: ClientLoginPolicy;
+  client_login_session?: ClientLoginSession;
   resolved_site?: string;
   profile: {
     data: string;
@@ -236,6 +294,7 @@ interface AssetTreeNodeData {
   name?: string;
   address?: string;
   comment?: string;
+  nodes?: AssetNode[];
   type?: string | AssetTreeChoice;
   category?: string | AssetTreeChoice;
   platform?: string | AssetTreeChoice;
@@ -318,6 +377,7 @@ export interface Actions {
 }
 
 export interface PermedAccount {
+  auto_push_protocols?: string[];
   alias: string;
   date_expired: string;
   has_secret: boolean;
@@ -367,24 +427,36 @@ export interface RawAssetData {
   permedAccounts?: PermedAccount[];
 }
 
-export type AssetDetailField = string | { name?: string; value?: string };
+export type AssetDetailField = string | { name?: string; value?: string; label?: string };
 
 export interface AssetDetail {
   id?: string;
   name?: string;
   address?: string;
+  comment?: string | null;
   org_id?: string;
+  org_name?: string;
   platform?: AssetDetailField;
   type?: AssetDetailField;
   zone?: AssetDetailField;
   category?: AssetDetailField;
   is_active?: boolean;
+  connectivity?: AssetDetailField;
+  nodes?: AssetNode[];
+  labels?: ({ name: string; value?: string } | null)[];
+  created_by?: string;
+  date_created?: string;
+  date_verified?: string | null;
   permed_protocols?: PermedProtocol[];
   permed_accounts?: PermedAccount[];
   permedProtocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
   spec_info?: {
     db_name?: string;
+    domain_name?: string;
+    use_ssl?: boolean;
+    allow_invalid_cert?: boolean;
+    pg_ssl_mode?: string | { value?: string; label?: string };
     success_selector?: string;
     interactive_selector?: string;
     allowed_urls?: string[];
@@ -459,14 +531,19 @@ export interface ConnectMethod {
   is_internal: boolean;
 }
 
+export type RdpSecurity = "default" | "any" | "rdp" | "tls" | "nla";
+
 export interface RdpGraphics {
   charset?: CharsetType;
   backspaceAsCtrlH?: boolean;
   disableautohash?: boolean;
+  use_sysdba?: boolean;
   rdp_resolution?: string;
   resolution?: string;
   keyboard_layout?: string;
   rdp_client_option?: string[];
+  printers_redirect?: boolean;
+  rdp_keyboard_hook?: "0" | "1" | "2";
   rdp_color_quality?: string;
   rdp_smart_size?: string;
   applet_connection_method?: string;
@@ -476,6 +553,7 @@ export interface RdpGraphics {
   token_reusable?: boolean;
   remote_microphone?: boolean;
   rdp_connection_speed?: "auto" | "low_speed_broadband" | "high_speed_broadband";
+  rdp_security?: RdpSecurity;
   file_name_conflict_resolution?: string;
 }
 
@@ -509,6 +587,7 @@ export interface ConnectionBody {
 }
 
 export interface TokenResponse {
+  account_preparation_required?: boolean;
   code?: string;
   detail?: string;
   account: string;
@@ -522,6 +601,20 @@ export interface TokenResponse {
   date_expired: string;
   date_updated: string;
   expire_time: number;
+  acl?: {
+    requirements: Record<string, "pending" | "running" | "passed" | "failed">;
+    steps?: string[];
+    face_online: boolean;
+    face_online_acknowledged?: boolean;
+    face_token?: string;
+    mfa_methods: { value: string; label: string; challenge_required: boolean }[];
+    reviewers?: { id: string; name: string; username: string }[];
+    review_group?: string;
+    review_status?: string;
+    preparation?: { status: "queued" | "running" | "failed" | "ready"; detail: string; execution_id?: string };
+    cancelled: boolean;
+    error?: string;
+  };
   face_token?: string;
   face_monitor_token?: string;
   from_ticket: any;
@@ -569,6 +662,7 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string;
   rdpSmartSize: string;
   recentSites: string[];
+  hiddenRecentSites: string[];
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
 }

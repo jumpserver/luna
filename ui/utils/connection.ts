@@ -1,9 +1,30 @@
-import type { AssetItem, PermedAccount, PersonalAssetCredential } from "~/types";
+import type { AssetItem, PermedAccount, PermedProtocol, PersonalAssetCredential } from "~/types";
+
+export const getVisibleConnectionProtocols = (protocols?: PermedProtocol[] | null) =>
+  (protocols || []).filter(
+    (protocol) => typeof protocol?.name === "string" && protocol.name.trim() && protocol.public !== false
+  );
 
 export const resolvePersonalCredentialSecretType = (protocol: string, fallback = "password") => {
   const normalizedProtocol = protocol.trim().toLowerCase();
   if (normalizedProtocol === "k8s" || normalizedProtocol === "kubernetes") return "token";
   return fallback || "password";
+};
+
+export const isManualCredentialReady = (input: {
+  protocol: string;
+  manualUsername: string;
+  manualPassword: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
+  savePersonalCredential?: boolean;
+}) => {
+  if (input.personalCredentialId && !input.savePersonalCredential) return true;
+  if (input.personalCredentialId && input.personalCredentialVersion === undefined) return false;
+  if (!input.manualUsername.trim()) return false;
+  const secretType = resolvePersonalCredentialSecretType(input.protocol, input.personalCredentialSecretType);
+  return (secretType === "password" && !input.savePersonalCredential) || !!input.manualPassword.trim();
 };
 
 export const findMatchingPersonalCredential = (
@@ -20,12 +41,16 @@ export const findMatchingPersonalCredential = (
       )
     : undefined;
 
+export const isAutoPushAccount = (account?: PermedAccount | null, protocol = "") =>
+  account?.alias === "@USER" && !!account.auto_push_protocols?.some((item) => item === "all" || item === protocol);
+
 export const needsInputSecret = (account?: PermedAccount | null) =>
   account?.has_secret === false && account.alias !== "@ANON";
 
 export const supportsPersonalCredential = (account?: PermedAccount | null) =>
   !!account &&
   (account.alias === "@INPUT" ||
+    account.alias === "@USER" ||
     (!account.alias.startsWith("@") &&
       needsInputSecret(account) &&
       !!account.username?.trim() &&
@@ -37,7 +62,14 @@ export const hasReusableSavedConnection = (asset: AssetItem) => {
 
   const mode = saved.accountMode || "hosted";
   if (mode === "manual") return !!(saved.manualUsername && saved.personalCredentialId);
-  if (mode === "dynamic") return !!(saved.rememberSecret && saved.dynamicPassword);
+  if (mode === "dynamic") {
+    const account = asset.permedAccounts?.find((item) => item.alias === "@USER");
+    return (
+      isAutoPushAccount(account, saved.protocol) ||
+      !!saved.personalCredentialId ||
+      !!(saved.rememberSecret && saved.dynamicPassword)
+    );
+  }
 
   if (mode === "hosted" && asset.permedAccounts?.length) {
     const account =

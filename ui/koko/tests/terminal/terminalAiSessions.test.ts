@@ -1,14 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { computed } from "vue";
-import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
-import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
-
 import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
+  getActiveKokoTerminalAiTargetId,
   getKokoTerminalAiSession,
   getKokoTerminalAiSessions,
-  getActiveKokoTerminalAiTargetId,
   handleKokoTerminalAiMessage,
   handleKokoTerminalAiWireMessage,
   isKokoTerminalAiAvailable,
@@ -20,6 +17,9 @@ import {
   submitKokoTerminalAiPrompt,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
+
+import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
 
 const paneIds: string[] = [];
 let agentHarness: ReturnType<typeof installAgentSessionHarness>;
@@ -235,12 +235,15 @@ it.each([
   { original: "auto", selected: undefined, expected: "auto" },
   { original: "auto", selected: "pty", expected: "pty" },
   { original: "auto", selected: "background", expected: "background" },
-  { original: "background", selected: "auto", expected: "auto" }
-])("executes the approved mode after $original → $selected", async ({ original, selected, expected }) => {
+  { original: "background", selected: "auto", expected: "auto" },
+  { original: "background", sessionMode: "pty", expected: "pty" },
+  { original: "pty", sessionMode: "background", expected: "background" }
+])("approves $original → $expected", async ({ original, selected, sessionMode, expected }) => {
   const session = createSession("approval-execution-mode");
   const sendMcpFrame = vi.fn();
   registerKokoTerminalAiSession(session.paneId, session.socket!, session.terminalId, { sendMcpFrame });
   const resourceId = await enableSession(session.paneId);
+  if (sessionMode) session.executionMode = sessionMode;
   const context = { paneId: session.paneId, surface: null, now: 0, t: (key: string) => key };
   if (selected) {
     terminalAiPanelDomain.handleTimelineAction?.(

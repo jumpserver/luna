@@ -279,6 +279,7 @@ function terminalRiskLabel(level: unknown) {
                   <UButton
                     v-if="
                       approvalMode === 'auto' &&
+                      execution.command.remember_allowed !== false &&
                       ['execute_shell', 'execute_command'].includes(String(execution.command.tool || ''))
                     "
                     size="xs"

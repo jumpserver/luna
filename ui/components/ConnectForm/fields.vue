@@ -10,6 +10,7 @@ import {
   parseLocalApplicationConnectMethod,
   useConnectMethods
 } from "~/composables/useConnectMethods";
+import { isManualCredentialReady } from "~/utils/connection";
 import { resolveOnlineSessionAccount } from "./onlineSession";
 
 const props = withDefaults(
@@ -62,11 +63,7 @@ const submitLabel = computed(() => {
 });
 const credentialReady = computed(() => {
   const isManual = draft.value.account === "@INPUT" || draft.value.account === t("Account.ManualInput");
-  if (isManual) {
-    if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
-    if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
-    return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword.trim();
-  }
+  if (isManual) return isManualCredentialReady(draft.value);
   const accounts = props.asset.permedAccounts || [];
   const hosted =
     accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||

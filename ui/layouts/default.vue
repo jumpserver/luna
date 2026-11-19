@@ -8,6 +8,8 @@ import {
   SettingsAppearancePage,
   SettingsApplicationPage,
   SettingsGeneralPage,
+  SettingsLocalAiPage,
+  SettingsShortcutsPage,
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
 import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
@@ -17,10 +19,11 @@ const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPane
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isMacOS, isWindows } = usePlatform();
+const shortcuts = useAppShortcuts();
 const { activeWorkspaceMode, uiWorkspaceMode, isUtilityRoute, isVideoPlayerRoute } = useWorkspaceMode();
-const { activeTabId, closeSession, enterFocusMode, exitFocusMode, focusMode, openLocalShell, registerSessionDisposer } =
-  useWorkspaceTabs();
+const { exitFocusMode, focusMode, openLocalShell, registerSessionDisposer } = useWorkspaceTabs();
 useWorkspaceFullscreenShortcuts();
+useWorkspaceSessionShortcuts(() => activeWorkspaceMode.value === "assets", openNewSession);
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
@@ -50,6 +53,8 @@ const { recentConnections } = useRecentConnections();
 const settingsSectionPages = {
   user: SettingsUserPage,
   general: SettingsGeneralPage,
+  "local-ai": SettingsLocalAiPage,
+  shortcuts: SettingsShortcutsPage,
   appearance: SettingsAppearancePage,
   application: SettingsApplicationPage,
   about: SettingsAboutPage
@@ -128,94 +133,38 @@ const stopEscapeHold = (event: KeyboardEvent) => {
   if (event.key === "Escape") clearEscapeHold();
 };
 
-const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
-  if (!isDesktopRuntime() || isWorkspaceTourActive() || event.repeat || event.altKey || event.shiftKey) return;
-
-  const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  if (!usesPrimaryModifier || event.code !== "KeyT") return;
-
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  void openAssetWorkspace(openLocalShell);
-};
+async function openNewSession() {
+  if (focusMode.value) await exitFocusMode();
+  await openAssetWorkspace(() => useEventBus().emit("workspaceNewSession", undefined));
+}
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
-  if (isWorkspaceTourActive() || event.defaultPrevented || event.repeat) return;
-
+  if (shortcuts.blocked(event)) return;
+  if (shortcuts.matches("rightPanel", event)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!event.repeat) toggleRightPanel();
+    return;
+  }
+  if (event.repeat) return;
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (!usesPrimaryModifier) return;
-
   if (!event.altKey && !event.shiftKey && event.code === "Comma") {
     event.preventDefault();
     void openSettings();
-    return;
-  }
-
-  if (!event.altKey && event.shiftKey && event.code === "Comma") {
-    if (!isDesktopRuntime()) return;
+  } else if (!event.altKey && event.shiftKey && event.code === "Comma" && isDesktopRuntime()) {
     event.preventDefault();
     void navigateTo(localePath("videoplayer"));
-    return;
   }
-
-  if (event.altKey && !event.shiftKey && event.code === "Digit2") {
-    event.preventDefault();
-    toggleRightPanel();
-  }
-};
-
-const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
-  if (isWorkspaceTourActive()) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return;
-  }
-
-  if (
-    !event.defaultPrevented &&
-    !event.repeat &&
-    event.altKey &&
-    event.shiftKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    event.code === "KeyW" &&
-    !isDesktopRuntime() &&
-    activeWorkspaceMode.value === "assets" &&
-    !settingsOpen.value &&
-    activeTabId.value
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-    void closeSession(activeTabId.value);
-    return;
-  }
-
-  const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
-  if (event.code !== "KeyP") return;
-
-  event.preventDefault();
-  event.stopPropagation();
-  if (focusMode.value) void exitFocusMode();
-  else enterFocusMode(activeTabId.value);
 };
 
 const handleDesktopMenuCommand = (command: string) => {
+  if (command === "open-new-session") {
+    void openNewSession();
+    return;
+  }
   if (command === "open-local-shell") {
     void openAssetWorkspace(openLocalShell);
-    return;
-  }
-
-  if (command === "close-current-tab") {
-    if (activeWorkspaceMode.value === "assets" && !settingsOpen.value && activeTabId.value) {
-      void closeSession(activeTabId.value);
-    }
-    return;
-  }
-
-  if (command === "toggle-focus-mode") {
-    if (focusMode.value) void exitFocusMode();
-    else if (activeTabId.value) enterFocusMode(activeTabId.value);
     return;
   }
 
@@ -280,9 +229,7 @@ const syncTrayRecentConnections = () => {
 };
 
 useEventListener(window, "keydown", startEscapeHold, { capture: true });
-useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
-useEventListener(window, "keydown", handleChromeShortcut);
-useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
+useEventListener(window, "keydown", handleChromeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold, { capture: true });
 useEventListener(window, "blur", clearEscapeHold);
 

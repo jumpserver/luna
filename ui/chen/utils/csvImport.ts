@@ -60,8 +60,7 @@ export function parseChenCsv(source: string): ChenParsedCsv {
   }
 
   if (quoted) throw new Error("CSV contains an unclosed quoted value");
-  if (value || record.length || !records.length) pushRecord();
-  while (records.length > 1 && records.at(-1)?.every((cell) => cell === "")) records.pop();
+  if (value || closedQuote || record.length || !records.length) pushRecord();
 
   const headers = (records.shift() || []).map((header) => header.trim());
   const rows = records.filter((row) => row.some((cell) => cell !== ""));

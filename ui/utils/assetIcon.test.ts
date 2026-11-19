@@ -24,6 +24,7 @@ describe("asset icon URLs", () => {
     ["DB2", "db2.png"],
     ["IBM DB2", "db2.png"],
     ["Linux", "linux.svg"],
+    ["macOS", "macos.svg"],
     ["Windows", "windows.svg"],
     ["Windows_AD", "windows.svg"],
     ["Website", "chrome.svg"],
@@ -34,6 +35,11 @@ describe("asset icon URLs", () => {
     expect(icon.src).toBe(`/luna/icons/${filename}`);
     expect(resolveAssetIconFromCandidates([undefined, platform, "asset"], "/luna/")).toEqual(icon);
     expect(resolveAssetIconSrc(platform, "/luna/")).toBe(icon.src);
+  });
+
+  it("keeps unix platforms on the linux icon", () => {
+    expect(resolveAssetIconFromFields({ platform: "Unix", type: "unix" }).src).toBe("/icons/linux.svg");
+    expect(resolveAssetIconFromCandidates(["BSD", "unix", "host"]).src).toBe("/icons/linux.svg");
   });
 
   it("keeps a known database vendor ahead of the generic database category", () => {
@@ -51,5 +57,30 @@ describe("asset icon URLs", () => {
       fallback: "i-tabler-database-filled"
     });
     expect(resolveAssetIconSrc("database")).toBe("");
+  });
+
+  it.each([
+    ["H3C", "h3c", "h3c.png"],
+    ["Cisco", "cisco", "cisco.svg"],
+    ["Huawei", "huawei", "huawei.png"]
+  ])("uses the %s brand icon only for the matching platform type", (platform, type, filename) => {
+    const icon = { src: `/luna/icons/${filename}`, fallback: "i-lucide-router" };
+    expect(resolveAssetIconFromFields({ platform: "Renamed device", type, category: "device" }, "/luna/")).toEqual(
+      icon
+    );
+    expect(resolveAssetIconFromFields({ platform, type: "general", category: "device" }, "/luna/").src).toBe("");
+    expect(resolveAssetIconFromFields({ type: "general" }, "/luna/", [platform, "switch"]).src).toBe("");
+    expect(resolveAssetIconSrc(type, "/luna/")).toBe(icon.src);
+  });
+
+  it("requires the complete device platform type", () => {
+    expect(resolveAssetIconFromFields({ type: "cisco-test", category: "device" }).src).toBe("");
+  });
+
+  it("keeps the generic network icon for general devices with a custom name", () => {
+    expect(resolveAssetIconFromFields({ type: "general", category: "device" }, "/", ["Windows gateway"])).toEqual({
+      src: "",
+      fallback: "i-lucide-router"
+    });
   });
 });

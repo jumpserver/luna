@@ -27,11 +27,17 @@ interface WebProxyControlOptions {
   method?: string;
   signal?: AbortSignal;
   proxyAuth?: { username: string; password: string };
+  agent?: http.Agent;
 }
 
 export async function requestWebProxyControl(proxyUrl, path, options: WebProxyControlOptions = {}): Promise<Response> {
   const { proxy, target } = controlUrl(proxyUrl, path);
-  const body = options.body == null ? null : Buffer.from(options.body);
+  const body =
+    options.body == null
+      ? null
+      : typeof options.body === "string"
+        ? Buffer.from(options.body)
+        : Buffer.from(options.body.buffer, options.body.byteOffset, options.body.byteLength);
   const headers = { ...options.headers };
   if (options.proxyAuth) {
     headers["Proxy-Authorization"] =
@@ -49,7 +55,8 @@ export async function requestWebProxyControl(proxyUrl, path, options: WebProxyCo
         method: options.method || "GET",
         path: `${target.pathname}${target.search}`,
         headers: { ...headers, host: target.host },
-        signal: options.signal
+        signal: options.signal,
+        agent: options.agent
       },
       (response) => {
         const chunks = [];

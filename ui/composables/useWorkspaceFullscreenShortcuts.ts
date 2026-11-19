@@ -1,8 +1,7 @@
-import { isWorkspaceTourActive } from "~/composables/useWorkspaceTour";
 import { desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 
 export function useWorkspaceFullscreenShortcuts() {
-  const { isMacOS } = usePlatform();
+  const shortcuts = useAppShortcuts();
   const { activeTabId, enterFullscreenMode, exitFocusMode, nativeFullscreen, workspaceFullscreen } = useWorkspaceTabs();
 
   const toggleDesktopFullscreen = async () => {
@@ -22,7 +21,7 @@ export function useWorkspaceFullscreenShortcuts() {
   };
 
   const handleEscape = (event: KeyboardEvent) => {
-    if (isWorkspaceTourActive() || event.key !== "Escape" || event.repeat) return;
+    if (shortcuts.blocked(event) || event.key !== "Escape" || event.repeat) return;
     if (!workspaceFullscreen.value && !nativeFullscreen.value) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -30,12 +29,11 @@ export function useWorkspaceFullscreenShortcuts() {
   };
 
   const handleFullscreenShortcut = (event: KeyboardEvent) => {
-    if (isWorkspaceTourActive() || event.repeat || event.altKey || !event.shiftKey || event.code !== "KeyF") return;
-    const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-    if (!usesPrimaryModifier || (!workspaceFullscreen.value && !nativeFullscreen.value && !activeTabId.value)) return;
+    if (shortcuts.blocked(event) || !shortcuts.matches("fullscreen", event)) return;
+    if (!workspaceFullscreen.value && !nativeFullscreen.value && !activeTabId.value) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void toggleDesktopFullscreen();
+    if (!event.repeat) void toggleDesktopFullscreen();
   };
 
   useEventListener(window, "keydown", handleEscape, { capture: true });

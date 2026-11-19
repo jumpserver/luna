@@ -28,6 +28,7 @@ interface ManagerOptions {
   direct?: boolean;
   allowManualNavigation?: boolean;
   createSession?: () => Promise<any>;
+  startRecording?: (options: any) => Promise<any>;
 }
 export function createWebProxyManager({
   emit: emitDesktopEvent,
@@ -36,9 +37,11 @@ export function createWebProxyManager({
   requireRecording = false,
   direct = false,
   allowManualNavigation = false,
-  createSession
+  createSession,
+  startRecording = WebProxyRecording.start
 }: ManagerOptions) {
   const webProxyViews = new Map();
+  const lockedHosts = new Set<number>();
   function parseWebProxyUrl(rawUrl, schemes, description) {
     const url = parseUrl(rawUrl);
     if (!schemes.includes(url.protocol) || !url.hostname || url.username || url.password) {
@@ -159,10 +162,20 @@ export function createWebProxyManager({
 
   function syncWebProxyVisibility(managed) {
     const previewing = managed.autofillPending && !managed.autofillPreviewFrozen;
-    const visible = managed.active && (!managed.autofillVisibilityBlocked || previewing);
+    const active = managed.active && !lockedHosts.has(managed.hostWebContentsId);
+    const visible = active && (!managed.autofillVisibilityBlocked || previewing);
     managed.view.setVisible(visible);
-    managed.inputShield?.setVisible(managed.active && previewing);
+    managed.inputShield?.setVisible(active && previewing);
     if (visible) (previewing ? managed.inputShield : managed.view)?.webContents.focus();
+  }
+
+  function setHostLocked(hostId: number, locked: boolean) {
+    if (lockedHosts.has(hostId) === locked) return;
+    if (locked) lockedHosts.add(hostId);
+    else lockedHosts.delete(hostId);
+    for (const managed of webProxyViews.values()) {
+      if (managed.hostWebContentsId === hostId) syncWebProxyVisibility(managed);
+    }
   }
 
   function removeWebProxyInputShield(managed) {
@@ -475,7 +488,13 @@ export function createWebProxyManager({
     return { jpeg, signature };
   }
 
-  async function createWebProxyView(event, win, args) {
+  async function createWebProxyView(event, win, args, assertCurrent?: () => void) {
+    const hostContents = win.webContents;
+    const checkHost = () => {
+      if (hostContents.isDestroyed()) throw new Error("Web Proxy host is closed");
+      assertCurrent?.();
+    };
+    checkHost();
     const label = String(args.label || "");
     validateWebProxyLabel(label);
     if (webProxyViews.has(label)) throw new Error("Web Proxy view label already exists");
@@ -496,6 +515,7 @@ export function createWebProxyManager({
     } else {
       await proxySession.setProxy({ mode: "direct" });
     }
+    checkHost();
 
     const view = new WebContentsView({
       webPreferences: {
@@ -512,6 +532,7 @@ export function createWebProxyManager({
       if (args.colorScheme) await view.webContents.loadURL("about:blank");
       // Apply before the first navigation so CSS and startup scripts agree.
       await setWebProxyColorScheme(view.webContents, args.colorScheme);
+      checkHost();
     } catch (error) {
       view.webContents?.close();
       throw error;
@@ -593,6 +614,10 @@ export function createWebProxyManager({
       height: Math.max(1, Math.round(Number(args.height) || 1))
     });
     inputShield.setBounds(view.getBounds());
+    // Native asset views share the host's application shortcuts, including client locking.
+    for (const contents of [view.webContents, inputShield.webContents]) {
+      contents.on("before-input-event", (event, input) => win.webContents.emit("before-input-event", event, input));
+    }
     // Keep the shield transparent; progress and actions live in the Nuxt toolbar.
     void inputShield.webContents.loadURL("data:text/html,<html style='background:transparent'></html>").catch(() => {
       if (!view.webContents.isDestroyed()) finishWebProxyAutofill(managed, "error", "WebProxy.SecureLoginShieldFailed");
@@ -754,7 +779,7 @@ export function createWebProxyManager({
           finishWebProxyAutofill(managed, "unavailable", "WebProxy.AssetAutofillDisabled");
         }
         if (requireRecording) {
-          managed.recording = await WebProxyRecording.start({
+          managed.recording = await startRecording({
             label,
             sessionId: session.sessionId,
             targetUrl: target.toString(),
@@ -762,10 +787,20 @@ export function createWebProxyManager({
             proxyAuth: managed.proxyAuth,
             width: view.getBounds().width,
             height: view.getBounds().height,
+            webContents: view.webContents,
+            getPauseReasons: () => [
+              ...(!managed.active ? ["inactive"] : []),
+              ...(managed.autofillVisibilityBlocked ? ["autofill"] : [])
+            ],
             capture: () => captureWebProxyFrame(managed),
             emit: (state) => emitWebProxyRecordingState(managed, state)
           });
           managed.recording.setPaused("inactive", !managed.active, "WebProxy.AwaitingWindow");
+          managed.recording.setPaused(
+            "autofill",
+            managed.autofillVisibilityBlocked,
+            "WebProxy.RecordingPausedForAutofill"
+          );
           if (managed.autofillFailure || view.webContents.isDestroyed() || webProxyViews.get(label) !== managed) {
             managed.recording.setPaused("closed", true, "WebProxy.SessionEnded");
             await managed.recording.finish();
@@ -806,17 +841,22 @@ export function createWebProxyManager({
     clearWebProxyAutofillWait(managed);
     managed.view.setVisible(false);
     removeWebProxyInputShield(managed);
-    try {
-      await managed.recording?.finish();
-    } catch (error) {
-      electronLog.warn(`failed to finish Web recording for ${label}`, error);
-    }
-    managed.recording?.dispose();
     managed.credentialSession?.dispose?.();
     managed.credentialSession = null;
     managed.host.contentView.removeChildView(managed.view);
-    managed.view.webContents.close();
-    await releaseWebProxyAuthentication(managed);
+    // The desktop tracks native recorders through app exit. Let the next tab
+    // activate while uploads finish, keeping the capture source alive until stop.
+    const finishing = (async () => {
+      try {
+        await managed.recording?.finish();
+      } catch (error) {
+        electronLog.warn(`failed to finish Web recording for ${label}`, error);
+      }
+      managed.recording?.dispose();
+      if (!managed.webContents.isDestroyed()) managed.webContents.close();
+      await releaseWebProxyAuthentication(managed);
+    })();
+    if (!managed.recording) await finishing;
   }
 
   async function releaseWebProxyAuthentication(managed) {
@@ -831,8 +871,8 @@ export function createWebProxyManager({
     }
   }
 
-  async function invoke(command, event, win, args) {
-    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args);
+  async function invoke(command, event, win, args, assertCurrent?: () => void) {
+    if (command === "create_web_proxy_view") return createWebProxyView(event, win, args, assertCurrent);
     if (command === "set_web_proxy_view_color_scheme") {
       const managed = webProxyView(event, args.label);
       return setWebProxyColorScheme(managed.view.webContents, args.colorScheme);
@@ -923,7 +963,7 @@ export function createWebProxyManager({
             "WebProxy.WebRecordingReady"
           );
         }
-        const recording = await WebProxyRecording.start({
+        const recording = await startRecording({
           label: managed.label,
           sessionId: webSession.sessionId,
           targetUrl: target.toString(),
@@ -931,11 +971,16 @@ export function createWebProxyManager({
           proxyAuth: managed.proxyAuth,
           width: Math.round(Number(args.width)),
           height: Math.round(Number(args.height)),
+          webContents: managed.view.webContents,
+          getPauseReasons: () => [
+            ...(!managed.active ? ["inactive"] : []),
+            ...(managed.autofillVisibilityBlocked ? ["autofill"] : [])
+          ],
           capture: () => captureWebProxyFrame(managed),
           emit: (state) => emitWebProxyRecordingState(managed, state)
         });
         if (webProxyViews.get(managed.label) !== managed) {
-          recording.setPaused("inactive", true, "WebProxy.TabClosed");
+          recording.setPaused("closed", true, "WebProxy.TabClosed");
           try {
             await recording.finish();
           } finally {
@@ -944,12 +989,13 @@ export function createWebProxyManager({
           return;
         }
         managed.recording = recording;
-        if (!managed.active) {
-          managed.recording.setPaused("inactive", true, "WebProxy.TabBackgroundPauseRecording");
-        }
-        if (managed.autofillPreviewFrozen && managed.autofillVisibilityBlocked) {
-          managed.recording.setPaused("autofill", true, "WebProxy.RecordingPausedForAutofill");
-        }
+        // Login may have completed while the native video encoder was starting.
+        managed.recording.setPaused("inactive", !managed.active, "WebProxy.TabBackgroundPauseRecording");
+        managed.recording.setPaused(
+          "autofill",
+          managed.autofillVisibilityBlocked,
+          "WebProxy.RecordingPausedForAutofill"
+        );
         electronLog.info(`web proxy recording start ${managed.label}`);
         return managed.recording.state(
           managed.recording.pauseReasons.size ? "paused" : "recording",
@@ -993,6 +1039,7 @@ export function createWebProxyManager({
     throw new Error("Unsupported Web Proxy command");
   }
   function disposeHost(windowWebContentsId) {
+    lockedHosts.delete(windowWebContentsId);
     for (const [viewLabel, managed] of webProxyViews) {
       if (managed.hostWebContentsId !== windowWebContentsId) continue;
       webProxyViews.delete(viewLabel);
@@ -1011,5 +1058,5 @@ export function createWebProxyManager({
       if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
   }
-  return { invoke, disposeHost, views: webProxyViews };
+  return { invoke, disposeHost, setHostLocked, views: webProxyViews };
 }

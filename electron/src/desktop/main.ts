@@ -1,4 +1,25 @@
-import type { MenuItemConstructorOptions } from "electron";
+import {
+  matchesShortcut,
+  normalizeShortcutOverrides,
+  shortcutAccelerator,
+  shortcutBindings,
+  shortcutDefinitions
+} from "../../../ui/shared/shortcuts";
+import type { ShortcutOverrides } from "../../../ui/shared/shortcuts";
+import { clientLoginExpiryMessage } from "../../../ui/utils/clientLoginPolicy";
+import type { ClientLoginPolicy, ClientLoginSession, ClientPolicyNotice } from "../../../ui/types/index";
+import { normalizeLanguageCode } from "../../../i18n/language";
+import enMessages from "../../../i18n/locales/en.json";
+import esMessages from "../../../i18n/locales/es.json";
+import frMessages from "../../../i18n/locales/fr.json";
+import jaMessages from "../../../i18n/locales/ja.json";
+import koMessages from "../../../i18n/locales/ko.json";
+import ptBrMessages from "../../../i18n/locales/pt_br.json";
+import ruMessages from "../../../i18n/locales/ru.json";
+import viMessages from "../../../i18n/locales/vi.json";
+import zhMessages from "../../../i18n/locales/zh.json";
+import zhHantMessages from "../../../i18n/locales/zh_hant.json";
+import type { MenuItemConstructorOptions, WebContents } from "electron";
 import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -10,14 +31,15 @@ import {
   clipboard,
   ClipboardItem,
   dialog,
-  session as electronSession,
   ipcMain,
   Menu,
   nativeImage,
   nativeTheme,
   net,
   Notification,
+  powerMonitor,
   protocol,
+  safeStorage,
   shell,
   Tray
 } from "electron";
@@ -33,6 +55,7 @@ import { isFaceLiveWebSocket } from "../face/socket-policy";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
+import { WebVideoRecording } from "../replay/web-recording";
 import { readableToWebBody } from "../shared/bytes";
 import {
   decodeClientProtocolPayload,
@@ -49,8 +72,17 @@ import {
 import { editCopyAccelerator, menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
+import { certificateSiteOrigin, SiteCertificateService } from "../shared/site-certificates";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { resolveExecutablePath } from "./executable-path";
+import { chenExportTarget, saveChenDownload } from "./chen-export";
+import { createHash } from "node:crypto";
+import { LocalCodexService } from "../codex/service";
+import { CodexInstallation } from "../codex/installation";
+import { isLocalAiSettingsCommand, LocalAiError, withLocalAiErrors } from "../../../ui/shared/codex/errorProtocol";
+import type { ClientSessionBinding } from "../auth/service";
+import { ClipboardHistoryService } from "./clipboard-history";
+import { ClientPolicyNoticeLayers } from "./client-policy-notices";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -61,27 +93,100 @@ const macDockIconSize = 512;
 const macDockIconInset = 48;
 const trayIconSize = process.platform === "darwin" ? 20 : 16;
 const defaultProductName = "JumpServer";
-const productName = String(runtimePackage.productName || defaultProductName);
+const productName = app.getName();
 const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, String(runtimePackage.version || ""));
-app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
+const windowSessionBindings = new WeakMap<WebContents, ReturnType<DesktopAuthService["captureSessionBinding"]>>();
+const lockedWindowCommands = new Set([
+  "plugin:event|listen",
+  "plugin:event|unlisten",
+  "plugin:store|load",
+  "plugin:store|get",
+  "plugin:store|has",
+  "plugin:store|keys",
+  "plugin:store|values",
+  "plugin:store|entries",
+  "plugin:store|length",
+  "close_window",
+  "minimize_window",
+  "toggle_maximize_window",
+  "plugin:app|version",
+  "plugin:app|name",
+  "plugin:os|locale",
+  "set_api_org",
+  "get_config",
+  "site_certificate_policy",
+  "site_certificate_info",
+  "get_ffmpeg_plugin_status",
+  "list_system_fonts",
+  "api_stream_cancel",
+  "resize_local_shell",
+  "close_local_shell",
+  "face_engine_status",
+  "face_engine_process_frame",
+  "face_engine_stop_session",
+  "set_web_proxy_view_active",
+  "set_web_proxy_view_bounds",
+  "set_web_proxy_view_color_scheme",
+  "close_web_proxy_view",
+  "cancel_transcode"
+]);
+const codexHosts = new Map<ClientSessionBinding, LocalCodexService>();
+const codexInstallation = new CodexInstallation(
+  path.join(app.getPath("userData"), "codex-runtime"),
+  (url, init) => net.fetch(url, init),
+  (status) => emitDesktopEvent("local-codex-runtime", status)
+);
+function requireCodexKeyStorage() {
+  if (
+    !safeStorage.isEncryptionAvailable() ||
+    (process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text")
+  )
+    throw new LocalAiError(
+      "LOCAL_AI_CREDENTIAL_STORAGE_UNAVAILABLE",
+      "OS encrypted credential storage is unavailable; use your existing Codex configuration"
+    );
+}
 const subscriptions = new Map();
 const stores = new Map();
+let shortcutOverrides: ShortcutOverrides = {};
+const shortcutRecorders = new WeakSet();
+const shortcutEnvironment = { mac: process.platform === "darwin", desktop: true };
 const localShellSessions = new Map();
+const clipboardHistory = new ClipboardHistoryService(() => clipboard.readText());
 const apiStreams = new Map();
-const webProxyManager = createWebProxyManager({ emit: emitDesktopEvent, labelForWindow, log: electronLog });
-const allowedChenOrigins = new Set();
+const webProxyManager = createWebProxyManager({
+  emit: emitDesktopEvent,
+  labelForWindow,
+  log: electronLog,
+  startRecording: (options) => WebVideoRecording.start(options, path.join(electronDir, "web-recording-preload.js"))
+});
+const clientNoticeLayers = new ClientPolicyNoticeLayers({
+  url: () => rendererTarget("/luna/auth/client-notices"),
+  preload: path.join(electronDir, "preload.js"),
+  serveApp: serveAppRequest,
+  dismiss: (host, id) => emitDesktopEvent("client-policy-notice-dismiss", id, labelForWindow(host))
+});
+const allowedChenOrigins = new Set<string>();
 const allowedKokoOrigins = new Set();
 const configuredConnectorSessions = new WeakSet();
-const allowedPaths = new Set([os.homedir(), app.getPath("userData"), process.resourcesPath]);
+const allowedPaths = new Set([
+  os.homedir(),
+  app.getPath("userData"),
+  process.resourcesPath,
+  path.join(projectRoot, "plugins")
+]);
+const clientPolicyNotices = new Map<string, ClientPolicyNotice[]>();
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
+let idleLockTimer: ReturnType<typeof setInterval> | undefined;
 let trayRecentConnections = [];
 let trayQuickConnectEnabled = false;
 let applicationConfig;
 let authService;
+let siteCertificates: SiteCertificateService;
 let localApplicationLauncher;
 let offlineRecordings;
 let replayTranscoder;
@@ -122,8 +227,15 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-function resolveConnectorEndpoint(smartEndpoint: string, component: "chen" | "koko") {
-  const origin = normalizedHttpOrigin(smartEndpoint || authService.currentSession().origin, `${component} endpoint`);
+function resolveConnectorEndpoint(
+  smartEndpoint: string,
+  component: "chen" | "koko",
+  binding: ReturnType<DesktopAuthService["captureSessionBinding"]>
+) {
+  const origin = normalizedHttpOrigin(
+    smartEndpoint || authService.getRequestSession(binding).origin,
+    `${component} endpoint`
+  );
   (component === "chen" ? allowedChenOrigins : allowedKokoOrigins).add(origin);
   electronLog.info(`${component} endpoint ${origin}`);
   return origin;
@@ -136,45 +248,55 @@ function installConnectorSessionHooks(targetSession) {
   targetSession.webRequest.onBeforeSendHeaders({ urls: socketPatterns }, (details, callback) => {
     const requestHeaders = { ...details.requestHeaders };
     void (async () => {
+      let isFaceSocket = false;
+      let isConnectorSocket = false;
       try {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
-        const isChenSocket = target.pathname.startsWith("/chen/ws/") && allowedChenOrigins.has(httpOrigin);
         // Lion is hosted by Koko and needs the same desktop WebSocket origin handling.
+        const isChenSocket = allowedChenOrigins.has(httpOrigin);
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
           allowedKokoOrigins.has(httpOrigin);
-        let activeSiteOrigin = "";
-        try {
-          activeSiteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-        } catch {
-          // No authenticated site is available yet.
-        }
-        const isFaceSocket = isFaceLiveWebSocket(details.url, activeSiteOrigin);
-        if (isChenSocket || isKokoSocket || isFaceSocket) {
+        isFaceSocket = isFaceLiveWebSocket(details.url, httpOrigin);
+        isConnectorSocket = isKokoSocket || isFaceSocket || isChenSocket;
+        if (isConnectorSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
-          // Chromium treats the custom renderer origin as cross-site and may omit
-          // the target HTTP session. Chen and FaceLive both authenticate with it;
-          // Chen additionally requires its WebSocket subprotocol token.
-          if (isChenSocket || isFaceSocket) {
-            const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
-            if (cookies.length) {
-              const cookieHeader =
-                Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
-              requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
-            }
+          // Connector HTTP uses an isolated site session. Supply its cookies to
+          // renderer WebSockets without copying them into the shared default session.
+          const cookies = await siteCertificates.cookiesForUrl(`${httpOrigin}${target.pathname}`);
+          const cookieHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "cookie") || "Cookie";
+          delete requestHeaders[cookieHeader];
+          if (cookies.length) {
+            requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
           }
           if (isFaceSocket) {
-            const current = authService.currentSession();
-            const bearer = await authService.freshToken(current.origin, current.sessionKey, current.bearerToken);
+            const source = [...windows.values()].find(
+              (win) => !win.isDestroyed() && win.webContents.id === details.webContentsId
+            );
+            const binding = source ? (windowSessionBindings.get(source.webContents) ?? null) : null;
+            const sourceSession = authService.getRequestSession(binding);
+            if (normalizedHttpOrigin(sourceSession.origin, "JumpServer site") !== httpOrigin)
+              throw new Error("FaceLive endpoint does not match this window's login");
+            const bearer = await authService.freshToken(
+              sourceSession.origin,
+              sourceSession.sessionKey,
+              sourceSession.bearerToken
+            );
+            if (authService.getRequestSession(binding) !== sourceSession)
+              throw new Error("Client login changed during websocket request");
             const authorization =
               Object.keys(requestHeaders).find((name) => name.toLowerCase() === "authorization") || "Authorization";
             requestHeaders[authorization] = `Bearer ${bearer}`;
           }
         }
       } catch {
+        if (isConnectorSocket) {
+          callback({ cancel: true });
+          return;
+        }
         // Leave headers untouched when the connector URL is malformed.
       }
       callback({ requestHeaders });
@@ -227,10 +349,7 @@ async function proxyChenRequest(request, url) {
     credentials: "include",
     redirect: "manual"
   });
-  // Chen binds its WebSocket token to the HTTP session created by /api/auth.
-  // Use the renderer's shared Electron session so Set-Cookie is persisted and
-  // automatically attached to the subsequent direct WebSocket handshake.
-  const response = await electronSession.defaultSession.fetch(proxied);
+  const response = await siteCertificates.fetch(proxied);
   const responseHeaders = new Headers(response.headers);
   corsHeaders.forEach((value, name) => responseHeaders.set(name, value));
   return new Response(response.body, {
@@ -266,12 +385,155 @@ function sendCallback(webContents, callbackId, payload) {
   if (!webContents.isDestroyed()) webContents.send("jms:callback", callbackId, payload);
 }
 
+function assetWindows() {
+  return [...windows].filter(([label, win]) => label.startsWith("asset-") && !win.isDestroyed());
+}
+
+function closeAssetWindows() {
+  // The user has confirmed leaving. beforeunload cannot retain an old account's connection.
+  for (const [, win] of assetWindows()) win.destroy();
+}
+
+function disposeWindowSessions(webContentsId: number) {
+  for (const host of codexHosts.values()) host.closeOwner(webContentsId);
+  for (const [sessionId, session] of localShellSessions) {
+    if (session.webContentsId !== webContentsId) continue;
+    localShellSessions.delete(sessionId);
+    session.process.kill();
+  }
+  for (const [streamId, stream] of apiStreams) {
+    if (stream.webContentsId !== webContentsId) continue;
+    apiStreams.delete(streamId);
+    stream.controller.abort();
+  }
+  webProxyManager.disposeHost(webContentsId);
+  faceEngine?.stopOwner(webContentsId);
+}
+
+function closeExpiredSessionWindows(sessionId: string) {
+  if (!sessionId) return;
+  for (const [label, win] of windows) {
+    if (win.isDestroyed()) continue;
+    const binding = windowSessionBindings.get(win.webContents);
+    // Keep other accounts and a newer login of the same account untouched.
+    if (binding?.sessionKey !== sessionId || authService.boundToken(binding)) continue;
+    for (const host of codexHosts.values()) host.closeOwner(win.webContents.id);
+    webProxyManager.disposeHost(win.webContents.id);
+    // Expiry is mandatory; a page's beforeunload guard cannot keep an asset usable.
+    if (label.startsWith("asset-")) win.destroy();
+  }
+}
+
 function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) {
+  if (name === "auth-session-expired") {
+    closeExpiredSessionWindows((payload as { sessionId?: string })?.sessionId || "");
+  }
+  if (name === "client-policy-notices" && !targetLabel) {
+    const { sessionId, notices } = payload as { sessionId: string; notices: ClientPolicyNotice[] };
+    if (notices.length) clientPolicyNotices.set(sessionId, notices);
+    else clientPolicyNotices.delete(sessionId);
+    for (const [label, win] of windows) {
+      const binding = windowSessionBindings.get(win.webContents);
+      if (binding?.sessionKey === sessionId) emitDesktopEvent(name, notices, label);
+    }
+    return;
+  }
+  if (name === "client-lock-changed") {
+    for (const win of windows.values()) syncWindowLock(win);
+    return;
+  }
   for (const [id, subscription] of subscriptions) {
     if (subscription.name !== name) continue;
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
+  if (name === "auth-session-expired") notifyClientLoginExpired(payload as { reason?: string });
+}
+
+function syncWindowLock(win) {
+  if (win.isDestroyed()) return;
+  const binding = windowSessionBindings.get(win.webContents) ?? null;
+  const bound = authService.lockState(binding);
+  const main = labelForWindow(win) === "main";
+  const canUnlock = main || Boolean(authService.boundToken(binding));
+  const state = {
+    ...bound,
+    locked: bound.locked && (!main || !bound.expired),
+    canUnlock,
+    ...(main ? { accountLocks: authService.listAccountLockStates() } : {})
+  };
+  if (state.locked) for (const host of codexHosts.values()) host.closeOwner(win.webContents.id);
+  webProxyManager.setHostLocked(win.webContents.id, state.locked);
+  emitDesktopEvent("client-lock-state", state, labelForWindow(win));
+  return state;
+}
+
+function activateApiSession(args, lockedSwitchSource?: ReturnType<DesktopAuthService["captureSessionBinding"]>) {
+  const beforeSwitch = () => {
+    // Cleanup and activation are synchronous: no new asset window can interleave with the switch.
+    closeAssetWindows();
+    const main = windows.get("main");
+    if (main && !main.isDestroyed()) disposeWindowSessions(main.webContents.id);
+    // Bind the new login below before publishing its lock state to the surviving windows.
+    for (const target of windows.values()) windowSessionBindings.delete(target.webContents);
+  };
+  const result = lockedSwitchSource
+    ? authService.setLockedAccountSession(args, lockedSwitchSource, beforeSwitch)
+    : authService.setSession(args, beforeSwitch);
+  if (result.status === "success") {
+    const binding = authService.captureSessionBinding();
+    for (const [label, target] of windows) {
+      const previous = windowSessionBindings.get(target.webContents);
+      // Existing asset windows belong to this same login; a real account change closes them above.
+      if (!label.startsWith("asset-") || previous === binding) {
+        windowSessionBindings.set(target.webContents, binding);
+        syncWindowLock(target);
+        emitDesktopEvent("client-policy-notices", clientPolicyNotices.get(binding?.sessionKey || "") || [], label);
+      }
+    }
+    void authService.checkSessions(true);
+    checkIdleLocks();
+  }
+  return result;
+}
+
+function checkIdleLocks() {
+  const idleSeconds = powerMonitor.getSystemIdleTime();
+  authService.lockIdleSessions(idleSeconds);
+  authService.updatePolicyNotices(idleSeconds);
+}
+
+function notifyClientLoginExpired(payload: {
+  reason?: string;
+  policy?: ClientLoginPolicy;
+  session?: ClientLoginSession;
+}) {
+  if (payload?.reason === "lock_logout") return;
+  const win = windows.get("main");
+  if (!win || win.isDestroyed() || win.isFocused() || !Notification.isSupported()) return;
+  const language = normalizeLanguageCode(authService?.currentLanguage || app.getLocale());
+  const messages = {
+    en: enMessages.Login,
+    es: esMessages.Login,
+    fr: frMessages.Login,
+    ja: jaMessages.Login,
+    ko: koMessages.Login,
+    pt_br: ptBrMessages.Login,
+    ru: ruMessages.Login,
+    vi: viMessages.Login,
+    zh: zhMessages.Login,
+    zh_hant: zhHantMessages.Login
+  }[language];
+  const message = clientLoginExpiryMessage(payload?.reason, payload?.policy, payload?.session, language);
+  if (!message) return;
+  const key = message.key.slice("Login.".length) as keyof typeof messages;
+  const body = messages[key].replace(/\{(\w+)\}/g, (placeholder, name) => message.params[name] ?? placeholder);
+  const notification = new Notification({ title: messages.SessionExpired, body });
+  notification.on("click", () => {
+    const mainWindow = createWindow("main");
+    if (mainWindow.isMinimized()) mainWindow.restore();
+  });
+  notification.show();
 }
 
 function clearDesktopEventSubscriptions(webContents) {
@@ -280,7 +542,7 @@ function clearDesktopEventSubscriptions(webContents) {
   }
 }
 
-function startApiStream(event, win, args) {
+function startApiStream(event, win, args, binding: ReturnType<DesktopAuthService["captureSessionBinding"]>) {
   const streamId = String(args.streamId || "").trim();
   if (!streamId) throw new Error("api stream id is required");
   if (apiStreams.has(streamId)) throw new Error("api stream already exists");
@@ -290,10 +552,14 @@ function startApiStream(event, win, args) {
   apiStreams.set(streamId, owner);
   const label = labelForWindow(win);
   void authService
-    .apiStreamRequest(args.request, {
-      signal: controller.signal,
-      onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
-    })
+    .apiStreamRequest(
+      args.request,
+      {
+        signal: controller.signal,
+        onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
+      },
+      binding
+    )
     .then(() => emitDesktopEvent("api-stream", { streamId, type: "done" }, label))
     .catch((error) => {
       if (controller.signal.aborted) return;
@@ -480,9 +746,14 @@ interface CreateWindowOptions {
   url?: string;
 }
 
-function createWindow(label = "main", options: CreateWindowOptions = {}) {
+function createWindow(
+  label = "main",
+  options: CreateWindowOptions = {},
+  sessionBinding = authService?.captureSessionBinding() ?? null
+) {
   const existing = windows.get(label);
   if (existing && !existing.isDestroyed()) {
+    syncWindowLock(existing);
     existing.show();
     existing.focus();
     electronLog.info(`window focus ${label}`);
@@ -518,20 +789,35 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   installConnectorSessionHooks(win.webContents.session);
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
+  windowSessionBindings.set(windowWebContents, sessionBinding);
 
   windowWebContents.on("before-input-event", (event, input) => {
-    const closeCurrentTab =
+    // Let the renderer resolve scope/focus before consuming application shortcuts.
+    // Native menus still show the configured accelerators and retain their click actions.
+    const key = {
+      code: input.code,
+      ctrlKey: input.control,
+      metaKey: input.meta,
+      altKey: input.alt,
+      shiftKey: input.shift
+    };
+    if (
       input.type === "keyDown" &&
-      !input.isAutoRepeat &&
-      input.alt &&
-      input.shift &&
-      !input.control &&
-      !input.meta &&
-      (input.code === "KeyW" || input.key.toLowerCase() === "w");
-    if (!closeCurrentTab) return;
-
-    event.preventDefault();
-    emitDesktopEvent("desktop-menu-command", "close-current-tab", label);
+      !shortcutRecorders.has(windowWebContents) &&
+      shortcutBindings("lockClient", shortcutOverrides, shortcutEnvironment).some((binding) =>
+        matchesShortcut(key, binding, shortcutEnvironment.mac)
+      )
+    ) {
+      event.preventDefault();
+      authService.lockAllSessions();
+      return;
+    }
+    const applicationShortcut = shortcutDefinitions.some(({ id }) =>
+      shortcutBindings(id, shortcutOverrides, shortcutEnvironment).some((binding) =>
+        matchesShortcut(key, binding, shortcutEnvironment.mac)
+      )
+    );
+    windowWebContents.setIgnoreMenuShortcuts(shortcutRecorders.has(windowWebContents) || applicationShortcut);
   });
 
   if (allowDevTools) {
@@ -550,8 +836,11 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   }
 
   windows.set(label, win);
+  authService.scheduleSessionCheck();
+  syncWindowLock(win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => {
+    syncWindowLock(win);
     win.show();
     if (allowDevTools && app.isPackaged) windowWebContents.openDevTools({ mode: "detach" });
   });
@@ -567,23 +856,14 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
   });
+  windowWebContents.on("did-finish-load", () => syncWindowLock(win));
   windowWebContents.on("render-process-gone", () => clearDesktopEventSubscriptions(windowWebContents));
   win.on("closed", () => {
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
-    for (const [sessionId, session] of localShellSessions) {
-      if (session.webContentsId !== windowWebContentsId) continue;
-      localShellSessions.delete(sessionId);
-      session.process.kill();
-    }
-    for (const [streamId, stream] of apiStreams) {
-      if (stream.webContentsId !== windowWebContentsId) continue;
-      apiStreams.delete(streamId);
-      stream.controller.abort();
-    }
-    webProxyManager.disposeHost(windowWebContentsId);
+    authService.scheduleSessionCheck();
+    disposeWindowSessions(windowWebContentsId);
     clearDesktopEventSubscriptions(windowWebContents);
-    faceEngine?.stopOwner(windowWebContentsId);
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;
@@ -651,6 +931,7 @@ function menuLabels() {
       paste: "粘贴",
       selectAll: "全选",
       newLocalShell: "新建本地终端",
+      newSession: "新建连接…",
       focusMode: "纯净模式",
       leftPanel: "左侧面板",
       rightPanel: "右侧面板",
@@ -688,6 +969,7 @@ function menuLabels() {
     paste: "Paste",
     selectAll: "Select All",
     newLocalShell: "New Local Shell",
+    newSession: "New Connection…",
     focusMode: "Focus Mode",
     leftPanel: "Left Panel",
     rightPanel: "Right Panel",
@@ -777,13 +1059,16 @@ function sendMenuCommand(command) {
     return;
   }
   const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed() && syncWindowLock(focused)?.locked) return;
   const label = menuCommandTargetLabel(focused && !focused.isDestroyed() ? labelForWindow(focused) : "");
   emitDesktopEvent("desktop-menu-command", command, label);
 }
 
 function sendMainWindowEvent(name, payload) {
   const win = showMainWindow();
-  const emit = () => emitDesktopEvent(name, payload, "main");
+  const emit = () => {
+    if (!syncWindowLock(win)?.locked) emitDesktopEvent(name, payload, "main");
+  };
   if (win.webContents.isLoadingMainFrame()) {
     win.webContents.once("did-finish-load", () => setTimeout(emit, 0));
     return;
@@ -796,6 +1081,11 @@ function buildMenu() {
   const appSubmenu: MenuItemConstructorOptions[] = [
     { label: labels.about, click: openAboutWindow },
     { type: "separator" },
+    {
+      label: prefersZh() ? "锁定客户端" : "Lock Client",
+      accelerator: shortcutAccelerator("lockClient", shortcutOverrides, shortcutEnvironment),
+      click: () => authService.lockAllSessions()
+    },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
     { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" },
@@ -817,14 +1107,18 @@ function buildMenu() {
       label: labels.file,
       submenu: [
         {
+          label: labels.newSession,
+          accelerator: shortcutAccelerator("newSession", shortcutOverrides, shortcutEnvironment),
+          click: () => sendMenuCommand("open-new-session")
+        },
+        {
           label: labels.newLocalShell,
-          accelerator: "CmdOrCtrl+T",
           click: () => sendMenuCommand("open-local-shell")
         },
         { type: "separator" },
         {
           label: labels.closeTab,
-          accelerator: "CmdOrCtrl+W",
+          accelerator: shortcutAccelerator("closeTab", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("close-current-tab")
         }
       ]
@@ -846,17 +1140,21 @@ function buildMenu() {
       submenu: [
         {
           label: labels.focusMode,
-          accelerator: "CmdOrCtrl+Shift+P",
+          accelerator: shortcutAccelerator("focus", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("toggle-focus-mode")
         },
         { label: labels.leftPanel, click: () => sendMenuCommand("toggle-left-panel") },
-        { label: labels.rightPanel, click: () => sendMenuCommand("toggle-right-panel") },
+        {
+          label: labels.rightPanel,
+          accelerator: shortcutAccelerator("rightPanel", shortcutOverrides, shortcutEnvironment),
+          click: () => sendMenuCommand("toggle-right-panel")
+        },
         { label: labels.batchCommand, click: () => sendMenuCommand("toggle-batch-command") },
         { label: labels.statusBar, click: () => sendMenuCommand("toggle-status-bar") },
         { type: "separator" },
         {
           label: labels.fullscreen,
-          accelerator: "CmdOrCtrl+Shift+F",
+          accelerator: shortcutAccelerator("fullscreen", shortcutOverrides, shortcutEnvironment),
           click: () => sendMenuCommand("toggle-fullscreen-mode")
         }
       ]
@@ -986,8 +1284,15 @@ async function handleStore(command, args) {
   const store = stores.get(args.rid);
   if (!store) throw new Error("Desktop store is not loaded");
   if (command === "plugin:store|set") {
-    store.data[args.key] = args.value;
-    emitDesktopEvent("store://change", { resourceId: args.rid, key: args.key, value: args.value, exists: true });
+    for (const [rid, loaded] of stores) {
+      if (loaded.path !== store.path) continue;
+      loaded.data[args.key] = args.value;
+      emitDesktopEvent("store://change", { resourceId: rid, key: args.key, value: args.value, exists: true });
+    }
+    if (path.basename(store.path) === "user-setting.json" && args.key === "state") {
+      shortcutOverrides = normalizeShortcutOverrides(args.value?.shortcutOverrides);
+      buildMenu();
+    }
     return null;
   }
   if (command === "plugin:store|get") return [store.data[args.key], Object.hasOwn(store.data, args.key)];
@@ -1017,6 +1322,15 @@ async function withIpcErrorLog(command, work) {
   }
 }
 
+async function confirmHttpConnection(site: string, win: BrowserWindow, riskAccepted?: unknown) {
+  const origin = certificateSiteOrigin(site);
+  if (!siteCertificates.needsHttpConfirmation(origin)) return true;
+  if (riskAccepted !== true) return false;
+  if (windows.get("main") !== win) throw new Error("HTTP risk acceptance requires the main window");
+  await siteCertificates.acknowledgeHttp(origin);
+  return true;
+}
+
 async function handleInvoke(event, request) {
   if (!isAllowedSender(event.senderFrame)) {
     electronLog.warn("rejected desktop IPC sender");
@@ -1024,6 +1338,210 @@ async function handleInvoke(event, request) {
   }
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
+  const binding = windowSessionBindings.get(event.sender) ?? null;
+  if (command === "get_asset_window_count" || command === "close_asset_windows") {
+    const mainWindow = labelForWindow(win) === "main";
+    if (command === "get_asset_window_count") return mainWindow ? assetWindows().length : 0;
+    if (mainWindow) closeAssetWindows();
+    return;
+  }
+  if (command === "client_lock_state") return syncWindowLock(win);
+  if (command === "client_policy_notices") return clientPolicyNotices.get(binding?.sessionKey || "") || [];
+  if (command === "client_policy_notice_overlay") {
+    const notices = clientPolicyNotices.get(binding?.sessionKey || "") || [];
+    const nativeWebsite = [...webProxyManager.views.values()].some(
+      (view) => view.hostWebContentsId === win.webContents.id && view.active
+    );
+    if (!nativeWebsite || !Array.isArray(args.ids) || !args.ids.length) {
+      clientNoticeLayers.hide(win);
+      return false;
+    }
+    return clientNoticeLayers.update(
+      win,
+      {
+        notices: notices.filter((notice) => args.ids.includes(notice.id)),
+        locale: normalizeLanguageCode(args.locale),
+        appearance: args.appearance
+      },
+      args.width,
+      args.height,
+      args.bottom
+    );
+  }
+  if (command === "client_lock_show_main") return void showMainWindow();
+  if (["client_lock_switch_prepare", "client_lock_switch_activate"].includes(command)) {
+    if (windows.get("main") !== win) throw new Error("Account switching requires the main window");
+    authService.requireLockedCurrentSession(binding);
+    if (command === "client_lock_switch_prepare") return authService.prepareLockedAccountSwitch(args, binding);
+    return activateApiSession(args, binding);
+  }
+  if (
+    [
+      "client_lock_info",
+      "client_unlock",
+      "client_lock_logout",
+      "client_lock_settings",
+      "client_lock_copy_settings"
+    ].includes(command)
+  ) {
+    if (command === "client_lock_info") return authService.lockInfo(binding);
+    if (command === "client_unlock") return authService.unlockSession(binding, args);
+    if (command === "client_lock_settings" || command === "client_lock_copy_settings") {
+      const info = await authService.lockInfo(binding);
+      if (command === "client_lock_copy_settings") return clipboard.writeText(info.settingsUrl);
+      return shell.openExternal(info.settingsUrl);
+    }
+    if (!authService.boundToken(binding) && windows.get("main") !== win)
+      throw new Error("Expired account logout requires the main window");
+    const result = authService.logoutLockedSession(binding);
+    closeExpiredSessionWindows(binding?.sessionKey || "");
+    return result;
+  }
+  if (
+    authService.lockState(binding).locked &&
+    (!authService.lockState(binding).expired || labelForWindow(win) !== "main") &&
+    !lockedWindowCommands.has(command) &&
+    !command.startsWith("plugin:window|") &&
+    !command.startsWith("plugin:path|")
+  ) {
+    throw new Error("client_locked");
+  }
+
+  if (command === "client_lock") {
+    authService.getBoundSession(binding);
+    return authService.lockAllSessions();
+  }
+
+  if (["client_account_lock_info", "client_account_unlock", "client_account_lock_settings"].includes(command)) {
+    if (windows.get("main") !== win) throw new Error("Account switching requires the main window");
+    const target = authService.pendingAccountBinding(args, binding);
+    const validateAccess = () => {
+      if (authService.pendingAccountBinding(args, binding) !== target)
+        throw new Error("Client account preflight changed");
+    };
+    if (command === "client_account_unlock") {
+      const result = await authService.unlockSession(target, args, validateAccess);
+      validateAccess();
+      return result;
+    }
+    const info = await authService.lockInfo(target, validateAccess);
+    validateAccess();
+    if (command === "client_account_lock_settings") return shell.openExternal(info.settingsUrl);
+    return info;
+  }
+
+  if (command.startsWith("local_codex_")) {
+    const label = labelForWindow(win);
+    if (label !== "main" && !label.startsWith("asset-") && !label.startsWith("settings"))
+      throw new Error("Local AI is unavailable in this window");
+    if (!binding) throw new Error("Local AI requires a current login");
+    const authenticated = authService.getBoundSession(binding);
+    if (windowSessionBindings.get(event.sender) !== binding) throw new Error("Local AI login changed");
+    if (command === "local_codex_runtime_status") return codexInstallation.status();
+    if (command === "local_codex_install") {
+      if (label !== "main" && !label.startsWith("settings"))
+        throw new Error("Install the AI engine from the settings window");
+      return codexInstallation.install();
+    }
+    let host = codexHosts.get(binding);
+    if (!host) {
+      const scope = createHash("sha256").update(`${binding.origin}\0${binding.sessionKey}`).digest("hex");
+      host = new LocalCodexService({
+        directory: path.join(app.getPath("userData"), "local-codex", scope),
+        runtime: codexInstallation,
+        fetch: (url, init) => net.fetch(url, init),
+        async assertEnabled() {
+          const settings = await authService.apiRequest(
+            { method: "GET", path: "/api/v1/settings/public/", timeoutMs: 15_000 },
+            binding
+          );
+          if (settings?.CHAT_AI_ENABLED !== true)
+            throw new LocalAiError("LOCAL_AI_DISABLED", "AI Assistant is disabled in enterprise settings");
+        },
+        secrets: {
+          encrypt(value) {
+            requireCodexKeyStorage();
+            return safeStorage.encryptString(value).toString("base64");
+          },
+          decrypt(value) {
+            requireCodexKeyStorage();
+            return safeStorage.decryptString(Buffer.from(value, "base64"));
+          }
+        },
+        assertOwner(ownerId, organizationId) {
+          const target = [...windows.values()].find(
+            (candidate) => candidate.webContents.id === ownerId && !candidate.isDestroyed()
+          );
+          if (
+            !target ||
+            windowSessionBindings.get(target.webContents) !== binding ||
+            (authService.getRequestSession(binding).orgId || "") !== organizationId
+          )
+            throw new Error("Local AI window, login or organization changed");
+        },
+        emit(ownerId, value) {
+          for (const [targetLabel, target] of windows) {
+            if (
+              !target.isDestroyed() &&
+              target.webContents.id === ownerId &&
+              windowSessionBindings.get(target.webContents) === binding
+            )
+              emitDesktopEvent("local-codex-event", value, targetLabel);
+          }
+        }
+      });
+      codexHosts.set(binding, host);
+    }
+    if (command === "local_codex_settings") return host.configuration();
+    if (command === "local_codex_configure") {
+      authService.getRequestSession(binding);
+      const settings = await host.configure(args.settings);
+      if (windowSessionBindings.get(event.sender) !== binding || !authService.boundToken(binding))
+        throw new Error("Local AI login changed");
+      for (const [targetLabel, target] of windows)
+        if (windowSessionBindings.get(target.webContents) === binding)
+          emitDesktopEvent("local-codex-settings", settings, targetLabel);
+      return settings;
+    }
+    if (command === "local_codex_probe") return host.probe(args.settings);
+    const organizationId = authenticated.orgId || "";
+    if (command === "local_codex_models") return host.models(event.sender.id, organizationId, args.settings);
+    if (command === "local_codex_test") {
+      authService.getRequestSession(binding);
+      return host.testConnection(event.sender.id, organizationId, args.settings);
+    }
+    if (command === "local_codex_create") {
+      if (label !== "main" && !label.startsWith("asset-")) throw new Error("AI sessions require a workspace window");
+      return host.create(event.sender.id, organizationId, args.input);
+    }
+    const methods = {
+      local_codex_send: "send",
+      local_codex_context: "context",
+      local_codex_history: "history",
+      local_codex_approve: "approve",
+      local_codex_mode: "mode",
+      local_codex_result: "result",
+      local_codex_cancel: "cancel",
+      local_codex_delete: "delete"
+    } as const;
+    const method = methods[command as keyof typeof methods];
+    if (!method) throw new Error("Unknown local Codex action");
+    return host[method](event.sender.id, organizationId, args);
+  }
+
+  if (command === "site_certificate_policy") return siteCertificates.policy(args.site);
+  if (command === "site_certificate_info") return siteCertificates.certificateInfo(args.site);
+  if (command === "set_site_certificate_policy") {
+    if (windows.get("main") !== win) throw new Error("Certificate settings require the main window");
+    if (typeof args.verifyCertificate !== "boolean") throw new Error("Invalid certificate verification setting");
+    const policy = siteCertificates.policy(args.site);
+    if (!policy.origin.startsWith("https://")) throw new Error("Certificate verification applies to HTTPS sites only");
+    if (!args.verifyCertificate && args.riskAccepted !== true)
+      throw new Error("Disabling certificate verification requires risk acceptance");
+    const updated = await siteCertificates.setVerification(policy.origin, args.verifyCertificate);
+    emitDesktopEvent("site-certificate-policy-changed", updated);
+    return updated;
+  }
 
   if (command.startsWith("plugin:store|")) return handleStore(command, args);
   if (command === "plugin:event|listen") {
@@ -1038,7 +1556,33 @@ async function handleInvoke(event, request) {
   }
   if (command === "plugin:event|unlisten") return subscriptions.delete(args.eventId);
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
+    if (
+      [
+        "local-codex-event",
+        "local-codex-settings",
+        "local-codex-runtime",
+        "client-lock-state",
+        "client-lock-changed",
+        "client-policy-notices",
+        "client-policy-notice-dismiss",
+        "client-policy-notice-layer",
+        "site-certificate-policy-changed"
+      ].includes(args.event)
+    )
+      throw new Error("Client lock events are owned by the main process");
     emitDesktopEvent(args.event, args.payload);
+    return null;
+  }
+
+  if (command === "set_shortcut_recording") {
+    if (args.enabled === true) shortcutRecorders.add(event.sender);
+    else shortcutRecorders.delete(event.sender);
+    event.sender.setIgnoreMenuShortcuts(args.enabled === true);
+    return null;
+  }
+
+  if (command === "open_new_session") {
+    sendMenuCommand("open-new-session");
     return null;
   }
 
@@ -1065,7 +1609,11 @@ async function handleInvoke(event, request) {
   if (command === "plugin:window|theme") return nativeTheme.shouldUseDarkColors ? "dark" : "light";
   if (command === "plugin:window|get_all_windows") return [...windows.keys()];
   if (command === "plugin:webview|create_webview_window") {
-    createWindow(args.options.label, args.options);
+    createWindow(
+      args.options.label,
+      args.options,
+      String(args.options.label).startsWith("asset-") ? (windowSessionBindings.get(event.sender) ?? null) : undefined
+    );
     return null;
   }
 
@@ -1081,9 +1629,24 @@ async function handleInvoke(event, request) {
   if (command === "plugin:path|extname") return path.extname(args.path);
   if (command === "plugin:path|basename") return path.basename(args.path, args.ext);
   if (command === "plugin:path|is_absolute") return path.isAbsolute(args.path);
-  if (command === "plugin:clipboard-manager|write_text") return void clipboard.writeText(args.text || "");
+  if (command === "plugin:clipboard-manager|write_text") {
+    await clipboard.writeText(args.text || "");
+    await clipboardHistory.capture();
+    return;
+  }
   if (command === "plugin:clipboard-manager|read_text") return clipboard.readText();
   if (command === "plugin:clipboard-manager|clear") return void clipboard.clear();
+  if (command === "desktop_clipboard_history") return clipboardHistory.read();
+  if (command === "desktop_clipboard_history_status") return clipboardHistory.status();
+  if (command === "desktop_clipboard_history_remove") {
+    if (typeof args.id !== "string") throw new Error("Invalid clipboard history item ID");
+    return clipboardHistory.remove(args.id);
+  }
+  if (command === "desktop_clipboard_history_clear") return clipboardHistory.clear();
+  if (command === "desktop_clipboard_history_set_enabled") {
+    if (typeof args.enabled !== "boolean") throw new Error("Invalid clipboard history state");
+    return clipboardHistory.setEnabled(args.enabled);
+  }
   if (command === "desktop_clipboard_write_image") {
     const image = nativeImage.createFromBitmap(Buffer.from(args.rgba), {
       width: Number(args.width),
@@ -1201,17 +1764,44 @@ async function handleInvoke(event, request) {
     }));
   }
 
-  if (command === "set_api_session") return authService.setSession(args);
-  if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
-  if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
+  if (command === "set_api_session") {
+    if (
+      labelForWindow(win) !== "main" &&
+      (args.sessionKey !== binding?.sessionKey || args.origin !== binding?.origin || !authService.boundToken(binding))
+    )
+      throw new Error("Account switching requires the main window");
+    return activateApiSession(args);
+  }
+  if (command === "set_api_org") {
+    if (binding && authService.getBoundSession(binding).orgId !== (args.orgId || "")) codexHosts.get(binding)?.close();
+    return authService.setCurrentOrg(args.orgId, binding);
+  }
+  if (command === "sync_backend_language") return authService.syncBackendLanguage(args, binding);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
-  if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
+  if (command === "auth_login") {
+    if (!(await confirmHttpConnection(args.site, win, args.httpRiskAccepted)))
+      return { status: "http-confirmation-required", origin: certificateSiteOrigin(args.site) };
+    return withIpcErrorLog("auth_login", () => authService.authLogin(args));
+  }
   if (command === "auth_cancel") return authService.cancelAuth();
   if (command === "list_authenticated_accounts") return authService.listAuthenticatedAccounts();
-  if (command === "bootstrap_auth_session")
+  if (command === "bootstrap_auth_session") {
+    if (!(await confirmHttpConnection(args.site, win, args.httpRiskAccepted)))
+      return { status: "http-confirmation-required", origin: certificateSiteOrigin(args.site) };
     return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
-  if (command === "api_request") return authService.apiRequest(args.request);
-  if (command === "api_stream_start") return startApiStream(event, win, args);
+  }
+  if (command === "api_request") {
+    const publicSettings = args.request?.service !== "kael" && args.request?.path === "/api/v1/settings/public/";
+    try {
+      const result = await authService.apiRequest(args.request, binding);
+      if (binding && publicSettings && result?.CHAT_AI_ENABLED !== true) codexHosts.get(binding)?.close();
+      return result;
+    } catch (error) {
+      if (binding && publicSettings) codexHosts.get(binding)?.close();
+      throw error;
+    }
+  }
+  if (command === "api_stream_start") return startApiStream(event, win, args, binding);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "face_engine_status") return faceEngine.status();
   if (command === "face_engine_initialize") return faceEngine.initialize();
@@ -1223,9 +1813,24 @@ async function handleInvoke(event, request) {
   }
   if (command === "face_engine_process_frame") return faceEngine.processFrame(event.sender.id, args);
   if (command === "face_engine_stop_session") return faceEngine.stopSession(event.sender.id, args.sessionId);
-  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
-  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
-  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
+  if (command === "download_chen_export") {
+    const target = chenExportTarget(String(args.url || ""), allowedChenOrigins);
+    const ticket = String(args.ticket || "");
+    if (!ticket || ticket.length > 1024) throw new Error("Invalid export download ticket");
+    if (!args.filePath) throw new Error("Export destination is required");
+    const filePath = normalizePath(args.filePath);
+    const response = await siteCertificates.fetch(target, {
+      method: "POST",
+      redirect: "error",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ticket }).toString()
+    });
+    await saveChenDownload(response, filePath);
+    return "saved";
+  }
+  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen", binding);
+  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko", binding);
+  if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args, binding);
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();
   if (command === "remove_offline_recording") return offlineRecordings.removeRecording(args.recordingId);
@@ -1252,12 +1857,32 @@ async function handleInvoke(event, request) {
       (command === "create_web_proxy_view" &&
         (args.successSelector || args.interactiveSelector || args.allowedUrls?.length))
     ) {
-      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
+      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" }, binding);
       if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
     }
-    return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
+    return withIpcErrorLog(command, async () => {
+      const result = await webProxyManager.invoke(command, event, win, args, () => {
+        if (
+          (windowSessionBindings.get(event.sender) ?? null) !== binding ||
+          (binding && (!authService.boundToken(binding) || authService.lockState(binding).locked))
+        )
+          throw new Error("Client login is no longer available");
+      });
+      if (["create_web_proxy_view", "set_web_proxy_view_active", "close_web_proxy_view"].includes(command)) {
+        clientNoticeLayers.raise(win);
+        emitDesktopEvent("client-policy-notice-layer", null, labelForWindow(win));
+      }
+      return result;
+    });
   }
-  if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
+  if (command === "logout")
+    return withIpcErrorLog("logout", () => {
+      const result = authService.logout(args);
+      closeExpiredSessionWindows(args.sessionId);
+      const main = windows.get("main");
+      if (main) syncWindowLock(main);
+      return result;
+    });
   if (command === "open_settings_window") {
     emitDesktopEvent("settings-navigate", args.path || "/setting/general", labelForWindow(win));
     return null;
@@ -1320,26 +1945,28 @@ async function handleInvoke(event, request) {
   throw new Error(`Electron bridge has not migrated command: ${command}`);
 }
 
-async function registerProtocols() {
-  protocol.handle("jms-app", async (request) => {
-    const url = parseUrl(request.url);
-    const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
-    const root = path.join(projectRoot, "dist");
-    let candidate = path.resolve(root, relative || "index.html");
-    if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== root)
-      return new Response("Forbidden", { status: 403 });
-    try {
-      const info = await stat(candidate);
-      if (info.isDirectory()) candidate = path.join(candidate, "index.html");
-    } catch {
-      if (/^(?:api|chen|core|koko|lion|media|static|ws)(?:\/|$)/.test(relative)) {
-        return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
-      }
-      candidate = path.join(root, "index.html");
+async function serveAppRequest(request) {
+  const url = parseUrl(request.url);
+  const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+  if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
+  const root = path.join(projectRoot, "dist");
+  let candidate = path.resolve(root, relative || "index.html");
+  if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== root)
+    return new Response("Forbidden", { status: 403 });
+  try {
+    const info = await stat(candidate);
+    if (info.isDirectory()) candidate = path.join(candidate, "index.html");
+  } catch {
+    if (/^(?:api|chen|core|koko|lion|media|static|ws)(?:\/|$)/.test(relative)) {
+      return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
     }
-    return net.fetch(pathToFileURL(candidate).toString());
-  });
+    candidate = path.join(root, "index.html");
+  }
+  return net.fetch(pathToFileURL(candidate).toString());
+}
+
+async function registerProtocols() {
+  protocol.handle("jms-app", serveAppRequest);
   protocol.handle("jms-asset", async (request) => {
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -1399,6 +2026,7 @@ async function registerProtocols() {
       const responseLength = fileLength === 0 ? 0 : end - start + 1;
       const headers = {
         "access-control-allow-origin": "*",
+        "access-control-expose-headers": "Content-Range, Accept-Ranges",
         "accept-ranges": "bytes",
         "content-length": String(responseLength),
         "content-type": contentType
@@ -1444,6 +2072,11 @@ function describeProtocolUrl(rawUrl) {
 }
 
 async function processIncomingProtocolUrl(value: string) {
+  const binding = authService.captureSessionBinding();
+  if (authService.lockState(binding).locked) {
+    showMainWindow();
+    return false;
+  }
   if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return false;
   const payload = decodeClientProtocolPayload(value);
   if (isWebAssetClientProtocolPayload(payload)) {
@@ -1496,26 +2129,53 @@ async function drainPendingProtocolUrls() {
 const initialProtocolUrl = findClientProtocolUrl(process.argv);
 if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
 
+let authExitFinished = false;
+let authExitPending = false;
 app.on("before-quit", (event) => {
-  if (!replayTranscoder?.isTranscoding || allowCloseDuringTranscode) return;
+  if (replayTranscoder?.isTranscoding && !allowCloseDuringTranscode) {
+    event.preventDefault();
+    confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+    return;
+  }
+  authService?.stopSessionMonitor();
+  clearInterval(idleLockTimer);
+  if (authExitFinished) return;
+  if (authExitPending) {
+    event.preventDefault();
+    return;
+  }
+  if (!authService?.hasExitSessions() && !WebVideoRecording.hasActiveRecordings()) return;
   event.preventDefault();
-  confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+  authExitPending = true;
+  void WebVideoRecording.finishAll()
+    .then(() => authService?.revokeOnExit())
+    .finally(() => {
+      authExitFinished = true;
+      app.quit();
+    });
 });
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("will-quit", () => {
+  codexInstallation.cancel();
+  for (const host of codexHosts.values()) host.close();
+  codexHosts.clear();
+  clipboardHistory.stop();
   void faceEngine?.shutdown();
 });
-app.on("activate", () => createWindow("main"));
-
 app.whenReady().then(async () => {
   debugLogService = new DebugLogService({ logsDir: app.getPath("logs") });
   await debugLogService.initialize();
   const persistedSettings = await readFile(path.join(app.getPath("userData"), "user-setting.json"), "utf8").catch(
     () => ""
   );
+  try {
+    shortcutOverrides = normalizeShortcutOverrides(JSON.parse(persistedSettings).state?.shortcutOverrides);
+  } catch {
+    shortcutOverrides = {};
+  }
   debugLogService.setEnabled(parsePersistedDebugLogEnabled(persistedSettings));
   activateDebugLogService(debugLogService);
   if (debugLogService.isEnabled) {
@@ -1526,12 +2186,21 @@ app.whenReady().then(async () => {
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
-  authService = new DesktopAuthService(emitDesktopEvent);
+  siteCertificates = new SiteCertificateService(
+    path.join(app.getPath("userData"), "site-certificates.json"),
+    (policy) => emitDesktopEvent("site-certificate-policy-changed", policy)
+  );
+  await siteCertificates.initialize();
+  authService = new DesktopAuthService(emitDesktopEvent, (url, init) => siteCertificates.fetch(url, init));
   await authService.initialize();
-  electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
-    // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat
-    // Other hosts (including plugin downloads) must use Chromium's certificate verification.
-    callback(authService.isTrustedSiteHost(request.hostname) ? 0 : -3);
+  // Keep main-process downloads strict. Only our renderer windows can opt into
+  // a user-confirmed exception, scoped to the full request origin (including port).
+  app.on("certificate-error", (event, webContents, url, error, certificate, callback) => {
+    const ownWindow = [...windows.values()].some((win) => !win.isDestroyed() && win.webContents === webContents);
+    if (!ownWindow) return;
+    siteCertificates.rememberCertificate(url, certificate, error);
+    event.preventDefault();
+    callback(siteCertificates.rendererCertificateAllowed(url));
   });
   const quitAfterProtocolLaunch = await drainPendingProtocolUrls();
   if (quitAfterProtocolLaunch) {
@@ -1558,7 +2227,12 @@ app.whenReady().then(async () => {
     (payload, label) => emitDesktopEvent("transcode-progress", payload, label),
     ffmpegPlugin
   );
-  ipcMain.handle("jms:invoke", handleInvoke);
+  ipcMain.handle("jms:invoke", (event, request) =>
+    isLocalAiSettingsCommand(request?.command)
+      ? withLocalAiErrors(() => handleInvoke(event, request))
+      : handleInvoke(event, request)
+  );
+  clipboardHistory.start();
   if (process.platform === "darwin") {
     const icon = loadAppIcon();
     if (icon) app.dock.setIcon(icon);
@@ -1568,5 +2242,14 @@ app.whenReady().then(async () => {
   nativeTheme.on("updated", () => {
     emitDesktopEvent("desktop://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
+  app.on("activate", () => createWindow("main"));
   createWindow("main");
+  authService.startSessionMonitor();
+  idleLockTimer = setInterval(checkIdleLocks, 1_000);
+  idleLockTimer.unref();
+  powerMonitor.on("suspend", () => authService.lockSessions());
+  powerMonitor.on("resume", () => {
+    checkIdleLocks();
+    void authService.checkSessions(true);
+  });
 });

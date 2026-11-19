@@ -282,7 +282,7 @@ export function parseKokoMcpFrame(value: unknown): KokoMcpFrame | null {
       resource_session_id: resourceSessionId,
       data: {
         profile: manifest.profile,
-        ...(manifest.context ? { context: manifest.context } : {}),
+        ...(isRecord(manifest.context) ? { context: manifest.context } : {}),
         revision,
         tools: manifest.tools as AgentMcpTool[]
       }

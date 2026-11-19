@@ -96,55 +96,6 @@ export const useThemeAdapter = () => {
     }
   };
 
-  /**
-   * @description 初始化应用主题，保留已保存的主题及跟随系统设置
-   */
-  const initialTheme = async () => {
-    await waitHydration();
-
-    const savedMode = (themeMode.value || "") as string;
-    const modeIsWithSystem = savedMode === "withSystem";
-    const modeIsManual = savedMode === "dark" || savedMode === "light";
-
-    const follow = modeIsWithSystem ? true : modeIsManual ? false : followSystem.value;
-    const savedTheme = (modeIsManual ? savedMode : userTheme.value) as DesktopTheme | "";
-
-    const osTheme = await getSystemTheme();
-
-    if (!osTheme) {
-      if (savedTheme) {
-        uiColorMode.preference = savedTheme;
-      }
-      return;
-    }
-
-    currentOSTheme.value = osTheme;
-
-    if (follow) {
-      if (themeMode.value !== "withSystem") {
-        setThemeMode("withSystem");
-      }
-      if (!followSystem.value) {
-        setFollowSystem(true);
-      }
-      uiColorMode.preference = osTheme;
-      setTheme(osTheme);
-      return;
-    }
-
-    if (followSystem.value) {
-      setFollowSystem(false);
-    }
-
-    if (savedTheme) {
-      uiColorMode.preference = savedTheme;
-      return;
-    }
-
-    uiColorMode.preference = osTheme;
-    setTheme(osTheme);
-  };
-
   const resolvePreset = (theme: DesktopTheme, preset?: string) =>
     preset || (theme === "dark" ? darkThemePreset.value : lightThemePreset.value);
 
@@ -170,6 +121,55 @@ export const useThemeAdapter = () => {
     root.style.colorScheme = theme;
     if (nextPreset) root.dataset.themePreset = nextPreset;
     if (nextAccent) applyPrimaryColor(nextAccent);
+  };
+
+  /**
+   * @description 初始化应用主题，保留已保存的主题及跟随系统设置
+   */
+  const initialTheme = async () => {
+    await waitHydration();
+
+    const savedMode = (themeMode.value || "") as string;
+    const modeIsWithSystem = savedMode === "withSystem";
+    const modeIsManual = savedMode === "dark" || savedMode === "light";
+
+    const follow = modeIsWithSystem ? true : modeIsManual ? false : followSystem.value;
+    const savedTheme = (modeIsManual ? savedMode : userTheme.value) as DesktopTheme | "";
+
+    const osTheme = await getSystemTheme();
+
+    if (!osTheme) {
+      if (savedTheme) {
+        applyVisualTheme(savedTheme);
+      }
+      return;
+    }
+
+    currentOSTheme.value = osTheme;
+
+    if (follow) {
+      if (themeMode.value !== "withSystem") {
+        setThemeMode("withSystem");
+      }
+      if (!followSystem.value) {
+        setFollowSystem(true);
+      }
+      applyVisualTheme(osTheme);
+      setTheme(osTheme);
+      return;
+    }
+
+    if (followSystem.value) {
+      setFollowSystem(false);
+    }
+
+    if (savedTheme) {
+      applyVisualTheme(savedTheme);
+      return;
+    }
+
+    applyVisualTheme(osTheme);
+    setTheme(osTheme);
   };
 
   const runThemeTransition = (apply: () => void, origin?: ThemeRevealOrigin | null) => {

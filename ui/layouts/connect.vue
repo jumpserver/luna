@@ -6,6 +6,7 @@ const route = useRoute();
 const { isMacOS } = usePlatform();
 const { focusMode, nativeFullscreen } = useWorkspaceTabs();
 useWorkspaceFullscreenShortcuts();
+useWorkspaceSessionShortcuts();
 const isSessionWindow = computed(() => route.path.startsWith("/session/"));
 const showSessionTabs = computed(() => shouldShowSessionTabStrip(route.path, route.query));
 const showSessionTabChrome = computed(() => showSessionTabs.value && !focusMode.value);

@@ -1,0 +1,1269 @@
+<script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type {
+  CellClassParams,
+  CellContextMenuEvent,
+  CellFocusedEvent,
+  CellMouseOverEvent,
+  ColDef,
+  GetRowIdParams,
+  GridApi,
+  GridReadyEvent,
+  IHeaderParams
+} from "ag-grid-community";
+import type { PropType } from "vue";
+import type { ChenGoApi, GoCopiedSQL, GoCopySelection, GoRows } from "./api";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
+import type { ChenGridCell } from "~/chen/utils/dataGridSelection";
+import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
+import { AgGridVue } from "ag-grid-vue3";
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
+import { gridLocales } from "~/chen/locales";
+import {
+  emptyChenGridSelection,
+  extendChenGridSelection,
+  finishChenGridSelection,
+  getChenGridSelectionBounds,
+  startChenGridSelection
+} from "~/chen/utils/dataGridSelection";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
+import { writeClipboardText } from "~/utils/clipboard";
+import GoResultCellEditor from "./GoResultCellEditor.vue";
+import GoResultValue from "./GoResultValue.client.vue";
+import {
+  compareResultValues,
+  resultClipboardTsv,
+  resultColumnId,
+  resultContextSelection,
+  resultFocusSelection,
+  resultGridRows,
+  resultSelectionTsv,
+  resultSQLSelection,
+  resultTypeBadge,
+  resultValuePreview,
+  resultValueText
+} from "./resultGrid";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-balham.css";
+
+const props = defineProps<{
+  rows: GoRows;
+  viewId?: string;
+  initialView?: QueryWorkspaceTab["gridView"];
+  canCopy: boolean;
+  readResultPage?: ChenGoApi["rows"];
+  rowActions?: DropdownMenuItem[];
+  displayMode?: "table" | "query";
+  active?: boolean;
+  loadingSettings?: GoResultLoadingSettings;
+  loadingSettingsDisabled?: boolean;
+  pageSizeControl?: boolean;
+  maxBatchSize?: number;
+  canLoadMore?: boolean;
+  nullableColumns?: number[];
+  copySql?: (operation: "insert" | "update", selection: GoCopySelection) => Promise<GoCopiedSQL>;
+  sqlCopyDisabled?: boolean;
+  editableColumns?: number[];
+  insertableColumns?: number[];
+  originalRowCount?: number;
+  changedCells?: string[];
+  defaultCells?: string[];
+  deletedRows?: number[];
+}>();
+const emit = defineEmits<{
+  edit: [row: number, column: number];
+  change: [row: number, column: number, value: string | null];
+  selection: [rows: number[]];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [];
+}>();
+ModuleRegistry.registerModules([AllCommunityModule]);
+const { t, locale } = useI18n();
+const toast = useToast();
+const gridApi = shallowRef<GridApi | null>(null);
+const selection = ref(emptyChenGridSelection());
+const filter = ref(props.initialView?.filter || "");
+const searchOpen = ref(false);
+const resultCopyBusy = ref(false);
+const localSearch = computed(() => props.displayMode !== "table");
+const gridPreferences = useChenGridPreferences();
+const loadingModes = computed(() => [
+  { label: t("Chen.GoBrowsePaging"), value: "page" },
+  { label: t("Chen.GoBrowseContinuous"), value: "continuous", disabled: props.rows.query_page?.mode === "database" }
+]);
+const batchSizes = computed(() =>
+  [...new Set([50, 100, 200, 500, 1000, props.loadingSettings?.batchSize || 50, props.maxBatchSize || 1000])]
+    .filter((size) => size <= (props.maxBatchSize || 1000))
+    .sort((a, b) => a - b)
+);
+function changeLoading(value: Partial<GoResultLoadingSettings>) {
+  if (!props.loadingSettings || props.loadingSettingsDisabled) return;
+  gridApi.value?.stopEditing();
+  emit("loadingSettings", { ...props.loadingSettings, ...value });
+}
+function loadNearEnd(event: { direction: string }) {
+  if (
+    event.direction !== "vertical" ||
+    props.active === false ||
+    !props.canLoadMore ||
+    filter.value ||
+    gridApi.value?.getEditingCells().length
+  )
+    return;
+  const api = gridApi.value;
+  if (api && api.getLastDisplayedRowIndex() >= api.getDisplayedRowCount() - 6) emit("loadMore");
+}
+const fieldSearch = ref("");
+// ponytail: the session exposes asset/account display names, not stable connection IDs.
+// Keep visibility in this result instance until the API supplies a reliable full table identity.
+const hiddenColumns = ref<string[]>([]);
+const columnStructure = computed(() =>
+  JSON.stringify(props.rows.columns.map((column) => [column.name, column.data_type]))
+);
+const nullDisplayOptions = computed(() => [
+  { label: "NULL", value: "keyword" },
+  { label: "(null)", value: "parenthesized" },
+  { label: t("Chen.Blank"), value: "blank" }
+]);
+const displaySwitches = [
+  { key: "showEmptyStrings", label: "Chen.MarkEmptyStrings" },
+  { key: "stripedRows", label: "Chen.ZebraStripes" },
+  { key: "showCellBorders", label: "Chen.CellBorders" },
+  { key: "compactRows", label: "Chen.CompactRows" }
+] as const;
+const visibleColumnCount = computed(() => props.rows.columns.length - hiddenColumns.value.length);
+const sqlCopyBusy = ref(false);
+let mounted = true;
+const shownRows = ref(props.rows.rows.length);
+const valueOpen = ref(false);
+const valueCell = ref<{ name: string; type: string; row: number; value: unknown } | null>(null);
+const pinVersion = ref(0);
+const expectedFocus = new Set<string>();
+const contextMenuOpen = ref(false);
+const contextMenuPosition = reactive({ x: 0, y: 0 });
+const contextCell = ref<ChenGridCell | null>(null);
+const contextRowNumber = ref<number | null>(null);
+// AG Grid Vue clones row objects; keep result identity as scalar fields.
+const data = computed(() =>
+  resultGridRows(props.rows).map((row) => ({ ...row, __result: props.rows.id, __offset: props.rows.offset }))
+);
+// Resolve the source row again after stopping an editor: its draft may have changed
+// both the value and its sorted/filtered display position while the menu is open.
+const contextRow = computed<Record<string, unknown> | undefined>(() =>
+  contextRowNumber.value === null ? undefined : data.value[contextRowNumber.value - props.rows.offset - 1]
+);
+const canSetNull = computed(() => {
+  const cell = contextCell.value;
+  const target = cell && editableTarget(contextRow.value, cell.colId);
+  return props.active !== false && !!target && props.nullableColumns?.includes(target.column) === true;
+});
+const sourceColumns = computed(() => props.rows.columns);
+const rowId = ({ data }: GetRowIdParams) => `${data.__result}:${data.__offset}:${data.__row}`;
+const columnNames = computed(() => {
+  let unnamed = 0;
+  return sourceColumns.value.map((column) =>
+    column.name === "?column?" ? t("Chen.GoV1GridUnnamedColumn", { index: ++unnamed }) : column.name
+  );
+});
+const allCopyColumns = computed(() =>
+  columnNames.value.map((name, ordinal) => ({ id: resultColumnId(ordinal), name }))
+);
+const listedColumns = computed(() =>
+  sourceColumns.value
+    .map((column, ordinal) => ({
+      id: resultColumnId(ordinal),
+      label: `${ordinal + 1}. ${columnNames.value[ordinal] || column.name}`
+    }))
+    .filter((column) => column.label.toLowerCase().includes(fieldSearch.value.trim().toLowerCase()))
+);
+function setColumnVisible(id: string, visible: boolean) {
+  if (!sourceColumns.value.some((_, ordinal) => resultColumnId(ordinal) === id)) return;
+  if (!visible && (hiddenColumns.value.includes(id) || visibleColumnCount.value <= 1)) return;
+  // Finish only the cell editor into the existing draft; no query/save event is emitted.
+  gridApi.value?.stopEditing();
+  hiddenColumns.value = visible ? hiddenColumns.value.filter((column) => column !== id) : [...hiddenColumns.value, id];
+  gridApi.value?.setColumnsVisible([id], visible);
+  visibilityChanged();
+}
+function showAllColumns() {
+  gridApi.value?.stopEditing();
+  hiddenColumns.value = [];
+  gridApi.value?.setColumnsVisible(
+    sourceColumns.value.map((_, ordinal) => resultColumnId(ordinal)),
+    true
+  );
+  visibilityChanged();
+}
+function visibilityChanged() {
+  const visible = columnIds();
+  if (
+    filter.value ||
+    [selection.value.anchor, selection.value.current, contextCell.value].some(
+      (cell) => cell && !visible.includes(cell.colId)
+    )
+  )
+    resetSelection();
+  const focused = gridApi.value?.getFocusedCell();
+  if (focused && !visible.includes(focused.column.getColId())) gridApi.value?.clearFocusedCell();
+  expectedFocus.clear();
+  pinVersion.value++;
+  refreshSelection();
+}
+const bounds = computed(() => {
+  void pinVersion.value;
+  return getChenGridSelectionBounds(selection.value, columnIds());
+});
+const selectedColumns = computed(
+  () => new Set(bounds.value?.displayedColIds.slice(bounds.value.minCol, bounds.value.maxCol + 1))
+);
+const selectionLabel = computed(() =>
+  bounds.value
+    ? t("Chen.GoV1GridSelection", {
+        rows: bounds.value.maxRow - bounds.value.minRow + 1,
+        columns: bounds.value.maxCol - bounds.value.minCol + 1
+      })
+    : ""
+);
+const positionLabel = computed(() => {
+  const cell = selection.value.current;
+  if (!cell) return "";
+  const row = gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  const name = gridApi.value?.getColumn(cell.colId)?.getColDef().headerName;
+  return row && name ? t("Chen.GoV1GridPosition", { row: row.__row, column: name }) : "";
+});
+const focusedColumn = computed(() => {
+  void pinVersion.value;
+  const id = selection.value.current?.colId;
+  return id ? gridApi.value?.getColumn(id) : null;
+});
+const menuItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("Chen.GoV1GridFitColumns"),
+      icon: "i-lucide-columns-3",
+      onSelect: () => gridApi.value?.autoSizeAllColumns()
+    },
+    {
+      label: t(focusedColumn.value?.isPinned() ? "Chen.GoV1GridUnpin" : "Chen.GoV1GridPin"),
+      icon: "i-lucide-pin",
+      disabled: !focusedColumn.value,
+      onSelect: () => togglePinned(selection.value.current?.colId)
+    },
+    {
+      label: t("Chen.GoV1GridResetView"),
+      icon: "i-lucide-rotate-ccw",
+      onSelect: () => {
+        filter.value = "";
+        showAllColumns();
+        gridApi.value?.resetColumnState();
+        resetSelection();
+      }
+    }
+  ]
+]);
+const contextMenuItems = computed<DropdownMenuItem[][]>(() => {
+  void pinVersion.value;
+  const cell = contextCell.value;
+  const column = cell && gridApi.value?.getColumn(cell.colId);
+  const row = contextRow.value;
+  const canEdit = cell && props.active !== false && editableTarget(row, cell.colId);
+  return [
+    [
+      {
+        label: t("Chen.GoV1GridViewValue"),
+        icon: "i-lucide-text-search",
+        disabled: !cell,
+        onSelect: () => openValue(cell, row)
+      },
+      ...(canEdit
+        ? [
+            {
+              label: t("Chen.GoWriteEditCell"),
+              icon: "i-lucide-pencil",
+              onSelect: () => emit("edit", canEdit.row, canEdit.column)
+            }
+          ]
+        : []),
+      ...(canSetNull.value
+        ? [
+            {
+              label: t("Chen.SetValueNull"),
+              icon: "i-lucide-circle-minus",
+              onSelect: setCurrentCellNull
+            }
+          ]
+        : [])
+    ],
+    [
+      {
+        label: t("Chen.GoCopyCell"),
+        icon: "i-lucide-copy",
+        disabled: !props.canCopy || !cell || !row,
+        onSelect: () => {
+          if (cell && row) void copyText(resultValueText(row[cell.colId]));
+        }
+      },
+      {
+        label: t("Chen.GoCopyRow"),
+        icon: "i-lucide-rows-2",
+        disabled: !props.canCopy || !row,
+        onSelect: () => {
+          if (row) void copyText(resultSelectionTsv([row], allCopyColumns.value));
+        }
+      },
+      {
+        label: t("Chen.CopySelection"),
+        icon: "i-lucide-grid-2x2",
+        disabled: !props.canCopy || !bounds.value,
+        children: [
+          { label: t("Chen.GoWithoutHeaders"), onSelect: () => copySelection() },
+          { label: t("Chen.GoWithHeaders"), onSelect: () => copySelection(true) },
+          ...(props.copySql
+            ? (["insert", "update"] as const).map((operation) => ({
+                label: t(operation === "insert" ? "Chen.CopyInsertSql" : "Chen.CopyUpdateSql"),
+                disabled: props.sqlCopyDisabled || sqlCopyBusy.value,
+                onSelect: () => void copySqlSelection(operation)
+              }))
+            : [])
+        ]
+      },
+      {
+        label: t(
+          props.readResultPage
+            ? "Chen.GoCopyResult"
+            : props.rows.query_page?.mode === "database" ||
+                (props.displayMode === "table" && props.loadingSettings?.mode === "page")
+              ? "Chen.GoCopyPage"
+              : "Chen.GoCopyLoaded"
+        ),
+        icon: "i-lucide-table-2",
+        disabled: !props.canCopy || resultCopyBusy.value,
+        children: [
+          { label: t("Chen.GoWithoutHeaders"), onSelect: () => void copyResult(false) },
+          { label: t("Chen.GoWithHeaders"), onSelect: () => void copyResult(true) }
+        ]
+      }
+    ],
+    [
+      ...(props.rowActions || []),
+      {
+        label: t(column?.isPinned() ? "Chen.GoV1GridUnpin" : "Chen.GoV1GridPin"),
+        icon: "i-lucide-pin",
+        disabled: !column,
+        onSelect: () => togglePinned(cell?.colId)
+      }
+    ]
+  ];
+});
+const tableActions = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("Chen.GoWriteEditCell"),
+      icon: "i-lucide-pencil",
+      disabled: !bounds.value || !(props.editableColumns?.length || props.insertableColumns?.length),
+      onSelect: () => requestEdit()
+    },
+    {
+      label: t("Chen.GoV1GridCopy"),
+      icon: "i-lucide-copy",
+      disabled: !props.canCopy || !bounds.value,
+      onSelect: () => copySelection()
+    },
+    {
+      label: t("Chen.GoV1GridCopyHeaders"),
+      icon: "i-lucide-table-2",
+      disabled: !props.canCopy || !bounds.value,
+      onSelect: () => copySelection(true)
+    },
+    {
+      label: t("Chen.GoV1GridViewValue"),
+      icon: "i-lucide-expand",
+      disabled: !bounds.value,
+      onSelect: () => openValue()
+    }
+  ],
+  ...menuItems.value
+]);
+const ResultColumnHeader = defineComponent({
+  props: { params: { type: Object as PropType<IHeaderParams & { dataType: string }>, required: true } },
+  setup: (header) => () =>
+    h("span", { class: "result-column-heading" }, [
+      h("span", { class: "result-column-name" }, header.params.displayName),
+      h("span", { class: "result-column-type", "aria-hidden": "true" }, resultTypeBadge(header.params.dataType))
+    ])
+});
+
+function togglePinned(id?: string) {
+  const column = id ? gridApi.value?.getColumn(id) : null;
+  if (column) gridApi.value?.setColumnsPinned([column.getColId()], column.isPinned() ? null : "left");
+}
+
+function columnIds() {
+  return (
+    gridApi.value
+      ?.getAllDisplayedColumns()
+      .map((column) => column.getColId())
+      .filter((id) => id !== "__row") || []
+  );
+}
+function selectedClass(params: CellClassParams) {
+  const area = bounds.value;
+  return (
+    !!area &&
+    params.node.rowIndex != null &&
+    params.node.rowIndex >= area.minRow &&
+    params.node.rowIndex <= area.maxRow &&
+    selectedColumns.value.has(params.column.getColId())
+  );
+}
+const columns = computed<ColDef[]>(() => [
+  {
+    colId: "__row",
+    field: "__row",
+    headerName: "#",
+    headerTooltip: t("Chen.RowNumber"),
+    width: 54,
+    minWidth: 54,
+    maxWidth: 82,
+    pinned: "left",
+    lockPinned: true,
+    lockPosition: true,
+    suppressMovable: true,
+    suppressAutoSize: true,
+    sortable: false,
+    cellClass: "result-row-number",
+    getQuickFilterText: () => ""
+  },
+  ...sourceColumns.value.map(
+    (column, ordinal): ColDef => ({
+      colId: resultColumnId(ordinal),
+      field: resultColumnId(ordinal),
+      headerName: columnNames.value[ordinal],
+      headerTooltip: `${column.name} · ${column.data_type} · ${t(props.loadingSettings?.mode === "continuous" ? "Chen.GoBrowseLoadedOnly" : "Chen.GoV1GridPageOnly")}`,
+      headerComponentParams: {
+        innerHeaderComponent: ResultColumnHeader,
+        innerHeaderComponentParams: { dataType: column.data_type }
+      },
+      initialWidth: Math.min(300, Math.max(130, (columnNames.value[ordinal]?.length || 0) * 8 + 72)),
+      editable: ({ data }) => props.active !== false && !!editableTarget(data, resultColumnId(ordinal)),
+      cellEditor: GoResultCellEditor,
+      valueSetter: (params) => {
+        const target = editableTarget(params.data, params.column.getColId());
+        if (target && (params.newValue === null || typeof params.newValue === "string")) {
+          emit("change", target.row, target.column, params.newValue);
+        }
+        // The application owns draft values. Never mutate AG Grid row data or
+        // the cached query result; the staged draft supplies the next rowData.
+        return false;
+      },
+      minWidth: 80,
+      maxWidth: 1000,
+      valueFormatter: ({ value, data }) =>
+        props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
+          ? "DEFAULT"
+          : resultValuePreview(value, 240, gridPreferences.value),
+      tooltipValueGetter: ({ value, data }) => {
+        return props.defaultCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`)
+          ? "DEFAULT"
+          : value === ""
+            ? t("Chen.GoV1GridEmptyString")
+            : resultValuePreview(value, 1024);
+      },
+      comparator: (a, b) => compareResultValues(a, b, resultTypeBadge(column.data_type) === "123"),
+      getQuickFilterText: ({ value }) => resultValueText(value),
+      cellClassRules: {
+        "result-selected-cell": selectedClass,
+        "result-null-cell": ({ value }) => value == null,
+        "result-empty-cell": ({ value }) => value === "",
+        "result-changed-cell": ({ data }) =>
+          !!props.changedCells?.includes(`${Number(data?.__row) - props.rows.offset - 1}:${ordinal}`),
+        "result-deleted-cell": ({ data }) => !!props.deletedRows?.includes(Number(data?.__row) - props.rows.offset - 1)
+      }
+    })
+  )
+]);
+const defaults: ColDef = {
+  resizable: true,
+  sortable: true,
+  editable: false,
+  cellDataType: false,
+  suppressMovable: true
+};
+
+let paintedBounds: typeof bounds.value = null;
+let paintedColumns = new Set<string>();
+let selectedRows: number[] = [];
+function refreshSelection(refreshAll = false) {
+  const area = bounds.value;
+  const columns = selectedColumns.value;
+  if (refreshAll) {
+    // Sorting can move previously highlighted row nodes outside their old range.
+    gridApi.value?.refreshCells();
+  } else if (
+    area?.minRow !== paintedBounds?.minRow ||
+    area?.maxRow !== paintedBounds?.maxRow ||
+    columns.size !== paintedColumns.size ||
+    [...columns].some((column) => !paintedColumns.has(column))
+  ) {
+    // Refresh only visible cells in the old/new ranges. Class rules also run
+    // without force, so clearing a selection does not rebuild cell contents.
+    const rowNodes = gridApi.value
+      ?.getRenderedNodes()
+      .filter(
+        ({ rowIndex }) =>
+          rowIndex != null &&
+          [area, paintedBounds].some((range) => range && rowIndex >= range.minRow && rowIndex <= range.maxRow)
+      );
+    const changedColumns = [...new Set([...paintedColumns, ...columns])];
+    if (rowNodes?.length && changedColumns.length) {
+      gridApi.value?.refreshCells({ rowNodes, columns: changedColumns });
+    }
+  }
+  paintedBounds = area;
+  paintedColumns = columns;
+  const rows = (selectedData()?.rows || []).map((row) => Number(row.__row) - props.rows.offset - 1);
+  if (rows.length !== selectedRows.length || rows.some((row, index) => row !== selectedRows[index])) {
+    selectedRows = rows;
+    emit("selection", rows);
+  }
+}
+function finishSelection() {
+  if (!selection.value.dragging) return;
+  selection.value = finishChenGridSelection(selection.value);
+}
+function resetSelection() {
+  expectedFocus.clear();
+  contextMenuOpen.value = false;
+  contextCell.value = null;
+  contextRowNumber.value = null;
+  selection.value = emptyChenGridSelection();
+  refreshSelection(true);
+}
+function captureCellMouseDown(event: MouseEvent) {
+  if (!(event.target instanceof Element) || (event.button !== 0 && event.button !== 2)) return;
+  const element = event.target.closest(".ag-cell[col-id]");
+  if (element?.classList.contains("ag-cell-inline-editing")) return;
+  const colId = element?.getAttribute("col-id");
+  const row = element?.closest("[row-index]")?.getAttribute("row-index");
+  if (!colId || row == null || !Number.isInteger(Number(row))) return;
+  const rowIndex = Number(row);
+  // Capture the gesture before AG Grid moves focus. Its deferred focus event must
+  // not replace a Shift-click anchor or collapse a range under the context menu.
+  if (colId !== "__row") expectedFocus.add(`${rowIndex}:${colId}`);
+  if (event.button === 2) return;
+  if (colId === "__row") {
+    const ids = columnIds();
+    if (!ids.length) return;
+    const anchor = event.shiftKey ? (selection.value.anchor?.rowIndex ?? rowIndex) : rowIndex;
+    selection.value = extendChenGridSelection(startChenGridSelection({ rowIndex: anchor, colId: ids[0]! }), {
+      rowIndex,
+      colId: ids.at(-1)!
+    });
+  } else {
+    const cell = { rowIndex, colId };
+    selection.value =
+      event.shiftKey && selection.value.anchor
+        ? { ...extendChenGridSelection(selection.value, cell), dragging: true }
+        : startChenGridSelection(cell);
+  }
+  refreshSelection();
+}
+function preventGridContextMenu(event: MouseEvent) {
+  if (!(event.target instanceof Element)) return;
+  const element = event.target.closest('.ag-cell:not([col-id="__row"])');
+  if (!element) return;
+  event.preventDefault();
+  // AG Grid does not emit cellContextMenu for an active text editor.
+  if (element.classList.contains("ag-cell-inline-editing")) {
+    const colId = element.getAttribute("col-id");
+    const row = element.closest("[row-index]")?.getAttribute("row-index");
+    if (colId && row != null && Number.isInteger(Number(row))) {
+      event.stopPropagation();
+      openContextMenu({ rowIndex: Number(row), colId }, event);
+    }
+  }
+}
+function openContextMenu(cell: ChenGridCell, mouse: Pick<MouseEvent, "clientX" | "clientY">) {
+  const row = gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  gridApi.value?.stopEditing();
+  contextRowNumber.value = row?.__row ?? null;
+  contextCell.value = cell;
+  selection.value = resultContextSelection(selection.value, columnIds(), cell);
+  refreshSelection();
+  contextMenuPosition.x = mouse.clientX;
+  contextMenuPosition.y = mouse.clientY;
+  contextMenuOpen.value = true;
+}
+function contextMenu(event: CellContextMenuEvent) {
+  const mouse = event.event as MouseEvent | undefined;
+  const rowIndex = event.node.rowIndex;
+  const colId = event.column.getColId();
+  if (!mouse || rowIndex == null || colId === "__row") return;
+  mouse.preventDefault();
+  openContextMenu({ rowIndex, colId }, mouse);
+}
+function selectedData() {
+  const area = getChenGridSelectionBounds(selection.value, columnIds());
+  if (!area || !gridApi.value) return null;
+  const ids = area.displayedColIds.slice(area.minCol, area.maxCol + 1);
+  const selectedRows: Record<string, unknown>[] = [];
+  for (let index = area.minRow; index <= area.maxRow; index++) {
+    const row = gridApi.value.getDisplayedRowAtIndex(index)?.data;
+    if (row) selectedRows.push(row);
+  }
+  const selectedColumns = ids.map((id) => ({ id, name: gridApi.value?.getColumn(id)?.getColDef().headerName || id }));
+  return selectedRows.length ? { rows: selectedRows, columns: selectedColumns } : null;
+}
+async function copyText(text: string) {
+  if (!props.canCopy) return;
+  try {
+    await writeClipboardText(text);
+    toast.add({ title: t("Chen.SelectionCopied"), color: "success" });
+  } catch {
+    toast.add({ title: t("Common.CopyFailed"), color: "error" });
+  }
+}
+function copySelection(headers = false) {
+  if (!props.canCopy) return;
+  const selected = selectedData();
+  if (selected) void copyText(resultSelectionTsv(selected.rows, selected.columns, headers));
+}
+let copyController: AbortController | undefined;
+watch([() => props.rows, () => props.canCopy, () => props.active], () => copyController?.abort(), { flush: "sync" });
+async function copyResult(headers: boolean) {
+  if (!props.canCopy || props.active === false || resultCopyBusy.value) return;
+  const controller = new AbortController();
+  copyController = controller;
+  resultCopyBusy.value = true;
+  try {
+    const text = await resultClipboardTsv(
+      props.rows,
+      allCopyColumns.value,
+      headers,
+      props.readResultPage,
+      controller.signal
+    );
+    if (!controller.signal.aborted) await copyText(text);
+  } catch {
+    if (!controller.signal.aborted) toast.add({ title: t("Common.CopyFailed"), color: "error" });
+  } finally {
+    resultCopyBusy.value = false;
+  }
+}
+async function copySqlSelection(operation: "insert" | "update") {
+  if (!props.canCopy || !props.copySql || props.sqlCopyDisabled || sqlCopyBusy.value) return;
+  const selected = selectedData();
+  const indices = selected && resultSQLSelection(selected.rows, selected.columns, props.rows);
+  if (!indices) {
+    toast.add({ title: t("Chen.GoCopySqlUnavailable"), description: t("Chen.GoCopySqlHint"), color: "error" });
+    return;
+  }
+  const source = props.rows;
+  sqlCopyBusy.value = true;
+  try {
+    const output = await props.copySql(operation, indices);
+    if (!mounted || props.rows !== source || !props.canCopy || props.sqlCopyDisabled) return;
+    if (!output.sql || output.row_count !== indices.rows.length) throw new Error("Invalid SQL copy response");
+    await writeClipboardText(output.sql);
+    toast.add({ title: t("Chen.SelectionCopied"), description: output.notes.join("\n"), color: "success" });
+  } catch (cause) {
+    if (mounted && props.rows === source)
+      toast.add({
+        title: t("Chen.GoCopySqlUnavailable"),
+        description: cause instanceof Error ? cause.message : String(cause),
+        color: "error"
+      });
+  } finally {
+    sqlCopyBusy.value = false;
+  }
+}
+function preventCopy(event: ClipboardEvent) {
+  if (!props.canCopy) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+function mouseOver(event: CellMouseOverEvent) {
+  if (!selection.value.dragging || event.node.rowIndex == null) return;
+  const mouse = event.event as MouseEvent | undefined;
+  if (mouse && !(mouse.buttons & 1)) {
+    finishSelection();
+    return;
+  }
+  const colId = event.column.getColId();
+  if (colId === "__row") return;
+  if (selection.value.current?.rowIndex === event.node.rowIndex && selection.value.current.colId === colId) return;
+  selection.value = extendChenGridSelection(selection.value, { rowIndex: event.node.rowIndex, colId });
+  refreshSelection();
+}
+function focused(event: CellFocusedEvent) {
+  if (event.rowIndex == null || !event.column || typeof event.column === "string" || !isColumn(event.column)) return;
+  const colId = event.column.getColId();
+  if (!columnIds().includes(colId)) return;
+  if (selection.value.dragging) {
+    expectedFocus.delete(`${event.rowIndex}:${colId}`);
+    return;
+  }
+  selection.value = resultFocusSelection(selection.value, { rowIndex: event.rowIndex, colId }, expectedFocus);
+  refreshSelection();
+}
+function openValue(
+  cell: ChenGridCell | null = selection.value.current,
+  row = cell && gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data
+) {
+  if (!cell || !columnIds().includes(cell.colId)) return;
+  const ordinal = Number(cell.colId.replace("column_", ""));
+  const column = props.rows.columns[ordinal];
+  if (!row || !column) return;
+  valueCell.value = {
+    name: columnNames.value[ordinal] || column.name,
+    type: column.data_type,
+    row: row.__row,
+    value: row[cell.colId]
+  };
+  valueOpen.value = true;
+}
+function keydown(event: KeyboardEvent) {
+  if (!(event.target instanceof HTMLElement) || !event.target.closest(".ag-cell")) return;
+  if (event.target.closest(".ag-cell-inline-editing") || gridApi.value?.getEditingCells?.().length) return;
+  if (
+    !event.shiftKey &&
+    ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Home", "End", "PageUp", "PageDown"].includes(event.key)
+  ) {
+    expectedFocus.clear();
+  }
+  if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+    const focused = gridApi.value?.getFocusedCell();
+    const el = event.target.closest(".ag-cell");
+    if (!focused || !el || focused.column.getColId() === "__row") return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = el.getBoundingClientRect();
+    openContextMenu(
+      { rowIndex: focused.rowIndex, colId: focused.column.getColId() },
+      { clientX: rect.left, clientY: rect.bottom }
+    );
+    return;
+  }
+  const modifier = event.metaKey || event.ctrlKey;
+  if (modifier && event.key.toLowerCase() === "c") {
+    event.preventDefault();
+    event.stopPropagation();
+    copySelection(event.shiftKey);
+    return;
+  }
+  const api = gridApi.value;
+  const ids = columnIds();
+  if (!api || !ids.length) return;
+  if (modifier && event.key.toLowerCase() === "a") {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!api.getDisplayedRowCount()) return;
+    selection.value = finishChenGridSelection(
+      extendChenGridSelection(startChenGridSelection({ rowIndex: 0, colId: ids[0]! }), {
+        rowIndex: api.getDisplayedRowCount() - 1,
+        colId: ids.at(-1)!
+      })
+    );
+    refreshSelection();
+    return;
+  }
+  if (event.key === "F2" && startInlineEdit()) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!startInlineEdit()) openValue();
+    return;
+  }
+  if (!event.shiftKey || !event.key.startsWith("Arrow")) return;
+  const cell = selection.value.current;
+  if (!cell) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const row = Math.min(
+    api.getDisplayedRowCount() - 1,
+    Math.max(0, cell.rowIndex + (event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0))
+  );
+  const index = Math.min(
+    ids.length - 1,
+    Math.max(0, ids.indexOf(cell.colId) + (event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0))
+  );
+  const next = { rowIndex: row, colId: ids[index]! };
+  selection.value = finishChenGridSelection(extendChenGridSelection(selection.value, next));
+  expectedFocus.add(`${row}:${next.colId}`);
+  api.ensureIndexVisible(row);
+  api.ensureColumnVisible(next.colId);
+  api.setFocusedCell(row, next.colId);
+  refreshSelection();
+}
+function editableTarget(row: Record<string, unknown> | undefined, colId: string) {
+  if (!row || row.__result !== props.rows.id || row.__offset !== props.rows.offset) return null;
+  const column = Number(colId.slice("column_".length));
+  const index = Number(row?.__row) - props.rows.offset - 1;
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= props.rows.rows.length ||
+    !Number.isInteger(column) ||
+    column < 0 ||
+    column >= props.rows.columns.length ||
+    resultColumnId(column) !== colId
+  )
+    return null;
+  const allowed =
+    index >= (props.originalRowCount ?? props.rows.rows.length) ? props.insertableColumns : props.editableColumns;
+  return allowed?.includes(column) && !props.deletedRows?.includes(index) ? { row: index, column } : null;
+}
+function startInlineEdit() {
+  const cell = selection.value.current;
+  const row = cell && gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  if (props.active === false || !cell || !editableTarget(row, cell.colId)) return false;
+  gridApi.value?.startEditingCell({ rowIndex: cell.rowIndex, colKey: cell.colId, key: "F2" });
+  return true;
+}
+function requestEdit() {
+  gridApi.value?.stopEditing();
+  const cell = selection.value.current;
+  const row = cell && gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data;
+  const target = cell && editableTarget(row, cell.colId);
+  if (props.active === false || !target) return false;
+  emit("edit", target.row, target.column);
+  return true;
+}
+function setCurrentCellNull() {
+  if (!canSetNull.value) return;
+  gridApi.value?.stopEditing(true);
+  const cell = contextCell.value;
+  const row = contextRow.value;
+  const target = cell && editableTarget(row, cell.colId);
+  if (target) emit("change", target.row, target.column, null);
+}
+defineExpose({
+  stopEditing: (cancel = false) => gridApi.value?.stopEditing(cancel),
+  snapshotView: () => ({ filter: filter.value, columns: gridApi.value?.getColumnState() || [] })
+});
+function ready(event: GridReadyEvent) {
+  gridApi.value = event.api;
+  if (props.initialView?.columns.length)
+    event.api.applyColumnState({ state: props.initialView.columns, applyOrder: true });
+}
+function modelUpdated() {
+  shownRows.value = gridApi.value?.getDisplayedRowCount() || 0;
+}
+function pinChanged() {
+  pinVersion.value++;
+  refreshSelection();
+}
+watch([() => props.viewId || props.rows.id, columnStructure], () => {
+  gridApi.value?.stopEditing(true);
+  showAllColumns();
+  fieldSearch.value = "";
+  resetSelection();
+  gridApi.value?.clearFocusedCell();
+  valueOpen.value = false;
+});
+watch(
+  () => [
+    gridPreferences.value.nullDisplay,
+    gridPreferences.value.showEmptyStrings,
+    props.defaultCells,
+    props.changedCells,
+    props.deletedRows
+  ],
+  () => {
+    gridApi.value?.refreshCells({ force: true });
+  }
+);
+watch([() => props.rows.id, () => props.rows.offset], () => {
+  gridApi.value?.stopEditing(true);
+  gridApi.value?.clearFocusedCell();
+  resetSelection();
+  valueOpen.value = false;
+});
+watch(
+  () => [props.editableColumns, props.insertableColumns, props.deletedRows],
+  () => {
+    if (
+      gridApi.value
+        ?.getEditingCells?.()
+        .some(
+          (cell) =>
+            !cell.column ||
+            !editableTarget(gridApi.value?.getDisplayedRowAtIndex(cell.rowIndex)?.data, cell.column.getColId())
+        )
+    ) {
+      gridApi.value.stopEditing(true);
+    }
+  },
+  { flush: "sync" }
+);
+watch(
+  () => props.active,
+  (active) => {
+    if (active === false) gridApi.value?.stopEditing();
+  },
+  { flush: "sync" }
+);
+watch(
+  () => props.viewId || props.rows.id,
+  () => {
+    filter.value = "";
+  }
+);
+watch(filter, () => {
+  resetSelection();
+  gridApi.value?.setGridOption("quickFilterText", filter.value);
+});
+watch(localSearch, (enabled) => {
+  if (!enabled) filter.value = "";
+});
+onMounted(() => {
+  window.addEventListener("pointerup", finishSelection);
+  window.addEventListener("blur", finishSelection);
+});
+onBeforeUnmount(() => {
+  gridApi.value?.stopEditing();
+  mounted = false;
+  copyController?.abort();
+  window.removeEventListener("pointerup", finishSelection);
+  window.removeEventListener("blur", finishSelection);
+  gridApi.value = null;
+});
+</script>
+
+<template>
+  <div class="flex h-full min-h-0 min-w-0 flex-col" data-chen-result-grid @copy.capture="preventCopy">
+    <div
+      data-chen-data-toolbar
+      class="flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-default px-2 py-1"
+    >
+      <slot name="toolbar-start" />
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <UPopover v-if="localSearch" v-model:open="searchOpen" :content="{ align: 'end', sideOffset: 6 }">
+          <UButton
+            icon="i-lucide-search"
+            size="xs"
+            :color="filter || searchOpen ? 'primary' : 'neutral'"
+            :variant="filter || searchOpen ? 'soft' : 'ghost'"
+            :class="filter || searchOpen ? undefined : workspaceButtonClass"
+            :aria-label="filter ? `${t('Chen.GoResultSearch')}: ${filter}` : t('Chen.GoResultSearch')"
+            :title="filter ? `${t('Chen.GoResultSearch')}: ${filter}` : t('Chen.GoResultSearch')"
+          />
+          <template #content>
+            <div class="w-60 max-w-[calc(100vw-1rem)] space-y-1.5 p-2" @copy.capture="preventCopy">
+              <UInput
+                v-model="filter"
+                autofocus
+                size="xs"
+                class="w-full"
+                :placeholder="t('Chen.GoResultSearch')"
+                :aria-label="t('Chen.GoResultSearch')"
+              >
+                <template v-if="filter" #trailing>
+                  <UButton
+                    icon="i-lucide-x"
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    :aria-label="t('Chen.GoV1GridClearFilter')"
+                    @mousedown.prevent
+                    @click="filter = ''"
+                  />
+                </template>
+              </UInput>
+              <p class="text-xs text-muted" role="status">
+                <span v-if="filter" class="tabular-nums">{{ shownRows }}/{{ rows.rows.length }} ·</span>
+                {{
+                  t(
+                    loadingSettings?.mode === "continuous" ? "Chen.GoBrowseLoadedOnlyHint" : "Chen.GoV1GridPageOnlyHint"
+                  )
+                }}
+              </p>
+            </div>
+          </template>
+        </UPopover>
+        <slot name="toolbar-end" />
+        <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }">
+          <UButton
+            icon="i-lucide-settings-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+            :class="workspaceButtonClass"
+            :title="
+              localSearch
+                ? t('Chen.GoBrowseTableSettings')
+                : `${t('Chen.GoBrowseTableSettings')} · ${t('Chen.GoV1GridColumns')}`
+            "
+            :aria-label="t('Chen.GoBrowseTableSettings')"
+          />
+          <template #content>
+            <div class="max-h-[70vh] w-72 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-3" data-result-settings>
+              <div v-if="loadingSettings" class="space-y-3 border-b border-default pb-3">
+                <p class="text-xs font-medium text-highlighted">{{ t("Chen.GoBrowseDataLoading") }}</p>
+                <label class="flex items-center justify-between gap-3 text-xs">
+                  <span>{{ t("Chen.GoBrowseLoadingMode") }}</span>
+                  <USelect
+                    :model-value="loadingSettings.mode"
+                    :items="loadingModes"
+                    class="w-32"
+                    size="xs"
+                    :aria-label="t('Chen.GoBrowseLoadingMode')"
+                    :disabled="loadingSettingsDisabled"
+                    @update:model-value="changeLoading({ mode: $event as GoResultLoadingSettings['mode'] })"
+                  />
+                </label>
+                <label
+                  v-if="pageSizeControl !== false && localSearch"
+                  class="flex items-center justify-between gap-3 text-xs"
+                >
+                  <span>
+                    {{ t(loadingSettings.mode === "continuous" ? "Chen.GoBrowseBatchSize" : "Chen.GoBrowseSize") }}
+                  </span>
+                  <USelect
+                    :model-value="loadingSettings.batchSize"
+                    :items="batchSizes"
+                    class="w-32"
+                    size="xs"
+                    :aria-label="
+                      t(loadingSettings.mode === 'continuous' ? 'Chen.GoBrowseBatchSize' : 'Chen.GoBrowseSize')
+                    "
+                    :disabled="loadingSettingsDisabled"
+                    @update:model-value="changeLoading({ batchSize: Number($event) })"
+                  />
+                </label>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-highlighted">{{ t("Chen.TableDisplay") }}</p>
+                <p class="mt-0.5 text-xs text-muted">{{ t("Chen.TableDisplayHint") }}</p>
+              </div>
+              <label class="flex items-center justify-between gap-3 text-xs">
+                <span>{{ t("Chen.NullValues") }}</span>
+                <USelect
+                  v-model="gridPreferences.nullDisplay"
+                  class="w-28"
+                  size="xs"
+                  :aria-label="t('Chen.NullValues')"
+                  :items="nullDisplayOptions"
+                  value-key="value"
+                />
+              </label>
+              <label
+                v-for="setting in displaySwitches"
+                :key="setting.key"
+                class="flex items-center justify-between gap-3 text-xs"
+              >
+                <span>{{ t(setting.label) }}</span>
+                <USwitch v-model="gridPreferences[setting.key]" size="sm" :aria-label="t(setting.label)" />
+              </label>
+              <slot name="settings-actions" />
+              <UDropdownMenu :items="localSearch ? menuItems : tableActions">
+                <UButton
+                  :label="t('Chen.GoV1GridColumns')"
+                  icon="i-lucide-columns-3"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  class="aria-expanded:bg-(--app-selected-soft) aria-expanded:text-(--app-fg)"
+                  :class="workspaceButtonClass"
+                />
+              </UDropdownMenu>
+              <div v-if="rows.columns.length" class="space-y-2 border-t border-default pt-3">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-xs font-medium text-highlighted">{{ t("Chen.VisibleFields") }}</span>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    :disabled="!hiddenColumns.length"
+                    :label="t('Chen.ShowAll')"
+                    @click="showAllColumns"
+                  />
+                </div>
+                <p class="text-xs text-muted">{{ t("Chen.GoGridPreferenceResultScope") }}</p>
+                <UInput
+                  v-if="rows.columns.length > 8"
+                  v-model="fieldSearch"
+                  size="xs"
+                  icon="i-lucide-search"
+                  :placeholder="t('Chen.SearchFields')"
+                  :aria-label="t('Chen.SearchFields')"
+                />
+                <div class="max-h-48 space-y-1 overflow-y-auto">
+                  <UCheckbox
+                    v-for="column in listedColumns"
+                    :key="column.id"
+                    class="py-1"
+                    :label="column.label"
+                    :title="column.label"
+                    :ui="{ label: 'break-all text-xs' }"
+                    :model-value="!hiddenColumns.includes(column.id)"
+                    :disabled="!hiddenColumns.includes(column.id) && visibleColumnCount <= 1"
+                    @update:model-value="setColumnVisible(column.id, $event === true)"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+        </UPopover>
+      </div>
+    </div>
+    <div
+      class="ag-theme-balham go-result-grid relative isolate min-h-0 min-w-0 flex-1"
+      :class="{ 'result-striped': gridPreferences.stripedRows, 'result-borders': gridPreferences.showCellBorders }"
+      @keydown.capture="keydown"
+      @mousedown.capture="captureCellMouseDown"
+      @contextmenu.capture="preventGridContextMenu"
+    >
+      <AgGridVue
+        class="h-full w-full"
+        theme="legacy"
+        :locale-text="gridLocales[locale] || gridLocales.en"
+        :column-defs="columns"
+        :stop-editing-when-cells-lose-focus="true"
+        :row-data="data"
+        :get-row-id="rowId"
+        :default-col-def="defaults"
+        :row-height="gridPreferences.compactRows ? 24 : 28"
+        :header-height="32"
+        :animate-rows="false"
+        :ensure-dom-order="true"
+        :enable-browser-tooltips="true"
+        :suppress-cell-focus="false"
+        :suppress-overlays="['noRows', 'noMatchingRows']"
+        @grid-ready="ready"
+        @body-scroll-end="loadNearEnd"
+        @cell-mouse-over="mouseOver"
+        @cell-focused="focused"
+        @cell-context-menu="contextMenu"
+        @sort-changed="resetSelection"
+        @model-updated="modelUpdated"
+        @column-pinned="pinChanged"
+        @column-visible="visibilityChanged"
+      />
+      <div
+        v-if="shownRows === 0"
+        class="pointer-events-none absolute inset-x-0 top-[30px] bottom-0 flex flex-col items-center justify-center gap-2 px-4 text-xs text-muted"
+        role="status"
+      >
+        <span>{{ t(filter ? "Chen.GoV1GridNoMatches" : "Chen.GoV1EmptyRows") }}</span>
+        <UButton
+          v-if="filter"
+          class="pointer-events-auto"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          :label="t('Chen.GoV1GridClearFilter')"
+          @click="filter = ''"
+        />
+      </div>
+    </div>
+    <UDropdownMenu
+      v-model:open="contextMenuOpen"
+      :items="contextMenuItems"
+      :content="{ align: 'start', side: 'bottom' }"
+    >
+      <div
+        class="pointer-events-none fixed h-px w-px"
+        :style="{ left: `${contextMenuPosition.x}px`, top: `${contextMenuPosition.y}px` }"
+      />
+    </UDropdownMenu>
+    <div
+      v-if="positionLabel || selectionLabel"
+      class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-default px-2 py-1 text-[11px] text-muted"
+    >
+      <span class="truncate" :title="[positionLabel, selectionLabel].filter(Boolean).join(' · ')">
+        <template v-if="positionLabel">{{ positionLabel }} ·</template>
+        {{ selectionLabel }}
+      </span>
+    </div>
+    <GoResultValue v-if="valueOpen && valueCell" v-model:open="valueOpen" :cell="valueCell" :can-copy="canCopy" />
+  </div>
+</template>
+
+<style scoped>
+.go-result-grid,
+.go-result-grid :deep(.ag-theme-balham),
+.go-result-grid :deep(.ag-root-wrapper) {
+  --ag-font-family: var(--font-sans);
+  --ag-font-size: 12px;
+  --ag-background-color: var(--data-grid-row-background);
+  --ag-data-background-color: var(--data-grid-row-background);
+  --ag-foreground-color: var(--data-grid-text);
+  --ag-header-background-color: var(--data-grid-header-background);
+  --ag-header-foreground-color: var(--data-grid-text);
+  --ag-odd-row-background-color: var(--data-grid-row-background);
+  --ag-row-hover-color: var(--data-grid-row-hover);
+  --ag-border-color: var(--data-grid-border);
+  --ag-row-border-color: color-mix(in srgb, var(--data-grid-border) 72%, transparent);
+  --ag-cell-horizontal-border: none;
+  --ag-header-column-resize-handle-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
+  --ag-range-selection-border-color: var(--theme-accent);
+  --ag-wrapper-border-radius: 0;
+  --ag-border-radius: 0;
+  background: var(--data-grid-row-background);
+}
+.go-result-grid :deep(.ag-root-wrapper) {
+  border: 0;
+}
+.go-result-grid.result-striped :deep(.ag-root-wrapper) {
+  --ag-odd-row-background-color: var(--data-grid-row-striped);
+}
+.go-result-grid.result-borders :deep(.ag-root-wrapper) {
+  --ag-row-border-color: var(--data-grid-border);
+  --ag-cell-horizontal-border: solid var(--data-grid-border);
+}
+.go-result-grid :deep(.ag-header-cell-text) {
+  min-width: 0;
+}
+.go-result-grid :deep(.result-column-heading) {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.go-result-grid :deep(.result-column-name) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.go-result-grid :deep(.result-column-type) {
+  flex-shrink: 0;
+  color: var(--data-grid-text-muted);
+  font-size: 9px;
+  font-weight: normal;
+}
+.go-result-grid :deep(.result-row-number) {
+  color: var(--data-grid-text-muted);
+  text-align: right;
+  cursor: pointer;
+}
+.go-result-grid :deep(.result-selected-cell) {
+  background: var(--data-grid-row-selected);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 35%, transparent);
+}
+.go-result-grid :deep(.result-null-cell),
+.go-result-grid :deep(.result-empty-cell) {
+  color: var(--data-grid-text-muted);
+  font-style: italic;
+}
+</style>
+
+<style scoped>
+.go-result-grid :deep(.result-changed-cell) {
+  background: color-mix(in srgb, var(--ui-warning) 12%, var(--data-grid-row-background));
+}
+.go-result-grid :deep(.result-changed-cell.result-selected-cell) {
+  background: color-mix(in srgb, var(--ui-warning) 12%, var(--data-grid-row-selected));
+}
+:deep(.result-deleted-cell) {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+</style>

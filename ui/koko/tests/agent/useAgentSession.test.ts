@@ -1827,6 +1827,26 @@ it.each(["unavailable", "dispose"] as const)(
   }
 );
 
+it("applies approval mode selected while the first panel is still being created", async () => {
+  const { client, controller } = panelRecoveryHarness();
+  const created = deferred<{ session_id: string }>();
+  const setApprovalMode = vi.fn().mockResolvedValue(undefined);
+  Object.assign(client, { setApprovalMode });
+  client.createSession.mockReset().mockReturnValueOnce(created.promise);
+  try {
+    const attaching = controller.actions.attachManifest(manifest());
+    await vi.waitFor(() => expect(client.createSession).toHaveBeenCalledOnce());
+    const updating = controller.actions.setApprovalMode("never");
+    created.resolve({ session_id: "panel-1" });
+    await Promise.all([attaching, updating]);
+
+    expect(setApprovalMode).toHaveBeenCalledWith("panel-1", "resource-1", { mode: "never" });
+    expect(controller.state.approvalMode).toBe("never");
+  } finally {
+    await controller.actions.dispose();
+  }
+});
+
 it("updates approval mode only after Agent Runtime accepts it and applies restored events", async () => {
   let streamOptions!: AgentSseOptions;
   const onApprovalMode = vi.fn();

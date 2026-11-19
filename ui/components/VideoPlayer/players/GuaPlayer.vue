@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { gunzipSync } from "fflate";
-import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
+import type { ArchivedRecordingEntry } from "~/utils/browserRecordingArchive";
+import Guacamole from "@jumpserver/guacamole";
+import { createRecordingSource } from "@jumpserver/guacamole/recording-source";
+import { streamArchiveEntry } from "~/utils/browserRecordingArchive";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 const props = defineProps<{
   source: string;
+  recordingBlob?: Blob;
+  recordingEntry?: ArchivedRecordingEntry;
 }>();
-
-const { t } = useI18n();
 
 const playerAreaRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLElement | null>(null);
@@ -21,11 +24,11 @@ const currentPosition = ref(0);
 const errorMessage = ref("");
 const speed = ref(1);
 
-let tunnel: any = null;
-let recording: any = null;
-let display: any = null;
+let recording: Guacamole.SessionRecording | null = null;
+let display: Guacamole.Display | null = null;
 let visibleBounds: { left: number; top: number; width: number; height: number } | null = null;
 let loadController: AbortController | null = null;
+let boundsTimers: number[] = [];
 
 function zeroPad(num: number) {
   return `${num}`.padStart(2, "0");
@@ -45,8 +48,8 @@ const currentLabel = computed(() => formatTime(currentPosition.value));
 const durationLabel = computed(() => formatTime(duration.value));
 
 function detectVisibleBounds() {
-  const layer = display?.getDefaultLayer?.();
-  const canvas = layer?.getCanvas?.() as HTMLCanvasElement | undefined;
+  const layer = display?.getDefaultLayer();
+  const canvas = layer?.getCanvas();
 
   if (!canvas) {
     return {
@@ -141,7 +144,7 @@ function resetVisibleBounds() {
 }
 
 function mergeVisibleBounds(nextBounds: { left: number; top: number; width: number; height: number }) {
-  const layer = display?.getDefaultLayer?.();
+  const layer = display?.getDefaultLayer();
   const fullWidth = layer?.width || 1024;
   const fullHeight = layer?.height || 768;
   const nextRight = Math.min(fullWidth, nextBounds.left + nextBounds.width);
@@ -173,12 +176,20 @@ function mergeVisibleBounds(nextBounds: { left: number; top: number; width: numb
 }
 
 function sampleVisibleBounds() {
-  const layer = display?.getDefaultLayer?.();
+  const layer = display?.getDefaultLayer();
 
   if (!layer) return;
 
   const fullWidth = layer.width || 1024;
   const fullHeight = layer.height || 768;
+  if (
+    visibleBounds?.left === 0 &&
+    visibleBounds.top === 0 &&
+    visibleBounds.width === fullWidth &&
+    visibleBounds.height === fullHeight
+  ) {
+    return;
+  }
   const nextBounds = detectVisibleBounds();
 
   if (!nextBounds.width || !nextBounds.height) return;
@@ -199,22 +210,30 @@ function sampleVisibleBounds() {
   mergeVisibleBounds(nextBounds);
 }
 
+function sampleAndScale() {
+  sampleVisibleBounds();
+  recomputeScale();
+}
+
+function clearBoundsSampling() {
+  boundsTimers.forEach((id) => window.clearTimeout(id));
+  boundsTimers = [];
+}
+
 function scheduleBoundsSampling() {
-  [80, 220, 480, 900].forEach((delay) => {
+  clearBoundsSampling();
+  boundsTimers = [80, 220, 480, 900].map((delay) =>
     window.setTimeout(() => {
-      sampleVisibleBounds();
-      recomputeScale();
-    }, delay);
-  });
+      if (!isSeeking.value) sampleAndScale();
+    }, delay)
+  );
 }
 
 function recomputeScale() {
   if (!display || !playerAreaRef.value || !displayHostRef.value || !displayViewportRef.value) return;
 
-  const layer = display.getDefaultLayer?.();
-  const displayElement = display.getElement?.() as HTMLElement | undefined;
-
-  if (!layer || !displayElement) return;
+  const layer = display.getDefaultLayer();
+  const displayElement = display.getElement();
 
   const bounds = visibleBounds || {
     left: 0,
@@ -249,23 +268,23 @@ function togglePlayback() {
 
   if (recording.isPlaying()) {
     recording.pause();
-    isPlaying.value = false;
   } else {
     recording.play();
-    isPlaying.value = true;
   }
 }
 
 function seek(event: Event) {
-  if (!recording) return;
+  if (!recording || errorMessage.value) return;
 
   const value = Number((event.target as HTMLInputElement).value);
   isSeeking.value = true;
+  clearBoundsSampling();
 
   recording.seek(value, () => {
-    currentPosition.value = value;
+    currentPosition.value = recording?.getPosition() ?? 0;
     isSeeking.value = false;
-    window.setTimeout(recomputeScale, 50);
+    sampleAndScale();
+    scheduleBoundsSampling();
   });
 }
 
@@ -276,8 +295,13 @@ async function loadRecording() {
   errorMessage.value = "";
   resetVisibleBounds();
 
-  tunnel = new Guacamole.StaticHTTPTunnel();
-  recording = new Guacamole.SessionRecording(tunnel);
+  const entry = props.recordingEntry;
+  const source = entry ? { stream: () => streamArchiveEntry(entry) } : props.recordingBlob || props.source;
+  recording = new Guacamole.SessionRecording(
+    createRecordingSource(source, {
+      disk: isDesktopRuntime() && !entry && !props.recordingBlob && props.source.startsWith("jms-asset:")
+    })
+  );
   applySpeed();
   display = recording.getDisplay();
 
@@ -290,6 +314,9 @@ async function loadRecording() {
   recording.onerror = (message: string) => {
     errorMessage.value = message;
     loading.value = false;
+    isPlaying.value = false;
+    isSeeking.value = false;
+    clearBoundsSampling();
   };
   recording.onplay = () => {
     isPlaying.value = true;
@@ -297,67 +324,40 @@ async function loadRecording() {
   recording.onpause = () => {
     isPlaying.value = false;
   };
-  recording.onseek = (position: number) => {
+  recording.onseek = (position: number, current: number, total: number) => {
     currentPosition.value = position;
-    sampleVisibleBounds();
-    window.setTimeout(recomputeScale, 30);
+    if (current < total) return;
+    sampleAndScale();
     scheduleBoundsSampling();
   };
 
-  const startPlayback = (chunks: string) => {
-    if (currentLoad.signal.aborted) return;
+  recording.onload = () => {
+    if (currentLoad.signal.aborted || !recording) return;
 
     loading.value = false;
-    recording.connect(chunks);
     applySpeed();
-    duration.value = recording.getDuration?.() || 0;
+    duration.value = recording.getDuration();
     recording.play();
     currentPosition.value = 0;
-    sampleVisibleBounds();
-    window.setTimeout(recomputeScale, 80);
-    window.setTimeout(recomputeScale, 240);
+    sampleAndScale();
     scheduleBoundsSampling();
   };
-
-  try {
-    if (props.source.startsWith("blob:")) {
-      const response = await fetch(props.source);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      let text = new TextDecoder("utf-8").decode(bytes);
-      if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
-        try {
-          text = new TextDecoder("utf-8").decode(gunzipSync(bytes));
-        } catch {
-          // already decoded as utf-8 above
-        }
-      }
-      startPlayback(text);
-      return;
-    }
-
-    // Electron 已经把 .replay.gz/.part.gz 解压成普通 Guacamole 指令流。
-    // custom protocol 直接返回文本，不再通过 IPC 逐块发送。
-    const response = await fetch(props.source, { signal: currentLoad.signal });
-    if (!response.ok) {
-      throw new Error(t("VideoPlayer.ReadFailed", { status: response.status }));
-    }
-
-    startPlayback(await response.text());
-  } catch (error: any) {
-    if (error?.name !== "AbortError") {
-      loading.value = false;
-      errorMessage.value = error?.message || String(error);
-    }
-  }
 }
 
 function cleanup() {
   loadController?.abort();
   loadController = null;
+  clearBoundsSampling();
 
   try {
-    recording?.pause?.();
-    recording?.disconnect?.();
+    if (recording) {
+      recording.onload = null;
+      recording.onerror = null;
+      recording.onplay = null;
+      recording.onpause = null;
+      recording.onseek = null;
+      recording.dispose();
+    }
   } catch {
     // ignore cleanup errors
   }
@@ -366,17 +366,17 @@ function cleanup() {
     displayHostRef.value.innerHTML = "";
   }
 
-  tunnel = null;
   recording = null;
   display = null;
   resetVisibleBounds();
   isPlaying.value = false;
+  isSeeking.value = false;
   currentPosition.value = 0;
   duration.value = 0;
 }
 
 function applySpeed() {
-  recording?.setPlaybackRate?.(speed.value);
+  recording?.setPlaybackRate(speed.value);
 }
 
 function handleResize() {
@@ -386,31 +386,12 @@ function handleResize() {
 watch(speed, applySpeed);
 
 onMounted(async () => {
-  const originalToCanvas = Guacamole.Layer.prototype.toCanvas;
-  Guacamole.Layer.prototype.toCanvas = function () {
-    if (this.width === 0 || this.height === 0) {
-      const fallback = document.createElement("canvas");
-      fallback.width = Math.max(this.width || 1, 1);
-      fallback.height = Math.max(this.height || 1, 1);
-      return fallback;
-    }
-
-    try {
-      return originalToCanvas.call(this);
-    } catch {
-      const fallback = document.createElement("canvas");
-      fallback.width = Math.max(this.width || 1, 1);
-      fallback.height = Math.max(this.height || 1, 1);
-      return fallback;
-    }
-  };
-
   window.addEventListener("resize", handleResize);
   await loadRecording();
 });
 
 watch(
-  () => props.source,
+  () => [props.source, props.recordingBlob, props.recordingEntry],
   async () => {
     cleanup();
     await nextTick();
@@ -459,7 +440,7 @@ onBeforeUnmount(() => {
         min="0"
         :max="duration"
         :value="currentPosition"
-        :disabled="loading || isSeeking || !duration"
+        :disabled="loading || !!errorMessage || isSeeking || !duration"
         @input="seek"
       />
       <VideoPlayerSpeedControl v-model="speed" class="shrink-0" />

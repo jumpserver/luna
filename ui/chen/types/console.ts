@@ -1,6 +1,6 @@
 import type { ChenTabDefinition } from "./base";
-import type { ChenExecutionPlan, ChenQueryBottomPane } from "./plan";
-import type { ChenDataViewDataset, ChenDataViewEditState, ChenDataViewMeta } from "./dataView";
+import type { ChenExecutionPlan } from "./plan";
+import type { ChenDataViewDataset } from "./dataView";
 
 export interface ChenSqlEditorSnapshot {
   documentSql: string;
@@ -46,16 +46,6 @@ export interface ChenConsoleMessage {
   [key: string]: any;
 }
 
-export interface ChenQueryResultTab {
-  id: string;
-  title: string;
-  meta: ChenDataViewMeta;
-  data: ChenDataViewDataset | null;
-  state: ChenConsoleState;
-  editState: ChenDataViewEditState;
-  affectedRows?: number;
-}
-
 export interface ChenConsoleHistoryEntry {
   id: string;
   sql: string;
@@ -94,24 +84,6 @@ export interface ChenConsoleTimelineEntry {
   backendStarted?: boolean;
 }
 
-export interface ChenQueryConsoleTab extends ChenTabDefinition {
-  kind: "query";
-  statement: string;
-  aiRevision: number;
-  lastSqlError: ChenSqlExecutionError | null;
-  uploadingSql: boolean;
-  state: ChenConsoleState;
-  logs: string[];
-  message: ChenConsoleMessage | null;
-  resultTabs: ChenQueryResultTab[];
-  activeResultTabId: string;
-  socket: WebSocket | null;
-  executionPlan: ChenExecutionPlan | null;
-  executionPlanLoading: boolean;
-  activeBottomPane: ChenQueryBottomPane;
-  connectionGeneration: number;
-}
-
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
   kind: "console";
   pendingSql: string;
@@ -123,8 +95,4 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
   logs: string[];
   message: ChenConsoleMessage | null;
   historyEntries: ChenConsoleHistoryEntry[];
-  socket: WebSocket | null;
-  connectionGeneration: number;
 }
-
-export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;

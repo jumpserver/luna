@@ -13,7 +13,7 @@ export default defineNuxtPlugin({
       construct(target, args, newTarget) {
         const socket: WebSocket = Reflect.construct(target, args, newTarget);
         // Match connector paths, including site prefixes and desktop endpoint origins.
-        if (!/\/(?:koko(?:\/lion)?|chen)\/ws\//.test(new URL(socket.url).pathname)) return socket;
+        if (!/\/koko(?:\/lion)?\/ws\//.test(new URL(socket.url).pathname)) return socket;
 
         // ponytail: Web Locks prevent Chromium automatic freezing, not unload or OS sleep.
         // Preserving sessions across those interruptions requires server-side resumption.

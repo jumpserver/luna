@@ -1,5 +1,4 @@
-import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
-import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import type { ClientNoticeSnapshot } from "~/types";
 import type {
   FaceEngineConfig,
   FaceEngineStatus,
@@ -9,6 +8,10 @@ import type {
   FaceSessionStart,
   FaceSessionStarted
 } from "~/types/face";
+import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
+import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import { cancelHttpLoginConfirmation, requestHttpConnectionConfirmation } from "./httpConfirmation";
+import { isLocalAiSettingsCommand, unwrapLocalAiResult } from "../codex/errorProtocol";
 
 export interface DesktopEvent<T> {
   event?: string;
@@ -87,6 +90,14 @@ interface ElectronDesktopApi {
 
 const electronApi = () => (globalThis as typeof globalThis & { __JMS_DESKTOP__?: ElectronDesktopApi }).__JMS_DESKTOP__;
 
+interface ClientNoticeOverlayBridge {
+  listen(handler: (snapshot: ClientNoticeSnapshot) => void): () => void;
+  dismiss(id: string): void;
+}
+
+export const clientNoticeOverlay = () =>
+  (globalThis as typeof globalThis & { __JMS_CLIENT_NOTICES__?: ClientNoticeOverlayBridge }).__JMS_CLIENT_NOTICES__;
+
 const requireElectron = () => {
   const electron = electronApi();
   if (!electron) throw new Error("Electron bridge is unavailable in the web runtime");
@@ -96,8 +107,26 @@ const requireElectron = () => {
 export const desktopRuntime = getDesktopRuntime;
 export const hasDesktopBridge = isElectronRuntime;
 
+let loginGeneration = 0;
+
 export async function desktopInvoke<T>(command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return requireElectron().invoke<T>(command, args);
+  if (command === "auth_cancel") {
+    loginGeneration += 1;
+    cancelHttpLoginConfirmation();
+  }
+  const generation = loginGeneration;
+  const requestArgs = { ...args };
+  const result = await requireElectron().invoke<T>(command, requestArgs);
+  if (isLocalAiSettingsCommand(command)) return unwrapLocalAiResult(result);
+  if (command !== "auth_login" && command !== "bootstrap_auth_session") return result;
+  const response = result as { status?: string; origin?: string } | null;
+  if (response?.status !== "http-confirmation-required") return result;
+  if (command === "auth_login" && generation !== loginGeneration) return { status: "stale" } as T;
+  const origin = new URL(String(requestArgs.site)).origin;
+  if (!origin.startsWith("http://") || response.origin !== origin) throw new Error("Invalid HTTP confirmation origin");
+  const accepted = await requestHttpConnectionConfirmation(origin, command);
+  if (!accepted || (command === "auth_login" && generation !== loginGeneration)) return { status: "stale" } as T;
+  return requireElectron().invoke<T>(command, { ...requestArgs, httpRiskAccepted: true });
 }
 
 export async function desktopListen<T>(
@@ -165,9 +194,21 @@ export const desktopOs = {
   locale: () => requireElectron().invoke<string | null>("plugin:os|locale")
 };
 
+export interface DesktopClipboardHistoryItem {
+  id: string;
+  text: string;
+  copiedAt: number;
+}
+
 export const desktopClipboard = {
   readText: () => requireElectron().invoke<string>("plugin:clipboard-manager|read_text"),
   writeText: (text: string) => requireElectron().invoke<void>("plugin:clipboard-manager|write_text", { text }),
+  history: () => requireElectron().invoke<DesktopClipboardHistoryItem[]>("desktop_clipboard_history"),
+  removeHistory: (id: string) => requireElectron().invoke<void>("desktop_clipboard_history_remove", { id }),
+  clearHistory: () => requireElectron().invoke<void>("desktop_clipboard_history_clear"),
+  historyStatus: () => requireElectron().invoke<{ enabled: boolean }>("desktop_clipboard_history_status"),
+  setHistoryEnabled: (enabled: boolean) =>
+    requireElectron().invoke<void>("desktop_clipboard_history_set_enabled", { enabled }),
   writeImage: (rgba: Uint8Array, width: number, height: number) =>
     requireElectron().invoke<void>("desktop_clipboard_write_image", { rgba, width, height })
 };

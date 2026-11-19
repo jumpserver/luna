@@ -67,7 +67,7 @@ describe("useKokoSessionAdapter", () => {
 
     const { shareInfo } = useKokoSessionAdapter(PANE_A);
 
-    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1/?code=code-1&component=koko");
+    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1/?component=koko&code=code-1");
     expect(shareInfo.value.enableShare).toBe(true);
   });
 
@@ -97,7 +97,7 @@ describe("useKokoSessionAdapter", () => {
     runtime.desktop = true;
     useKokoConnectionStore().updatePane(PANE_A, { shareId: "share-1", shareCode: "1234" });
     expect(useKokoSessionAdapter(PANE_A).shareInfo.value.shareURL).toBe(
-      "https://desktop.example/luna/share/share-1/?code=1234&component=koko"
+      "https://desktop.example/luna/share/share-1/?component=koko&code=1234"
     );
   });
 
@@ -124,7 +124,9 @@ describe("useKokoSessionAdapter", () => {
     });
 
     const copied = String(vi.mocked(writeText).mock.calls[0]?.[0]);
-    expect(copied).toBe(`${window.location.origin}/luna/share/share-1/?code=code-1&component=koko`);
+    expect(copied).toBe(
+      `RightPanel.ShareLink: ${window.location.origin}/luna/share/share-1/?component=koko&code=code-1\nRightPanel.VerifyCode: code-1`
+    );
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ title: "koko.terminal.shareLinkCopied", color: "success" })
     );

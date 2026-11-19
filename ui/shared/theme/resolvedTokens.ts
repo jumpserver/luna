@@ -8,7 +8,7 @@ import type {
 
 import { normalizeResolvedCssColor } from "~/shared/theme/color";
 
-function resolveCssColor(varName: string, fallback: string): string {
+export function resolveCssColor(varName: string, fallback: string): string {
   if (!import.meta.client) return fallback;
 
   const probe = document.createElement("span");

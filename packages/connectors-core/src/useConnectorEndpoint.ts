@@ -2,9 +2,8 @@ import type { JmsComponent } from "./types/component";
 import type { ConnectorSessionContext } from "./types/session";
 import { buildWsQueryParams, toWsOrigin } from "./utils/wsQuery";
 
-const WS_PREFIX: Record<JmsComponent, string> = {
+const WS_PREFIX: Record<Exclude<JmsComponent, "chen">, string> = {
   koko: "/koko/ws/",
-  chen: "/chen/ws/",
   lion: "/koko/lion/ws/",
   tinker: "/koko/lion/ws/",
   default: "/koko/ws/"
@@ -57,6 +56,7 @@ export function resolveEndpointUrl(
 }
 
 export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: ConnectorSessionContext) {
+  if (component === "chen") throw new Error("Chen uses HTTP and SSE");
   const params = buildWsQueryParams({
     token: ctx.tokenId,
     ticket: ctx.ticket,

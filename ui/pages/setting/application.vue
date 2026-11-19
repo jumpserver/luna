@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { PluginListItem } from "~/types";
+import AppConfigManager from "~/components/SettingItems/appConfigManager.vue";
 import { getConfiguredAppName, isDefaultAppName } from "~/composables/useAppName";
 import { desktopConvertFileSrc, desktopDialog } from "~/shared/desktop/bridge";
 
@@ -10,14 +11,18 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { activeApplicationProtocol } = useSettingsWindow();
-const { pluginList, installPlugin, uninstallPlugin } = useApplicationConfig();
+const { activeApplicationProtocol, activeApplicationView } = useSettingsWindow();
+const { pluginList, installPlugin, uninstallPlugin } = useApplicationConfig({ refreshOnMount: true });
 const { language } = useSettingManager();
-const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng"]);
+const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle", "dameng", "db2", "clickhouse"]);
 const appName = getConfiguredAppName();
 const pluginModalOpen = ref(false);
 const installingPlugin = ref(false);
 const uninstallingPluginId = ref("");
+const applicationViews = computed(() => [
+  { label: t("Setting.ProtocolAssociations"), value: "protocols", icon: "i-lucide-waypoints" },
+  { label: t("Setting.ApplicationManager"), value: "applications", icon: "i-lucide-app-window" }
+]);
 
 const protocolComponents = {
   terminal: defineAsyncComponent(() => import("~/pages/setting/application/terminal.vue")),
@@ -33,6 +38,8 @@ const protocolComponents = {
   pg: defineAsyncComponent(() => import("~/pages/setting/application/pg.vue")),
   oracle: defineAsyncComponent(() => import("~/pages/setting/application/oracle.vue")),
   dameng: defineAsyncComponent(() => import("~/pages/setting/application/dameng.vue")),
+  db2: defineAsyncComponent(() => import("~/pages/setting/application/db2.vue")),
+  clickhouse: defineAsyncComponent(() => import("~/pages/setting/application/clickhouse.vue")),
   sqlserver: defineAsyncComponent(() => import("~/pages/setting/application/sqlserver.vue"))
 } as const;
 
@@ -64,6 +71,8 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
     { label: "PostgreSQL", protocol: "pg" as const, routeName: "setting-application-pg" },
     { label: "Oracle", protocol: "oracle" as const, routeName: "setting-application-oracle" },
     { label: "Dameng", protocol: "dameng" as const, routeName: "setting-application-dameng" },
+    { label: "DB2", protocol: "db2" as const, routeName: "setting-application-db2" },
+    { label: "ClickHouse", protocol: "clickhouse" as const, routeName: "setting-application-clickhouse" },
     { label: "SQL Server", protocol: "sqlserver" as const, routeName: "setting-application-sqlserver" }
   ]
     .filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol))
@@ -151,6 +160,15 @@ const handlePluginUpload = async () => {
 };
 
 const route = useRoute();
+watch(
+  () => route.path,
+  (path) => {
+    if (!props.embedded && /^\/setting\/application\/[^/]+/.test(path)) {
+      activeApplicationView.value = "protocols";
+    }
+  },
+  { immediate: true }
+);
 
 const isProtocolActive = (child: NavigationMenuItem) => {
   if (child.active) return true;
@@ -175,8 +193,16 @@ const handlePluginUninstall = async (pluginId: string) => {
 
 <template>
   <div>
+    <UTabs
+      v-model="activeApplicationView"
+      :items="applicationViews"
+      :content="false"
+      color="neutral"
+      size="sm"
+      class="mb-4 w-fit"
+    />
     <SettingsGroup
-      v-if="isDesktopRuntime()"
+      v-if="activeApplicationView === 'applications' && isDesktopRuntime()"
       class="mb-4"
       :divided="false"
       padded
@@ -210,7 +236,9 @@ const handlePluginUninstall = async (pluginId: string) => {
       </div>
     </SettingsGroup>
 
-    <SettingsGroup :divided="false" body-class="flex min-h-[480px]">
+    <AppConfigManager v-if="activeApplicationView === 'applications'" />
+
+    <SettingsGroup v-else :divided="false" body-class="flex min-h-[480px]">
       <nav
         class="flex w-52 shrink-0 flex-col gap-2 overflow-y-auto p-2.5"
         :aria-label="t('Setting.ApplicationDescription')"
@@ -241,6 +269,7 @@ const handlePluginUninstall = async (pluginId: string) => {
       </nav>
 
       <div class="min-w-0 flex-1 border-l border-(--app-border) p-4">
+        <p class="mb-4 text-xs text-muted">{{ t("Setting.ProtocolAssociationsDescription") }}</p>
         <KeepAlive v-if="embedded">
           <component :is="activeProtocolComponent" />
         </KeepAlive>

@@ -13,6 +13,8 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 import {
   findMatchingPersonalCredential,
+  getVisibleConnectionProtocols,
+  isAutoPushAccount,
   resolvePersonalCredentialSecretType,
   supportsPersonalCredential
 } from "~/utils/connection";
@@ -92,8 +94,6 @@ export function useConnectionFormState() {
     () => userInfoStore.getConnectionPreferenceForProtocol(draft.value.protocol)?.connectMethod || ""
   );
 
-  const getVisibleProtocols = (protocols: PermedProtocol[]) =>
-    protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>
@@ -194,7 +194,7 @@ export function useConnectionFormState() {
     const saved = asset.savedConnection;
     const preferred = userInfoStore.getConnectionPreferenceForAsset(asset.id) || undefined;
     const source = { ...(saved || {}), ...(preferred || {}) } as ConnectionPreferenceInfo | ConnectionInfo;
-    const protocols = getVisibleProtocols(asset.permedProtocols || []);
+    const protocols = getVisibleConnectionProtocols(asset.permedProtocols);
     const accounts = asset.permedAccounts || [];
     const protocol = resolvePreferredProtocol(source, protocols, explicitProtocol);
     const savedCredentialMatchesProtocol =
@@ -278,8 +278,12 @@ export function useConnectionFormState() {
           (item) => item.name === account || item.username === account || item.alias === account
         )?.id;
     }
-    const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
-    const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
+    const selectedAccount = asset.permedAccounts?.find((item) =>
+      accountMode === "dynamic" ? item.alias === "@USER" : item.id === accountId
+    );
+    const autoPushAccount = isAutoPushAccount(selectedAccount, draft.value.protocol);
+    const canUsePersonalCredential =
+      !autoPushAccount && (accountMode === "manual" || supportsPersonalCredential(selectedAccount));
     const inputSecretType =
       accountMode === "hosted" || accountMode === "dynamic"
         ? ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
@@ -290,19 +294,19 @@ export function useConnectionFormState() {
         : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      accountMode === "hosted" ? inputSecretType : draft.value.personalCredentialSecretType
+      accountMode === "manual" ? draft.value.personalCredentialSecretType : inputSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
         ? findMatchingPersonalCredential(
             personalCredentials.value,
-            accountMode === "hosted" ? selectedAccount?.username || "" : draft.value.manualUsername,
+            accountMode === "manual" ? draft.value.manualUsername : selectedAccount?.username || "",
             personalCredentialSecretType
           )
         : undefined;
 
     const availableProtocols = sortProtocolNames(
-      getVisibleProtocols(asset.permedProtocols || [])
+      getVisibleConnectionProtocols(asset.permedProtocols)
         .map((protocol) => protocol.name?.trim())
         .filter((protocol): protocol is string => !!protocol)
     );
@@ -325,8 +329,11 @@ export function useConnectionFormState() {
         : undefined,
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
-      dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
+      dynamicPassword: autoPushAccount ? "" : draft.value.dynamicPassword,
+      rememberSecret:
+        draft.value.rememberSecret &&
+        !(canUsePersonalCredential && (draft.value.personalCredentialId || draft.value.savePersonalCredential)) &&
+        !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },

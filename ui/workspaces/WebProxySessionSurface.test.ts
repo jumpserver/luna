@@ -104,7 +104,7 @@ function setupSurface(safeMode = false, observe = false, dom?: Document) {
   const surface = effects.run(() =>
     new Function(
       ...Object.keys(scope),
-      `${outputText}\nreturn { statusSummary, recordingStatus, interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationError, navigationDisabled, safeMode, addressValue, navigate, history, reload, reconnect };`
+      `${outputText}\nreturn { statusSummary, recordingStatus, interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, startRecording, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationError, navigationDisabled, safeMode, addressValue, navigate, history, reload, reconnect };`
     )(...Object.values(scope))
   );
   surface.viewCreated.value = true;
@@ -268,6 +268,20 @@ it("allows normalized HTTP navigation only in standalone browser mode", async ()
   }
   expect(desktopWebProxy.navigate).toHaveBeenCalledTimes(1);
   expect(surface.navigationError.value).toBe("WebProxy.InvalidAddress");
+});
+
+it("disconnects the website when recording startup ultimately fails", async () => {
+  const { surface, desktopWebProxy, emit, stop } = setupSurface(false, true);
+  desktopWebProxy.startRecording.mockRejectedValue(new Error("AbortError: Timeout starting video source"));
+  try {
+    await surface.startRecording();
+    await nextTick();
+    expect(desktopWebProxy.close).toHaveBeenCalledExactlyOnceWith(surface.viewLabel);
+    expect(surface.error.value).toBe("WebProxy.RecordingStartFailedReconnect");
+    expect(emit).toHaveBeenCalledWith("fatal", webProxyMessages.zh.WebProxy.RecordingStartFailedReconnect);
+  } finally {
+    stop();
+  }
 });
 
 it("shares recording finalization across concurrent closes and stops view updates immediately", async () => {

@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import type { TokenResponse } from "~/types";
 import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
 import * as Vue from "vue";
@@ -28,6 +29,7 @@ function mountGuide(
     detail?: Record<string, unknown>;
     error?: Error;
     orgId?: string;
+    connectOptions?: TokenResponse["connect_options"];
   } = {}
 ) {
   const token = {
@@ -37,7 +39,8 @@ function mountGuide(
     asset: { id: "asset-id", name: "MongoDB", ...options.asset },
     org_id: options.orgId,
     account: options.account || "account",
-    input_username: options.inputUsername || ""
+    input_username: options.inputUsername || "",
+    connect_options: options.connectOptions
   };
   const getAssetDetailRequest = options.error
     ? vi.fn().mockRejectedValue(options.error)
@@ -77,6 +80,7 @@ function mountGuide(
     database: Ref<string>;
     rows: Ref<Array<{ name: string; value: unknown }>>;
     commands: Ref<Array<{ value: string }>>;
+    nativeDatabaseHelp: Ref<string>;
     copiedKey: Ref<string>;
     copy: (value: unknown, key: string) => Promise<void>;
   };
@@ -105,6 +109,33 @@ function mountGuide(
   unmounts.push(() => app.unmount());
   return { state, token, getAssetDetailRequest, toast, writeText };
 }
+
+it.each([
+  ["db2", "DB2NativeHelp"],
+  ["clickhouse", "ClickHouseNativeHelp"]
+])("uses the Magnus port, database and manual settings for %s guides", async (protocol, helpKey) => {
+  const { state } = mountGuide({ protocol, detail: { spec_info: { db_name: "ANALYTICS" } } });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.rows.value.find((row) => row.name === "port")?.value).toBe("5525");
+  expect(state.rows.value.find((row) => row.name === "database")?.value).toBe("ANALYTICS");
+  expect(state.rows.value.find((row) => row.name === "username")?.value).toBe("token-id");
+  expect(state.rows.value.find((row) => row.name === "password")?.value).toBe("secret");
+  expect(state.nativeDatabaseHelp.value).toBe(`ConnectionGuide.${helpKey}`);
+  if (protocol === "db2") {
+    expect(state.commands.value[0]?.value).toContain("db2cli execsql");
+  }
+  expect(state.commands.value[0]?.value).toContain("5525");
+  expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+});
+
+it.each([
+  ["oceanbase", "ConnectionGuide.OceanBaseNativeHelp"],
+  ["mysql", ""]
+])("only shows OceanBase profile guidance for a MySQL wire asset of type %s", async (type, message) => {
+  const { state } = mountGuide({ protocol: "mysql", detail: { type: { value: type }, spec_info: { db_name: "APP" } } });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.nativeDatabaseHelp.value).toBe(message);
+});
 
 it("loads MongoDB's default database from asset details for display, copy and mongosh", async () => {
   const { state, token, getAssetDetailRequest, writeText } = mountGuide({ orgId: "asset-org" });
@@ -214,3 +245,38 @@ it("keeps manually entered VNC connections token-only", async () => {
     "vncviewer -UserName=token-id gateway.example.com:5900"
   ]);
 });
+
+it.each([undefined, false, true])(
+  "uses the token SYSDBA role in the displayed Oracle command (%s)",
+  async (use_sysdba) => {
+    const { state } = mountGuide({
+      protocol: "oracle",
+      connectOptions: use_sysdba === undefined ? undefined : { use_sysdba }
+    });
+    await vi.waitFor(() => expect(state.loading.value).toBe(false));
+    expect(state.commands.value.map((command) => command.value)).toEqual([
+      `sqlplus token-id/secret@gateway.example.com:5525/token-id${use_sysdba ? " as sysdba" : ""}`
+    ]);
+  }
+);
+
+it.each(["mysql", "postgresql", "clickhouse"])(
+  "keeps %s frontend plaintext and backend TLS settings separate",
+  async (protocol) => {
+    const { state } = mountGuide({
+      protocol,
+      detail: {
+        spec_info: { db_name: "app", use_ssl: true, pg_ssl_mode: "verify-full", ca_cert: "BACKEND_CA" },
+        secret_info: { client_key: "BACKEND_KEY" }
+      }
+    });
+    await vi.waitFor(() => expect(state.loading.value).toBe(false));
+    expect(state.rows.value.find((row) => row.name === "frontend_tls")?.value).toBe("ConnectionGuide.TLSDisabled");
+    const backend = String(state.rows.value.find((row) => row.name === "backend_tls")?.value);
+    expect(backend).toContain(protocol === "postgresql" ? "verify-full" : "TLSVerified");
+    const command = state.commands.value[0]!.value;
+    if (protocol === "clickhouse") expect(command).not.toContain("--secure");
+    else expect(command).toContain(protocol === "mysql" ? "--ssl-mode=DISABLED" : "sslmode=disable");
+    expect(JSON.stringify(state.rows.value) + command).not.toMatch(/BACKEND_CA|BACKEND_KEY|sslrootcert|ssl-ca/);
+  }
+);

@@ -5,6 +5,7 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import os from "node:os";
+import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import test, { mock } from "node:test";
 import { runInNewContext } from "node:vm";
@@ -61,6 +62,7 @@ async function setupNavigation(
   let preferences: any;
   const views = new Map();
   const scope = {
+    lockedHosts: new Set<number>(),
     requireRecording: false,
     direct: false,
     allowManualNavigation,
@@ -98,11 +100,11 @@ async function setupNavigation(
     finishWebProxyAutofill: finishAutofill,
     emitWebProxyState: state,
     event: { sender: { id: 1 } },
-    win: { contentView: { addChildView() {} } }
+    win: { webContents: createContents(), contentView: { addChildView() {} } }
   };
   const api = new Function(
     ...Object.keys(scope),
-    `${source}\nreturn {
+    `${stripTypeScriptTypes(source)}\nreturn {
       create: (args) => createWebProxyView(event, win, args),
       invoke: async (command, args) => { ${commands} }
     };`
@@ -433,11 +435,115 @@ test("script supports explicit SSO origins without an asset allowlist and valida
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
-  const promise = new Promise<T>((complete) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((complete, fail) => {
     resolve = complete;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
+
+test("capture startup retries only source timeouts and requests a fresh source ID", async (t) => {
+  const preload = await readFile(new URL("../src/replay/web-recording-preload.ts", import.meta.url), "utf8");
+  // Exercise acquisition before the separate codec probing and upload stages.
+  const source = stripTypeScriptTypes(
+    `${preload.slice(
+      preload.indexOf("async function start()"),
+      preload.indexOf("  const track = stream.getVideoTracks()[0];")
+    )}return stream; }`
+  );
+  const timeout = new DOMException("Timeout starting video source", "AbortError");
+  for (const [name, errors] of [
+    ["first attempt succeeds", [undefined]],
+    ["timeout then success", [timeout, undefined]],
+    ["two timeouts then success", [timeout, timeout, undefined]],
+    ["repeated timeout", [timeout, timeout, timeout]],
+    ["permission denied", [new DOMException("Permission denied", "NotAllowedError")]],
+    ["other abort", [new DOMException("Capture aborted", "AbortError")]]
+  ] as const) {
+    await t.test(name, { timeout: 1000 }, async () => {
+      const ids: string[] = [];
+      const stream = {};
+      let requests = 0;
+      const started = runInNewContext(`let stream; ${source}; start();`, {
+        channel: "test",
+        ipcRenderer: { invoke: async () => ({ sourceId: `source-${++requests}`, width: 640, height: 360 }) },
+        navigator: {
+          mediaDevices: {
+            getUserMedia: async ({ video }) => {
+              ids.push(video.mandatory.chromeMediaSourceId);
+              const error = errors[ids.length - 1];
+              if (error) throw error;
+              return stream;
+            }
+          }
+        },
+        setTimeout: (callback) => queueMicrotask(callback)
+      });
+      const error = errors.at(-1);
+      if (error) await assert.rejects(started, (cause) => cause === error);
+      else assert.equal(await started, stream);
+      assert.deepEqual(
+        ids,
+        Array.from({ length: errors.length }, (_, index) => `source-${index + 1}`)
+      );
+    });
+  }
+});
+
+test("closing a recorded tab leaves finalization in the background and preserves other sessions", async (t) => {
+  const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
+  const source = main.slice(main.indexOf("async function closeWebProxyView("), main.indexOf("async function invoke("));
+  for (const failed of [false, true]) {
+    await t.test(failed ? "failed finalization" : "successful finalization", async () => {
+      const finished = deferred<void>();
+      const released = deferred<void>();
+      const contents = { isDestroyed: () => false, close: mock.fn() };
+      const recording = { finish: () => finished.promise, dispose: mock.fn() };
+      const managed = {
+        label: "web-proxy-closing",
+        webContents: contents,
+        view: { setVisible() {} },
+        host: { contentView: { removeChildView: mock.fn() } },
+        recording,
+        proxyUrl: "http://localhost:5001",
+        proxySessionId: "closing-session",
+        proxyAuth: { username: "session", password: "ticket" }
+      };
+      const other = { recording: { finish: mock.fn() } };
+      const views = new Map<string, any>([
+        [managed.label, managed],
+        ["web-proxy-other", other]
+      ]);
+      const closeSession = mock.fn(async () => released.resolve());
+      const scope = {
+        webProxyView: (_event, label) => views.get(label),
+        webProxyViews: views,
+        electronLog: { info() {}, warn() {} },
+        clearInterval,
+        clearWebProxyAutofillWait() {},
+        removeWebProxyInputShield() {},
+        closeWebProxySession: closeSession
+      };
+      const close = new Function(...Object.keys(scope), `${source}\nreturn closeWebProxyView;`)(
+        ...Object.values(scope)
+      );
+      await close({}, managed.label);
+      assert.equal(views.has(managed.label), false);
+      assert.equal(managed.host.contentView.removeChildView.mock.callCount(), 1);
+      assert.equal(contents.close.mock.callCount(), 0, "capture source must survive until recorder finalization");
+      assert.equal(closeSession.mock.callCount(), 0, "upload authentication must survive until finalization");
+      assert.equal(views.get("web-proxy-other"), other);
+      assert.equal(other.recording.finish.mock.callCount(), 0);
+      if (failed) finished.reject(new Error("upload failed"));
+      else finished.resolve();
+      await released.promise;
+      assert.equal(recording.dispose.mock.callCount(), 1);
+      assert.equal(contents.close.mock.callCount(), 1);
+      assert.equal(managed.proxyAuth, null);
+    });
+  }
+});
 
 test("interactive optional accepts only booleans and preserves required verification", () => {
   const step = { step: 1, command: "interactive", target: "id=mfa" };
@@ -608,6 +714,7 @@ async function setupAutofill() {
   const scriptStarted = deferred<void>();
   const script = { hooks: null as any, cancel: mock.fn(), completeVerification: mock.fn(async () => true) };
   const scope = {
+    lockedHosts: new Set<number>(),
     webProxyViews: views,
     emitDesktopEvent: (name, state) => events.push({ name, state }),
     normalizedWebOrigin,
@@ -644,7 +751,7 @@ async function setupAutofill() {
   };
   const api = new Function(
     ...Object.keys(scope),
-    `${source}\nreturn { startWebProxyAutofillWait, captureWebProxyPreview, tryWebProxyAutofill, finishWebProxyAutofill, checkWebProxyLoginSuccess, completeWebProxyVerification, emitWebProxyState, syncWebProxyVisibility };`
+    `${stripTypeScriptTypes(source)}\nreturn { startWebProxyAutofillWait, captureWebProxyPreview, tryWebProxyAutofill, finishWebProxyAutofill, checkWebProxyLoginSuccess, completeWebProxyVerification, emitWebProxyState, syncWebProxyVisibility };`
   )(...Object.values(scope));
   return {
     api,

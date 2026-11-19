@@ -34,7 +34,7 @@ const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sql
 const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
-const openPanels = ref<Set<PanelKind>>(new Set());
+const { sidebarOpenPanel, setSidebarOpenPanel } = useSettingManager();
 const {
   folders: favoriteFolders,
   rootAssets: favoriteRootAssets,
@@ -252,23 +252,10 @@ const panelConfig = {
 
 const panelMaxHeight = (kind: PanelKind) => (props.mainPanelOpen ? panelConfig[kind].maxHeight : "100%");
 
-const isOpen = (kind: PanelKind) => openPanels.value.has(kind);
+const isOpen = (kind: PanelKind) => sidebarOpenPanel.value === kind;
 
 const togglePanel = (kind: PanelKind) => {
-  const next = new Set(openPanels.value);
-  const nextOpen = !next.has(kind);
-  if (nextOpen) {
-    const group = panelConfig[kind].exclusiveGroup;
-    for (const openKind of next) {
-      if (panelConfig[openKind].exclusiveGroup === group) next.delete(openKind);
-    }
-    next.add(kind);
-  } else {
-    next.delete(kind);
-  }
-  openPanels.value = next;
-  if (nextOpen && kind === "favorites") loadFavorites();
-  if (nextOpen && kind === "snippets") loadSnippets();
+  setSidebarOpenPanel(isOpen(kind) ? null : kind);
 };
 
 const refreshPanel = (kind: PanelKind) => {
@@ -439,11 +426,20 @@ useEventBus().on("assetRenamed", ({ assetId, name }) => {
   renameFavoriteAsset(assetId, name);
 });
 
-onMounted(() => {
-  if (!props.hideChrome) return;
-  if (props.visiblePanels.favorites) void loadFavorites();
-  if (props.visiblePanels.snippets) void loadSnippets();
-});
+watch(
+  () => props.visiblePanels.favorites && (props.hideChrome || isOpen("favorites")),
+  (open) => {
+    if (open) void loadFavorites();
+  },
+  { immediate: true }
+);
+watch(
+  () => props.visiblePanels.snippets && (props.hideChrome || isOpen("snippets")),
+  (open) => {
+    if (open) void loadSnippets();
+  },
+  { immediate: true }
+);
 
 defineExpose({
   openCreateFolder: () => createAndRenameFolder(),

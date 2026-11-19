@@ -9,14 +9,14 @@
     "default": "Terminal"
   },
   "launch": {
-    "type": "args",
-    "driver": "terminal",
-    "application_id": "com.apple.Terminal",
+    "type": "script",
+    "script": "scripts/launch.macos.applescript",
+    "interpreter": "/usr/bin/osascript",
+    "accepts_command": true,
     "use_ssh_helper": true,
     "protocol_aliases": {
       "telnet": "ssh"
-    },
-    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+    }
   },
   "display_name": "Terminal"
 }

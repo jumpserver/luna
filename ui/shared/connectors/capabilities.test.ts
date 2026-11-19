@@ -16,3 +16,7 @@ it("routes WinRM through Koko's built-in terminal", () => {
     backendConnectMethod: "web_cli"
   });
 });
+
+it.each(["oceanbase", "oceanbase-mysql", "oceanbase-oracle"])("routes %s to the database workbench", (protocol) => {
+  expect(findDeclaredCapability(protocol, WEB_DB_NATIVE_VALUE)?.surface).toBe("database");
+});

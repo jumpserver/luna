@@ -5,6 +5,7 @@ export function getDirectGuideCommand(options: {
   username: string;
   account: string;
   inputUsername: string;
+  personalCredentialId?: string;
   accounts: Pick<PermedAccount, "id" | "username">[];
   assetId: string;
   host: string;
@@ -13,11 +14,12 @@ export function getDirectGuideCommand(options: {
   const { protocol, username, account, inputUsername, accounts, assetId, host, port } = options;
   if (protocol === "vnc" && account === "@INPUT") return "";
   const accountUsername =
-    account === "@USER"
+    (protocol === "ssh" && account === "@INPUT" && options.personalCredentialId) ||
+    (account === "@USER"
       ? username
       : account === "@INPUT"
         ? inputUsername
-        : accounts.find((item) => item.id === account)?.username || inputUsername;
+        : accounts.find((item) => item.id === account)?.username || inputUsername);
   if (!username || !accountUsername || !assetId || !host) return "";
   // Koko and Nec split this login name on '#'; embedded separators cannot be represented.
   if ([username, accountUsername, assetId].some((value) => value.includes("#"))) return "";

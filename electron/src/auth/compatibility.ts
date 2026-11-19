@@ -2,7 +2,7 @@ import type { SiteCompatibility } from "../../../ui/types/clientCompatibility";
 import { parseUrl } from "../shared/url";
 
 // Raise only when the client starts depending on a breaking server change.
-export const MIN_CORE_VERSION = "v5.1.0";
+export const MIN_CORE_VERSION = "v5.2.0";
 const COMPATIBILITY_PATH = "/api/v1/settings/client/compatibility/";
 
 function parseVersion(value: unknown) {
@@ -97,11 +97,14 @@ export async function checkSiteCompatibility(
     }
   } catch (error) {
     const failure = error as { name?: string; code?: string; message?: string; cause?: { code?: string } };
-    const reason = ["TimeoutError", "AbortError"].includes(failure?.name || "")
-      ? "timeout"
-      : /CERT|TLS|SELF_SIGNED/.test(failure?.cause?.code || failure?.code || failure?.message || "")
-        ? "tls"
-        : "network";
+    const reason =
+      failure?.code === "ERR_CROSS_ORIGIN_REDIRECT"
+        ? "redirect"
+        : ["TimeoutError", "AbortError"].includes(failure?.name || "")
+          ? "timeout"
+          : /CERT|TLS|SELF_SIGNED/.test(failure?.cause?.code || failure?.code || failure?.message || "")
+            ? "tls"
+            : "network";
     return { ...result, reason };
   }
 

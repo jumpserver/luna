@@ -4,7 +4,6 @@ import type {
   ChenConsoleTimelineEntry,
   ChenConsoleTimelineResult,
   ChenPromptConsoleTab,
-  ChenQueryLikeWorkspaceTab,
   ChenSqlEditorSnapshot
 } from "~/chen/types";
 
@@ -17,11 +16,14 @@ const props = defineProps<{
   promptLabel: string;
   canCopy: boolean;
   aiEnabled: boolean;
+  disabled?: boolean;
+  canCancel?: boolean;
+  canExplain?: boolean;
 }>();
 
 const emit = defineEmits<{
   run: [tab: ChenPromptConsoleTab];
-  cancel: [tab: ChenQueryLikeWorkspaceTab];
+  cancel: [tab: ChenPromptConsoleTab];
   clear: [tab: ChenPromptConsoleTab];
   updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
   aiGenerate: [tab: ChenPromptConsoleTab];
@@ -105,7 +107,7 @@ const statusDetails = computed<Record<ChenConsoleExecutionStatus, { icon: string
 );
 
 function run() {
-  if (busy.value || !pendingSqlValue.value.trim()) return;
+  if (props.disabled || busy.value || !pendingSqlValue.value.trim()) return;
   historyIndex = null;
   historyDraft = "";
   followLatest = true;
@@ -204,6 +206,14 @@ function resultSummary(result: ChenConsoleTimelineResult) {
   return total > shown ? t("Chen.RowsShownTotal", { shown, total }) : t("Chen.RowCount", { count: shown });
 }
 
+// Only suppress clearly ineligible commands. Chen validates the full SQL per dialect.
+function canOfferPlan(sql: string) {
+  const command = sql.replace(/^(?:[\s;]|--[^\r\n]*|#[^\r\n]*|\/\*(?!!)[\s\S]*?\*\/)*/, "");
+  return !/^(?:SHOW|DESC|DESCRIBE|EXPLAIN|SET|USE|BEGIN|COMMIT|ROLLBACK|INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE)\b/i.test(
+    command
+  );
+}
+
 function elapsed(entry: ChenConsoleTimelineEntry) {
   if (!entry.completedAt) return "";
   const milliseconds = Math.max(0, entry.completedAt - entry.startedAt);
@@ -297,17 +307,18 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
                 icon="i-lucide-square"
                 size="sm"
                 color="error"
-                :disabled="entry.status === 'cancelling'"
+                :disabled="entry.status === 'cancelling' || canCancel === false"
                 @click="emit('cancel', tab)"
               >
                 {{ t("Chen.Stop") }}
               </UButton>
               <UButton
-                v-else
+                v-else-if="canOfferPlan(entry.sql)"
                 size="xs"
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-git-fork"
+                :disabled="disabled || busy || canExplain === false"
                 @click="emit('explainPlan', tab, entry.sql, entry.id)"
               >
                 {{ t("ExecutionPlan.explain") }}
@@ -377,7 +388,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
         ref="inputRef"
         v-model="pendingSqlValue"
         class="h-full min-h-12 flex-1 resize-none rounded-sm border border-default bg-transparent px-2 py-2 text-[var(--app-fg)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--app-muted)] focus:border-primary focus:ring-1 focus:ring-[var(--app-focus-ring)]"
-        :disabled="busy"
+        :disabled="busy || disabled"
         rows="1"
         :placeholder="t('Chen.ConsoleInputPlaceholder')"
         spellcheck="false"

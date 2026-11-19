@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CharsetType, LangType } from "~/types";
+import type { CharsetType } from "~/types";
 
 import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -7,6 +7,8 @@ import {
   clearTerminalCommandHistory,
   getAuthenticatedTerminalCommandHistoryScope
 } from "~/composables/useTerminalCommandHistory";
+import { message as lionMessages } from "~/lion/locales/modules";
+import { keyboardLayoutOptions } from "~/lion/utils/keyboard";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -25,12 +27,7 @@ interface FfmpegPluginProgress {
   error?: string;
 }
 
-interface LangItem {
-  id: LangType;
-  label: string;
-}
-
-const { t, locales, locale } = useI18n();
+const { t, locale } = useI18n();
 const settingManager = useSettingManager();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
@@ -46,7 +43,6 @@ const commandHistoryConfirmOpen = ref(false);
 const clearingCommandHistory = ref(false);
 const toast = useToast();
 const {
-  setLang,
   charset,
   backspaceAsCtrlH,
   rightClickQuickPaste,
@@ -73,14 +69,6 @@ const logActionLabel = (feedback: typeof clearFeedback.value, idle: string, done
 const debugLogEnabled = computed({
   get: () => debugLog.value,
   set: (value: boolean) => setDebugLog(value)
-});
-
-const languageItems = computed<LangItem[]>(() => {
-  const arr = (locales.value as any[]) || [];
-  return arr.map((l: any) => ({
-    id: (l.code || l) as LangType,
-    label: l.name || l
-  }));
 });
 
 const charsetItems = computed(() => {
@@ -145,12 +133,15 @@ const smartSizeItems = computed(() => [
   { label: t("Setting.Enable"), id: "1" }
 ]);
 
-const selectedLanguage = computed<LangType>({
-  get: () => (locale.value as LangType) || "zh",
-  set: (code: LangType) => {
-    if (!code) return;
-    setLang(code);
-  }
+const keyboardHookItems = computed(() => [
+  { label: t("Setting.RdpKeyboardHookLocal"), id: "0" },
+  { label: t("Setting.RdpKeyboardHookRemote"), id: "1" },
+  { label: t("Setting.RdpKeyboardHookFullScreen"), id: "2" }
+]);
+
+const keyboardLayoutItems = computed(() => {
+  const messages = lionMessages[locale.value as keyof typeof lionMessages] || lionMessages.en;
+  return keyboardLayoutOptions.map((option) => ({ value: String(option.value), label: messages[option.label] }));
 });
 
 const selectedCharset = computed<CharsetType>({
@@ -160,12 +151,15 @@ const selectedCharset = computed<CharsetType>({
 
 const {
   resolution: selectedResolution,
+  keyboardLayout: selectedKeyboardLayout,
   busy: graphicsBusy,
   colorQuality: selectedColorQuality,
   smartSize: selectedSmartSize,
   fullScreen: selectedFullScreen,
   multiScreen: selectedMultiScreen,
-  drivesRedirect: selectedDrivesRedirect
+  drivesRedirect: selectedDrivesRedirect,
+  printersRedirect: selectedPrintersRedirect,
+  keyboardHook: selectedKeyboardHook
 } = useRdpResolutionPreference();
 const hasXPack = computed(() => currentUser.value?.xpackLicenseValid === true);
 
@@ -273,14 +267,7 @@ async function clearCommandHistory() {
   <div class="flex flex-col gap-4">
     <SettingsGroup>
       <SettingsRow :title="t('Common.Language')">
-        <USelect
-          v-model="selectedLanguage"
-          :items="languageItems"
-          value-key="id"
-          :aria-label="t('Common.Language')"
-          size="sm"
-          class="w-48"
-        />
+        <LanguageSelect />
       </SettingsRow>
 
       <SettingsRow :title="t('Setting.Charset')" :description="t('Setting.CharsetDescription')">
@@ -307,6 +294,18 @@ async function clearCommandHistory() {
     </SettingsGroup>
 
     <SettingsGroup :title="t('Setting.RemoteDesktop')">
+      <SettingsRow :title="t('RightPanel.KeyboardLayout')">
+        <USelect
+          v-model="selectedKeyboardLayout"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="keyboardLayoutItems"
+          :aria-label="t('RightPanel.KeyboardLayout')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
         <USelect
           v-model="selectedResolution"
@@ -343,6 +342,27 @@ async function clearCommandHistory() {
           :aria-label="t('Setting.RdpSmartSize')"
           size="sm"
           class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpKeyboardHook')" :description="t('Setting.RdpKeyboardHookDescription')">
+        <USelect
+          v-model="selectedKeyboardHook"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="keyboardHookItems"
+          value-key="id"
+          :aria-label="t('Setting.RdpKeyboardHook')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpPrintersRedirect')" :description="t('Setting.RdpPrintersRedirectDescription')">
+        <USwitch
+          v-model="selectedPrintersRedirect"
+          :disabled="graphicsBusy"
+          :aria-label="t('Setting.RdpPrintersRedirect')"
         />
       </SettingsRow>
 

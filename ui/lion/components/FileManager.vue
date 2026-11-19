@@ -206,7 +206,7 @@ onUnmounted(() => {
     :class="{ 'h-full sftp-file-management--compact': compact }"
   >
     <div
-      class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
+      class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     >
       <div class="flex shrink-0 items-center gap-0.5">
         <UTooltip :text="compact ? t('koko.drawer.up') : t('koko.fileManagement.back')">
@@ -214,7 +214,7 @@ onUnmounted(() => {
             :icon="compact ? 'i-lucide-arrow-up' : 'i-lucide-chevron-left'"
             color="neutral"
             variant="ghost"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="disabledBack"
             :aria-label="compact ? t('koko.drawer.up') : t('koko.fileManagement.back')"
@@ -226,7 +226,7 @@ onUnmounted(() => {
             icon="i-lucide-chevron-right"
             color="neutral"
             variant="ghost"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
             :disabled="disabledForward"
             :aria-label="t('koko.fileManagement.forward')"
@@ -269,13 +269,13 @@ onUnmounted(() => {
         </template>
       </div>
 
-      <div class="flex shrink-0 items-center" :class="compact ? 'mx-1 gap-0' : 'gap-1'">
+      <div class="flex shrink-0 items-center" :class="compact ? 'gap-0' : 'gap-1'">
         <UTooltip v-if="!searchOpen && !searchValue" :text="t('koko.fileManagement.filterCurrentDirectory')">
           <UButton
             icon="i-lucide-search"
             color="neutral"
             variant="ghost"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="searchOpen = true"
@@ -287,7 +287,7 @@ onUnmounted(() => {
             icon="i-lucide-refresh-cw"
             color="neutral"
             variant="ghost"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
             :aria-label="t('koko.fileManagement.refresh')"
             @click="handleRefresh"
@@ -299,7 +299,7 @@ onUnmounted(() => {
             icon="i-lucide-arrow-left-right"
             color="neutral"
             variant="ghost"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
             :aria-label="t('FileTransfer.Title')"
             :aria-expanded="transferOpen"
@@ -313,9 +313,8 @@ onUnmounted(() => {
             icon="i-lucide-cloud-upload"
             color="primary"
             variant="solid"
-            :size="compact ? 'xs' : 'sm'"
+            size="xs"
             square
-            class="text-inverted! enabled:hover:bg-primary/75!"
             :disabled="uploadDisabled"
             :aria-label="t('koko.actions.upload')"
             @click="fileInputRef?.click()"
@@ -407,24 +406,8 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped lang="scss">
+<style scoped>
 .sftp-file-management--compact .sftp-file-management__toolbar {
-  gap: 0;
   padding-inline: 6px;
-
-  :deep(button:not(.sftp-path-crumb)) {
-    gap: 4px;
-    padding: 4px;
-    border-radius: 6px;
-  }
-
-  :deep(button:not(.sftp-path-crumb):not(:has([data-slot="label"]))) {
-    padding: 0;
-  }
-
-  :deep([data-slot="leadingIcon"]) {
-    width: var(--sftp-icon-md);
-    height: var(--sftp-icon-md);
-  }
 }
 </style>

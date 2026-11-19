@@ -1,5 +1,7 @@
+import type Guacamole from "@jumpserver/guacamole";
+
 export function applyGuacamolePlaybackRate(
-  recording: { setPlaybackRate?: (rate: number) => void } | null | undefined,
+  recording: Partial<Pick<Guacamole.SessionRecording, "setPlaybackRate">> | null | undefined,
   speed?: number
 ) {
   const rate = speed ?? 1;

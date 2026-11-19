@@ -54,8 +54,8 @@ it("covers all connector paths, site prefixes and desktop origins without protec
     "/koko/ws/monitor/",
     "/koko/ws/sftp/",
     "/koko/lion/ws/connect/",
-    "/chen/ws/session",
-    "/site/chen/ws/console"
+    "/site/koko/ws/terminal/",
+    "/site/koko/lion/ws/connect/"
   ]) {
     expect(new WebSocket(`wss://remote-endpoint.test${path}?token=test`)).toBeInstanceOf(FakeWebSocket);
   }
@@ -75,13 +75,13 @@ it("preserves constructor arguments, constants, instanceof and subclasses", () =
   expect((socket as unknown as FakeWebSocket).protocols).toEqual(["JMS-KOKO"]);
   expect(WebSocket.OPEN).toBe(FakeWebSocket.OPEN);
   class DerivedWebSocket extends WebSocket {}
-  expect(new DerivedWebSocket("wss://example.test/chen/ws/session")).toBeInstanceOf(DerivedWebSocket);
+  expect(new DerivedWebSocket("wss://example.test/koko/lion/ws/connect/")).toBeInstanceOf(DerivedWebSocket);
 });
 
 it("holds independent shared locks while connecting and releases each on close", async () => {
   plugin.setup();
   const first = new WebSocket("wss://example.test/koko/ws/terminal/");
-  const second = new WebSocket("wss://example.test/chen/ws/session");
+  const second = new WebSocket("wss://example.test/koko/lion/ws/connect/");
   expect(requests.every(({ mode }) => mode === "shared")).toBe(true);
   expect(requests[0]!.name).toBe(requests[1]!.name);
   const released = vi.fn();

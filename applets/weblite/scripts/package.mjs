@@ -4,9 +4,11 @@ import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/p
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createWindowsSigner } from "../../../scripts/windows-sign.ts";
 import { flattenWebLiteMsi } from "./flatten-msi.mjs";
 
 if (process.platform !== "win32") throw new Error("WebLite MSI packaging must run on Windows");
+const windowsSigner = createWindowsSigner();
 await import("./build.mjs");
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -46,6 +48,7 @@ try {
     executableName: "weblite",
     icon: path.join(root, "assets/icon.ico")
   });
+  await windowsSigner.signFile(path.join(appDir, "weblite.exe"));
 
   await mkdir(installerOut, { recursive: true });
   const creator = new MSICreator({
@@ -74,6 +77,7 @@ try {
   const installer = path.join(releaseOut, `JumpServer-WebLite-${manifest.version}-x64.msi`);
   await mkdir(releaseOut, { recursive: true });
   await copyFile(msiFile, installer);
+  await windowsSigner.signFile(installer);
   console.info(`WebLite installer: ${installer}`);
 } finally {
   await rm(work, { recursive: true, force: true });

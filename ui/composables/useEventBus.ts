@@ -3,10 +3,12 @@ import type { AssetItem, PermedAccount, PermedProtocol, SortType } from "~/types
 
 import mitt from "mitt";
 
+export type LoginSitePrefill = { site: string; siteName?: string };
+
 type BusEvents = {
   setSort: SortType;
   search: string;
-  login: { accountId: string } | undefined;
+  login: { accountId: string; prefill?: LoginSitePrefill } | undefined;
   loaded: undefined;
   loading: undefined;
   refresh: undefined;
@@ -26,6 +28,7 @@ type BusEvents = {
   workspaceConnectAsset: AssetItem;
   workspaceQuickConnectAsset: AssetItem;
   workspaceQuickSearch: undefined;
+  workspaceNewSession: undefined;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

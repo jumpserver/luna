@@ -1,7 +1,7 @@
 import type { AppConfigType, PluginListItem } from "~/types";
 import { desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 
-export const useApplicationConfig = () => {
+export const useApplicationConfig = ({ refreshOnMount = false } = {}) => {
   const { t } = useI18n();
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
@@ -42,7 +42,7 @@ export const useApplicationConfig = () => {
   };
 
   onMounted(async () => {
-    if (!isDesktopRuntime()) return;
+    if (!refreshOnMount || !isDesktopRuntime()) return;
 
     // 仅在主窗口拉取配置；其他窗口直接读取结果
     if (desktopWindow.label() !== "main") {

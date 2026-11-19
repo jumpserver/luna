@@ -22,7 +22,7 @@ const { getSessionDetails } = useWorkspaceSessionDetails();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, currentAccountId, currentUser } = storeToRefs(userInfoStore);
 
 const search = ref("");
 const searchLoading = ref(false);
@@ -112,15 +112,16 @@ function disposeCachedOwner(paneId: string) {
 
 function syncCachedSessions() {
   const previous = cachedSessions.value;
-  const next = loggedIn.value
-    ? nextSftpSessionCache({
-        cached: previous,
-        identities: liveIdentities.value,
-        activePaneId: activeSshPaneId.value,
-        activeReady: activeSessionReady.value,
-        sftpTabVisible: sftpTabVisible.value
-      })
-    : [];
+  const next =
+    loggedIn.value || isDesktopRuntime()
+      ? nextSftpSessionCache({
+          cached: previous,
+          identities: liveIdentities.value,
+          activePaneId: activeSshPaneId.value,
+          activeReady: activeSessionReady.value,
+          sftpTabVisible: sftpTabVisible.value
+        })
+      : [];
   cachedSessions.value = next;
   const nextKeys = new Set(next.map((entry) => `${entry.paneId}:${entry.identity}`));
   for (const entry of previous) {
@@ -161,7 +162,7 @@ const selectAsset = (node: AssetTreeNode) => {
 
 const openSearchSftp = async () => {
   const asset = selectedAsset.value;
-  if (!asset || connecting.value) return;
+  if (!loggedIn.value || !asset || connecting.value) return;
 
   const attempt = ++connectionAttempt;
   connecting.value = true;
@@ -199,11 +200,16 @@ watch([liveIdentities, activeSshPaneId, activeSessionReady, sftpTabVisible, logg
   immediate: true
 });
 
-watch(loggedIn, (value) => {
-  if (value) return;
+function clearSearchSession() {
+  connectionAttempt++;
+  connecting.value = false;
   searchPayload.value = null;
   selectedAsset.value = null;
   searchError.value = "";
+}
+watch([currentAccountId, () => currentUser.value?.userId, () => currentUser.value?.site], clearSearchSession);
+watch(loggedIn, (value) => {
+  if (!value && !isDesktopRuntime()) clearSearchSession();
 });
 
 onUnmounted(() => {
@@ -213,11 +219,14 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400">
+    <div
+      v-if="!loggedIn && !activeCached && !searchTab"
+      class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400"
+    >
       {{ t("Common.LoginFirst") }}
     </div>
 
-    <template v-else>
+    <div class="contents">
       <SftpSessionInline
         v-for="entry in mountedSessions"
         v-show="entry.paneId === activeSshPaneId"
@@ -226,7 +235,7 @@ onUnmounted(() => {
         class="min-h-0 flex-1"
       />
 
-      <div v-if="showPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
+      <div v-if="loggedIn && showPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
         <div class="flex flex-col items-center gap-2">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
           <span>{{ t("koko.workspace.preparingSftp") }}</span>
@@ -237,7 +246,7 @@ onUnmounted(() => {
         <KokoFileManagerSessionSurface :key="searchTab.id" :tab="searchTab" compact class="min-h-0 flex-1" />
       </div>
 
-      <template v-else-if="showSearch">
+      <template v-else-if="loggedIn && showSearch">
         <div class="shrink-0 space-y-2 border-b border-gray-200 p-3 dark:border-white/10">
           <UInput
             v-model="search"
@@ -309,6 +318,6 @@ onUnmounted(() => {
           </button>
         </div>
       </template>
-    </template>
+    </div>
   </div>
 </template>

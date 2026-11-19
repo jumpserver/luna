@@ -298,7 +298,12 @@ onMounted(loadAsset);
         <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
           <section
             v-if="dialogVisible"
-            v-show="!loading && formReady && !(connecting && !downloadingRdp && !externalClientLaunch)"
+            v-show="
+              !loading &&
+              formReady &&
+              !hasScopeGroup(tab.id) &&
+              !(connecting && !downloadingRdp && !externalClientLaunch)
+            "
             class="connection-setup-shell relative w-full overflow-hidden"
             :class="
               modernIsland
@@ -489,8 +494,7 @@ onMounted(loadAsset);
           v-if="
             tab.connectionProgress &&
             shouldShowConnectionProgress(tab, hasScopeGroup(tab.id)) &&
-            !downloadingRdp &&
-            !externalClientLaunch
+            (hasScopeGroup(tab.id) || (!downloadingRdp && !externalClientLaunch))
           "
           :pane-id="tab.id"
           :stage="tab.connectionProgress"

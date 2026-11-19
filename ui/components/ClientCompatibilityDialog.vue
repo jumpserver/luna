@@ -4,6 +4,8 @@ import { desktopOpener } from "~/shared/desktop/bridge";
 const { t } = useI18n();
 const toast = useToast();
 const { pending, dismiss, confirm } = useClientCompatibility();
+const certificateFailure = computed(() => pending.value?.reason === "tls");
+const redirectFailure = computed(() => pending.value?.reason === "redirect");
 const open = computed({
   get: () => pending.value !== null,
   set: (value) => {
@@ -47,7 +49,20 @@ const description = computed(() => {
 </script>
 
 <template>
+  <SiteCertificateErrorDialog v-if="certificateFailure" />
+  <UModal
+    v-else-if="redirectFailure"
+    v-model:open="open"
+    :title="t('Login.LoginFailed')"
+    :description="t('ClientCompatibility.redirect')"
+    :ui="{ content: 'max-w-md', footer: 'justify-end' }"
+  >
+    <template #footer>
+      <UButton color="neutral" @click="dismiss">{{ t("Common.Close") }}</UButton>
+    </template>
+  </UModal>
   <ModalAlertDialog
+    v-else
     v-model:open="open"
     :title="t('ClientCompatibility.Title')"
     :confirm-label="t('ClientCompatibility.Continue')"

@@ -1,8 +1,23 @@
+const menuSlots = {
+  content:
+    "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] rounded-[length:var(--app-radius)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+  viewport: "relative overflow-y-auto flex-1",
+  group: "p-1 isolate",
+  label:
+    "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
+  separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
+  item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-[length:var(--app-radius)] leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
+  itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
+  itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
+  itemWrapper: "min-w-0 flex-1 overflow-hidden",
+  itemLabel: "block truncate text-sm"
+};
+
 export default defineAppConfig({
   app: {
     name: "JumpServer",
     author: "JumpServer",
-    version: "v5.1.0",
+    version: "5.2.0",
     repo: "https://github.com/jumpserver/clients"
   },
   componentsConfig: {
@@ -36,10 +51,19 @@ export default defineAppConfig({
       },
       compoundVariants: [
         {
+          trailing: true,
+          class: "aria-[haspopup=menu]:gap-1 aria-[haspopup=menu]:[&>[data-slot=trailingIcon]]:size-[0.9em]"
+        },
+        {
+          color: "neutral",
+          variant: ["outline", "subtle"],
+          class: "in-data-[focus-input=pointer]:focus-visible:ring-accented"
+        },
+        {
           color: "neutral",
           variant: "ghost",
           class:
-            "bg-transparent text-(--app-fg) hover:bg-(--app-surface-canvas) active:bg-(--app-surface-canvas) focus-visible:bg-(--app-surface-canvas)"
+            "bg-transparent text-(--app-fg) hover:bg-(--app-hover-soft) active:bg-(--app-hover-strong) focus-visible:bg-(--app-hover-strong)"
         }
       ]
     },
@@ -48,16 +72,32 @@ export default defineAppConfig({
         base: "!rounded-[length:var(--app-radius)]"
       }
     },
+    switch: {
+      slots: {
+        base: "cursor-pointer disabled:cursor-not-allowed"
+      }
+    },
+    checkbox: {
+      slots: {
+        base: "cursor-pointer",
+        label: "cursor-pointer"
+      }
+    },
     kbd: {
       base: "!rounded-[length:min(var(--app-radius),3px)]"
     },
     toast: {
       slots: {
-        root: "rounded-[length:var(--app-radius)]",
+        root: "app-notification-card rounded-[length:var(--app-radius)] ring-0",
         wrapper: "w-0 min-w-0 flex-1 flex flex-col",
-        description: "text-sm text-muted whitespace-pre-wrap break-all",
+        description: "text-sm text-muted whitespace-pre-wrap break-words",
+        icon: "mt-0.5 size-5 shrink-0",
+        close: "size-6 shrink-0 justify-center cursor-pointer p-0 text-muted hover:text-highlighted",
         actions: "flex gap-1.5 shrink-0 flex-wrap"
       }
+    },
+    toaster: {
+      slots: { viewport: "app-notification-viewport" }
     },
     formField: {
       slots: {
@@ -110,20 +150,10 @@ export default defineAppConfig({
       }
     },
     dropdownMenu: {
-      slots: {
-        content:
-          "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] rounded-[length:var(--app-radius)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
-        viewport: "relative overflow-y-auto flex-1",
-        group: "p-1 isolate",
-        label:
-          "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
-        separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-[length:var(--app-radius)] leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
-        itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
-        itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
-        itemWrapper: "min-w-0 flex-1 overflow-hidden",
-        itemLabel: "block truncate text-sm"
-      }
+      slots: menuSlots
+    },
+    contextMenu: {
+      slots: menuSlots
     },
     modal: {
       slots: {

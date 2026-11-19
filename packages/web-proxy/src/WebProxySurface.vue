@@ -359,7 +359,8 @@ async function startRecording() {
     });
   } catch {
     recordingStatus.value = "error";
-    if (props.recordingRequired) emit("fatal", t("WebProxy.RecordingStartFailedReconnect"));
+    await closeView().catch(() => undefined);
+    error.value = "WebProxy.RecordingStartFailedReconnect";
   }
 }
 

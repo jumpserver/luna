@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { SettingsSection } from "~/composables/useSettingsWindow";
+import { TooltipProvider } from "reka-ui";
+import { useClientAccountHandoff } from "~/composables/useClientAccountHandoff";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(
@@ -17,10 +19,14 @@ const props = withDefaults(
 const route = useRoute();
 const localePath = useLocalePath();
 const { t } = useI18n();
+const { t: localAiText } = useLocalAiMessages();
 const { isMacOS } = usePlatform();
 const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, isLoggingOut } = storeToRefs(userInfoStore);
+const { active: accountHandoffActive } = useClientAccountHandoff();
+// Keep the current section mounted through the expiry notice and account handoff.
+const userSectionAvailable = computed(() => loggedIn.value || isLoggingOut.value || accountHandoffActive.value);
 const hasNativeTitlebarInset = computed(() => isDesktopRuntime() && isMacOS.value);
 
 const sectionDefs = computed(() => {
@@ -44,11 +50,29 @@ const sectionDefs = computed(() => {
       authenticatedOnly: false
     },
     {
+      key: "local-ai" as const,
+      label: localAiText("title"),
+      description: localAiText("hint"),
+      icon: "i-lucide-bot",
+      routeName: "setting-local-ai",
+      desktopOnly: true,
+      authenticatedOnly: true
+    },
+    {
       key: "appearance" as const,
       label: t("Common.Appearance"),
       description: t("Setting.AppearanceDescription"),
       icon: "i-lucide-palette",
       routeName: "setting-appearance",
+      desktopOnly: false,
+      authenticatedOnly: false
+    },
+    {
+      key: "shortcuts" as const,
+      label: t("Shortcuts.Title"),
+      description: t("Shortcuts.Description"),
+      icon: "i-lucide-keyboard",
+      routeName: "setting-shortcuts",
       desktopOnly: false,
       authenticatedOnly: false
     },
@@ -73,7 +97,7 @@ const sectionDefs = computed(() => {
   ];
 
   return defs.filter(
-    (item) => (!item.desktopOnly || isDesktopRuntime()) && (!item.authenticatedOnly || loggedIn.value)
+    (item) => (!item.desktopOnly || isDesktopRuntime()) && (!item.authenticatedOnly || userSectionAvailable.value)
   );
 });
 
@@ -113,16 +137,16 @@ const sectionNavItems = computed<NavigationMenuItem[]>(() =>
 );
 
 watch(
-  loggedIn,
+  userSectionAvailable,
   (value) => {
     if (!import.meta.client || value) return;
 
-    if (props.mode === "inline" && inlineActiveSection.value === "user") {
+    if (props.mode === "inline" && ["user", "local-ai"].includes(inlineActiveSection.value)) {
       inlineActiveSection.value = "general";
       return;
     }
 
-    if (props.mode === "route" && route.path.startsWith("/setting/user")) {
+    if (props.mode === "route" && /^\/setting\/(?:user|local-ai)(?:\/|$)/.test(route.path)) {
       void navigateTo(localePath({ name: "setting-general" }), { replace: true });
     }
   },
@@ -131,68 +155,70 @@ watch(
 </script>
 
 <template>
-  <div class="settings-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
-    <div class="flex min-h-0 flex-1 flex-col md:flex-row">
-      <aside
-        class="settings-panel__sidebar flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
-        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
-      >
-        <div class="px-3 pt-3">
-          <UButton
-            :label="t('Setting.BackToApp')"
-            icon="i-lucide-arrow-left"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            class="h-8 w-full justify-start text-xs text-muted"
-            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
-            @click="closeSettings"
-          />
-        </div>
-
-        <nav class="min-h-0 flex-1 overflow-x-auto px-3 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
-          <UNavigationMenu
-            orientation="vertical"
-            color="neutral"
-            variant="pill"
-            :items="sectionNavItems"
-            :ui="{
-              root: 'w-full',
-              list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
-              item: 'shrink-0 md:w-full',
-              link: 'rounded-[length:var(--app-radius)]',
-              linkLeadingIcon: 'size-4'
-            }"
-          />
-        </nav>
-      </aside>
-
-      <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
-
-      <main
-        class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"
-        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
-      >
-        <div class="px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
-          <div class="mx-auto w-full max-w-4xl">
-            <Transition name="settings-section" mode="out-in">
-              <UPageHeader
-                :key="activeSection?.key"
-                :title="activeSection?.label"
-                :description="activeSection?.description"
-                :ui="{
-                  root: 'relative mb-8 border-0 py-0',
-                  wrapper: 'flex flex-col gap-0',
-                  title: 'text-xl font-semibold tracking-tight text-highlighted',
-                  description: 'mt-1.5 text-sm text-muted'
-                }"
-              />
-            </Transition>
-
-            <slot />
+  <TooltipProvider :content="{ side: 'top', align: 'center' }">
+    <div class="settings-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
+      <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+        <aside
+          class="settings-panel__sidebar flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
+          :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+        >
+          <div class="px-3 pt-3">
+            <UButton
+              :label="t('Setting.BackToApp')"
+              icon="i-lucide-arrow-left"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              class="h-8 w-full justify-start text-xs text-muted"
+              :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
+              @click="closeSettings"
+            />
           </div>
-        </div>
-      </main>
+
+          <nav class="min-h-0 flex-1 overflow-x-auto px-3 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
+            <UNavigationMenu
+              orientation="vertical"
+              color="neutral"
+              variant="pill"
+              :items="sectionNavItems"
+              :ui="{
+                root: 'w-full',
+                list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
+                item: 'shrink-0 md:w-full',
+                link: 'rounded-[length:var(--app-radius)]',
+                linkLeadingIcon: 'size-4'
+              }"
+            />
+          </nav>
+        </aside>
+
+        <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
+
+        <main
+          class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"
+          :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+        >
+          <div class="flex min-h-full flex-col px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
+            <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col">
+              <Transition name="settings-section" mode="out-in">
+                <UPageHeader
+                  :key="activeSection?.key"
+                  :title="activeSection?.label"
+                  :description="activeSection?.description"
+                  :ui="{
+                    root: 'relative mb-8 border-0 py-0',
+                    wrapper: 'flex flex-col gap-0',
+                    title: 'text-2xl sm:text-2xl font-semibold tracking-tight text-highlighted',
+                    description: 'mt-1.5 text-sm text-muted'
+                  }"
+                />
+              </Transition>
+
+              <slot />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
+  </TooltipProvider>
 </template>

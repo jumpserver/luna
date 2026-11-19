@@ -325,7 +325,8 @@ const elementsReady = () => {
   const submit = findElement(selectors.submit);
   const usernameReady = !selectors.username || (username instanceof HTMLInputElement && ["text", "email", "tel"].includes(username.type) && !username.disabled && visible(username));
   const passwordReady = !selectors.password || (password instanceof HTMLInputElement && password.type === "password" && !password.disabled && visible(password));
-  const submitReady = !selectors.submit || ((submit instanceof HTMLButtonElement || submit instanceof HTMLAnchorElement || (submit instanceof HTMLInputElement && ["submit", "button"].includes(submit.type))) && (selectors.interactive || (!submit.disabled && visible(submit))));
+  // Empty credentials commonly keep the submit button disabled until autofill.
+  const submitReady = !selectors.submit || ((submit instanceof HTMLButtonElement || submit instanceof HTMLAnchorElement || (submit instanceof HTMLInputElement && ["submit", "button"].includes(submit.type))) && (selectors.interactive || visible(submit)));
   return usernameReady && passwordReady && submitReady;
 };
 let readySince = 0;
@@ -417,20 +418,31 @@ if (successObserver) {
 }
 // The main process decides whether a visible verification area must precede submission.
 if (payload.interactiveSelector) return true;
+let submitted = false;
 try {
   // Input handlers may schedule a framework render that replaces or enables the
-  // submit button. Let that update finish, then resolve the current DOM node.
+  // submit button. Wait for readiness and resolve the current DOM node each time.
   await new Promise(resolve => setTimeout(resolve, 0));
-  const currentSubmit = findElement(payload.submitSelector);
-  if (!(currentSubmit instanceof HTMLElement) || !currentSubmit.isConnected || currentSubmit.disabled) {
+  const deadline = Date.now() + 15000;
+  let currentSubmit = null;
+  while (Date.now() < deadline) {
+    const candidate = findElement(payload.submitSelector);
+    if (candidate instanceof HTMLElement && candidate.isConnected && !candidate.disabled && candidate.getClientRects().length > 0 && getComputedStyle(candidate).visibility !== "hidden") {
+      currentSubmit = candidate;
+      break;
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  if (!currentSubmit) {
     throw new Error("登录提交按钮不可用，请检查提交元素配置或页面是否需要验证");
   }
   internalAction = true;
-  if (!submitElement(currentSubmit)) throw new Error("登录表单校验未通过，请检查必填项或验证码配置");
+  submitted = submitElement(currentSubmit);
+  if (!submitted) throw new Error("登录表单校验未通过，请检查必填项或验证码配置");
   return true;
 } finally {
   internalAction = false;
-  if (!payload.successSelector && !payload.interactiveSelector) cleanup();
+  if (!submitted || !payload.successSelector) cleanup();
 }
 })()`;
 }

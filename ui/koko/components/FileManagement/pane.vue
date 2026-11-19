@@ -484,7 +484,6 @@ defineExpose({
       :context-label="contextLabel"
       :show-workbench-actions="showWorkbenchActions && !compact"
       :path-segments="pathSegments"
-      :dense="Boolean(compact)"
       @navigate="navigateToPath"
       @go-to-path="goToAbsolutePath"
       @create-folder="createFolder"

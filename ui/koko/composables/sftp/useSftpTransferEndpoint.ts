@@ -56,7 +56,8 @@ export function useSftpTransferEndpoint(
     if (message.type === SftpMessageType.Data && message.cmd === request.command) {
       pending.delete(message.id);
       clearTimeout(request.timeout);
-      request.resolve(message);
+      if (message.err || message.error_code) request.reject(new Error(message.error_code || message.err));
+      else request.resolve(message);
     }
   });
   const removeFailureListener = socket.onFailure((failure) => {

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import Guacamole from "@jumpserver/guacamole";
 import { useWindowSize } from "@vueuse/core";
-import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import dedeqwertz from "@/lion/assets/layouts/de-de-qwertz.json";
 import enusqwerty from "@/lion/assets/layouts/en-us-qwerty.json";
 import esesqwerty from "@/lion/assets/layouts/es-es-qwerty.json";
@@ -15,11 +15,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: "keyboardChange", action: "keydown" | "keyup", keysym: string): void;
+  (event: "keyboardChange", action: "keydown" | "keyup", keysym: number): void;
 }>();
 const { t } = useI18n();
 
-const keyboardLayouts: Record<string, any> = {
+const keyboardLayouts: Record<string, ConstructorParameters<typeof Guacamole.OnScreenKeyboard>[0]> = {
   "de-de-qwertz": dedeqwertz,
   "en-us-qwerty": enusqwerty,
   "es-es-qwerty": esesqwerty,
@@ -30,7 +30,7 @@ const keyboardLayouts: Record<string, any> = {
 };
 
 const keyboardRef = ref<HTMLElement | null>(null);
-const screenKeyboard = ref<any>(null);
+const screenKeyboard = shallowRef<Guacamole.OnScreenKeyboard | null>(null);
 const isDragging = ref(false);
 const dragStartX = ref(0);
 const dragStartY = ref(0);
@@ -100,8 +100,8 @@ const setLayout = (layoutName?: string) => {
   const keyboard = new Guacamole.OnScreenKeyboard(keyboardLayouts[layoutName || ""] || enusqwerty);
   container.prepend(keyboard.getElement());
   keyboard.resize(keyboardWidth());
-  keyboard.onkeydown = (keysym: string) => emit("keyboardChange", "keydown", keysym);
-  keyboard.onkeyup = (keysym: string) => emit("keyboardChange", "keyup", keysym);
+  keyboard.onkeydown = (keysym: number) => emit("keyboardChange", "keydown", keysym);
+  keyboard.onkeyup = (keysym: number) => emit("keyboardChange", "keyup", keysym);
   screenKeyboard.value = keyboard;
 };
 

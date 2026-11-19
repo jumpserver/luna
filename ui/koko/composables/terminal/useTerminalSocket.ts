@@ -33,6 +33,11 @@ import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEve
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import {
+  dispatchKokoBroadcastInput,
+  registerKokoBroadcastEndpoint,
+  unregisterKokoBroadcastEndpoint
+} from "#koko/composables/terminal/useTerminalBroadcast";
+import {
   createKokoTerminalMessageHandlers,
   useKokoTerminalMessageHandler
 } from "#koko/composables/terminal/useTerminalMessageHandler";
@@ -61,7 +66,7 @@ const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN
 const isXtermAddonDisposeError = (error: unknown) =>
   error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
 
-export const useKokoTerminalSocket = () => {
+export const useKokoTerminalSocket = (matchesSearchShortcut: (event: KeyboardEvent) => boolean) => {
   const isMobile = useMobile();
   let stopRendererWatch: (() => void) | undefined;
   const toast = useToast();
@@ -128,6 +133,11 @@ export const useKokoTerminalSocket = () => {
     { immediate: true }
   );
   const sessionCtxRef = inject(connectorSessionKey, null);
+  const clearPermissionWarning = () => {
+    if (warningInterval.value !== null) clearInterval(warningInterval.value);
+    warningInterval.value = null;
+    toast.remove(`koko-permission-${sessionId.value || unref(sessionCtxRef)?.tabId || terminalId.value}`);
+  };
   const queryTerminalThemeName = computed(() => unref(sessionCtxRef)?.terminalThemeName || "");
   // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
@@ -186,11 +196,6 @@ export const useKokoTerminalSocket = () => {
     );
   }, 200);
 
-  const debouncedSendHostKey = useDebounceFn((key: string) => {
-    if (key === "ArrowRight") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+right");
-    if (key === "ArrowLeft") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+left");
-  }, 500);
-
   const terminalInputLocked = (data = "") => {
     if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return true;
     const paneId = unref(sessionCtxRef)?.tabId || "";
@@ -201,6 +206,8 @@ export const useKokoTerminalSocket = () => {
     return Boolean(paneId && isKokoTerminalAiBusy(paneId));
   };
   const sendSuggestionData = (data: string) => {
+    const routed = dispatchKokoBroadcastInput(unref(sessionCtxRef)?.tabId || "", data);
+    if (routed !== "inactive") return routed === "sent";
     const socket = socketRef.value;
     if (!socket || !isSocketOpen(socket) || terminalInputLocked() || terminalAiBusy() || zmodem.isActiveSession())
       return false;
@@ -251,15 +258,17 @@ export const useKokoTerminalSocket = () => {
     onContextMenu: openContextMenu,
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
-    onHostKey: debouncedSendHostKey,
     inputLocked: terminalInputLocked,
     sendHostEvent,
     sendToHost,
     sendMittEvent,
     validateClipboardText,
+    matchesSearchShortcut,
     onData: commandSuggestions.handleData,
     onExternalData: commandSuggestions.invalidate,
-    onKeyEvent: commandSuggestions.handleKeyEvent
+    onKeyEvent: commandSuggestions.handleKeyEvent,
+    routeUserInput: (data, paste) =>
+      dispatchKokoBroadcastInput(unref(sessionCtxRef)?.tabId || "", data, paste) !== "inactive"
   });
 
   let lastMessage = "";
@@ -296,6 +305,7 @@ export const useKokoTerminalSocket = () => {
     setClipboardAccess,
     showInfoOnce,
     onServerClose: (reason) => {
+      clearPermissionWarning();
       serverCloseReason = reason;
     },
     onTerminalReady: startupOutput.markReady,
@@ -318,6 +328,22 @@ export const useKokoTerminalSocket = () => {
           terminal: terminalRef.value || undefined
         });
         registerKokoTerminalDataSender(tabId, sendExternalTerminalData);
+        registerKokoBroadcastEndpoint(tabId, {
+          canSend: (data, paste) =>
+            unref(sessionCtxRef)?.terminalProfile?.protocol === "ssh" &&
+            socketRef.value === socket &&
+            Boolean(terminalRef.value) &&
+            isSocketOpen(socket) &&
+            !terminalInputLocked() &&
+            !terminalAiBusy() &&
+            !zmodem.isActiveSession() &&
+            (!paste || validateClipboardText("paste", data)),
+          send: (data, paste) => {
+            commandSuggestions.invalidate();
+            if (paste) terminalRef.value!.paste(data);
+            else if (!sendSuggestionData(data)) throw new Error("Terminal input unavailable");
+          }
+        });
         registerKokoTerminalAiSession(tabId, socket, id);
         registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
@@ -377,7 +403,9 @@ export const useKokoTerminalSocket = () => {
     };
 
     const handleSocketClose = (event: CloseEvent) => {
+      clearPermissionWarning();
       heartbeat.stop();
+      if (paneId) unregisterKokoBroadcastEndpoint(paneId);
       zmodem.abortActiveSession();
       if (paneId) disconnectKokoTerminalAiSession(paneId, socket);
       const detail = describeTerminalClose(event, serverCloseReason, navigator.onLine);
@@ -512,9 +540,10 @@ export const useKokoTerminalSocket = () => {
     themeObserver?.disconnect();
     input.stop();
     heartbeat.stop();
-    if (warningInterval.value) clearInterval(warningInterval.value);
+    clearPermissionWarning();
     const tabId = unref(sessionCtxRef)?.tabId;
     if (tabId) {
+      unregisterKokoBroadcastEndpoint(tabId);
       unregisterKokoTerminalDataSender(tabId);
       unregisterKokoTerminalSession(tabId);
       unregisterKokoTerminalAiSession(tabId, socketRef.value);

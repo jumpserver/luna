@@ -30,6 +30,8 @@ const defaultPorts: Record<string, number> = {
   redis: 6379,
   oracle: 1521,
   dameng: 5236,
+  db2: 50000,
+  clickhouse: 9000,
   sqlserver: 1433,
   mongodb: 27017
 };
@@ -38,6 +40,7 @@ const databaseProtocols = DATABASE_GUIDE_PROTOCOLS;
 const { t } = useI18n();
 const toast = useToast();
 const token = computed(() => (props.tab.payload?.token || props.tab.payload) as TokenResponse);
+const asset = computed(() => token.value?.asset as any);
 const endpoint = ref<Record<string, any>>({});
 const assetDetail = ref<AssetDetail>();
 const loading = ref(true);
@@ -51,6 +54,19 @@ const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
+const showDatabaseTLS = computed(() => ["mysql", "postgresql", "clickhouse"].includes(clientProtocol.value));
+const nativeDatabaseHelp = computed(() => {
+  if (protocol.value === "db2") return t("ConnectionGuide.DB2NativeHelp");
+  if (protocol.value === "clickhouse") return t("ConnectionGuide.ClickHouseNativeHelp");
+  const assetType = assetDetail.value?.type ?? asset.value?.type;
+  if (
+    clientProtocol.value === "mysql" &&
+    (typeof assetType === "string" ? assetType : assetType?.value) === "oceanbase"
+  ) {
+    return t("ConnectionGuide.OceanBaseNativeHelp");
+  }
+  return "";
+});
 const showDirectCommand = computed(() => {
   const method = props.tab.payload?.connectMethod;
   return (
@@ -72,7 +88,6 @@ const port = computed(() =>
       ""
   )
 );
-const asset = computed(() => token.value?.asset as any);
 const assetName = computed(() => {
   const name = asset.value?.name || props.tab.assetName;
   const address = asset.value?.address || props.tab.address;
@@ -92,6 +107,16 @@ const username = computed(() => {
 const password = computed(() =>
   protocol.value === "redis" ? `${token.value.id}@${token.value.value}` : token.value.value
 );
+const backendTLS = computed(() => {
+  const spec = assetDetail.value?.spec_info ?? asset.value?.spec_info;
+  if (typeof spec?.use_ssl !== "boolean") return t("ConnectionGuide.TLSUnknown");
+  if (!spec.use_ssl) return t("ConnectionGuide.TLSDisabled");
+  if (clientProtocol.value === "postgresql") {
+    const mode = typeof spec.pg_ssl_mode === "object" ? spec.pg_ssl_mode?.value : spec.pg_ssl_mode;
+    return `${t("ConnectionGuide.TLSConfigured")}: ${mode || t("ConnectionGuide.TLSUnknown")}`;
+  }
+  return t(spec.allow_invalid_cert ? "ConnectionGuide.TLSInsecure" : "ConnectionGuide.TLSVerified");
+});
 
 const rows = computed(() => {
   const values = [
@@ -104,6 +129,16 @@ const rows = computed(() => {
       ? [{ name: "database", label: t("ConnectionGuide.Database"), value: database.value }]
       : []),
     { name: "protocol", label: t("ConnectionGuide.Protocol"), value: clientProtocol.value },
+    ...(showDatabaseTLS.value
+      ? [
+          {
+            name: "frontend_tls",
+            label: t("ConnectionGuide.ClientTransport"),
+            value: t("ConnectionGuide.TLSDisabled")
+          },
+          { name: "backend_tls", label: t("ConnectionGuide.DatabaseTransport"), value: backendTLS.value }
+        ]
+      : []),
     { name: "date_expired", label: t("ConnectionGuide.ExpireTime"), value: token.value.date_expired }
   ];
 
@@ -118,7 +153,8 @@ const commands = computed(() => {
     host: host.value,
     port: port.value,
     database: database.value,
-    redisAuth: password.value
+    redisAuth: password.value,
+    useSysDBA: token.value.connect_options?.use_sysdba === true
   });
   const tokenPassword = protocol.value === "ssh" || protocol.value === "vnc";
   const items = [];
@@ -135,6 +171,7 @@ const commands = computed(() => {
       username: loginUsername.value,
       account: token.value.account,
       inputUsername: token.value.input_username,
+      personalCredentialId: token.value.personal_credential_id,
       accounts: props.tab.permedAccounts || [],
       assetId: props.tab.assetId,
       host: host.value,
@@ -205,7 +242,7 @@ onMounted(async () => {
         endpoint.value = value;
       }),
       // Connection tokens normally include only asset id/name, not the default database.
-      showDatabaseHelp.value && protocol.value !== "oracle" && !database.value && assetId
+      showDatabaseHelp.value && protocol.value !== "oracle" && (!database.value || showDatabaseTLS.value) && assetId
         ? getAssetDetailRequest(assetId, token.value.org_id || props.tab.orgId)
             .then((value) => {
               assetDetail.value = value;
@@ -270,6 +307,23 @@ onMounted(async () => {
           </header>
 
           <div class="bg-[var(--workspace-surface-panel)] p-3 pb-6">
+            <UAlert
+              v-if="showDatabaseTLS"
+              icon="i-lucide-shield-alert"
+              color="warning"
+              variant="subtle"
+              class="mb-3"
+              :title="t('ConnectionGuide.TLSBoundary')"
+              :description="t('ConnectionGuide.TLSBoundaryHelp')"
+            />
+            <UAlert
+              v-if="nativeDatabaseHelp"
+              icon="i-lucide-info"
+              color="warning"
+              variant="subtle"
+              class="mb-3"
+              :description="nativeDatabaseHelp"
+            />
             <div class="overflow-hidden rounded-lg border border-[var(--workspace-surface-border)]">
               <table class="w-full border-collapse text-sm">
                 <tbody>

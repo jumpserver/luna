@@ -20,12 +20,20 @@ const searchOptions = reactive<ISearchOptions>({
 });
 
 const searchKey = ref("");
+const inputRef = useTemplateRef<{ inputRef: HTMLInputElement | null }>("searchInput");
+
+function focus() {
+  inputRef.value?.inputRef?.focus();
+}
+
+defineExpose({ focus });
+
 const gutterWidth = 16;
 const drawerRef = shallowRef<HTMLElement | null>(null);
 const { width } = useElementSize(drawerRef);
 
 const keyWordsSearch = (value: string) => {
-  if (value) void props.searchAddon.findNext(value, searchOptions);
+  void props.searchAddon.findNext(value, searchOptions);
 };
 
 const toggleSearchOption = (option: "caseSensitive" | "wholeWord" | "regex") => {
@@ -46,11 +54,9 @@ const positionRight = computed(() => {
   return `calc(${clamped}px + ${gutterWidth}px)`;
 });
 
-watch(searchKey, (value) => {
-  if (!value) {
-    props.searchAddon.clearDecorations();
-    props.searchAddon.clearActiveDecoration();
-  }
+onBeforeUnmount(() => {
+  // An empty search clears both match decorations and the terminal selection.
+  props.searchAddon.findNext("");
 });
 
 onMounted(() => {
@@ -73,6 +79,7 @@ useMutationObserver(
     :style="{ right: positionRight }"
   >
     <UInput
+      ref="searchInput"
       v-model="searchKey"
       size="sm"
       class="min-w-48"

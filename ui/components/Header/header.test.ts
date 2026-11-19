@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { computed, ref } from "vue";
 import source from "./header.vue?raw";
 
-it("keeps guest tools accessible while hiding only the empty Windows workspace bar", () => {
+it("keeps the new-session entry available in an empty desktop workspace", () => {
   const desktop = ref(true);
   const isWindows = ref(true);
   const loggedIn = ref(false);
@@ -27,11 +27,12 @@ it("keeps guest tools accessible while hiding only the empty Windows workspace b
   };
   const header = new Function(
     ...Object.keys(scope),
-    `${outputText}; return { showTitleBarMenu, showWorkspaceHeader };`
+    `${outputText}; return { showTitleBarMenu, showWorkspaceHeader, showAssetTabs };`
   )(...Object.values(scope));
 
   expect(header.showTitleBarMenu.value).toBe(true);
-  expect(header.showWorkspaceHeader.value).toBe(false);
+  expect(header.showAssetTabs.value).toBe(true);
+  expect(header.showWorkspaceHeader.value).toBe(true);
   for (const tool of ["/videoplayer", "/tools", "/transcode", "/face"]) {
     path.value = tool;
     expect(header.showWorkspaceHeader.value).toBe(true);
@@ -48,6 +49,7 @@ it("keeps guest tools accessible while hiding only the empty Windows workspace b
   expect(header.showWorkspaceHeader.value).toBe(true);
   loggedIn.value = false;
   desktop.value = false;
+  expect(header.showAssetTabs.value).toBe(false);
   expect(header.showTitleBarMenu.value).toBe(false);
   expect(header.showWorkspaceHeader.value).toBe(true);
   desktop.value = true;

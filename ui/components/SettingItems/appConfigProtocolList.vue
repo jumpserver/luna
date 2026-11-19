@@ -74,7 +74,7 @@ const databaseDisplayItems = computed<ConfigItem[]>(() => {
   }
 
   return items.value.map((item) => {
-    if (item.name !== "terminal") {
+    if (!item.uses_terminal_host) {
       return item;
     }
 

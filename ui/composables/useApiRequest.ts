@@ -1,18 +1,20 @@
 import type {
   AssetDetail,
   AssetTreeKind,
+  ConnectionTokenReuseResponse,
   PermedAccount,
   PermedProtocol,
   PermissionOrgs,
   PersonalAssetCredential,
   RdpGraphics,
-  ConnectionTokenReuseResponse,
   TokenResponse,
   UserProfile
 } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { compactApiErrorBody } from "~/utils/apiError";
+import { pageLocation } from "~/utils/runtime";
+import { isWebSessionLoggingOut } from "~/utils/webSessionLock";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
@@ -23,6 +25,8 @@ export interface ApiRequest {
   headers?: Record<string, string>;
   orgId?: string;
   responseType?: "text";
+  timeoutMs?: number;
+  keepalive?: boolean;
 }
 
 export class ApiRequestError extends Error {
@@ -146,6 +150,32 @@ export interface PublicSettings {
 }
 
 let lastAuthFailureAt = 0;
+let webAuthFailurePromise: Promise<void> | null = null;
+let lockSignOutUntil = 0;
+let webSessionScope: string | undefined;
+let webSessionLoggingOut = false;
+
+export function setWebSessionAuthState(state: { session: { scope: string } | null; loggingOut: boolean }) {
+  webSessionScope = state.session?.scope;
+  webSessionLoggingOut = state.loggingOut;
+}
+
+const isWebLogoutPending = () => webSessionLoggingOut || isWebSessionLoggingOut(webSessionScope);
+
+export function deferAuthFailureUntil(at: number) {
+  if (Number.isFinite(at)) lockSignOutUntil = Math.max(lockSignOutUntil, Math.min(at, Date.now() + 5000));
+}
+
+interface WebSessionProfile {
+  id: string;
+  name?: string;
+  username?: string;
+  display_name?: string;
+  org_id?: string;
+  org_name?: string;
+  org?: { id?: string; name?: string };
+  system_roles?: UserProfile["system_roles"];
+}
 
 const PERSONAL_CREDENTIAL_CACHE_TTL_MS = 15_000;
 const PERSONAL_CREDENTIAL_CACHE_MAX_ENTRIES = 128;
@@ -246,6 +276,8 @@ const isAuthFailure = (error: unknown) => {
 
 const handleApiAuthFailure = () => {
   if (import.meta.server) return;
+  if (isWebLogoutPending()) return;
+  if (lockSignOutUntil > Date.now()) return;
 
   const userInfoStore = useUserInfoStore();
   if (!userInfoStore.loggedIn) return;
@@ -256,11 +288,42 @@ const handleApiAuthFailure = () => {
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
-  if (isDesktopRuntime()) {
-    useEventBus().emit("login", undefined);
-  } else {
-    redirectToWebLogin();
-  }
+  redirectToWebLogin();
+};
+
+const handleWebApiAuthFailure = () => {
+  if (import.meta.server) return;
+  if (isWebLogoutPending()) return;
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
+  if (webAuthFailurePromise) return webAuthFailurePromise;
+
+  const accountId = userInfoStore.currentAccountId;
+  const userId = userInfoStore.currentUser?.userId;
+  webAuthFailurePromise = (async () => {
+    const profile = await getWebSessionProfile().catch(() => null);
+    if (
+      isWebLogoutPending() ||
+      !userInfoStore.loggedIn ||
+      userInfoStore.currentAccountId !== accountId ||
+      userInfoStore.currentUser?.userId !== userId
+    )
+      return;
+
+    // A late 401 can belong to the session replaced by login in another tab.
+    if (profile && profile.id === userId) return;
+    if (profile) {
+      // Reinitialize the workspace if the shared Cookie now belongs to another user.
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      pageLocation().reload();
+      return;
+    }
+    handleApiAuthFailure();
+  })().finally(() => {
+    webAuthFailurePromise = null;
+  });
+  return webAuthFailurePromise;
 };
 
 const buildWebQuery = (request: ApiRequest) => {
@@ -275,15 +338,35 @@ const buildWebQuery = (request: ApiRequest) => {
   return query.toString();
 };
 
-async function webApiRequest<T>(request: ApiRequest): Promise<T> {
+// Session lifecycle requests need a form body so sendBeacon can pass the existing CSRF check.
+export function notifyWebSessionClose(close: { scope?: string; page_id: string }) {
+  if (import.meta.server || isDesktopRuntime()) return;
+  const path = "/api/v1/authentication/user-session/";
+  const csrf = new Headers(getWebApiMutationHeaders()).get("X-CSRFToken") || "";
+  const body = new URLSearchParams({ ...close, csrfmiddlewaretoken: csrf });
+  try {
+    if (navigator.sendBeacon?.(withWebSitePrefix(path), body)) return;
+  } catch {
+    /* Fall back when the browser cannot queue a beacon. */
+  }
+  void apiRequest({ method: "POST", path, body: close, keepalive: true }).catch(() => {});
+}
+
+async function webApiRequest<T>(
+  request: ApiRequest,
+  options: Pick<RequestInit, "cache" | "headers" | "signal"> = {}
+): Promise<T> {
   const query = buildWebQuery(request);
   const url = [withWebSitePrefix(request.path), query].filter(Boolean).join("?");
   const hasBody = request.body !== undefined;
   const mutating = !["GET", "OPTIONS"].includes(request.method);
   const response = await fetch(url, {
+    ...options,
     method: request.method,
     credentials: "include",
-    headers: {
+    ...(request.keepalive ? { keepalive: true } : {}),
+    ...(request.timeoutMs !== undefined && !options.signal ? { signal: AbortSignal.timeout(request.timeoutMs) } : {}),
+    headers: options.headers ?? {
       Accept: "application/json",
       ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),
       ...request.headers,
@@ -304,6 +387,9 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 423 && data?.code === "web_session_locked") {
+      globalThis.dispatchEvent?.(new Event("jms:web-session-locked"));
+    }
     throw new ApiRequestError(response.status, data, response.headers.get("content-type") || "");
   }
 
@@ -312,6 +398,33 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   }
 
   return data as T;
+}
+
+export async function getWebSessionProfile(connectionToken?: string): Promise<WebSessionProfile> {
+  const signal = AbortSignal.timeout(5000);
+  const paths = [
+    connectionToken
+      ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
+      : "/api/v1/users/profile/?fields_size=mini",
+    "/api/v1/users/profile/",
+    "/api/v1/profile/"
+  ];
+  let failure: unknown;
+  for (const path of paths) {
+    try {
+      // Bypass apiRequest's 401 handler and organization scoping when checking identity.
+      const profile = await webApiRequest<WebSessionProfile>(
+        { method: "GET", path },
+        { cache: "no-store", headers: { Accept: "application/json" }, signal }
+      );
+      if (typeof profile?.id !== "string" || !profile.id.trim()) throw new Error("Invalid web session profile");
+      return { ...profile, id: profile.id.trim() };
+    } catch (error) {
+      if (signal.aborted || (error instanceof ApiRequestError && [401, 403].includes(error.status))) throw error;
+      failure = error;
+    }
+  }
+  throw failure;
 }
 
 async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
@@ -373,9 +486,12 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
 
     return await webApiRequest<T>(request);
   } catch (error) {
-    if (isAuthFailure(error)) {
-      handleApiAuthFailure();
+    if (error instanceof ApiRequestError && error.status === 401 && error.data?.code === "authentication_required") {
+      throw error;
     }
+    // Desktop auth failures are scoped by the main process's auth-session-expired
+    // event. A late response from a previous account must not sign out its replacement.
+    if (!isDesktopRuntime() && isAuthFailure(error)) await handleWebApiAuthFailure();
     throw error;
   }
 }
@@ -411,14 +527,14 @@ export function getUserAssetTreeMetrics(
 }
 
 export function getAuthorizedAssets(
-  params: { search?: string; limit: number; offset: number },
-  orgId: string
+  params: { search?: string; limit: number; offset: number; fields?: string },
+  orgId?: string
 ): Promise<{ count: number; next: string | null; results: Record<string, unknown>[] }> {
   return apiRequest({
     method: "GET",
     path: "/api/v1/perms/users/self/assets/",
     // Request only display fields; fields also makes the backend count the filtered assets exactly.
-    query: { ...params, fields: "id,name,address,org_id,is_active", order: "name" },
+    query: { fields: "id,name,address,org_id,is_active", ...params, order: "name" },
     orgId
   });
 }
@@ -585,18 +701,45 @@ export function getSmartEndpoint(
 export function createConnectionToken(
   body: unknown,
   orgId?: string,
-  options: { createTicket?: boolean; faceVerify?: boolean; faceMonitorToken?: string; admin?: boolean } = {}
+  options: { faceMonitorToken?: string; admin?: boolean; aclStepwise?: boolean } = {}
 ): Promise<TokenResponse> {
   const query: Record<string, unknown> = {};
-  if (options.createTicket) query.create_ticket = 1;
-  if (options.faceVerify) query.face_verify = 1;
   if (options.faceMonitorToken) query.face_monitor_token = options.faceMonitorToken;
+  if (options.aclStepwise) query.acl_stepwise = true;
 
   return apiRequest<TokenResponse>({
     method: "POST",
     path: options.admin ? "/api/v1/authentication/admin-connection-token/" : "/api/v1/authentication/connection-token/",
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
+    orgId
+  });
+}
+
+export function advanceConnectionAcl(
+  tokenId: string,
+  body: Record<string, unknown>,
+  orgId?: string,
+  admin?: boolean
+): Promise<TokenResponse> {
+  return apiRequest<TokenResponse>({
+    method: "POST",
+    path: `/api/v1/authentication/${admin ? "admin-connection-token" : "connection-token"}/${encodeURIComponent(tokenId)}/acl/`,
+    body,
+    orgId
+  });
+}
+
+export function advanceConnectionAclBatch(
+  tokenIds: string[],
+  body: Record<string, unknown>,
+  orgId?: string,
+  admin?: boolean
+): Promise<TokenResponse[]> {
+  return apiRequest<TokenResponse[]>({
+    method: "POST",
+    path: `/api/v1/authentication/${admin ? "admin-connection-token" : "connection-token"}/acl/batch/`,
+    body: { ...body, token_ids: tokenIds },
     orgId
   });
 }
@@ -629,10 +772,11 @@ export function getConnectionRdpFile(tokenId: string, query: Record<string, unkn
   });
 }
 
-export function exchangeConnectionToken(tokenId: string): Promise<TokenResponse> {
+export function exchangeConnectionToken(tokenId: string, aclStepwise = false): Promise<TokenResponse> {
   return apiRequest<TokenResponse>({
     method: "POST",
     path: "/api/v1/authentication/connection-token/exchange/",
+    ...(aclStepwise ? { query: { acl_stepwise: true } } : {}),
     body: { id: tokenId }
   });
 }

@@ -22,7 +22,7 @@ const isToolRoute = computed(() => {
 });
 const showSidebarChrome = computed(() => loggedIn.value && !isToolRoute.value);
 const showAssetTabs = computed(
-  () => activeWorkspaceMode.value === "assets" && (loggedIn.value || tabs.value.length > 0)
+  () => activeWorkspaceMode.value === "assets" && (loggedIn.value || tabs.value.length > 0 || isDesktopRuntime())
 );
 const showWorkspaceHeader = computed(
   () => !focusMode.value && (!showTitleBarMenu.value || showAssetTabs.value || isToolRoute.value)

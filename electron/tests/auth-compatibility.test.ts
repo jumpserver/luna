@@ -8,14 +8,14 @@ import { runInNewContext } from "node:vm";
 import type { SiteCompatibility } from "../../ui/types/clientCompatibility.ts";
 import { checkSiteCompatibility, normalizeCompatibilitySite } from "../src/auth/compatibility.ts";
 import { isOAuthCallbackUrl, parseOAuthCallback } from "../src/auth/oauth-callback.ts";
-import { isTrustedCertificateHost, parseUrl, siteHostname } from "../src/shared/url.ts";
+import { parseUrl } from "../src/shared/url.ts";
 
 // Run the real auth service with Electron's app/net/storage adapters replaced.
 // This follows the existing auth request tests and never reads real accounts.
 const source = readFileSync(new URL("../src/auth/service.ts", import.meta.url), "utf8");
 const body = source.slice(source.indexOf("const OAUTH_WELL_KNOWN"));
 const script = stripTypeScriptTypes(
-  `${body.replace("export class DesktopAuthService", "class DesktopAuthService")}\nnew DesktopAuthService(emitEvent)`
+  `${body.replace("export class DesktopAuthService", "class DesktopAuthService")}\nnew DesktopAuthService(emitEvent, fetchResponse)`
 );
 const siteA = { sessionKey: "a", origin: "https://a.test", bearerToken: "token-a", orgId: "org-a" };
 const payload = (site = "https://b.test") => ({
@@ -29,22 +29,26 @@ const payload = (site = "https://b.test") => ({
 const compatible = (site: string): SiteCompatibility => ({
   status: "compatible",
   site,
-  clientVersion: "5.1.0",
-  minCoreVersion: "5.1.0",
-  coreVersion: "5.1.0",
-  minClientVersion: "5.1.0",
+  clientVersion: "5.2.0",
+  minCoreVersion: "5.2.0",
+  coreVersion: "5.2.0",
+  minClientVersion: "5.2.0",
   failures: []
 });
 
-function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (site) => compatible(site)) {
+function setup(
+  preflight: (site: string) => Promise<SiteCompatibility> = async (site) => compatible(site),
+  fetchResponse: (url: string, init: RequestInit) => Promise<Response> = async () => {
+    throw new Error("Unexpected site network request");
+  }
+) {
   const calls: string[] = [];
   const events: [string, unknown][] = [];
   const auth = runInNewContext(script, {
-    app: { getPath: () => "/tmp/compatibility-test", getVersion: () => "5.1.0" },
+    app: { getPath: () => "/tmp/compatibility-test", getVersion: () => "5.2.0" },
     path,
     parseUrl,
-    siteHostname,
-    isTrustedCertificateHost,
+    fetchResponse,
     isOAuthCallbackUrl,
     parseOAuthCallback,
     normalizeCompatibilitySite,
@@ -55,6 +59,7 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
     AbortSignal,
     URLSearchParams,
     Buffer,
+    performance,
     electronLog: { info() {}, warn() {} },
     compactApiErrorBody: (body: string) => body,
     emitEvent: (event: string, data: unknown) => {
@@ -68,7 +73,6 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
   auth.sessions.set("a", { ...siteA });
   auth.currentSessionKey = "a";
   auth.tokens = { a: { access_token: "token-a", refresh_token: "refresh-a" } };
-  auth.trustedHosts.add("a.test");
   auth.checkCompatibility = ({ site }: { site: string }) => {
     calls.push(`check:${site}`);
     return preflight(site);
@@ -78,7 +82,12 @@ function setup(preflight: (site: string) => Promise<SiteCompatibility> = async (
   };
   auth.fetchSite = async () => {
     calls.push("oauth-config");
-    return new Response('{"client_id":"test-client"}');
+    return new Response(
+      JSON.stringify({
+        client_id: "test-client",
+        client_login_policy: { reauth_on_exit: false, idle_lock_time: 0, max_session_time: 0 }
+      })
+    );
   };
   auth.exchangeToken = async () => {
     calls.push("token-exchange");
@@ -102,8 +111,7 @@ function snapshot(auth: any) {
   return JSON.stringify({
     key: auth.currentSessionKey,
     sessions: [...auth.sessions],
-    tokens: auth.tokens,
-    trustedHosts: [...auth.trustedHosts]
+    tokens: auth.tokens
   });
 }
 
@@ -257,31 +265,28 @@ test("active-session restoration still checks compatibility for other accounts, 
   );
 });
 
-test("the probe uses Electron's runtime version and existing site network adapter without changing the active session", async () => {
-  const { auth } = setup();
-  const before = JSON.parse(snapshot(auth));
+test("the probe uses Electron's runtime version and injected site network adapter without changing the active session or trusting the host", async () => {
   const requests: [string, RequestInit][] = [];
+  const { auth } = setup(undefined, async (url, init) => {
+    requests.push([url, init]);
+    return new Response('{"schema_version":1,"core_version":"v5.2.0","min_client_version":"v5.2.0"}');
+  });
+  const before = snapshot(auth);
   const actualScript = stripTypeScriptTypes(
     `${body.replace("export class DesktopAuthService", "class DesktopAuthService")}\n` +
       `({ checkCompatibility: DesktopAuthService.prototype.checkCompatibility, fetchSite: DesktopAuthService.prototype.fetchSite })`
   );
   const methods = runInNewContext(actualScript, {
-    app: { getVersion: () => "5.1.2-rc1" },
+    app: { getVersion: () => "5.2.2-rc1" },
     CLIENT_AUTH_CALLBACK: "callback",
-    checkSiteCompatibility,
-    net: {
-      fetch: async (url: string, init: RequestInit) => {
-        requests.push([url, init]);
-        return new Response('{"schema_version":1,"core_version":"v5.1.0","min_client_version":"v5.1.0"}');
-      }
-    }
+    checkSiteCompatibility
   });
   auth.fetchSite = methods.fetchSite.bind(auth);
   const result = await methods.checkCompatibility.call(auth, {
     site: "https://b.test",
     clientVersion: "999.0.0"
   });
-  assert.equal(result.clientVersion, "5.1.2-rc1");
+  assert.equal(result.clientVersion, "5.2.2-rc1");
   assert.equal(result.status, "compatible");
   assert.equal(requests.length, 1);
   const [url, init] = requests[0]!;
@@ -290,8 +295,8 @@ test("the probe uses Electron's runtime version and existing site network adapte
   assert.equal(init.redirect, "follow");
   assert.equal(init.cache, "no-store");
   assert.deepEqual(Object.keys(init.headers).sort(), ["Accept", "Cache-Control"]);
-  assert.equal(snapshot(auth), JSON.stringify({ ...before, trustedHosts: ["a.test", "b.test"] }));
-  assert.equal(auth.isTrustedSiteHost("unrelated.test"), false);
+  assert.equal(snapshot(auth), before);
+  assert.equal("trustedHosts" in auth, false);
 });
 
 test("login authenticates after checking and activates only with the main process approval", async () => {

@@ -62,6 +62,10 @@
   height: var(--app-tree-icon-size);
 }
 
+.app-tree .app-tree-icon--wide {
+  width: 20px;
+}
+
 .app-tree .app-tree-toggle-icon {
   width: var(--app-tree-toggle-icon-size);
   height: var(--app-tree-toggle-icon-size);

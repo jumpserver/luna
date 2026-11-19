@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
-import type { ComponentPublicInstance } from "vue";
-import type { SidebarSectionKey } from "~/types";
+import type { AssetDetailField, SidebarSectionKey } from "~/types";
 
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -9,7 +8,14 @@ import { ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { collapse, sidebarSections, setSidebarSections, modernIsland } = useSettingManager();
+const {
+  collapse,
+  sidebarSections,
+  setSidebarSections,
+  sidebarAssetsOpen: assetTreeOpen,
+  setSidebarAssetsOpen,
+  modernIsland
+} = useSettingManager();
 const { hoverPreviewOpen } = useSidebarLayout();
 const visuallyCollapsed = computed(() => collapse.value && !hoverPreviewOpen.value);
 const { activeWorkspaceMode } = useWorkspaceMode();
@@ -23,6 +29,8 @@ const {
   assetContextMenuItems,
   contextMenuVisible,
   contextMenuPosition,
+  assetDetails,
+  updateAssetDetailsModal,
   renameModalOpen,
   renameAsset,
   renameValue,
@@ -33,11 +41,42 @@ const {
   updateRenameModal
 } = useSidebarAssetActions();
 
+const assetDetailText = (field?: AssetDetailField) =>
+  typeof field === "string" ? field : field?.label || field?.name || field?.value;
+
+const assetDetailsRows = computed(() => {
+  const detail = assetDetails.value?.detail;
+  if (!detail) return [];
+
+  const spec = detail.spec_info;
+  return [
+    { label: t("AssetCard.Organization"), value: detail.org_name || detail.org_id },
+    { label: t("AssetCard.Platform"), value: assetDetailText(detail.platform) },
+    { label: t("AssetCard.Category"), value: assetDetailText(detail.category) },
+    { label: t("AssetCard.Type"), value: assetDetailText(detail.type) },
+    { label: t("AssetCard.Zone"), value: assetDetailText(detail.zone) },
+    {
+      label: t("AssetCard.Labels"),
+      value: detail.labels
+        ?.flatMap((label) => (label ? [[label.name, label.value].filter(Boolean).join(": ")] : []))
+        .join("\n")
+    },
+    {
+      label: t("AssetCard.Status"),
+      value:
+        detail.is_active == null ? undefined : t(detail.is_active ? "AssetCard.Activated" : "AssetCard.Deactivated")
+    },
+    { label: t("ConnectionGuide.Database"), value: spec?.db_name },
+    { label: t("AssetCard.DomainName"), value: spec?.domain_name },
+    { label: t("AssetCard.AllowedUrls"), value: spec?.allowed_urls?.join("\n") },
+    { label: t("AssetCard.AssetId"), value: detail.id || assetDetails.value?.asset.id }
+  ].filter(({ value }) => value);
+});
+
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
-const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
-const assetTreeOpen = ref(true);
+const assetSearchInputRef = useTemplateRef("assetSearchInputRef");
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
   currentCommand: workspaceUiCommand,
@@ -72,7 +111,7 @@ watch(
       return;
     }
 
-    assetTreeOpen.value = true;
+    setSidebarAssetsOpen(true);
     showAssetSearch.value = Boolean(query);
     if (sidebarSearch.value !== query) sidebarSearch.value = query;
     await nextTick();
@@ -195,8 +234,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 
 const focusAssetSearchInput = async () => {
   await nextTick();
-  const input = assetSearchInputRef.value?.$el?.querySelector("input") as HTMLInputElement | undefined;
-  input?.focus();
+  assetSearchInputRef.value?.focus();
 };
 
 const toggleAssetSearch = async () => {
@@ -297,7 +335,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           :open="assetTreeOpen"
           @select="handleAssetConnect"
           @contextmenu="handleAssetContextMenu"
-          @toggle="assetTreeOpen = !assetTreeOpen"
+          @toggle="setSidebarAssetsOpen(!assetTreeOpen)"
           @open-multiple="handleOpenMultipleAssets"
           @favorite-multiple="handleFavoriteMultipleAssets"
         />
@@ -315,44 +353,11 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
-          <UInput
-            ref="assetSearchInputRef"
-            v-model="sidebarSearch"
-            size="sm"
-            autofocus
-            clearable
-            autocapitalize="none"
-            autocorrect="off"
-            icon="i-lucide-search"
-            variant="none"
-            :placeholder="t('Operation.Search')"
-            class="search-input w-full rounded-xl"
-            :ui="{
-              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]',
-              leadingIcon: 'sidebar-icon',
-              trailingIcon: 'sidebar-icon'
-            }"
-          >
-            <template v-if="sidebarSearch?.length" #trailing>
-              <UButton
-                color="neutral"
-                variant="link"
-                size="xs"
-                icon="i-lucide-circle-x"
-                :aria-label="t('Common.ClearInput')"
-                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                @click="
-                  () => {
-                    sidebarSearch = '';
-                  }
-                "
-              />
-            </template>
-          </UInput>
+        <div class="px-2.5 py-1.5">
+          <SideBarSearchInput ref="assetSearchInputRef" v-model="sidebarSearch" :placeholder="t('Operation.Search')" />
         </div>
 
-        <div v-if="sidebarSearch.trim()" class="min-h-0 flex-1">
+        <div v-if="sidebarSearch.trim()" class="flex min-h-0 flex-1 flex-col">
           <SideBarAssetTree
             :search="sidebarSearch"
             :open="true"
@@ -397,6 +402,50 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         />
       </UFormField>
     </Modal>
+
+    <UModal
+      :open="Boolean(assetDetails)"
+      :title="t('AssetCard.Details')"
+      :ui="{
+        content: 'max-h-[85dvh] sm:max-w-lg',
+        header: 'relative min-h-12 shrink-0',
+        title: 'text-[length:calc(var(--app-ui-font-size)+3px)] leading-snug',
+        close: 'top-1/2 -translate-y-1/2',
+        body: 'min-h-0 overflow-y-auto'
+      }"
+      @update:open="updateAssetDetailsModal"
+    >
+      <template #body>
+        <dl v-if="assetDetails" class="space-y-2.5 text-sm">
+          <div class="grid grid-cols-[minmax(6rem,35%)_minmax(0,1fr)] gap-3">
+            <dt class="text-muted">{{ t("AssetCard.AssetName") }}</dt>
+            <dd class="wrap-anywhere">{{ assetDetails.detail?.name || assetDetails.asset.name || "–" }}</dd>
+          </div>
+          <div class="grid grid-cols-[minmax(6rem,35%)_minmax(0,1fr)] gap-3">
+            <dt class="text-muted">{{ t("AssetCard.Address") }}</dt>
+            <dd class="wrap-anywhere">{{ assetDetails.detail?.address || assetDetails.asset.address || "–" }}</dd>
+          </div>
+          <div class="grid grid-cols-[minmax(6rem,35%)_minmax(0,1fr)] gap-3">
+            <dt class="text-muted">{{ t("AssetCard.Comment") }}</dt>
+            <dd class="whitespace-pre-wrap wrap-anywhere" aria-live="polite">
+              <span v-if="assetDetails.detail === undefined" class="text-muted">{{ t("Loading.Loading") }}</span>
+              <span v-else-if="assetDetails.detail === null" class="text-error">
+                {{ t("AssetCard.LoadDetailsFailed") }}
+              </span>
+              <template v-else>{{ assetDetails.detail.comment?.trim() || "–" }}</template>
+            </dd>
+          </div>
+          <div
+            v-for="row in assetDetailsRows"
+            :key="row.label"
+            class="grid grid-cols-[minmax(6rem,35%)_minmax(0,1fr)] gap-3"
+          >
+            <dt class="text-muted">{{ row.label }}</dt>
+            <dd class="whitespace-pre-wrap wrap-anywhere">{{ row.value }}</dd>
+          </div>
+        </dl>
+      </template>
+    </UModal>
 
     <UDropdownMenu
       :open="contextMenuVisible"

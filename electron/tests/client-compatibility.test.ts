@@ -48,7 +48,7 @@ test("compares base versions, ignoring prerelease and build suffixes", () => {
   }
 });
 
-const metadata = (core = "v5.1.0", minimum = "v5.1.0") => ({
+const metadata = (core = "v5.2.0", minimum = "v5.2.0") => ({
   schema_version: 1,
   core_version: core,
   min_client_version: minimum
@@ -59,34 +59,34 @@ const fetchJson =
     new Response(JSON.stringify(data), { status });
 
 test("checks both minimums, exempting only dev Core from its minimum", async () => {
-  assert.equal(MIN_CORE_VERSION, "v5.1.0");
+  assert.equal(MIN_CORE_VERSION, "v5.2.0");
   for (const [client, core, minimum, failures] of [
-    ["5.1.0", "5.1.0", "5.1.0", []],
-    ["5.1.0", "v5.1.0", "v5.1.0", []],
-    ["5.1.0", "dev", "5.1.0", []],
-    ["5.0.9", "dev", "5.1.0", ["client-too-old"]],
-    ["5.1.0", "dev", "5.1.1", ["client-too-old"]],
-    ["v5.1.0-rc3", "v5.1.0", "v5.1.0", []],
-    ["5.1.0-beta8", "v5.1.0", "v5.1.0", []],
-    ["5.1.0-rc3", "v5.1.0", "v5.1.0-rc9", []],
-    ["5.1.0", "v5.1.0-rc1", "v5.1.0", []],
-    ["5.1.0", "v5.1.1", "v5.1.1", ["client-too-old"]],
-    ["5.1.1", "5.2.0", "5.1.0", []],
-    ["5.1.0-rc1", "5.1.0", "5.1.0", []],
-    ["5.1.0", "5.1.0-rc1", "5.1.0", []],
-    ["5.1.0", "5.1.0-rc2", "5.1.0", []],
-    ["5.1.0", "5.1.0-rc0", "5.1.0", []],
-    ["5.1.0", "5.1.0-beta8", "5.1.0", []],
-    ["5.1.0", "v5.1.0-adasda", "5.1.0", []],
-    ["5.1.0", "v5.1.0-rc.1+build.9", "5.1.0", []],
-    ["5.1.0", "5.0.9-rc1", "5.1.0", ["core-too-old"]],
-    ["5.1.0-rc1", "5.1.0-rc1", "5.1.0", []],
-    ["5.0.9-rc3", "5.1.0", "5.1.0", ["client-too-old"]],
-    ["5.1.0-rc3", "5.1.0", "5.1.1-beta8", ["client-too-old"]],
-    ["5.1.0", "5.1.1-rc1", "5.1.1", ["client-too-old"]],
-    ["5.1.0", "5.1.0", "5.1.1", ["client-too-old"]],
-    ["5.0.9", "5.0.9", "5.1.0", ["client-too-old", "core-too-old"]],
-    ["v5.1.0-lts", "v5.1.0-lts", "v5.1.0", []]
+    ["5.2.0", "5.2.0", "5.2.0", []],
+    ["5.2.0", "v5.2.0", "v5.2.0", []],
+    ["5.2.0", "dev", "5.2.0", []],
+    ["5.1.9", "dev", "5.2.0", ["client-too-old"]],
+    ["5.2.0", "dev", "5.2.1", ["client-too-old"]],
+    ["v5.2.0-rc3", "v5.2.0", "v5.2.0", []],
+    ["5.2.0-beta8", "v5.2.0", "v5.2.0", []],
+    ["5.2.0-rc3", "v5.2.0", "v5.2.0-rc9", []],
+    ["5.2.0", "v5.2.0-rc1", "v5.2.0", []],
+    ["5.2.0", "v5.2.1", "v5.2.1", ["client-too-old"]],
+    ["5.2.1", "5.3.0", "5.2.0", []],
+    ["5.2.0-rc1", "5.2.0", "5.2.0", []],
+    ["5.2.0", "5.2.0-rc1", "5.2.0", []],
+    ["5.2.0", "5.2.0-rc2", "5.2.0", []],
+    ["5.2.0", "5.2.0-rc0", "5.2.0", []],
+    ["5.2.0", "5.2.0-beta8", "5.2.0", []],
+    ["5.2.0", "v5.2.0-adasda", "5.2.0", []],
+    ["5.2.0", "v5.2.0-rc.1+build.9", "5.2.0", []],
+    ["5.2.0", "5.1.9-rc1", "5.2.0", ["core-too-old"]],
+    ["5.2.0-rc1", "5.2.0-rc1", "5.2.0", []],
+    ["5.1.9-rc3", "5.2.0", "5.2.0", ["client-too-old"]],
+    ["5.2.0-rc3", "5.2.0", "5.2.1-beta8", ["client-too-old"]],
+    ["5.2.0", "5.2.1-rc1", "5.2.1", ["client-too-old"]],
+    ["5.2.0", "5.2.0", "5.2.1", ["client-too-old"]],
+    ["5.1.9", "5.1.9", "5.2.0", ["client-too-old", "core-too-old"]],
+    ["v5.2.0-lts", "v5.2.0-lts", "v5.2.0", []]
   ] as const) {
     const result = await checkSiteCompatibility(
       "https://site.test/prefix/",
@@ -106,19 +106,19 @@ test("missing, unsupported, malformed and unsuccessful responses remain unknown"
   for (const data of [
     null,
     [],
-    ["5.1.0"],
+    ["5.2.0"],
     {},
     { ...metadata(), schema_version: "1" },
     { ...metadata(), schema_version: 2 },
     { ...metadata("dev"), schema_version: 2 },
     metadata("dev", "dev"),
     { ...metadata(), core_version: "dev-test" },
-    { ...metadata(), core_version: "5.1.0_rc1" },
-    { ...metadata(), core_version: "5.1.0-01" },
+    { ...metadata(), core_version: "5.2.0_rc1" },
+    { ...metadata(), core_version: "5.2.0-01" },
     { ...metadata(), min_client_version: 510 },
     { ...metadata(), min_client_version: "5.1" }
   ]) {
-    const result = await checkSiteCompatibility("https://site.test", "5.1.0", fetchJson(data));
+    const result = await checkSiteCompatibility("https://site.test", "5.2.0", fetchJson(data));
     assert.equal(result.status, "unknown");
     assert.equal(result.reason, "invalid-response");
     assert.deepEqual(result.failures, []);
@@ -129,13 +129,13 @@ test("missing, unsupported, malformed and unsuccessful responses remain unknown"
     [403, "http"],
     [500, "http"]
   ] as const) {
-    const result = await checkSiteCompatibility("https://site.test", "5.1.0", fetchJson({}, status));
+    const result = await checkSiteCompatibility("https://site.test", "5.2.0", fetchJson({}, status));
     assert.equal(result.status, "unknown");
     assert.equal(result.reason, reason);
   }
   for (const body of ["<html>login</html>", "{", JSON.stringify({ ...metadata(), padding: "x".repeat(65 * 1024) })]) {
     assert.equal(
-      (await checkSiteCompatibility("https://site.test", "5.1.0", async () => new Response(body))).reason,
+      (await checkSiteCompatibility("https://site.test", "5.2.0", async () => new Response(body))).reason,
       "invalid-response"
     );
   }
@@ -150,7 +150,7 @@ test("timeouts, TLS and network errors are unknown and do not fall back to the o
     [new Error("unreachable"), "network"]
   ] as const) {
     let requests = 0;
-    const result = await checkSiteCompatibility("https://site.test", "5.1.0", async () => {
+    const result = await checkSiteCompatibility("https://site.test", "5.2.0", async () => {
       requests += 1;
       throw error;
     });
@@ -181,7 +181,7 @@ test("normalizes site URLs and preserves a legal deployment prefix", async () =>
     undefined
   ]) {
     assert.throws(() => normalizeCompatibilitySite(invalid));
-    const result = await checkSiteCompatibility(invalid, "5.1.0", async () => {
+    const result = await checkSiteCompatibility(invalid, "5.2.0", async () => {
       throw new Error("must not fetch");
     });
     assert.equal(result.reason, "invalid-site");
@@ -189,7 +189,7 @@ test("normalizes site URLs and preserves a legal deployment prefix", async () =>
 });
 
 test("uses an anonymous, uncached request to the exact private-site endpoint", async () => {
-  const result = await checkSiteCompatibility("https://private.test/team/", "5.1.0", async (url, init) => {
+  const result = await checkSiteCompatibility("https://private.test/team/", "5.2.0", async (url, init) => {
     assert.equal(url, "https://private.test/team/api/v1/settings/client/compatibility/");
     assert.equal(init?.credentials, "omit");
     assert.equal(init?.cache, "no-store");
@@ -229,10 +229,10 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
       response.writeHead(404).end();
       return;
     }
-    const minimum = request.url?.startsWith("/new/") ? "v5.1.1" : "v5.1.0";
+    const minimum = request.url?.startsWith("/new/") ? "v5.2.1" : "v5.2.0";
     response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    let core = "v5.1.0";
-    if (request.url?.startsWith("/rc/")) core = "v5.1.0-rc1";
+    let core = "v5.2.0";
+    if (request.url?.startsWith("/rc/")) core = "v5.2.0-rc1";
     if (request.url?.startsWith("/dev/")) core = "dev";
     response.end(JSON.stringify(metadata(core, minimum)));
   });
@@ -240,17 +240,17 @@ test("loopback integration: timeout, redirect, legacy Core and updated minimums"
   await once(server, "listening");
   const site = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   try {
-    assert.equal((await checkSiteCompatibility(site, "5.1.0", fetch)).status, "compatible");
-    assert.equal((await checkSiteCompatibility(`${site}/rc`, "5.1.0", fetch)).status, "compatible");
-    assert.equal((await checkSiteCompatibility(`${site}/dev`, "5.1.0", fetch)).status, "compatible");
-    assert.deepEqual((await checkSiteCompatibility(`${site}/dev`, "5.0.9", fetch)).failures, ["client-too-old"]);
+    assert.equal((await checkSiteCompatibility(site, "5.2.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/rc`, "5.2.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/dev`, "5.2.0", fetch)).status, "compatible");
+    assert.deepEqual((await checkSiteCompatibility(`${site}/dev`, "5.1.9", fetch)).failures, ["client-too-old"]);
     assert.equal((await checkSiteCompatibility(`${site}/dev`, "dev", fetch)).reason, "invalid-client-version");
-    assert.deepEqual((await checkSiteCompatibility(`${site}/new`, "5.1.0", fetch)).failures, ["client-too-old"]);
-    assert.equal((await checkSiteCompatibility(`${site}/old`, "5.1.0", fetch)).reason, "endpoint-missing");
-    assert.equal((await checkSiteCompatibility(`${site}/timeout`, "5.1.0", fetch, 30)).reason, "timeout");
-    assert.equal((await checkSiteCompatibility(`${site}/redirect`, "5.1.0", fetch)).status, "compatible");
-    assert.equal((await checkSiteCompatibility(`${site}/login-redirect`, "5.1.0", fetch)).reason, "invalid-response");
-    assert.equal((await checkSiteCompatibility(`${site}/redirect-loop`, "5.1.0", fetch)).status, "unknown");
+    assert.deepEqual((await checkSiteCompatibility(`${site}/new`, "5.2.0", fetch)).failures, ["client-too-old"]);
+    assert.equal((await checkSiteCompatibility(`${site}/old`, "5.2.0", fetch)).reason, "endpoint-missing");
+    assert.equal((await checkSiteCompatibility(`${site}/timeout`, "5.2.0", fetch, 30)).reason, "timeout");
+    assert.equal((await checkSiteCompatibility(`${site}/redirect`, "5.2.0", fetch)).status, "compatible");
+    assert.equal((await checkSiteCompatibility(`${site}/login-redirect`, "5.2.0", fetch)).reason, "invalid-response");
+    assert.equal((await checkSiteCompatibility(`${site}/redirect-loop`, "5.2.0", fetch)).status, "unknown");
     assert.ok(requests.every((url) => url.endsWith("/api/v1/settings/client/compatibility/")));
   } finally {
     server.closeAllConnections();

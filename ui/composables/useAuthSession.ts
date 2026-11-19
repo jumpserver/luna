@@ -1,21 +1,30 @@
 import type { PublicSettings } from "~/composables/useApiRequest";
 import type { SiteUserData } from "~/store/modules/userInfo";
-import type { DesktopConnectionResult } from "~/types/clientCompatibility";
-import { useClientCompatibility } from "~/composables/useClientCompatibility";
 import type {
+  ClientLoginSession,
   ConnectionInfo,
   ConnectionPreferenceInfo,
   CurrentOrg,
   PermissionOrgs,
   PermOrgItem,
   RdpGraphics,
-  RoleType,
   UserData,
   UserIntiInfo
 } from "~/types";
-import { getUserPermissions } from "~/composables/useApiRequest";
+import type { DesktopConnectionResult } from "~/types/clientCompatibility";
+import { ApiRequestError, getUserPermissions, getWebSessionProfile } from "~/composables/useApiRequest";
+import { useClientAccountHandoff } from "~/composables/useClientAccountHandoff";
+import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { useClientLockState } from "~/composables/useClientLockState";
+import {
+  closeCurrentSiteWorkspace,
+  confirmLeaveCurrentSiteSessions,
+  hasActiveSiteSessions,
+  hasActiveWorkspaceSessions
+} from "~/composables/useSiteAccountSwitch";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { clientLoginExpiryMessage, restoreMissingCurrentAccount } from "~/utils/clientLoginPolicy";
 import {
   recordedOrganizationForBootstrap,
   resolveOrganizationSelection,
@@ -51,17 +60,6 @@ interface PersistedUserSnapshot {
   currentRdpClientOption?: RdpGraphics;
   currentConnectionInfoMap?: Record<string, ConnectionInfo>;
   currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
-}
-
-interface WebProfile {
-  id?: string;
-  name?: string;
-  username?: string;
-  display_name?: string;
-  org_id?: string;
-  org_name?: string;
-  org?: { id?: string; name?: string };
-  system_roles?: RoleType[];
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -100,13 +98,20 @@ const parseApiData = <T>(value: { data?: string } | undefined, fallback: T): T =
 export const useAuthSession = () => {
   // vue-i18n's useI18n() requires setup(); this composable also runs from route middleware.
   const nuxtApp = useNuxtApp();
-  const t = (key: string) => String(nuxtApp.$i18n.t(key));
+  const t = (key: string, params: Record<string, string> = {}) => String(nuxtApp.$i18n.t(key, params));
   const toast = useToast();
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
+  const { notice: expiredSessionNotice, handoff: expiredSessionHandoff } = useClientAccountHandoff();
+  const lockLogoutPending = useState("client-lock-logout-pending", () => false);
+  const lockLogoutRecovery = useState<string | null>("client-lock-logout-recovery", () => null);
+  const clientLock = useClientLockState();
+  const settingsOpen = useState("settings-open", () => false);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
   const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
+  const authReady = useState("auth-bootstrap-ready", () => false);
+  let expiredWorkspaceCleanup = Promise.resolve();
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -128,12 +133,43 @@ export const useAuthSession = () => {
     const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
     const resolvedSite = resolved_site || "";
     const accountId = options.accountId || currentAccountId.value || resolvedSite;
-    const existingUser = userMap.value[accountId];
-    const siteName = options.siteName || existingUser?.siteName || resolvedSite;
 
     if (!profileData || !resolvedSite || !accountId) return false;
 
-    const userId = (typeof profileData.id === "string" && profileData.id.trim()) || existingUser?.userId || "";
+    const authenticatedUserId = typeof profileData.id === "string" ? profileData.id.trim() : "";
+    const siteAddress = (site: string) => {
+      try {
+        return new URL(site.trim()).href.replace(/\/+$/, "");
+      } catch {
+        return site.trim().replace(/\/+$/, "");
+      }
+    };
+    // A login attempt has its own session key; the account identity comes from the verified profile.
+    const duplicateAccounts = authenticatedUserId
+      ? Object.entries(userMap.value).filter(
+          ([id, user]) =>
+            id !== accountId &&
+            user.userId === authenticatedUserId &&
+            siteAddress(user.site) === siteAddress(resolvedSite)
+        )
+      : [];
+    const previousAccountId = userMap.value[accountId]
+      ? accountId
+      : (duplicateAccounts.find(([id]) => id === currentAccountId.value) || duplicateAccounts.at(-1))?.[0];
+    const existingUser = previousAccountId ? userMap.value[previousAccountId] : undefined;
+    const siteName = options.siteName || existingUser?.siteName || resolvedSite;
+    const userId = authenticatedUserId || existingUser?.userId || "";
+    const currentUser = userInfoStore.currentUser;
+    const keepingWorkspace = isDesktopRuntime() && Boolean(currentUser) && (await hasActiveSiteSessions());
+    const sameIdentity = Boolean(
+      currentUser?.userId &&
+      currentUser.userId === authenticatedUserId &&
+      currentAccountId.value === accountId &&
+      currentUser.site === resolvedSite
+    );
+    // A browser may authenticate a different user while reusing a saved site.
+    // Only the same identity can keep the previous user's live transports.
+    if (keepingWorkspace && !sameIdentity && !(await confirmLeaveCurrentSiteSessions("login"))) return false;
 
     const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const selectedOrg = resolveOrganizationSelection(
@@ -150,7 +186,10 @@ export const useAuthSession = () => {
       userId,
       siteName,
       name: profileData.name,
+      username: typeof profileData.username === "string" ? profileData.username : undefined,
       bearerToken: bearer,
+      clientLoginPolicy: payload.client_login_policy,
+      clientLoginSession: payload.client_login_session,
       site: resolvedSite,
       org: currentOrg || {
         id: "",
@@ -171,7 +210,8 @@ export const useAuthSession = () => {
     };
 
     const publishSession = () => {
-      userInfoStore.setUserData(accountId, userData);
+      userInfoStore.setUserData(accountId, userData, previousAccountId);
+      if (expiredSessionNotice.value === accountId) expiredSessionNotice.value = null;
 
       userInfoStore.setOrganizations(availableOrgs);
       if (currentOrg?.id) {
@@ -198,16 +238,28 @@ export const useAuthSession = () => {
       publishSession();
     }
 
+    // Only retire old sessions after the new one is active; logout also clears the main-process tokens.
+    await Promise.all(
+      duplicateAccounts.map(async ([id, user]) => {
+        if (userMap.value[id] !== user) return;
+        try {
+          await userInfoStore.deleteUserData(id);
+        } catch (error) {
+          console.error("remove duplicate login failed", error);
+        }
+      })
+    );
+
     if (options.showToast !== false) {
       toast.add({
         title: t("Login.LoginSuccess"),
-        color: "primary",
-        icon: "line-md:check-all",
+        color: "success",
+        icon: "i-lucide-circle-check",
         progress: true
       });
     }
 
-    if (options.navigateHome !== false) {
+    if (options.navigateHome !== false && !(keepingWorkspace && sameIdentity)) {
       await navigateTo({
         path: localePath({ path: "/" })
       });
@@ -236,6 +288,7 @@ export const useAuthSession = () => {
       }
 
       const parsed = JSON.parse(raw) as PersistedUserSnapshot;
+      restoreMissingCurrentAccount(parsed);
       const snapshotAccountId = parsed.currentAccountId || "";
 
       if (!snapshotAccountId || !parsed.userMap?.[snapshotAccountId]) {
@@ -276,7 +329,8 @@ export const useAuthSession = () => {
       try {
         const response = await fetch(withWebSitePrefix(path), {
           credentials: "include",
-          headers: getWebApiHeaders()
+          headers: getWebApiHeaders(),
+          signal: AbortSignal.timeout(5000)
         });
 
         if (response.status === 401 || response.status === 403) return null;
@@ -299,17 +353,25 @@ export const useAuthSession = () => {
       return false;
     }
 
+    const accountId = userInfoStore.currentAccountId;
+    const previousUserId = userInfoStore.currentUser?.userId;
+    const wasLoggedIn = userInfoStore.loggedIn;
+    const isCurrentSession = () =>
+      userInfoStore.currentAccountId === accountId &&
+      userInfoStore.currentUser?.userId === previousUserId &&
+      userInfoStore.loggedIn === wasLoggedIn;
     const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
-      fetchWebJson<WebProfile>([
-        connectionToken
-          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
-          : "/api/v1/users/profile/?fields_size=mini",
-        "/api/v1/users/profile/",
-        "/api/v1/profile/"
-      ]),
+      getWebSessionProfile(connectionToken || undefined).catch((error) => {
+        // Login in another tab may have replaced the Cookie while bootstrap was in flight.
+        if (!connectionToken && error instanceof ApiRequestError && error.status === 401) {
+          return getWebSessionProfile().catch(() => null);
+        }
+        return null;
+      }),
       fetchWebJson<PublicSettings>(["/api/v1/settings/public/"])
     ]);
+    if (!isCurrentSession()) return false;
 
     webWorkspaceBrand.value = resolveWorkspaceBrand(publicSettings);
     webWorkspaceFavicon.value = resolveWorkspaceFavicon(publicSettings);
@@ -319,6 +381,12 @@ export const useAuthSession = () => {
       if (!connectionToken) {
         redirectToWebLogin();
       }
+      return false;
+    }
+    if (wasLoggedIn && profileData.id !== previousUserId) {
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      pageLocation().reload();
       return false;
     }
 
@@ -344,6 +412,7 @@ export const useAuthSession = () => {
       ),
       withOrganizationBootstrapTimeout(fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"]), null)
     ]);
+    if (!isCurrentSession()) return false;
     const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
     const selectedOrg =
@@ -358,6 +427,7 @@ export const useAuthSession = () => {
       userId,
       siteName: site,
       name: profileData.name || profileData.username || profileData.display_name || "",
+      username: typeof profileData.username === "string" ? profileData.username : undefined,
       bearerToken: "",
       site,
       org: currentOrg,
@@ -380,7 +450,7 @@ export const useAuthSession = () => {
   const promptDesktopLogin = async () => {
     if (import.meta.server || !isDesktopRuntime()) return;
     if (pageLocation().pathname.includes("/auth")) return;
-    await navigateTo(localePath({ path: "/" }));
+    if (!hasActiveWorkspaceSessions()) await navigateTo(localePath({ path: "/" }));
     await nextTick();
     useEventBus().emit("login", undefined);
   };
@@ -391,7 +461,7 @@ export const useAuthSession = () => {
       bootstrapRetryTimer = null;
     }
 
-    const restored = restorePersistedSnapshot();
+    const restored = (isDesktopRuntime() || !authReady.value) && restorePersistedSnapshot();
 
     const notifyBootstrapFailure = (failure: "network" | "server") => {
       if (lastBootstrapFailure === failure) return;
@@ -405,8 +475,12 @@ export const useAuthSession = () => {
     };
 
     if (!isDesktopRuntime()) {
-      return (await bootstrapWebCookieSession()) || restored;
+      return await bootstrapWebCookieSession();
     }
+
+    // A reloaded renderer must keep the main-process lock and its live login.
+    const lock = await desktopInvoke<{ locked: boolean }>("client_lock_state");
+    if (lock?.locked) return restored;
 
     const persistedAccount = getPersistedAccount();
     if (!persistedAccount) {
@@ -429,7 +503,9 @@ export const useAuthSession = () => {
         if (payload?.status === "stale") return false;
         if (payload?.status === "confirmation-required" && payload.compatibility) {
           useClientCompatibility().show(payload.compatibility, () =>
-            bootstrapPersistedSession(payload.compatibility_confirmation_id)
+            bootstrapPersistedSession(
+              payload.compatibility?.reason === "tls" ? undefined : payload.compatibility_confirmation_id
+            )
           );
           return false;
         }
@@ -437,8 +513,8 @@ export const useAuthSession = () => {
 
         if (failure === "auth") {
           lastBootstrapFailure = null;
-          userInfoStore.markSessionExpired(accountId);
-          if (restored) await promptDesktopLogin();
+          userInfoStore.markSessionExpired(accountId, payload?.client_login_reason, payload?.client_login_session);
+          if (restored && expiredSessionNotice.value !== accountId) await promptDesktopLogin();
           return false;
         }
         if (failure) {
@@ -474,6 +550,7 @@ export const useAuthSession = () => {
       }, 5000);
       return false;
     } catch (error) {
+      if (String(error).includes("client_locked")) return restored;
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);
       if (restored) await promptDesktopLogin();
@@ -481,28 +558,119 @@ export const useAuthSession = () => {
     }
   };
 
-  const authReady = useState("auth-bootstrap-ready", () => false);
-
   function bootstrapPersistedSession(compatibilityConfirmationId?: number) {
-    if (!bootstrapPromise) {
-      bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
-        authReady.value = true;
-        bootstrapPromise = null;
-      });
-    }
+    if (bootstrapPromise) return bootstrapPromise;
+    // Route changes must not restore a snapshot over an already validated desktop login.
+    if (isDesktopRuntime() && authReady.value && userInfoStore.loggedIn) return Promise.resolve(true);
+
+    bootstrapPromise = bootstrapSession(compatibilityConfirmationId).finally(() => {
+      authReady.value = true;
+      bootstrapPromise = null;
+    });
 
     return bootstrapPromise;
   }
 
-  const handleDesktopAuthExpired = async (sessionId: string) => {
-    if (!sessionId) return false;
-    userInfoStore.markSessionExpired(sessionId);
-    if (sessionId !== currentAccountId.value) return false;
+  const removeExpiredAccount = async (sessionId: string, kind: "logout" | "lock_logout" | "expired") => {
+    const account = userMap.value[sessionId];
+    if (!account?.sessionExpired) return;
+    const wasCurrent = sessionId === currentAccountId.value;
+    const lockLogout = kind === "lock_logout";
+    if (lockLogout && wasCurrent) {
+      lockLogoutPending.value = true;
+      lockLogoutRecovery.value = null;
+      settingsOpen.value = false;
+    }
+    try {
+      if (wasCurrent) await expiredWorkspaceCleanup;
+      // A late confirmation must not remove a newer login of this account.
+      if (userMap.value[sessionId] !== account || !account.sessionExpired) return;
+      if (kind !== "expired" && expiredSessionNotice.value === sessionId) expiredSessionNotice.value = null;
+      await userInfoStore.deleteUserData(sessionId, {
+        alreadyLoggedOut: true,
+        ...(kind !== "logout" ? { removeExpiredAccounts: true } : {})
+      });
+      if (wasCurrent && (lockLogout || (kind === "logout" && !userInfoStore.loggedIn)))
+        await navigateTo(localePath({ path: "/" }));
+    } finally {
+      if (lockLogout && wasCurrent) {
+        lockLogoutRecovery.value =
+          !userInfoStore.loggedIn && !currentAccountId.value && Object.keys(userMap.value).length ? account.site : null;
+        lockLogoutPending.value = false;
+      }
+    }
+  };
 
-    userInfoStore.setUserLoggedIn(false);
-    useEventBus().emit("clearAssets", undefined);
-    await promptDesktopLogin();
-    return true;
+  const handleDesktopAuthExpired = async (
+    sessionId: string,
+    reason?: string,
+    session?: ClientLoginSession,
+    locked?: boolean
+  ) => {
+    if (!sessionId) return false;
+    const lockLogout = reason === "lock_logout";
+    const logout = lockLogout || reason === "logout";
+    const alreadyExpired = userMap.value[sessionId]?.sessionExpired;
+    if (userInfoStore.markSessionExpired(sessionId, lockLogout ? "logout" : reason, session) === false) return false;
+    const wasCurrent = sessionId === currentAccountId.value;
+    const wasLocked =
+      locked ?? (clientLock.value?.sessionId === sessionId && (clientLock.value.locked || clientLock.value.expired));
+    if (wasCurrent) {
+      // A locked account already has an expiry/exit screen; do not leave a second notice behind it.
+      if (!alreadyExpired && !logout && !wasLocked && reason !== "app_exit") expiredSessionNotice.value = sessionId;
+      userInfoStore.setUserLoggedIn(false);
+      useEventBus().emit("clearAssets", undefined);
+      // End live connections immediately, and finish cleanup before activating the replacement.
+      expiredWorkspaceCleanup = closeCurrentSiteWorkspace();
+    }
+    if (logout) await removeExpiredAccount(sessionId, lockLogout ? "lock_logout" : "logout");
+    else if (wasCurrent) await expiredWorkspaceCleanup;
+    return wasCurrent;
+  };
+
+  const expiredSessionDescription = computed(() => {
+    if (expiredSessionHandoff.value)
+      return t(expiredSessionHandoff.value.status === "pending" ? "ScreenLock.Checking" : "ClientLock.HandoffFailed");
+    const account = expiredSessionNotice.value ? userMap.value[expiredSessionNotice.value] : undefined;
+    if (!account) return "";
+    const message = clientLoginExpiryMessage(
+      account.sessionExpiredReason,
+      account.clientLoginPolicy,
+      account.clientLoginSession,
+      String(unref(nuxtApp.$i18n.locale) || "en")
+    );
+    return message ? t(message.key, message.params) : "";
+  });
+  const dismissExpiredSessionNotice = async (confirm = false) => {
+    if (expiredSessionHandoff.value?.status === "pending") return;
+    const accountId = expiredSessionNotice.value;
+    const account = accountId ? userMap.value[accountId] : undefined;
+    const removingCurrent = accountId === currentAccountId.value && account?.sessionExpired;
+    if (!confirm || (!removingCurrent && !expiredSessionHandoff.value)) {
+      expiredSessionNotice.value = null;
+      return;
+    }
+    const site = expiredSessionHandoff.value?.site ?? account!.site;
+    expiredSessionHandoff.value = { site, status: "pending" };
+    try {
+      // Keep the current page and use the expiry notice for progress/retry.
+      // The lock shield is reserved for accounts that are actually locked.
+      if (removingCurrent && accountId) await removeExpiredAccount(accountId, "expired");
+      else await userInfoStore.selectNextAccount(site, { removeExpiredAccounts: true });
+    } catch (error) {
+      console.warn("expired account handoff deferred", error);
+    } finally {
+      if (!userInfoStore.loggedIn && Object.keys(userMap.value).length) {
+        expiredSessionHandoff.value = { site, status: "retry" };
+      } else {
+        if (!userInfoStore.loggedIn) {
+          settingsOpen.value = false;
+          await navigateTo(localePath({ path: "/" }));
+        }
+        expiredSessionNotice.value = null;
+        expiredSessionHandoff.value = null;
+      }
+    }
   };
 
   const refreshOrganizations = () => {
@@ -539,6 +707,10 @@ export const useAuthSession = () => {
     applyLoginPayload,
     authReady,
     bootstrapPersistedSession,
+    expiredSessionNotice,
+    expiredSessionHandoff,
+    expiredSessionDescription,
+    dismissExpiredSessionNotice,
     handleDesktopAuthExpired,
     refreshOrganizations
   };

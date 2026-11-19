@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { nextTick, ref, watch } from "vue";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 
 export interface WorkspaceSubTab {
   id: string;
@@ -48,11 +49,7 @@ const localDraggedId = ref("");
 const dropTargetId = ref("");
 const dropPlacement = ref<"before" | "after">("before");
 const editorTabMime = "application/x-jumpserver-editor-tab";
-const SUB_TAB_GAP = 4;
-const tabStripIdealWidth = computed(() => {
-  const count = props.tabs.length;
-  return `calc(${count} * var(--workspace-sub-tab-width) + ${Math.max(0, count - 1) * SUB_TAB_GAP}px)`;
-});
+const tabStripIdealWidth = computed(() => `calc(${props.tabs.length} * var(--workspace-sub-tab-width))`);
 const tabMenuItems = computed<DropdownMenuItem[]>(() =>
   props.tabs.map((tab) => ({
     label: tab.label,
@@ -208,7 +205,7 @@ watch(
 <template>
   <div
     v-if="tabs.length || $slots['after-tabs'] || $slots.trailing"
-    class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-main)] px-2"
+    class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-border)] bg-[var(--workspace-surface-main)] px-2"
   >
     <UButton
       v-if="hasLeftHidden"
@@ -216,6 +213,7 @@ watch(
       icon="i-lucide-chevron-left"
       color="neutral"
       variant="ghost"
+      :class="workspaceButtonClass"
       :aria-label="t('TabMenu.ScrollLeft')"
       :title="t('TabMenu.ScrollLeft')"
       @click="scrollTabStrip('left')"
@@ -228,15 +226,15 @@ watch(
       <div
         ref="strip"
         role="tablist"
-        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center gap-1 overflow-x-auto"
+        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center overflow-x-auto"
         @wheel="scrollTabs"
       >
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-full min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-[11px] leading-none transition-colors"
+          class="group relative flex h-(--workspace-sub-tab-height) min-w-20 max-w-(--workspace-sub-tab-width) basis-(--workspace-sub-tab-width) grow shrink cursor-pointer items-center gap-1.5 pr-1.5 pl-2.5 text-left text-xs leading-normal transition-colors hover:bg-[var(--workspace-surface-sub-tab-active)] hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
           :class="[
-            activeId === tab.id ? 'text-primary' : 'text-muted',
+            activeId === tab.id ? 'bg-[var(--workspace-surface-sub-tab-active)] text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',
             localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : '',
             tab.preview ? 'italic' : ''
@@ -263,17 +261,18 @@ watch(
             v-if="dropTargetId === tab.id && dropPlacement === 'before'"
             class="absolute -left-0.5 inset-y-1 w-0.5 rounded-full bg-primary"
           />
-          <span class="relative flex h-full min-w-0 items-center gap-1.5">
+          <span class="relative flex h-full min-w-0 flex-1 items-center gap-1.5">
             <UIcon :name="tab.icon" class="size-3.5 shrink-0" />
             <span class="min-w-0 truncate">{{ tab.label }}</span>
             <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" :title="t('Common.Unsaved')" />
           </span>
           <button
             type="button"
-            class="ml-auto flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
+            class="ml-auto flex size-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
             :aria-label="`${resolvedCloseLabel} ${tab.label}`"
             :title="`${resolvedCloseLabel} ${tab.label}`"
             @click.stop="$emit('close', tab.id)"
+            @dblclick.stop
           >
             <UIcon name="i-lucide-x" class="size-3" />
           </button>
@@ -290,6 +289,7 @@ watch(
       icon="i-lucide-chevron-right"
       color="neutral"
       variant="ghost"
+      :class="workspaceButtonClass"
       :aria-label="t('TabMenu.ScrollRight')"
       :title="t('TabMenu.ScrollRight')"
       @click="scrollTabStrip('right')"
@@ -305,15 +305,16 @@ watch(
         icon="i-lucide-ellipsis"
         color="neutral"
         variant="ghost"
+        :class="workspaceButtonClass"
         :aria-label="t('TabMenu.SelectTab')"
         :title="t('TabMenu.SelectTab')"
       />
     </UDropdownMenu>
     <div v-if="$slots['after-tabs']" class="flex h-full shrink-0 items-center gap-1">
-      <slot name="after-tabs" />
+      <slot name="after-tabs" :button-class="workspaceButtonClass" />
     </div>
     <div v-if="$slots.trailing" class="ml-auto flex h-full shrink-0 items-center gap-1 pl-2">
-      <slot name="trailing" />
+      <slot name="trailing" :button-class="workspaceButtonClass" />
     </div>
   </div>
 </template>

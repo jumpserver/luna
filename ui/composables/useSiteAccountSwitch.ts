@@ -1,8 +1,11 @@
+import { useAccountSwitchPrompt } from "~/composables/useAccountSwitchPrompt";
 import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
 import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
 
@@ -20,6 +23,15 @@ const leaveConfirm = ref<LeaveConfirmRequest | null>(null);
 const switchingAccountId = ref("");
 let leaveInFlight = false;
 let fileWorkspaceLeaveHandler: FileWorkspaceLeaveHandler | null = null;
+// User-initiated site changes may need a component-specific draft check after the global prompt.
+// Direct closeCurrentSiteWorkspace calls remain authoritative for forced cleanup.
+const siteLeaveGuards = new Set<() => boolean | Promise<boolean>>();
+export const registerSiteLeaveGuard = (guard: () => boolean | Promise<boolean>) => {
+  siteLeaveGuards.add(guard);
+  return () => {
+    siteLeaveGuards.delete(guard);
+  };
+};
 
 const resolveLeaveConfirm = (confirmed: boolean) => {
   const pending = leaveConfirm.value;
@@ -38,10 +50,14 @@ export const hasActiveWorkspaceSessions = () =>
   useWorkspaceTabs().tabs.value.some((tab) => tab.panes.some((pane) => pane.mode !== "empty")) ||
   Boolean(fileWorkspaceLeaveHandler?.hasActive());
 
+export const hasActiveSiteSessions = async () =>
+  hasActiveWorkspaceSessions() || (isDesktopRuntime() && (await desktopInvoke<number>("get_asset_window_count")) > 0);
+
 export const closeCurrentSiteWorkspace = async () => {
   useBatchCommandPanel().setOpen(false);
   await useWorkspaceTabs().closeAllSessions({ force: true });
   await fileWorkspaceLeaveHandler?.close();
+  if (isDesktopRuntime()) await desktopInvoke("close_asset_windows");
 };
 
 export const confirmLeaveCurrentSiteSessions = async (
@@ -55,18 +71,19 @@ export const confirmLeaveCurrentSiteSessions = async (
   try {
     if (hasActiveAiTask()) {
       if (!(await confirmAiTaskLeave(kind === "logout" ? "logout" : "account"))) return false;
-      if (closeOnConfirm) await closeCurrentSiteWorkspace();
-      return true;
+    } else if (await hasActiveSiteSessions()) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        leaveConfirm.value = { kind, resolve };
+      });
+      if (!confirmed) return false;
     }
-    if (!hasActiveWorkspaceSessions()) {
-      if (closeOnConfirm) await closeCurrentSiteWorkspace();
-      return true;
+    for (const guard of siteLeaveGuards) {
+      try {
+        if (!(await guard())) return false;
+      } catch {
+        return false;
+      }
     }
-
-    const confirmed = await new Promise<boolean>((resolve) => {
-      leaveConfirm.value = { kind, resolve };
-    });
-    if (!confirmed) return false;
     if (closeOnConfirm) await closeCurrentSiteWorkspace();
     return true;
   } finally {
@@ -75,6 +92,7 @@ export const confirmLeaveCurrentSiteSessions = async (
 };
 
 export const useSiteAccountSwitch = () => {
+  const toast = useToast();
   const confirmOpen = computed({
     get: () => leaveConfirm.value !== null,
     set: (open) => {
@@ -85,21 +103,46 @@ export const useSiteAccountSwitch = () => {
   const switchAccount = async (accountId: string) => {
     const user = useUserInfoStore();
     if (switchingAccountId.value || (accountId === user.currentAccountId && user.loggedIn)) return false;
-    const toast = useToast();
     const { $i18n } = useNuxtApp();
     const bus = useEventBus();
+    const prompt = useAccountSwitchPrompt();
+    const sourceAccountId = user.currentAccountId;
+    const target = user.userMap[accountId];
+    if (!target) return false;
+    const stillCurrent = () => user.currentAccountId === sourceAccountId && user.loggedIn;
+    const offerLogin = async () => {
+      if ((await prompt.confirmLogin(target)) && stillCurrent()) {
+        bus.emit("login", {
+          accountId,
+          ...(!user.userMap[accountId] ? { prefill: { site: target.site, siteName: target.siteName } } : {})
+        });
+      }
+    };
+    let cancelled = false;
     switchingAccountId.value = accountId;
     try {
       if (user.userMap[accountId]?.sessionExpired) {
-        bus.emit("login", { accountId });
+        await offerLogin();
         return false;
       }
-      if (!(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) return false;
       const switched = await user.setCurrentAccount(accountId, {
-        beforeSwitch: closeCurrentSiteWorkspace,
-        onAuthRequired: () => bus.emit("login", { accountId })
+        requireUnlocked: true,
+        prepareTarget: async (result) => {
+          if (!stillCurrent()) return false;
+          if (result.client_locked && !(await prompt.unlock(target, result.connection_id!))) return false;
+          return stillCurrent();
+        },
+        beforeSwitch: async () => {
+          if (!stillCurrent() || !(await confirmLeaveCurrentSiteSessions("switch", { close: false }))) {
+            cancelled = true;
+            return false;
+          }
+          if (!stillCurrent()) return false;
+          await closeCurrentSiteWorkspace();
+        },
+        onAuthRequired: offerLogin
       });
-      if (switched === false && !user.userMap[accountId]?.sessionExpired) {
+      if (switched === false && !cancelled && !user.userMap[accountId]?.sessionExpired) {
         toast.add({ title: String($i18n.t("Login.SwitchFailed")), color: "error" });
       }
       return switched === true;

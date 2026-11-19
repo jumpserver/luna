@@ -125,6 +125,30 @@ describe("API request headers", () => {
     });
   });
 
+  it.each([false, true])("requests parent nodes through the shared API wrapper (desktop=%s)", async (desktop) => {
+    const response = { count: 0, next: null, results: [] };
+    const fetch = vi.fn(async (_request: string) => new Response(JSON.stringify(response)));
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiHeaders", () => ({}));
+    vi.stubGlobal("fetch", fetch);
+    desktopInvoke.mockResolvedValue(response);
+    const params = { search: "web", limit: 999, offset: 0, fields: "id,name,nodes" };
+    await getAuthorizedAssets(params);
+    if (desktop) {
+      expect(desktopInvoke).toHaveBeenCalledWith("api_request", {
+        request: expect.objectContaining({
+          path: "/api/v1/perms/users/self/assets/",
+          query: { ...params, order: "name" }
+        })
+      });
+    } else {
+      const url = new URL(String(fetch.mock.calls[0]?.[0]), "https://luna.test");
+      expect(url.searchParams.get("fields")).toBe("id,name,nodes");
+      expect(url.searchParams.get("search")).toBe("web");
+    }
+  });
+
   it("includes mutation headers for DELETE requests without a body", async () => {
     const getWebApiMutationHeaders = vi.fn(() => ({ "X-CSRFToken": "csrf-token" }));
     const fetch = vi.fn(async () => new Response(null, { status: 204 }));
@@ -321,7 +345,7 @@ describe("API error summaries", () => {
     expect(userInfoStore.setUserLoggedIn).not.toHaveBeenCalled();
   });
 
-  it("does not throttle the next auth failure while already logged out", async () => {
+  it("leaves desktop expiry handling to the main process account-scoped event", async () => {
     const emit = vi.fn();
     vi.stubGlobal("isDesktopRuntime", () => true);
     vi.stubGlobal("useEventBus", () => ({ emit }));
@@ -333,10 +357,9 @@ describe("API error summaries", () => {
     userInfoStore.loggedIn = true;
     await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toMatchObject({ status: 401 });
 
-    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledOnce();
-    expect(userInfoStore.setUserLoggedIn).toHaveBeenCalledWith(false);
-    expect(emit).toHaveBeenCalledWith("clearAssets", undefined);
-    expect(emit).toHaveBeenCalledWith("login", undefined);
+    expect(userInfoStore.loggedIn).toBe(true);
+    expect(userInfoStore.setUserLoggedIn).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("preserves structured validation data", () => {

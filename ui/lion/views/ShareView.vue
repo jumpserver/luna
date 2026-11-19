@@ -66,7 +66,7 @@ function connectShareSession() {
       window.innerHeight
     );
     const displayEl = displayRef.value;
-    if (displayEl) displayEl.appendChild(guaDisplay.value.getElement());
+    if (displayEl && guaDisplay.value) displayEl.appendChild(guaDisplay.value.getElement());
   } catch (error) {
     loading.value = false;
     const message = error instanceof Error ? error.message : t("ShareSessionError");

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { playwright } from "@vitest/browser-playwright";
@@ -5,6 +6,10 @@ import AutoImport from "unplugin-auto-import/vite";
 import { defineConfig } from "vitest/config";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
+
+execFileSync(process.execPath, [fileURLToPath(new URL("./packages/guacamole/scripts/build.mjs", import.meta.url))], {
+  stdio: "inherit"
+});
 
 export default defineConfig({
   root: rootDir,

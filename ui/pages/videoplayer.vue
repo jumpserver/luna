@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { VideoPlayerItem } from "~/composables/useVideoPlayerParser";
+import { useArchivedPlayerMedia } from "~/composables/useArchivedPlayerMedia";
+import { releaseBrowserVideoPlayerItems } from "~/composables/useVideoPlayerParser";
 import { useVideoPlayerTour, videoPlayerTourDemo, videoPlayerTourFilled } from "~/composables/useVideoPlayerTour";
 import { desktopDialog, desktopWindow } from "~/shared/desktop/bridge";
 import {
@@ -18,21 +20,23 @@ const { addErrorToast } = useErrorToast();
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
 const items = ref<VideoPlayerItem[]>([]);
+let pageDisposed = false;
 
 useHead(() => ({ title: `JumpServer ${t("VideoPlayer.PageTitle")}` }));
 // selectedId 立即跟随点击,用于播放列表高亮;activeId 经防抖后才更新,
 // 真正驱动播放器组件的挂载/加载。快速来回切换时,只有停手后的最后一次
-// 才会触发销毁旧播放器 + fetch + 全量解析,避免多个 part 的解析结果在
-// GC 回收前叠加导致内存飙升甚至 OOM。
+// 才会销毁旧播放器并开始新分片的索引与读取，避免快速切换反复创建缓存。
 const selectedId = ref<string | null>(null);
 const activeId = ref<string | null>(null);
 const commitActiveId = useDebounceFn((id: string | null) => {
+  if (pageDisposed || id !== selectedId.value || !items.value.some((item) => item.id === id)) return;
   activeId.value = id;
 }, 250);
 const importMessage = ref("");
 const playlistCollapsed = ref(false);
 const isDragOver = ref(false);
 let dragDepth = 0;
+let importController: AbortController | null = null;
 
 const { modernIsland } = useSettingManager();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
@@ -52,6 +56,12 @@ const playlistItems = computed(() =>
 );
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
+const {
+  source: playerSource,
+  castData: playerCastData,
+  loading: archiveLoading,
+  error: archiveError
+} = useArchivedPlayerMedia(currentItem);
 
 function metaName(value: unknown) {
   if (typeof value === "string") {
@@ -102,9 +112,16 @@ const playerComponent = computed(() => {
   }
 });
 
-function cleanupItem(item: VideoPlayerItem) {
-  if (item.source.startsWith("blob:")) {
-    URL.revokeObjectURL(item.source);
+async function releaseItems(removed: VideoPlayerItem[], retained: VideoPlayerItem[] = []) {
+  await releaseBrowserVideoPlayerItems(removed, retained);
+  if (isDesktopRuntime()) {
+    const retainedIds = new Set(retained.map((item) => item.recordingId));
+    const unusedIds = new Set(
+      removed
+        .filter((item) => !item.recordingEntry && !retainedIds.has(item.recordingId))
+        .map((item) => item.recordingId)
+    );
+    await Promise.allSettled([...unusedIds].map((id) => removeRecording(id)));
   }
 }
 
@@ -115,7 +132,6 @@ function selectItem(item: VideoPlayerItem) {
 }
 
 async function removeItem(item: VideoPlayerItem) {
-  cleanupItem(item);
   items.value = items.value.filter((entry) => entry.id !== item.id);
 
   if (selectedId.value === item.id) {
@@ -125,18 +141,15 @@ async function removeItem(item: VideoPlayerItem) {
     activeId.value = nextId;
   }
 
-  const recordingStillUsed = items.value.some((entry) => entry.recordingId === item.recordingId);
-
-  if (isDesktopRuntime() && !recordingStillUsed) {
-    try {
-      await removeRecording(item.recordingId);
-    } catch {
-      // stale recording directories are cleaned on the next application startup
-    }
-  }
+  await nextTick();
+  await releaseItems([item], items.value);
 }
 
 async function appendParsedItems(parsed: VideoPlayerItem[]) {
+  if (pageDisposed) {
+    await releaseItems(parsed);
+    return;
+  }
   if (parsed.length === 0) {
     importMessage.value = "";
     toast.add({
@@ -150,14 +163,13 @@ async function appendParsedItems(parsed: VideoPlayerItem[]) {
   const existingNames = new Set(items.value.map((item) => item.name));
   const incoming = parsed.filter((item) => !existingNames.has(item.name));
   const duplicates = parsed.length - incoming.length;
-
-  if (isDesktopRuntime()) {
-    const retainedRecordingIds = new Set(incoming.map((item) => item.recordingId));
-    const unusedRecordingIds = new Set(
-      parsed.filter((item) => !retainedRecordingIds.has(item.recordingId)).map((item) => item.recordingId)
-    );
-
-    await Promise.allSettled([...unusedRecordingIds].map((recordingId) => removeRecording(recordingId)));
+  await releaseItems(
+    parsed.filter((item) => !incoming.includes(item)),
+    [...items.value, ...incoming]
+  );
+  if (pageDisposed) {
+    await releaseItems(incoming);
+    return;
   }
 
   items.value.push(...incoming);
@@ -184,16 +196,20 @@ async function importFiles(files: File[]) {
 
   isImporting.value = true;
   importMessage.value = t("VideoPlayer.Importing", { count: files.length });
+  const controller = new AbortController();
+  importController = controller;
 
   try {
-    await appendParsedItems(await parseFiles(files));
+    await appendParsedItems(await parseFiles(files, controller.signal));
   } catch (error: any) {
+    if (controller.signal.aborted || pageDisposed) return;
     importMessage.value = "";
     addErrorToast({
       title: t("VideoPlayer.ImportFailed"),
       description: error?.message || String(error)
     });
   } finally {
+    if (importController === controller) importController = null;
     isImporting.value = false;
   }
 }
@@ -340,15 +356,13 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  pageDisposed = true;
+  importController?.abort();
+  importController = null;
   destroyTour();
   resetPanelBounds();
   setRightPanelOpen(false);
-  items.value.forEach(cleanupItem);
-
-  if (isDesktopRuntime()) {
-    const recordingIds = new Set(items.value.map((item) => item.recordingId));
-    void Promise.allSettled([...recordingIds].map((recordingId) => removeRecording(recordingId)));
-  }
+  void releaseItems(items.value);
 });
 </script>
 
@@ -419,13 +433,24 @@ onBeforeUnmount(() => {
           </span>
         </div>
         <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">
+          <div
+            v-if="archiveLoading || archiveError"
+            class="flex flex-1 items-center justify-center text-sm text-white/80"
+          >
+            {{ archiveError || $t("VideoPlayer.Parsing") }}
+          </div>
           <component
             :is="playerComponent"
-            v-if="playerComponent && currentItem"
+            v-if="playerComponent && currentItem && !archiveLoading && !archiveError"
             :key="currentItem.id"
             class="h-full w-full min-h-0"
-            :source="currentItem.source"
-            :cast-data="currentItem.castData"
+            :source="playerSource"
+            v-bind="
+              currentItem.type === 'gua'
+                ? { recordingBlob: currentItem.recordingBlob, recordingEntry: currentItem.recordingEntry }
+                : {}
+            "
+            :cast-data="playerCastData"
           />
         </div>
       </section>

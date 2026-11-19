@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import type { ReplayPlayerHandle } from "#online-player/types";
-import type {
-  GuacamoleDisplay,
-  GuacamoleRecording,
-  GuacamoleStatic,
-  GuacamoleTunnel
-} from "#online-player/types/guacamole";
 import type { VisibleRect } from "#online-player/utils/guacamoleBounds";
 
-import * as GuacamoleModule from "guacamole-common-js-jumpserver/dist/guacamole-common";
+import Guacamole from "@jumpserver/guacamole";
+import { createRecordingSource } from "@jumpserver/guacamole/recording-source";
 import { accumulateVisibleBounds, visibleBoundsFromAlpha } from "#online-player/utils/guacamoleBounds";
 import { applyGuacamolePlaybackRate } from "#online-player/utils/guacamolePlayback";
 import { interpretTouchGesture } from "#online-player/utils/touchSeek";
@@ -28,20 +23,16 @@ const emit = defineEmits<{
   error: [string];
 }>();
 
-const Guacamole = GuacamoleModule as unknown as GuacamoleStatic;
-
 const playerAreaRef = shallowRef<HTMLElement | null>(null);
 const viewportRef = shallowRef<HTMLElement | null>(null);
 const hostRef = shallowRef<HTMLElement | null>(null);
-let recording: GuacamoleRecording | null = null;
-let display: GuacamoleDisplay | null = null;
-let sourceTunnel: GuacamoleTunnel | null = null;
+let recording: Guacamole.SessionRecording | null = null;
+let display: Guacamole.Display | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let scaleTimer: ReturnType<typeof setTimeout> | null = null;
 let recordingLoaded = false;
-let streamOpened = false;
 let startApplied = false;
-let loadFailed = false;
+let loadError = "";
 let playbackIntent = true;
 let ignoreClick = false;
 let touchStart: { x: number; y: number; t: number } | null = null;
@@ -65,7 +56,7 @@ let pendingSeek: SeekRequest | null = null;
 let activeSeek: SeekRequest | null = null;
 
 const layerSize = () => {
-  const layer = display?.getDefaultLayer?.();
+  const layer = display?.getDefaultLayer();
   return {
     width: layer?.width || display?.getWidth() || 0,
     height: layer?.height || display?.getHeight() || 0
@@ -73,10 +64,18 @@ const layerSize = () => {
 };
 
 const sampleVisibleBounds = () => {
-  const layer = display?.getDefaultLayer?.();
-  const canvas = layer?.getCanvas?.();
+  const layer = display?.getDefaultLayer();
+  const canvas = layer?.getCanvas();
   const { width: fullWidth, height: fullHeight } = layerSize();
   if (!fullWidth || !fullHeight) return;
+  if (
+    visibleBounds?.left === 0 &&
+    visibleBounds.top === 0 &&
+    visibleBounds.width === fullWidth &&
+    visibleBounds.height === fullHeight
+  ) {
+    return;
+  }
 
   let sampled: VisibleRect | null = null;
   if (canvas) {
@@ -129,8 +128,13 @@ const sampleAndScale = () => {
   applyScale();
 };
 
-const scheduleBoundsSampling = () => {
+const clearBoundsSampling = () => {
   boundsTimers.forEach((id) => window.clearTimeout(id));
+  boundsTimers = [];
+};
+
+const scheduleBoundsSampling = () => {
+  clearBoundsSampling();
   boundsTimers = [80, 220, 480, 900].map((delay) => window.setTimeout(sampleAndScale, delay));
 };
 
@@ -158,7 +162,11 @@ const abortSeek = (resumePlayback: boolean) => {
   pendingSeek = null;
   activeSeek = null;
 
-  if (inProgress && recording) recording.pause();
+  if (inProgress && recording) {
+    recording.pause();
+    sampleAndScale();
+    scheduleBoundsSampling();
+  }
   if (request) request.resolve();
   emit("seeking", false);
 
@@ -199,6 +207,11 @@ const performSeek = (request: SeekRequest) => {
   }
 
   activeSeek = request;
+  clearBoundsSampling();
+  if (scaleTimer) {
+    clearTimeout(scaleTimer);
+    scaleTimer = null;
+  }
   recording.seek(targetMs, () => {
     if (!recording || activeSeek?.id !== request.id) return;
     lastPosition = recording.getPosition();
@@ -206,12 +219,20 @@ const performSeek = (request: SeekRequest) => {
     emit("seeking", false);
     sampleAndScale();
     applyScaleWithRetry();
+    scheduleBoundsSampling();
     settleSeek(request);
     tryStartPlayback();
   });
 };
 
 const seekRecording = async (ms: number) => {
+  if (loadError) {
+    emit("playing", false);
+    emit("seeking", false);
+    emit("position", lastPosition);
+    emit("error", loadError);
+    return;
+  }
   startApplied = true;
   abortSeek(false);
   emit("seeking", true);
@@ -257,18 +278,15 @@ const destroy = () => {
     clearTimeout(scaleTimer);
     scaleTimer = null;
   }
-  if (sourceTunnel) {
-    sourceTunnel.onstatechange = null;
-    sourceTunnel.onerror = null;
-  }
   if (recording) {
+    recording.onload = null;
     recording.onplay = null;
     recording.onpause = null;
     recording.onseek = null;
     recording.onprogress = null;
     recording.onerror = null;
     try {
-      recording.disconnect();
+      recording.dispose();
     } catch {
       // ignore
     }
@@ -279,16 +297,13 @@ const destroy = () => {
     element.parentNode?.removeChild(element);
   }
 
-  boundsTimers.forEach((id) => window.clearTimeout(id));
-  boundsTimers = [];
+  clearBoundsSampling();
   visibleBounds = null;
   recording = null;
   display = null;
-  sourceTunnel = null;
   recordingLoaded = false;
-  streamOpened = false;
   startApplied = false;
-  loadFailed = false;
+  loadError = "";
   playbackIntent = true;
   lastPosition = 0;
   abortSeek(false);
@@ -300,35 +315,18 @@ const mount = () => {
 
   const controller = new AbortController();
   loadController = controller;
-  const tunnel = new Guacamole.StaticHTTPTunnel(props.src);
-  sourceTunnel = tunnel;
-
-  tunnel.onerror = (status) => {
-    if (controller.signal.aborted) return;
-    loadFailed = true;
-    playbackIntent = false;
-    startApplied = true;
-    abortSeek(false);
-    if (recording?.isPlaying()) recording.pause();
-    emit("playing", false);
-    emit("error", String(status?.message || "Failed to load recording"));
-  };
-  tunnel.onstatechange = (state) => {
-    if (controller.signal.aborted || !recording) return;
-    if (state === Guacamole.Tunnel.State.OPEN) streamOpened = true;
-    if (state === Guacamole.Tunnel.State.CLOSED && streamOpened) {
-      recordingLoaded = true;
-      emit("duration", recording.getDuration());
-      if (!loadFailed) flushStartOrPending();
-    }
-  };
-
-  recording = new Guacamole.SessionRecording(tunnel);
+  recording = new Guacamole.SessionRecording(createRecordingSource(props.src));
   applySpeed();
   display = recording.getDisplay();
   const element = display.getElement();
   hostRef.value.appendChild(element);
 
+  recording.onload = () => {
+    if (controller.signal.aborted || loadError || !recording) return;
+    recordingLoaded = true;
+    emit("duration", recording.getDuration());
+    flushStartOrPending();
+  };
   recording.onplay = () => {
     emit("playing", true);
     emit("ready");
@@ -337,31 +335,45 @@ const mount = () => {
     scheduleBoundsSampling();
   };
   recording.onpause = () => emit("playing", false);
-  recording.onseek = (millis: number) => {
+  recording.onseek = (millis: number, current: number, total: number) => {
     lastPosition = millis;
     emit("position", millis);
+    if (current < total) return;
     sampleAndScale();
     scheduleBoundsSampling();
   };
-  recording.onerror = (message: string) => emit("error", String(message || ""));
+  recording.onerror = (message: string) => {
+    if (controller.signal.aborted) return;
+    loadError = String(message || "Failed to load recording");
+    playbackIntent = false;
+    startApplied = true;
+    abortSeek(false);
+    if (recording?.isPlaying()) recording.pause();
+    emit("playing", false);
+    emit("error", loadError);
+  };
   recording.onprogress = (millis: number) => {
+    if (controller.signal.aborted || loadError) return;
     emit("duration", millis);
     flushStartOrPending();
   };
   display.onresize = () => {
-    applyScale();
+    if (!activeSeek) applyScale();
   };
 
   if (playerAreaRef.value) {
     resizeObserver = new ResizeObserver(() => applyScale());
     resizeObserver.observe(playerAreaRef.value);
   }
-
-  recording.connect("");
 };
 
 const handle: ReplayPlayerHandle = {
   play() {
+    if (loadError) {
+      emit("playing", false);
+      emit("error", loadError);
+      return;
+    }
     playbackIntent = true;
     if (activeSeek || pendingSeek) return;
     if (recording && !recording.isPlaying()) recording.play();

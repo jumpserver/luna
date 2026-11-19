@@ -1,5 +1,8 @@
 import type { DesktopConnectionResult } from "~/types/clientCompatibility";
 import type {
+  ClientLoginPolicy,
+  ClientLoginReason,
+  ClientLoginSession,
   ConnectionInfo,
   ConnectionPreferenceInfo,
   CurrentOrg,
@@ -8,14 +11,17 @@ import type {
   RdpGraphics,
   UserData
 } from "~/types/index";
-import { defineStore } from "pinia";
+import { acceptHMRUpdate, defineStore, getActivePinia } from "pinia";
 import { useClientCompatibility } from "~/composables/useClientCompatibility";
+import { useClientLockState } from "~/composables/useClientLockState";
 import { desktopInvoke } from "~/shared/desktop/bridge";
+import { normalizeClientLoginReason, restoreMissingCurrentAccount, serializeUserInfo } from "~/utils/clientLoginPolicy";
 import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export type SiteUserData = UserData & {
   sessionExpired?: boolean;
+  sessionExpiredReason?: ClientLoginReason;
   language?: string;
   rdpClientOption?: RdpGraphics;
   connectionInfoMap?: Record<string, ConnectionInfo>;
@@ -64,13 +70,16 @@ const areConnectionInfoValuesEqual = (left: unknown, right: unknown): boolean =>
 };
 
 const normalizeStoredConnections = (state: {
+  currentAccountId?: string;
   userMap?: Record<string, SiteUserData>;
   currentUser?: SiteUserData | null;
   currentConnectionInfoMap?: Record<string, ConnectionInfo>;
   currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
 }) => {
+  restoreMissingCurrentAccount(state);
   const clearSite = (site?: SiteUserData | null) => {
     if (!site) return;
+    if (site.clientLoginPolicy?.reauth_on_exit) site.bearerToken = "";
     normalizeStoredConnection(site.connectionInfo);
     Object.values(site.connectionInfoMap || {}).forEach(normalizeStoredConnection);
     Object.values(site.connectionPreferenceMap || {}).forEach(normalizeStoredConnection);
@@ -93,6 +102,7 @@ export const useUserInfoStore = defineStore(
     const currentUser = ref<UserData | null>(null);
     const currentOrganizations = ref<PermOrgItem[]>([]);
     const userMap = ref<Record<string, SiteUserData>>({});
+    const clientLock = isDesktopRuntime() ? useClientLockState() : null;
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
     const currentConnectionPreferenceMap = ref<Record<string, ConnectionPreferenceInfo>>({});
@@ -113,18 +123,27 @@ export const useUserInfoStore = defineStore(
      * @param accountId
      * @param userData
      */
-    const syncApiSession = async (accountId: string, userData: UserData, connectionId?: number) => {
+    const syncApiSession = async (
+      accountId: string,
+      userData: UserData,
+      connectionId?: number,
+      requireUnlocked?: boolean,
+      lockedSwitch?: boolean
+    ) => {
       if (!isDesktopRuntime()) return true;
       if (!accountId || !userData.bearerToken) return false;
 
       try {
-        const result = await desktopInvoke<DesktopConnectionResult>("set_api_session", {
-          sessionKey: accountId,
-          origin: userData.site,
-          bearerToken: userData.bearerToken,
-          orgId: userData.org?.id || "",
-          connectionId
-        });
+        const result = await desktopInvoke<DesktopConnectionResult>(
+          lockedSwitch ? "client_lock_switch_activate" : "set_api_session",
+          {
+            sessionKey: accountId,
+            orgId: userData.org?.id || "",
+            connectionId,
+            ...(!lockedSwitch ? { origin: userData.site, bearerToken: userData.bearerToken } : {}),
+            ...(requireUnlocked ? { requireUnlocked: true } : {})
+          }
+        );
         return result?.status === "success";
       } catch (error) {
         console.error("sync api session failed", error);
@@ -135,6 +154,8 @@ export const useUserInfoStore = defineStore(
     watch(
       [currentAccountId, currentUser],
       ([accountId, userData]) => {
+        restoreMissingCurrentAccount({ currentAccountId: accountId, currentUser: userData, userMap: userMap.value });
+        if (clientLock?.value?.sessionId === accountId && clientLock.value.locked) return;
         if (loggedIn.value && accountId && userData) void syncApiSession(accountId, userData);
       },
       { immediate: true }
@@ -148,12 +169,49 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = l;
     };
 
-    const markSessionExpired = (accountId: string) => {
+    const setClientLoginSession = (accountId: string, session: ClientLoginSession) => {
       const user = userMap.value[accountId];
-      if (user) user.sessionExpired = true;
+      if (!user) return false;
+      const previous = user.clientLoginSession;
+      if (
+        previous &&
+        (Date.parse(previous.authenticated_at) > Date.parse(session.authenticated_at) ||
+          (Date.parse(previous.authenticated_at) === Date.parse(session.authenticated_at) &&
+            Date.parse(previous.server_time) > Date.parse(session.server_time)))
+      )
+        return false;
+      // A site can contain multiple accounts; activity and deadlines belong to one login only.
+      user.clientLoginSession = session;
+      if (accountId === currentAccountId.value && currentUser.value) currentUser.value.clientLoginSession = session;
+      return true;
+    };
+
+    const markSessionExpired = (accountId: string, reason?: string, session?: ClientLoginSession) => {
+      if (session && !setClientLoginSession(accountId, session)) return false;
+      const user = userMap.value[accountId];
+      const incomingReason = normalizeClientLoginReason(reason);
+      const expiredReason =
+        incomingReason === "unknown" ? user?.sessionExpiredReason || incomingReason : incomingReason;
+      if (user) {
+        user.sessionExpired = true;
+        user.sessionExpiredReason = expiredReason;
+        user.bearerToken = "";
+      }
       if (accountId === currentAccountId.value) {
         loggedIn.value = false;
-        if (currentUser.value) (currentUser.value as SiteUserData).sessionExpired = true;
+        if (currentUser.value) {
+          (currentUser.value as SiteUserData).sessionExpired = true;
+          (currentUser.value as SiteUserData).sessionExpiredReason = expiredReason;
+          currentUser.value.bearerToken = "";
+        }
+      }
+      return true;
+    };
+
+    const setClientLoginPolicy = (accountId: string, policy: ClientLoginPolicy) => {
+      if (userMap.value[accountId]) userMap.value[accountId].clientLoginPolicy = policy;
+      if (currentUser.value && accountId === currentAccountId.value) {
+        currentUser.value.clientLoginPolicy = policy;
       }
     };
 
@@ -194,12 +252,13 @@ export const useUserInfoStore = defineStore(
      * @param accountId
      * @param userData
      */
-    const setUserData = (accountId: string, userData: UserData) => {
-      const previous = userMap.value[accountId];
+    const setUserData = (accountId: string, userData: UserData, previousAccountId = accountId) => {
+      const previous = userMap.value[previousAccountId];
       const next: SiteUserData = {
         ...previous,
         ...userData,
         sessionExpired: false,
+        sessionExpiredReason: undefined,
         accountId,
         connectionInfoMap: previous?.connectionInfoMap || {},
         connectionPreferenceMap: previous?.connectionPreferenceMap || {},
@@ -221,64 +280,115 @@ export const useUserInfoStore = defineStore(
       currentRdpClientOption.value = next.rdpClientOption || {};
     };
 
+    const deletingAccounts = shallowReactive(new Map<string, Promise<void>>());
+    const isLoggingOut = computed(() => deletingAccounts.size > 0);
     /**
      * @description 删除用户数据
      * @param accountId
      */
-    const deleteUserData = async (accountId: string) => {
+    const deleteUserData = (
+      accountId: string,
+      options: { alreadyLoggedOut?: boolean; removeExpiredAccounts?: boolean } = {}
+    ): Promise<void> => {
+      const pending = deletingAccounts.get(accountId);
+      if (pending) return pending;
       const userData = userMap.value[accountId];
+      if (!userData) return Promise.resolve();
 
-      // 退出当前站点时立即请求清理其 Cookie
-      if (isDesktopRuntime() && userData) {
-        await desktopInvoke("logout", {
-          name: "main",
-          site: userData.site,
-          sessionId: accountId
-        });
-      }
-
-      if (!userData) {
-        return;
-      }
-
-      ++accountSwitchGeneration;
-      delete userMap.value[accountId];
-      if (accountId !== currentAccountId.value) return;
-
-      // 如果还有用户，则切换到下一个用户
-      if (hasUser.value) {
-        const nextEntry = Object.entries(userMap.value)[0] as [string, SiteUserData] | undefined;
-
-        if (nextEntry) {
-          if (isDesktopRuntime()) {
-            currentAccountId.value = "";
-            currentSite.value = "";
-            currentUser.value = null;
-            loggedIn.value = false;
-            currentOrganizations.value = [];
-            currentConnectionInfoMap.value = {};
-            currentConnectionPreferenceMap.value = {};
-            currentRdpClientOption.value = {};
+      // Both an explicit logout and a main-process expiry can finish the same removal.
+      // Join the whole operation, including activation of the replacement account.
+      const deleting = Promise.resolve()
+        .then(async () => {
+          if (userMap.value[accountId] !== userData) return;
+          const startingGeneration = accountSwitchGeneration;
+          if (isDesktopRuntime() && !options.alreadyLoggedOut) {
+            await desktopInvoke("logout", {
+              name: "main",
+              site: userData.site,
+              sessionId: accountId
+            });
           }
-          if (await setCurrentAccount(nextEntry[0])) loggedIn.value = true;
-        }
-      } else {
-        currentAccountId.value = "";
-        currentSite.value = "";
-        loggedIn.value = false;
-        currentUser.value = null;
 
-        userMap.value = {};
-        currentRdpClientOption.value = {};
-        currentConnectionInfoMap.value = {};
-        currentConnectionPreferenceMap.value = {};
-        currentOrganizations.value = [];
+          // Do not delete a newer login or invalidate a switch started by another removal.
+          if (userMap.value[accountId] !== userData) return;
+          delete userMap.value[accountId];
+          if (accountId !== currentAccountId.value) return;
 
-        nextTick(() => {
-          useEventBus().emit("clearAssets", undefined);
+          const newerSwitch = accountSwitchGeneration !== startingGeneration;
+          if (!newerSwitch) ++accountSwitchGeneration;
+          currentAccountId.value = "";
+          currentSite.value = "";
+          loggedIn.value = false;
+          currentUser.value = null;
+          currentRdpClientOption.value = {};
+          currentConnectionInfoMap.value = {};
+          currentConnectionPreferenceMap.value = {};
+          currentOrganizations.value = [];
+
+          if (!hasUser.value) {
+            nextTick(() => {
+              useEventBus().emit("clearAssets", undefined);
+            });
+            return;
+          }
+          if (newerSwitch) return;
+
+          await selectNextAccount(userData.site, options);
+        })
+        .finally(() => {
+          if (deletingAccounts.get(accountId) === deleting) deletingAccounts.delete(accountId);
         });
-      }
+      deletingAccounts.set(accountId, deleting);
+      return deleting;
     };
+
+    // Retryable account handoff; unknown/network failures retain their saved login.
+    async function selectNextAccount(previousSite: string, options: { removeExpiredAccounts?: boolean } = {}) {
+      if (currentAccountId.value || loggedIn.value) return;
+      const siteAddress = (site: string) => {
+        const value = site.trim().replace(/\/+$/, "");
+        try {
+          return new URL(value).href.replace(/\/+$/, "");
+        } catch {
+          return value;
+        }
+      };
+      const sourceSite = siteAddress(previousSite);
+      const groups = new Map<string, string[]>([[sourceSite, []]]);
+      for (const [id, account] of Object.entries(userMap.value)) {
+        if (account.sessionExpired && !options.removeExpiredAccounts) continue;
+        const address = siteAddress(account.site);
+        const group = groups.get(address) || [];
+        group.push(id);
+        groups.set(address, group);
+      }
+      for (const id of [...groups.values()].flat()) {
+        if (!userMap.value[id]) continue;
+        if (userMap.value[id].sessionExpired) {
+          if (options.removeExpiredAccounts) {
+            const generation = accountSwitchGeneration;
+            await deleteUserData(id);
+            if (generation !== accountSwitchGeneration) return;
+          }
+          continue;
+        }
+        const switching = setCurrentAccount(id).catch(() => false);
+        const generation = accountSwitchGeneration;
+        const switched = await switching;
+        if (switched) {
+          loggedIn.value = true;
+          return;
+        }
+        // A newer user-initiated switch owns the next selection. Cancellation also stops fallback.
+        if (generation !== accountSwitchGeneration || switched === undefined) return;
+        // Only an explicit authentication failure marks a candidate expired. Network
+        // failures keep its saved login while fallback tries the next account.
+        if (options.removeExpiredAccounts && userMap.value[id]?.sessionExpired) {
+          await deleteUserData(id);
+          if (generation !== accountSwitchGeneration) return;
+        }
+      }
+    }
 
     /**
      * @description 设置当前账号
@@ -287,8 +397,11 @@ export const useUserInfoStore = defineStore(
     async function setCurrentAccount(
       accountId: string,
       options: {
-        beforeSwitch?: () => Promise<void>;
-        onAuthRequired?: () => void;
+        beforeSwitch?: () => Promise<void | boolean>;
+        onAuthRequired?: () => void | Promise<void>;
+        prepareTarget?: (result: DesktopConnectionResult) => Promise<boolean>;
+        requireUnlocked?: boolean;
+        lockedSwitch?: boolean;
         compatibilityConfirmationId?: number;
       } = {}
     ): Promise<boolean | undefined> {
@@ -307,27 +420,28 @@ export const useUserInfoStore = defineStore(
       let nextUser = { ...userData };
       if (desktop) {
         useClientCompatibility().dismiss();
-        const result = await desktopInvoke<DesktopConnectionResult & { bearer?: string; profile?: { status: number } }>(
-          "bootstrap_auth_session",
-          {
-            site: userData.site,
-            sessionId: accountId,
-            compatibilityConfirmationId: options.compatibilityConfirmationId
-          }
-        );
-        if (generation !== accountSwitchGeneration || result?.status === "stale") return false;
+        const result = await desktopInvoke<
+          DesktopConnectionResult & { bearer?: string; profile?: { status: number; data?: string } }
+        >(options.lockedSwitch ? "client_lock_switch_prepare" : "bootstrap_auth_session", {
+          sessionId: accountId,
+          compatibilityConfirmationId: options.compatibilityConfirmationId,
+          ...(!options.lockedSwitch ? { site: userData.site } : {})
+        });
+        if (generation !== accountSwitchGeneration || getUserData(accountId) !== userData || result?.status === "stale")
+          return false;
         if (result?.status === "confirmation-required" && result.compatibility) {
           // Cancellation is distinct from a failed switch so the caller can finish quietly.
           if (!(await useClientCompatibility().show(result.compatibility))) return;
           if (generation !== accountSwitchGeneration) return false;
           return setCurrentAccount(accountId, {
             ...options,
-            compatibilityConfirmationId: result.compatibility_confirmation_id
+            compatibilityConfirmationId:
+              result.compatibility.reason === "tls" ? undefined : result.compatibility_confirmation_id
           });
         }
         if (result?.status === "auth-required" || result?.profile?.status === 401 || result?.profile?.status === 403) {
-          markSessionExpired(accountId);
-          options.onAuthRequired?.();
+          markSessionExpired(accountId, result?.client_login_reason, result?.client_login_session);
+          await options.onAuthRequired?.();
           return false;
         }
         if (
@@ -341,17 +455,37 @@ export const useUserInfoStore = defineStore(
           return false;
         }
         connectionId = result.connection_id;
-        nextUser = { ...nextUser, bearerToken: result.bearer, sessionExpired: false };
+        if (options.prepareTarget && !(await options.prepareTarget(result))) return;
+        if (generation !== accountSwitchGeneration || getUserData(accountId) !== userData) return false;
+        if (result.profile.data) {
+          try {
+            const profile = JSON.parse(result.profile.data);
+            if (typeof profile.username === "string") nextUser.username = profile.username;
+          } catch {
+            // Keep saved display metadata when the optional profile body cannot be read.
+          }
+        }
+        nextUser = {
+          ...nextUser,
+          bearerToken: result.bearer,
+          sessionExpired: false,
+          sessionExpiredReason: undefined,
+          clientLoginPolicy: result.client_login_policy,
+          clientLoginSession: result.client_login_session
+        };
       }
       enforceOrganizationLicense(nextUser);
       const activate = async () => {
         if (desktop && generation !== accountSwitchGeneration) return false;
-        await options.beforeSwitch?.();
+        if ((await options.beforeSwitch?.()) === false) return false;
+        if (getUserData(accountId) !== userData) return false;
         if (
           desktop &&
-          (generation !== accountSwitchGeneration || !(await syncApiSession(accountId, nextUser, connectionId)))
+          (generation !== accountSwitchGeneration ||
+            !(await syncApiSession(accountId, nextUser, connectionId, options.requireUnlocked, options.lockedSwitch)))
         )
           return false;
+        if (getUserData(accountId) !== userData) return false;
         // Once main accepts this session, publish it even if another preflight has started.
         // Its activation must wait for this publication, so a failed newer check keeps both sides aligned.
         userMap.value[accountId] = nextUser;
@@ -598,6 +732,7 @@ export const useUserInfoStore = defineStore(
       orgId,
       userMap,
       loggedIn,
+      isLoggingOut,
       currentAccountId,
       currentSite,
       currentUser,
@@ -611,10 +746,13 @@ export const useUserInfoStore = defineStore(
       selectAccountForLogin,
       setCurrentOrg,
       setCurrentAccount,
+      selectNextAccount,
       withSessionActivation,
       deleteUserData,
       setUserLoggedIn,
       markSessionExpired,
+      setClientLoginPolicy,
+      setClientLoginSession,
       setCommandExecutionEnabled,
       setOrganizations,
       setRdpClientOption,
@@ -632,6 +770,7 @@ export const useUserInfoStore = defineStore(
     persist: typeof localStorage !== "undefined" && {
       key: "userInfoV2",
       storage: localStorage,
+      serializer: { serialize: serializeUserInfo, deserialize: JSON.parse },
       afterHydrate: ({ store }) => {
         normalizeStoredConnections(store.$state as Parameters<typeof normalizeStoredConnections>[0]);
         store.$persist();
@@ -650,3 +789,21 @@ export const useUserInfoStore = defineStore(
     }
   }
 );
+
+if (import.meta.hot) {
+  const hot = import.meta.hot;
+  const update = acceptHMRUpdate(useUserInfoStore, hot);
+  hot.accept((module) => {
+    const pinia = hot.data.pinia || getActivePinia();
+    const store = pinia?.state.value.userInfo ? useUserInfoStore(pinia) : undefined;
+    // Pinia merges hot state against default keys, which drops entries from dynamic dictionaries.
+    const dictionaries = store && {
+      userMap: { ...store.userMap },
+      currentRdpClientOption: { ...store.currentRdpClientOption },
+      currentConnectionInfoMap: { ...store.currentConnectionInfoMap },
+      currentConnectionPreferenceMap: { ...store.currentConnectionPreferenceMap }
+    };
+    update(module);
+    if (store && dictionaries) store.$patch(dictionaries);
+  });
+}

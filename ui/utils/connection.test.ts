@@ -2,6 +2,7 @@ import type { AssetItem, PermedAccount } from "~/types";
 import { describe, expect, it } from "vitest";
 import {
   hasReusableSavedConnection,
+  isManualCredentialReady,
   isSavedConnectionAvailable,
   needsInputSecret,
   supportsPersonalCredential
@@ -25,6 +26,34 @@ const asset = {
   savedConnection: { protocol: "ssh", username: "root", accountId: "account-id", accountMode: "hosted" }
 } as AssetItem;
 
+describe("manual connection credentials", () => {
+  const input = { protocol: "ssh", manualUsername: "user", manualPassword: "" };
+
+  it.each(["ssh", "mysql", "postgresql", "redis"])("allows an empty %s password", (protocol) => {
+    expect(isManualCredentialReady({ ...input, protocol })).toBe(true);
+  });
+
+  it.each([
+    { manualUsername: " " },
+    { personalCredentialSecretType: "ssh_key" },
+    { personalCredentialSecretType: "token" },
+    { protocol: "k8s" },
+    { protocol: "kubernetes" },
+    { savePersonalCredential: true },
+    { savePersonalCredential: true, personalCredentialId: "credential", manualPassword: "replacement" }
+  ])("keeps incomplete credentials blocked: %j", (changes) => {
+    expect(isManualCredentialReady({ ...input, ...changes })).toBe(false);
+  });
+
+  it("preserves saved credentials and nonempty replacement credentials", () => {
+    expect(isManualCredentialReady({ ...input, personalCredentialId: "credential" })).toBe(true);
+    expect(isManualCredentialReady({ ...input, protocol: "k8s", manualPassword: "token" })).toBe(true);
+    expect(isManualCredentialReady({ ...input, savePersonalCredential: true, manualPassword: "replacement" })).toBe(
+      true
+    );
+  });
+});
+
 describe("connections requiring a one-time secret", () => {
   it.each(["ssh", "sftp"])("reuses a personal credential for an authorized empty-secret %s account", (protocol) => {
     const savedAsset = {
@@ -39,7 +68,6 @@ describe("connections requiring a one-time secret", () => {
 
   it.each([
     { ...account, username: "" },
-    { ...account, alias: "@USER" },
     { ...account, alias: "@ANON" },
     { ...account, secret_type: "ssh_certificate" }
   ])("rejects personal credentials for an ineligible account: %j", (ineligible) => {

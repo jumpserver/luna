@@ -1,20 +1,26 @@
-export type SettingsSection = "user" | "general" | "appearance" | "application" | "about";
+export type SettingsSection = "user" | "general" | "local-ai" | "appearance" | "shortcuts" | "application" | "about";
 
 export const useSettingsWindow = () => {
   const route = useRoute();
   const open = useState("settings-open", () => false);
   const activeSection = useState<SettingsSection>("settings-active-section", () => "general");
   const activeApplicationProtocol = useState("settings-active-application-protocol", () => "ssh");
+  const activeApplicationView = useState<"applications" | "protocols">(
+    "settings-active-application-view",
+    () => "protocols"
+  );
+  const activeApplicationId = useState("settings-active-application-id", () => "");
 
   const openSettings = async (path = "/setting/general") => {
     const [, section, protocol] =
-      path.match(/^\/setting\/(user|general|appearance|application|about)(?:\/([^/?#]+))?/) || [];
+      path.match(/^\/setting\/(user|general|local-ai|appearance|shortcuts|application|about)(?:\/([^/?#]+))?/) || [];
 
     if (section) {
       activeSection.value = section as SettingsSection;
     }
     if (section === "application" && protocol) {
       activeApplicationProtocol.value = decodeURIComponent(protocol);
+      activeApplicationView.value = "protocols";
     }
 
     open.value = true;
@@ -35,6 +41,8 @@ export const useSettingsWindow = () => {
     open,
     activeSection,
     activeApplicationProtocol,
+    activeApplicationView,
+    activeApplicationId,
     openSettings,
     closeSettings
   };

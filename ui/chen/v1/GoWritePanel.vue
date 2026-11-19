@@ -1,0 +1,639 @@
+<script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ChenGoApi, GoCopySelection, GoEditColumn, GoEditPlan, GoSession } from "./api";
+import type { GoResultLoadingSettings, QueryWorkspaceTab } from "./workspace";
+import type { ChenDataViewField } from "~/chen/types";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
+import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
+import { chenErrorText } from "~/chen/utils/errorMessages";
+import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
+import { executionActive } from "./api";
+import {
+  clearEditDraft,
+  editChanges,
+  editDirty,
+  editDraftRows,
+  editPayloadBytes,
+  editRowRef,
+  GO_EDIT_LIMIT,
+  GO_EDIT_MAX_BYTES,
+  stageDeleteRows,
+  stageEditCell
+} from "./dataEditing";
+import GoResultGrid from "./GoResultGrid.client.vue";
+import { newChenRequestId } from "./requestId";
+import { hasMoreResultRows, resultLoadingLocked } from "./workspace";
+
+const props = defineProps<{ query: QueryWorkspaceTab; session: GoSession; api: ChenGoApi; visible?: boolean }>();
+const emit = defineEmits<{
+  apply: [plan: GoEditPlan];
+  refresh: [];
+  loadingSettings: [settings: GoResultLoadingSettings];
+  loadMore: [automatic: boolean];
+}>();
+const { t } = useI18n();
+const error = ref("");
+const selected = ref<number[]>([]);
+const grid = ref<{
+  stopEditing: (cancel?: boolean) => void;
+  snapshotView: () => NonNullable<QueryWorkspaceTab["gridView"]>;
+} | null>(null);
+const metadataBusy = ref(false);
+const previewOpen = ref(false);
+const csvOpen = ref(false);
+const batchOpen = ref(false);
+const draft = computed(() => props.query.edit);
+const dirty = computed(() => editDirty(draft.value));
+const count = computed(() => editChanges(draft.value).length);
+const policyPending = computed(
+  () =>
+    props.query.executionEditPlan === draft.value.plan?.plan_id &&
+    ["command_review_required", "command_warning_confirmation_required"].includes(
+      props.query.execution?.error?.code || ""
+    )
+);
+const cannotDiscard = computed(
+  () => props.query.busy || !!props.query.pending || draft.value.busy || executionActive(props.query.execution)
+);
+const locked = computed(
+  () =>
+    props.session.state !== "ready" ||
+    props.query.console?.state !== "ready" ||
+    props.query.busy ||
+    props.query.loadingRows ||
+    !!props.query.pending ||
+    executionActive(props.query.execution) ||
+    draft.value.busy ||
+    previewOpen.value ||
+    draft.value.refreshRequired ||
+    policyPending.value
+);
+const supported = computed(() => !props.query.readOnly && draft.value.metadata?.supported === true);
+const canChange = computed(() => supported.value && !locked.value && !metadataBusy.value);
+const canInsert = computed(
+  () =>
+    canChange.value &&
+    draft.value.metadata?.mode === "table" &&
+    draft.value.metadata.columns.some((column) => column.insertable)
+);
+const rows = computed(() => editDraftRows(draft.value, props.query.rows!));
+const changedCells = computed(() =>
+  props.query.rows!.rows.flatMap((_, index) => {
+    const ref = editRowRef(draft.value, props.query.rows!, index);
+    return Object.keys((ref && draft.value.changes[ref]?.values) || {}).map((column) => `${index}:${column}`);
+  })
+);
+const defaultCells = computed(() =>
+  draft.value.inserts.flatMap((row, index) =>
+    props.query.rows!.columns.flatMap((_, column) =>
+      row.values[column] === undefined ? [`${index + props.query.rows!.rows.length}:${column}`] : []
+    )
+  )
+);
+const deletedRows = computed(() =>
+  props.query.rows!.rows.flatMap((_, index) => {
+    const ref = editRowRef(draft.value, props.query.rows!, index);
+    return ref && draft.value.changes[ref]?.op === "delete" ? [index] : [];
+  })
+);
+const asField = (column: GoEditColumn): ChenDataViewField => ({
+  name: column.name,
+  sourceColumn: column.name,
+  type: column.data_type,
+  nullable: column.nullable,
+  insertable: column.insertable,
+  editable: column.editable
+});
+const insertFields = computed(() => (draft.value.metadata?.columns || []).map(asField));
+const updateFields = computed(() =>
+  (draft.value.metadata?.columns || []).filter((column) => column.editable).map(asField)
+);
+const rowActions = computed<DropdownMenuItem[]>(() =>
+  supported.value
+    ? [
+        {
+          label: t("Chen.UpdateSelectedRows"),
+          icon: "i-lucide-list-restart",
+          disabled:
+            !canChange.value ||
+            !selected.value.length ||
+            !updateFields.value.length ||
+            (draft.value.source === "csv" && selected.value.some((row) => row < props.query.rows!.rows.length)),
+          onSelect: () => {
+            batchOpen.value = true;
+          }
+        }
+      ]
+    : []
+);
+function stageCell(row: number, column: number, value: string | null) {
+  if (!canChange.value) return;
+  if (!stageEditCell(draft.value, props.query.rows!, row, column, value)) error.value = t("Chen.GoWriteLimit");
+}
+let controller: AbortController | undefined;
+async function loadMetadata() {
+  if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
+  controller?.abort();
+  const metadata = draft.value.metadata;
+  if (
+    metadata?.supported &&
+    metadata.version === props.query.rows.id &&
+    metadata.offset === props.query.rows.offset &&
+    metadata.row_refs.length >= props.query.rows.rows.length
+  ) {
+    metadataBusy.value = false;
+    return;
+  }
+  if (draft.value.transactionStale) {
+    metadataBusy.value = false;
+    return;
+  }
+  controller = new AbortController();
+  const current = controller;
+  const rowSet = props.query.rows;
+  const previous = draft.value.metadata;
+  const prefix =
+    previous?.supported &&
+    previous.version === rowSet.id &&
+    previous.offset === rowSet.offset &&
+    previous.row_refs.length < rowSet.rows.length
+      ? [...previous.row_refs]
+      : [];
+  metadataBusy.value = true;
+  try {
+    const metadata = await props.api.editMetadata(
+      props.query.console.id,
+      rowSet.id,
+      rowSet.offset + prefix.length,
+      Math.min(1000, Math.max(1, rowSet.rows.length - prefix.length)),
+      current.signal
+    );
+    if (current.signal.aborted || props.query.rows !== rowSet) return;
+    if (metadata.supported && (metadata.version !== rowSet.id || metadata.offset !== rowSet.offset + prefix.length))
+      throw new Error(t("Chen.GoBrowseMetadataChanged"));
+    if (metadata.supported) {
+      metadata.offset = rowSet.offset;
+      metadata.row_refs = [...prefix, ...metadata.row_refs];
+      for (let offset = metadata.row_refs.length; offset < rowSet.rows.length;) {
+        const next = await props.api.editMetadata(
+          props.query.console.id,
+          rowSet.id,
+          rowSet.offset + offset,
+          Math.min(1000, rowSet.rows.length - offset),
+          current.signal
+        );
+        if (current.signal.aborted || props.query.rows !== rowSet) return;
+        if (
+          !next.supported ||
+          next.version !== metadata.version ||
+          next.offset !== rowSet.offset + offset ||
+          !next.row_refs.length
+        )
+          throw new Error(t("Chen.GoBrowseMetadataChanged"));
+        metadata.row_refs.push(...next.row_refs);
+        offset += next.row_refs.length;
+      }
+    }
+    if (!current.signal.aborted && props.query.rows === rowSet) draft.value.metadata = metadata;
+  } catch (cause) {
+    if (!current.signal.aborted) {
+      draft.value.metadata = null;
+      error.value = chenErrorText(cause, t);
+    }
+  } finally {
+    if (!current.signal.aborted) metadataBusy.value = false;
+  }
+}
+watch(
+  () => [
+    props.query.rows?.id,
+    props.query.rows?.offset,
+    props.query.rows?.rows.length,
+    props.query.console?.id,
+    draft.value.transactionStale
+  ],
+  () => void loadMetadata(),
+  { immediate: true }
+);
+let copyController: AbortController | undefined;
+onBeforeUnmount(() => {
+  controller?.abort();
+  copyController?.abort();
+});
+const sqlCopyDisabled = computed(() => metadataBusy.value || locked.value || dirty.value || props.visible === false);
+watch(
+  () => [sqlCopyDisabled.value, props.query.rows, props.query.console?.id],
+  () => copyController?.abort(),
+  { flush: "sync" }
+);
+async function copySQL(operation: "insert" | "update", selection: GoCopySelection) {
+  const source = props.query.rows;
+  const consoleId = props.query.console?.id;
+  if (!source || !consoleId || !props.session.permissions.can_copy || sqlCopyDisabled.value)
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  copyController?.abort();
+  const current = new AbortController();
+  copyController = current;
+  const result = await props.api.copySQL(consoleId, source.id, operation, selection, current.signal);
+  if (
+    current.signal.aborted ||
+    props.query.rows !== source ||
+    props.query.console?.id !== consoleId ||
+    !props.session.permissions.can_copy ||
+    sqlCopyDisabled.value
+  )
+    throw new Error(t("Chen.GoCopySqlLocked"));
+  return result;
+}
+
+function addRow() {
+  if (!canInsert.value || count.value >= GO_EDIT_LIMIT) return;
+  draft.value.inserts.push({ id: newChenRequestId(), values: {} });
+  draft.value.plan = null;
+}
+function deleteRows() {
+  if (!canChange.value || !props.query.rows) return;
+  if (!stageDeleteRows(draft.value, props.query.rows, selected.value)) error.value = t("Chen.GoWriteLimit");
+  selected.value = [];
+}
+const cell = ref<{ row: number; column: GoEditColumn } | null>(null);
+const cellValue = ref("");
+const cellMode = ref("value");
+const cellModes = computed(() => [
+  { value: "value", label: t("Chen.Value") },
+  ...(cell.value?.column.nullable ? [{ value: "null", label: "NULL" }] : []),
+  ...(cell.value && cell.value.row >= props.query.rows!.rows.length ? [{ value: "default", label: "DEFAULT" }] : [])
+]);
+function editCell(row: number, columnIndex: number) {
+  if (!canChange.value) return;
+  const column = draft.value.metadata?.columns.find((item) => item.index === columnIndex);
+  if (!column) return;
+  cell.value = { row, column };
+  const value = rows.value.rows[row]?.[columnIndex];
+  cellValue.value = value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  cellMode.value = value === undefined ? "default" : value === null ? "null" : "value";
+}
+function saveCell() {
+  if (!cell.value || !canChange.value) return;
+  const { row, column } = cell.value;
+  if (cellMode.value === "default") {
+    const insertion = draft.value.inserts[row - props.query.rows!.rows.length];
+    if (insertion) {
+      delete insertion.values[column.index];
+      draft.value.plan = null;
+    }
+  } else if (
+    !stageEditCell(
+      draft.value,
+      props.query.rows!,
+      row,
+      column.index,
+      cellMode.value === "null" ? null : cellValue.value
+    )
+  ) {
+    error.value = t("Chen.GoWriteLimit");
+    return;
+  }
+  cell.value = null;
+}
+function batch(field: ChenDataViewField, value: unknown) {
+  if (!canChange.value) return;
+  const column = draft.value.metadata?.columns.find((item) => item.name === field.name);
+  if (!column) return;
+  for (const row of selected.value) {
+    if (!stageEditCell(draft.value, props.query.rows!, row, column.index, value === null ? null : String(value))) {
+      error.value = t("Chen.GoWriteLimit");
+      break;
+    }
+  }
+}
+function importRows(values: Record<string, string | null>[]) {
+  if (!canInsert.value || !props.session.permissions.can_upload || Object.keys(draft.value.changes).length) return;
+  if (count.value + values.length > GO_EDIT_LIMIT) {
+    error.value = t("Chen.GoWriteLimit");
+    return;
+  }
+  const columns = draft.value.metadata!.columns;
+  draft.value.inserts.push(
+    ...values.map((row) => ({
+      id: newChenRequestId(),
+      values: Object.fromEntries(
+        Object.entries(row).map(([name, value]) => [columns.find((column) => column.name === name)!.index, value])
+      )
+    }))
+  );
+  draft.value.source = "csv";
+  draft.value.plan = null;
+}
+async function preview() {
+  grid.value?.stopEditing();
+  if (!canChange.value || !dirty.value || !props.query.console || !props.query.rows) return;
+  if (editPayloadBytes(editChanges(draft.value), draft.value.source) > GO_EDIT_MAX_BYTES) {
+    error.value = t("Chen.GoWritePayloadLimit");
+    return;
+  }
+  draft.value.busy = true;
+  error.value = "";
+  try {
+    draft.value.plan = await props.api.previewEdits(
+      props.query.console.id,
+      props.query.rows.id,
+      editChanges(draft.value),
+      draft.value.source
+    );
+    previewOpen.value = true;
+  } catch (cause) {
+    error.value = chenErrorText(cause, t);
+  } finally {
+    draft.value.busy = false;
+  }
+}
+function apply() {
+  if (
+    !draft.value.plan ||
+    props.session.state !== "ready" ||
+    draft.value.busy ||
+    props.query.busy ||
+    props.query.pending ||
+    executionActive(props.query.execution)
+  )
+    return;
+  previewOpen.value = false;
+  emit("apply", draft.value.plan);
+}
+function discard() {
+  if (cannotDiscard.value) return;
+  clearEditDraft(draft.value);
+  error.value = "";
+}
+defineExpose({ snapshotView: () => grid.value?.snapshotView() });
+</script>
+
+<template>
+  <div
+    class="flex min-h-0 flex-1 flex-col"
+    data-chen-write-panel
+    @copy.capture="
+      (event) => {
+        if (!session.permissions.can_copy) event.preventDefault();
+      }
+    "
+    @paste.capture="
+      (event) => {
+        if (!session.permissions.can_paste) event.preventDefault();
+      }
+    "
+  >
+    <p v-if="draft.source === 'csv'" class="px-3 py-1 text-xs text-muted">{{ t("Chen.GoWriteCsvBatchHint") }}</p>
+    <p v-if="draft.transactionStale" role="status" class="px-3 py-2 text-xs text-default">
+      {{ t("Chen.Transaction.ResultStale") }}
+    </p>
+    <p v-else-if="error" role="alert" class="px-3 py-2 text-xs text-error">{{ error }}</p>
+    <p v-if="draft.saveError && !query.execution?.edit" role="alert" class="px-3 py-2 text-xs text-error">
+      {{ chenErrorText(draft.saveError, t) }}
+    </p>
+    <p v-if="draft.status && draft.status !== 'committed'" role="status" class="px-3 py-2 text-xs text-warning">
+      {{
+        t(
+          draft.status === "rolled_back" && !dirty
+            ? "Chen.Transaction.RolledBack"
+            : `Chen.GoWriteOutcome_${draft.status}`
+        )
+      }}
+    </p>
+    <GoResultGrid
+      ref="grid"
+      :rows="rows"
+      :view-id="query.resultViewId"
+      :initial-view="query.gridView"
+      :read-result-page="!query.browseObject && query.rows?.query_page?.mode !== 'database' ? api.rows : undefined"
+      :row-actions="rowActions"
+      :display-mode="query.browseObject ? 'table' : 'query'"
+      :loading-settings="query.loadingSettings"
+      :page-size-control="!!query.browseObject"
+      :loading-settings-disabled="locked || dirty || metadataBusy"
+      :max-batch-size="
+        query.rows?.query_page?.mode === 'database'
+          ? query.rows.query_page.max_page_size
+          : query.rows?.browse?.supported
+            ? query.rows.browse.max_page_size
+            : 1000
+      "
+      :can-load-more="
+        session.state === 'ready' &&
+        !resultLoadingLocked(query) &&
+        !metadataBusy &&
+        !query.loadMoreFailed &&
+        hasMoreResultRows(query)
+      "
+      :active="visible !== false"
+      :nullable-columns="draft.metadata?.columns.filter((column) => column.nullable).map((column) => column.index)"
+      :can-copy="session.permissions.can_copy"
+      :copy-sql="copySQL"
+      :sql-copy-disabled="sqlCopyDisabled"
+      :editable-columns="
+        canChange && draft.source !== 'csv'
+          ? draft.metadata?.columns.filter((column) => column.editable).map((column) => column.index)
+          : []
+      "
+      :insertable-columns="
+        canInsert ? draft.metadata?.columns.filter((column) => column.insertable).map((column) => column.index) : []
+      "
+      :original-row-count="query.rows!.rows.length"
+      :changed-cells="changedCells"
+      :default-cells="defaultCells"
+      :deleted-rows="deletedRows"
+      class="min-h-0 flex-1"
+      @loading-settings="emit('loadingSettings', $event)"
+      @load-more="emit('loadMore', true)"
+      @selection="selected = $event"
+      @edit="editCell"
+      @change="stageCell"
+    >
+      <template #toolbar-start>
+        <slot name="source" />
+        <template v-if="supported">
+          <UButton
+            v-if="draft.metadata?.mode === 'table'"
+            icon="i-lucide-plus"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :class="workspaceButtonClass"
+            :label="t('Chen.AddRow')"
+            :disabled="!canInsert || count >= GO_EDIT_LIMIT"
+            @click="addRow"
+          />
+          <UButton
+            v-if="draft.metadata?.mode === 'table'"
+            icon="i-lucide-trash-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :class="workspaceButtonClass"
+            :label="t('Chen.DeleteRow')"
+            :disabled="
+              !canChange ||
+              !selected.length ||
+              (draft.source === 'csv' && selected.some((row) => row < query.rows!.rows.length))
+            "
+            @click="deleteRows"
+          />
+          <UButton
+            v-if="dirty"
+            icon="i-lucide-eye"
+            size="xs"
+            :label="t('Chen.PreviewAndSave')"
+            :loading="draft.busy"
+            :disabled="!canChange"
+            @click="preview"
+          />
+          <UButton
+            v-if="dirty"
+            icon="i-lucide-undo-2"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :class="workspaceButtonClass"
+            :label="t('Common.Cancel')"
+            :disabled="cannotDiscard"
+            @click="discard"
+          />
+          <span v-if="dirty" class="text-xs text-muted">
+            {{ t("Chen.GoWritePending", { count, limit: GO_EDIT_LIMIT }) }}
+          </span>
+        </template>
+      </template>
+      <template #settings-actions><slot name="settings-actions" /></template>
+      <template #toolbar-end>
+        <UButton
+          icon="i-lucide-refresh-cw"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :class="workspaceButtonClass"
+          :aria-label="t('Chen.RefreshData')"
+          :title="t('Chen.RefreshData')"
+          :disabled="
+            query.loadingRows ||
+            dirty ||
+            query.busy ||
+            !!query.pending ||
+            executionActive(query.execution) ||
+            session.state !== 'ready'
+          "
+          @click="emit('refresh')"
+        />
+        <UButton
+          v-if="supported && draft.metadata?.mode === 'table' && session.permissions.can_upload"
+          icon="i-lucide-upload"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :class="workspaceButtonClass"
+          :aria-label="t('Chen.ImportCsv')"
+          :disabled="!canInsert || count >= GO_EDIT_LIMIT || Object.keys(draft.changes).length > 0"
+          :title="t('Chen.GoWriteCsvBatchHint')"
+          @click="csvOpen = true"
+        />
+        <slot name="actions" />
+      </template>
+    </GoResultGrid>
+    <DataViewImportDialog
+      v-if="csvOpen"
+      v-model:open="csvOpen"
+      :fields="insertFields"
+      :max-rows="GO_EDIT_LIMIT - count"
+      @confirm="importRows"
+    />
+    <DataViewBatchUpdateDialog
+      v-if="batchOpen"
+      v-model:open="batchOpen"
+      :fields="updateFields"
+      :row-count="selected.length"
+      @confirm="batch"
+    />
+    <UModal
+      :open="!!cell"
+      :title="t('Chen.GoWriteEditCell')"
+      @update:open="
+        (value) => {
+          if (!value) cell = null;
+        }
+      "
+    >
+      <template #body>
+        <div
+          class="space-y-3"
+          @copy.capture="
+            (event) => {
+              if (!session.permissions.can_copy) event.preventDefault();
+            }
+          "
+          @paste.capture="
+            (event) => {
+              if (!session.permissions.can_paste) event.preventDefault();
+            }
+          "
+        >
+          <p class="text-sm">{{ cell?.column.name }} · {{ cell?.column.data_type }}</p>
+          <USelect v-model="cellMode" size="xs" :items="cellModes" class="w-full" />
+          <UTextarea
+            v-model="cellValue"
+            class="w-full font-ui-mono"
+            :rows="8"
+            :disabled="cellMode !== 'value'"
+            :aria-label="t('Chen.Value')"
+          />
+          <p class="text-xs text-muted">{{ t("Chen.GoWriteCellHint") }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="cell = null" />
+          <UButton :label="t('Chen.GoWriteStage')" :disabled="!canChange" @click="saveCell" />
+        </div>
+      </template>
+    </UModal>
+    <UModal v-model:open="previewOpen" :title="t('Chen.SaveChanges')" :ui="{ content: 'sm:max-w-4xl' }">
+      <template #body>
+        <div
+          class="space-y-3"
+          @copy.capture="
+            (event) => {
+              if (!session.permissions.can_copy) event.preventDefault();
+            }
+          "
+          @paste.capture="
+            (event) => {
+              if (!session.permissions.can_paste) event.preventDefault();
+            }
+          "
+        >
+          <p class="text-sm">{{ t("Chen.GoWritePreviewHint") }}</p>
+          <p class="text-xs">
+            {{ t("Chen.Updates") }}: {{ draft.plan?.update_count }} · {{ t("Chen.Inserts") }}:
+            {{ draft.plan?.insert_count }} · {{ t("Chen.Deletes") }}: {{ draft.plan?.delete_count }}
+          </p>
+          <pre class="max-h-[50vh] overflow-auto rounded bg-elevated p-3 font-ui-mono text-xs">{{
+            draft.plan?.sql
+          }}</pre>
+          <p class="text-xs text-warning">{{ t("Chen.GoWriteTransactionHint") }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="previewOpen = false" />
+          <UButton
+            icon="i-lucide-save"
+            :label="t('Chen.SaveChanges')"
+            :disabled="session.state !== 'ready' || query.console?.state !== 'ready' || query.busy || !!query.pending"
+            @click="apply"
+          />
+        </div>
+      </template>
+    </UModal>
+  </div>
+</template>
