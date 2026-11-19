@@ -21,6 +21,9 @@ export const chenErrorCatalog: Record<string, readonly string[]> = {
   ],
   transaction_table_unsupported: ["Manual writes require verifiable transactional base tables"],
   transaction_cancel_unsupported: ["Transaction boundaries cannot be canceled"],
+  explain_show_not_supported: [
+    "Estimated plans are unavailable for SHOW statements. Run the statement directly to view the metadata."
+  ],
 
   idle_disconnect: ["The session was disconnected due to inactivity. Reconnect to continue."],
   max_session_timeout: ["The maximum session duration was reached. Reconnect to continue."],
