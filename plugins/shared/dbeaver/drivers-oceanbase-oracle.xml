@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drivers>
+  <provider id="generic">
+    <driver id="jumpserver-oceanbase-oracle" name="OceanBase Oracle (JumpServer)"
+            class="com.oceanbase.jdbc.Driver" url="jdbc:oceanbase://{host}:{port}[/{database}]"
+            custom="true" categories="sql">
+      <library type="jar" path="maven:/com.oceanbase:oceanbase-client:2.4.18" custom="true"/>
+    </driver>
+  </provider>
+</drivers>
