@@ -1271,6 +1271,7 @@
     "StartFaceVerify": "Iniciar verificación"
   },
   "ConnectionGuide": {
+    "OceanBaseNativeHelp": "Ambos modos de OceanBase se conectan a Magnus mediante MySQL. Para un tenant Oracle, selecciona OceanBase Oracle Mode en DBX e instala su controlador. El controlador MySQL genérico no puede leer los metadatos de Oracle.",
     "DB2NativeHelp": "En DBX, seleccione IBM DB2 e introduzca securityMechanism=3;sslConnection=false; en Parámetros de conexión → Configurar → Texto original. En DBeaver, configure securityMechanism=3 y sslConnection=false en Propiedades del controlador. Use los datos de esta página. Desactive SSL entre el cliente y Magnus y use una red de confianza o un túnel seguro.",
     "ClickHouseNativeHelp": "Seleccione el controlador oficial ClickHouse HTTP en DBeaver, o ClickHouse en DBX. Use el host y el puerto del proxy de esta página, no el 8123 ni el 9000 del servidor. Desactive SSL en el cliente. DBeaver envía session_id automáticamente. Los clientes Native pueden usar el mismo puerto del proxy. Los puertos y TLS del servidor se configuran en el activo.",
     "ClientTransport": "Cliente → Magnus",

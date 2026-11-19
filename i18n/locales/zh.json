@@ -1271,6 +1271,7 @@
     "StartFaceVerify": "开始核验"
   },
   "ConnectionGuide": {
+    "OceanBaseNativeHelp": "两个 OceanBase 租户都通过 MySQL 协议连接 Magnus。手动配置 DBX 时，Oracle 租户请选择 OceanBase Oracle Mode 并安装对应驱动；选择普通 MySQL 会导致无法读取 Oracle 元数据。",
     "DB2NativeHelp": "DBX：选择 IBM DB2，在「连接参数 → 配置 → 原始文本」填入 securityMechanism=3;sslConnection=false;。DBeaver：在「驱动属性」设置 securityMechanism=3 和 sslConnection=false。使用本页连接信息，客户端到 Magnus 不启用 SSL，请通过可信网络或安全隧道连接。",
     "ClickHouseNativeHelp": "DBeaver 选择官方 ClickHouse（HTTP）驱动，DBX 选择 ClickHouse。使用本页代理主机和端口，不要填写数据库的 8123 或 9000。关闭客户端 SSL；DBeaver 自动发送的 session_id 无需手动填写。Native 客户端仍可通过同一代理端口连接，后端端口和 TLS 在资产上配置。",
     "ClientTransport": "客户端 → Magnus",

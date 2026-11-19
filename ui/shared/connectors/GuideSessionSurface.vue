@@ -40,6 +40,7 @@ const databaseProtocols = DATABASE_GUIDE_PROTOCOLS;
 const { t } = useI18n();
 const toast = useToast();
 const token = computed(() => (props.tab.payload?.token || props.tab.payload) as TokenResponse);
+const asset = computed(() => token.value?.asset as any);
 const endpoint = ref<Record<string, any>>({});
 const assetDetail = ref<AssetDetail>();
 const loading = ref(true);
@@ -57,6 +58,13 @@ const showDatabaseTLS = computed(() => ["mysql", "postgresql", "clickhouse"].inc
 const nativeDatabaseHelp = computed(() => {
   if (protocol.value === "db2") return t("ConnectionGuide.DB2NativeHelp");
   if (protocol.value === "clickhouse") return t("ConnectionGuide.ClickHouseNativeHelp");
+  const assetType = assetDetail.value?.type ?? asset.value?.type;
+  if (
+    clientProtocol.value === "mysql" &&
+    (typeof assetType === "string" ? assetType : assetType?.value) === "oceanbase"
+  ) {
+    return t("ConnectionGuide.OceanBaseNativeHelp");
+  }
   return "";
 });
 const showDirectCommand = computed(() => {
@@ -80,7 +88,6 @@ const port = computed(() =>
       ""
   )
 );
-const asset = computed(() => token.value?.asset as any);
 const assetName = computed(() => {
   const name = asset.value?.name || props.tab.assetName;
   const address = asset.value?.address || props.tab.address;

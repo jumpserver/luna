@@ -23,9 +23,18 @@ describe("connection guide client protocol", () => {
 });
 
 describe("connection guide CLI", () => {
-  it("leaves DB2 to the manual driver settings in the connection guide", () => {
-    expect(getGuideConnectCommand({ ...database, protocol: "db2" })).toBe("");
+  it("uses native IBM db2cli with the Magnus endpoint, token and SERVER authentication", () => {
+    expect(getGuideConnectCommand({ ...database, host: "[::1]", protocol: "db2" })).toBe(
+      'db2cli execsql -connstring "DATABASE=app;HOSTNAME=::1;PORT=33060;PROTOCOL=TCPIP;AUTHENTICATION=SERVER;UID=token-id;PWD=s3cret;"'
+    );
   });
+
+  it.each([{ database: "app;PWD=x" }, { secret: "$(bad)" }, { host: "" }, { port: "65536" }])(
+    "omits a DB2 command that cannot be copied safely (%o)",
+    (override) => {
+      expect(getGuideConnectCommand({ ...database, ...override, protocol: "db2" })).toBe("");
+    }
+  );
 
   it("uses the ClickHouse Native client with shell-quoted values", () => {
     expect(getGuideConnectCommand({ ...database, protocol: "clickhouse", port: "15525", secret: "a'b $(id)" })).toBe(

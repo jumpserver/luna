@@ -14,6 +14,31 @@ import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
+test("DBX selects the Oracle dialect only for an explicit OceanBase Oracle tenant on the MySQL wire", async () => {
+  for (const platform of ["windows", "macos", "linux"]) {
+    const { default: launch } = await import(`../../plugins/${platform}/${platform}.dbx/scripts/launch.mjs`);
+    const input = {
+      protocol: "mysql",
+      name: "QA",
+      host: "2001:db8::42",
+      port: 5526,
+      dbname: "APP",
+      username: "selector",
+      value: "access"
+    };
+    const params = (options) => new URL(launch({ ...input, connect_options: options }).args[0]).searchParams;
+    const oracle = params({ oceanbase_tenant_mode: "oracle" });
+    assert.equal(oracle.get("type"), "oceanbase-oracle");
+    assert.equal(oracle.get("url"), "oceanbase://[2001:db8::42]:5526/APP");
+    assert.equal(oracle.get("password"), "access");
+    assert.equal(oracle.get("ssl"), "false");
+    for (const options of [{}, { oceanbase_tenant_mode: "mysql" }]) {
+      assert.equal(params(options).get("type"), "mysql");
+      assert.equal(params(options).has("url"), false);
+    }
+  }
+});
+
 function shellArguments(command) {
   const result = spawnSync("/bin/sh", ["-c", `set -- ${command}; printf '%s\\0' "$@"`], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
