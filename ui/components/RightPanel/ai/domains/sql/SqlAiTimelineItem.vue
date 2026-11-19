@@ -19,6 +19,24 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
+const validationBadges = {
+  valid: { color: "success", label: "RightPanel.SQLAIValid" },
+  invalid: { color: "error", label: "RightPanel.SQLAIInvalid" },
+  unverified: { color: "warning", label: "RightPanel.SQLAINeedsDatabaseValidation" }
+} as const;
+
+const validationStatus = computed<keyof typeof validationBadges>(() => {
+  const data = props.item.kind === "sql-analysis" ? props.item.data : null;
+  const status = data?.validationStatus;
+  if (status === "valid" || status === "invalid" || status === "unverified") return status;
+  return data?.valid ? "valid" : "invalid";
+});
+
+const analysisErrors = computed(() => {
+  const errors = props.item.kind === "sql-analysis" ? props.item.data.errors : null;
+  return Array.isArray(errors) ? errors.map(String) : [];
+});
+
 function proposalDecision(item: SqlProposalItem) {
   if (!isChenSqlWorkspaceAiSession(props.session)) return "";
   return props.session.proposalDecisions.get(item.toolCallId || item.key) || "";
@@ -35,10 +53,6 @@ function setThoughtExpanded(key: string, expanded: boolean) {
 
 function resolveMetadataApproval(decision: ChenSqlMetadataApprovalDecision) {
   emit("action", { domain: "sql", type: "resolve-metadata-approval", decision });
-}
-
-function analysisErrors(value: unknown) {
-  return Array.isArray(value) ? value.map(String) : [];
 }
 
 function analysisItems(value: unknown) {
@@ -107,8 +121,8 @@ function timingTotal(data: ChenSqlAiTiming) {
       <span class="mr-auto text-xs font-semibold text-highlighted">
         {{ t("RightPanel.SQLAIAnalysis") }}
       </span>
-      <UBadge :color="item.data.valid ? 'success' : 'error'" variant="subtle" size="xs">
-        {{ item.data.valid ? t("RightPanel.SQLAIValid") : t("RightPanel.SQLAIInvalid") }}
+      <UBadge :color="validationBadges[validationStatus].color" variant="subtle" size="xs">
+        {{ t(validationBadges[validationStatus].label) }}
       </UBadge>
       <UBadge v-if="item.data.statementType" color="neutral" variant="subtle" size="xs">
         {{ item.data.statementType }}
@@ -133,9 +147,16 @@ function timingTotal(data: ChenSqlAiTiming) {
       <span class="text-muted">{{ t("RightPanel.SQLAIColumns") }}:</span>
       {{ analysisItems(item.data.columns).join(", ") }}
     </div>
-    <ul v-if="analysisErrors(item.data.errors).length" class="space-y-1 text-[11px] text-error">
-      <li v-for="error in analysisErrors(item.data.errors)" :key="error" class="flex items-start gap-1.5">
-        <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
+    <ul
+      v-if="analysisErrors.length && (validationStatus !== 'unverified' || !item.data.riskReason)"
+      class="space-y-1 text-[11px]"
+      :class="validationStatus === 'unverified' ? 'text-muted' : 'text-error'"
+    >
+      <li v-for="error in analysisErrors" :key="error" class="flex items-start gap-1.5">
+        <UIcon
+          :name="validationStatus === 'unverified' ? 'i-lucide-info' : 'i-lucide-circle-alert'"
+          class="mt-0.5 size-3 shrink-0"
+        />
         <span class="break-words">{{ error }}</span>
       </li>
     </ul>

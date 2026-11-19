@@ -267,7 +267,11 @@ function preventCopy(event: ClipboardEvent) {
         </div>
       </div>
       <div v-if="plan.error" class="border-b border-error/20 bg-error/10 px-3 py-2 text-xs text-error">
-        {{ plan.error.message }}
+        {{
+          plan.error.code === "explain_show_not_supported"
+            ? t("Chen.Errors.explain_show_not_supported")
+            : plan.error.message
+        }}
       </div>
       <div
         v-for="item in visiblePrerequisites"
