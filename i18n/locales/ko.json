@@ -1271,6 +1271,7 @@
     "StartFaceVerify": "인증 시작"
   },
   "ConnectionGuide": {
+    "OceanBaseNativeHelp": "OceanBase의 두 테넌트 모드 모두 MySQL 프로토콜로 Magnus에 연결합니다. DBX에서 Oracle 테넌트를 수동으로 설정할 때는 OceanBase Oracle Mode를 선택하고 해당 드라이버를 설치하세요. 일반 MySQL 드라이버로는 Oracle 메타데이터를 읽을 수 없습니다.",
     "DB2NativeHelp": "DBX에서 IBM DB2를 선택하고 연결 매개변수 → 구성 → 원본 텍스트에 securityMechanism=3;sslConnection=false;를 입력하세요. DBeaver의 드라이버 속성에는 securityMechanism=3과 sslConnection=false를 설정하세요. 이 페이지의 연결 정보를 사용하세요. 클라이언트와 Magnus 사이의 SSL은 끄고 신뢰할 수 있는 네트워크나 보안 터널을 사용하세요.",
     "ClickHouseNativeHelp": "DBeaver에서는 공식 ClickHouse HTTP 드라이버를, DBX에서는 ClickHouse를 선택하세요. 데이터베이스 포트 8123이나 9000이 아닌 이 페이지의 프록시 호스트와 포트를 사용하세요. 클라이언트 SSL을 끄세요. DBeaver는 session_id를 자동으로 전송합니다. Native 클라이언트도 같은 프록시 포트를 사용할 수 있으며 백엔드 포트와 TLS는 자산에서 설정합니다.",
     "ClientTransport": "클라이언트 → Magnus",

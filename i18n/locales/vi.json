@@ -1271,6 +1271,7 @@
     "StartFaceVerify": "Bắt đầu xác minh"
   },
   "ConnectionGuide": {
+    "OceanBaseNativeHelp": "Cả hai chế độ tenant OceanBase đều kết nối đến Magnus qua giao thức MySQL. Khi cấu hình DBX thủ công cho tenant Oracle, hãy chọn OceanBase Oracle Mode và cài trình điều khiển tương ứng. Trình điều khiển MySQL thông thường không đọc được siêu dữ liệu Oracle.",
     "DB2NativeHelp": "Trong DBX, chọn IBM DB2 và nhập securityMechanism=3;sslConnection=false; tại Tham số kết nối → Cấu hình → Văn bản gốc. Trong DBeaver, đặt securityMechanism=3 và sslConnection=false trong thuộc tính trình điều khiển. Dùng thông tin trên trang này. Tắt SSL giữa máy khách và Magnus; dùng mạng tin cậy hoặc đường hầm bảo mật.",
     "ClickHouseNativeHelp": "Chọn trình điều khiển ClickHouse HTTP chính thức trong DBeaver hoặc ClickHouse trong DBX. Dùng máy chủ và cổng proxy trên trang này, không dùng cổng 8123 hay 9000 của cơ sở dữ liệu. Tắt SSL phía máy khách. DBeaver tự gửi session_id. Máy khách Native có thể dùng cùng cổng proxy. Cổng và TLS máy chủ được cấu hình trên tài sản.",
     "ClientTransport": "Máy khách → Magnus",

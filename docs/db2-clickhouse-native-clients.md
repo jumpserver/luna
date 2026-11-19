@@ -36,7 +36,10 @@ from a fresh connection guide. In DBX select IBM DB2 and enter
 `securityMechanism=3;sslConnection=false;` in Connection Parameters → Configure →
 Raw text. In DBeaver set `securityMechanism=3` and `sslConnection=false` in
 Driver Properties. Do not enable SSL on the client-to-Magnus leg; use a trusted
-network or secure tunnel. The guide does not generate a DB2 CLI command.
+network or secure tunnel. The guide also provides an IBM Data Server Driver
+`db2cli execsql -connstring "..."` command; it does not require a cataloged
+DSN, Java, or usql. At the SQL prompt run `VALUES 42;` to verify the session.
+The copied command contains a temporary secret: do not paste it into logs.
 
 ## ClickHouse
 

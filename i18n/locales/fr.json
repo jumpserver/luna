@@ -1271,6 +1271,7 @@
     "StartFaceVerify": "Démarrer la vérification"
   },
   "ConnectionGuide": {
+    "OceanBaseNativeHelp": "Les deux modes OceanBase utilisent le protocole MySQL avec Magnus. Pour un locataire Oracle, choisissez OceanBase Oracle Mode dans DBX et installez son pilote : le pilote MySQL générique ne peut pas lire les métadonnées Oracle.",
     "DB2NativeHelp": "Dans DBX, sélectionnez IBM DB2 et saisissez securityMechanism=3;sslConnection=false; dans Paramètres de connexion → Configurer → Texte brut. Dans DBeaver, définissez securityMechanism=3 et sslConnection=false dans les propriétés du pilote. Utilisez les informations de cette page. Désactivez SSL entre le client et Magnus et utilisez un réseau de confiance ou un tunnel sécurisé.",
     "ClickHouseNativeHelp": "Sélectionnez le pilote officiel ClickHouse HTTP dans DBeaver, ou ClickHouse dans DBX. Utilisez l’hôte et le port du proxy affichés ici, pas les ports 8123 ou 9000 de la base. Désactivez SSL côté client. DBeaver envoie session_id automatiquement. Les clients Native peuvent utiliser le même port proxy. Les ports et le TLS du serveur se configurent sur l’actif.",
     "ClientTransport": "Client → Magnus",

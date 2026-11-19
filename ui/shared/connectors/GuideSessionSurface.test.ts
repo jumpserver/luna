@@ -122,11 +122,19 @@ it.each([
   expect(state.rows.value.find((row) => row.name === "password")?.value).toBe("secret");
   expect(state.nativeDatabaseHelp.value).toBe(`ConnectionGuide.${helpKey}`);
   if (protocol === "db2") {
-    expect(state.commands.value).toEqual([]);
-  } else {
-    expect(state.commands.value[0]?.value).toContain("5525");
-    expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+    expect(state.commands.value[0]?.value).toContain("db2cli execsql");
   }
+  expect(state.commands.value[0]?.value).toContain("5525");
+  expect(state.commands.value[0]?.value).toContain("ANALYTICS");
+});
+
+it.each([
+  ["oceanbase", "ConnectionGuide.OceanBaseNativeHelp"],
+  ["mysql", ""]
+])("only shows OceanBase profile guidance for a MySQL wire asset of type %s", async (type, message) => {
+  const { state } = mountGuide({ protocol: "mysql", detail: { type: { value: type }, spec_info: { db_name: "APP" } } });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.nativeDatabaseHelp.value).toBe(message);
 });
 
 it("loads MongoDB's default database from asset details for display, copy and mongosh", async () => {

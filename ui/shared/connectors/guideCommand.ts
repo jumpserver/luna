@@ -36,6 +36,21 @@ export function getGuideConnectCommand(input: {
       return `sqlplus ${id}/${secret}@${host}:${port}/${id}${input.useSysDBA ? " as sysdba" : ""}`;
     case "dameng":
       return `disql ${id}/${secret}@${host}:${port}`;
+    case "db2": {
+      // db2cli parses semicolons itself (even inside shell quotes). Only
+      // interpolate unambiguous values and use quotes shared by cmd, PS and sh.
+      const hostname = host.replace(/^\[([\da-f:]+)\]$/i, "$1");
+      if (
+        ![hostname, database, id, secret].every(
+          (value) => typeof value === "string" && /^[a-z0-9._:@#-]+$/i.test(value)
+        ) ||
+        !/^\d{1,5}$/.test(port) ||
+        Number(port) < 1 ||
+        Number(port) > 65535
+      )
+        return "";
+      return `db2cli execsql -connstring "DATABASE=${database};HOSTNAME=${hostname};PORT=${port};PROTOCOL=TCPIP;AUTHENTICATION=SERVER;UID=${id};PWD=${secret};"`;
+    }
     case "clickhouse":
       return `clickhouse-client --host=${shellQuote(host)} --port=${shellQuote(port)} --user=${shellQuote(id)} --password=${shellQuote(secret)} --database=${shellQuote(database)}`;
     case "sqlserver":
