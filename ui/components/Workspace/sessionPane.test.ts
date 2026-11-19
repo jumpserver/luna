@@ -556,3 +556,35 @@ it.skipIf(typeof document === "undefined")(
     expect(warnings).toEqual([]);
   }
 );
+
+it.skipIf(typeof document === "undefined").each(["dialog", "alertdialog"] as const)(
+  "does not steal surface focus from an inline %s",
+  async (role) => {
+    const pane = workspace.openSession({ id: `inline-${role}`, name: `Inline ${role}` } as AssetItem, {
+      protocol: "ssh",
+      account: "root",
+      newTab: true,
+      payload: { id: `inline-${role}-token` }
+    });
+    workspace.markSessionConnected(pane.id);
+    workspace.activeTab.value!.panes[0]!.connectionProgress = undefined;
+    const { host, focused } = mountWorkspace();
+    await Vue.nextTick();
+    await Vue.nextTick();
+    const surface = host.querySelector<HTMLElement>(`[data-pane-id="${pane.id}"] .flex-1`)!;
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", role);
+    const action = document.createElement("button");
+    action.textContent = "Keep editing";
+    dialog.append(action);
+    surface.append(dialog);
+    focused.mockClear();
+
+    action.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(workspace.activePaneId.value).toBe(pane.id);
+    expect(focused).not.toHaveBeenCalled();
+
+    surface.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(focused).toHaveBeenCalledExactlyOnceWith(pane.id);
+  }
+);

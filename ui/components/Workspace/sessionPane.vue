@@ -135,8 +135,10 @@ function setPaneSurfaceTarget(paneId: string, element: unknown) {
   paneTargetRefs.delete(paneId);
 }
 
-function focusPane(paneId: string) {
+function focusPane(paneId: string, event?: MouseEvent) {
   setActivePane(paneId);
+  // Inline dialogs own focus; focusing the editor here dismisses them before the click arrives.
+  if (event && event.target instanceof Element && event.target.closest('[role="dialog"], [role="alertdialog"]')) return;
   focusPaneSurface(paneId);
 }
 
@@ -566,7 +568,7 @@ onBeforeUnmount(() => {
             </UBadge>
           </div>
 
-          <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
+          <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id, $event)">
             <div
               v-if="pane.mode === 'empty'"
               class="grid h-full place-items-center p-6 text-center"
