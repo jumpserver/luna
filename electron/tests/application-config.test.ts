@@ -1207,8 +1207,10 @@ test("database command plans use the selected iTerm2 host and reject hosts witho
 });
 
 for (const platform of ["macos", "linux", "windows"]) {
-  test(`${platform} DBeaver module owns driver mapping and Oracle SYSDBA arguments`, async () => {
-    const service = new ApplicationConfigService({ getPath: () => projectRoot }, projectRoot);
+  test(`${platform} DBeaver module owns driver mapping and Oracle SYSDBA arguments`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbeaver-drivers-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const service = new ApplicationConfigService({ getPath: () => appData }, projectRoot);
     const id = `${platform}.dbeaver`;
     const application = await service.buildItem(
       {
@@ -1218,33 +1220,47 @@ for (const platform of ["macos", "linux", "windows"]) {
         pluginDir: path.join(projectRoot, "plugins", platform, id)
       },
       {
-        selections: { "databases:oracle": id, "databases:sqlserver": id },
+        selections: { "databases:oracle": id, "databases:sqlserver": id, "databases:mysql": id },
         plugins: { [id]: { path: process.execPath } }
       }
     );
     const launcher = new LocalApplicationLauncher(
       { isPackaged: false },
       projectRoot,
-      { getConfig: async () => ({ databases: [application] }) },
+      { configDir: service.configDir, getConfig: async () => ({ databases: [application] }) },
       null
     );
-    for (const [protocol, role] of [
-      ["oracle", false],
-      ["oracle", true],
-      ["sqlserver", false]
-    ]) {
+    for (const [protocol, options, expectedDriver] of [
+      ["oracle", {}, "oracle"],
+      ["oracle", { use_sysdba: true }, "oracle"],
+      ["sqlserver", {}, "mssql_jdbc_ms_new"],
+      ["mysql", {}, "mysql"],
+      ["mysql", { oceanbase_tenant_mode: "mysql" }, "mysql"],
+      ["mysql", { oceanbase_tenant_mode: "oracle" }, "jumpserver-oceanbase-oracle"]
+    ] as const) {
       let called = false;
       launcher.launchExecutable = async (_selected, args) => {
-        assert.equal(args[0], "-con");
-        assert.equal(args.length, 2);
-        assert.ok(args[1].includes("password=space ' \" 中文"));
-        assert.equal(args[1].includes("authProp.oracle.logon-as=SYSDBA"), role);
-        if (protocol === "sqlserver") assert.ok(args[1].includes("driver=mssql_jdbc_ms_new"));
+        const oracleTenant = expectedDriver === "jumpserver-oceanbase-oracle";
+        const workspace = path.join(service.configDir, "dbeaver-oceanbase-oracle");
+        assert.deepEqual(args.slice(0, -1), oracleTenant ? ["-data", workspace, "-con"] : ["-con"]);
+        if (oracleTenant) {
+          const xml = await readFile(path.join(workspace, ".metadata/.config/drivers.xml"), "utf8");
+          assert.match(xml, /<provider id="generic">/);
+          assert.match(xml, /class="com\.oceanbase\.jdbc\.Driver"/);
+          assert.ok(xml.includes(`id="${expectedDriver}"`));
+          assert.ok(!xml.includes("space '"));
+        }
+        const fields = args.at(-1).split("|");
+        assert.ok(fields.includes("password=space ' \" 中文"));
+        assert.equal(fields.includes("authProp.oracle.logon-as=SYSDBA"), "use_sysdba" in options);
+        assert.ok(fields.includes(`driver=${expectedDriver}`));
+        if (protocol === "mysql") assert.ok(fields.includes("database=APP") && fields.includes("user=token"));
         called = true;
       };
       const payload = {
         protocol,
-        connect_options: { use_sysdba: role },
+        connect_options: options,
+        asset: { info: { db_name: "APP" } },
         endpoint: { host: "gateway.example", port: 5525 },
         token: { id: "token", value: "space ' \" 中文" }
       };
