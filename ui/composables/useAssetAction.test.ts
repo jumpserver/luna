@@ -386,6 +386,96 @@ describe("opening assets in local applications", () => {
     }
   );
 
+  it.each([false, true].flatMap((desktop) => [false, true].map((save) => [desktop, save] as const)))(
+    "uses the cached LDAP secret without stale credentials, desktop=%s, save=%s",
+    async (desktop, savePersonalCredential) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection(
+        "同名账号(ldap-user)",
+        "asset",
+        "ssh",
+        [
+          {
+            alias: "@USER",
+            id: "",
+            name: "同名账号",
+            username: "ldap-user",
+            has_secret: true,
+            has_username: true,
+            secret_type: "password",
+            date_expired: "",
+            actions: []
+          }
+        ],
+        undefined,
+        {
+          accountMode: "dynamic",
+          dynamicPassword: "stale-private-key",
+          inputSecretType: "ssh_key",
+          savePersonalCredential,
+          connectMethod: method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body.account).toBe("@USER");
+      for (const field of [
+        "input_username",
+        "input_secret",
+        "input_secret_type",
+        "personal_credential_id",
+        "personal_credential_version",
+        "save_personal_credential"
+      ]) {
+        expect(body).not.toHaveProperty(field);
+      }
+    }
+  );
+
+  it("preserves an explicitly selected personal credential for a dynamic account with a cached password", async () => {
+    const ready = vi.fn();
+    const failed = vi.fn();
+    await useAssetAction().handleAssetConnection(
+      "@USER",
+      "asset",
+      "ssh",
+      [
+        {
+          alias: "@USER",
+          id: "",
+          name: "Same user",
+          username: "ldap-user",
+          has_secret: true,
+          has_username: true,
+          secret_type: "password",
+          date_expired: "",
+          actions: []
+        }
+      ],
+      undefined,
+      {
+        accountMode: "dynamic",
+        personalCredentialId: "selected-key",
+        dynamicPassword: "stale-password",
+        connectMethod: method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      }
+    );
+    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+    expect(failed).not.toHaveBeenCalled();
+    const body = mocks.createToken.mock.calls[0]![0];
+    expect(body.personal_credential_id).toBe("selected-key");
+    expect(body).not.toHaveProperty("input_secret");
+  });
+
   it.each(["ssh", "sftp"])(
     "uses a saved SSH key over %s without sending an empty replacement secret",
     async (protocol) => {

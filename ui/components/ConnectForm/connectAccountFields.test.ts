@@ -86,6 +86,7 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     accountItems: ComputedRef<{ type?: string; label?: string; value?: string; icon?: string }[]>;
     showSshKey: ComputedRef<boolean>;
     showHostedSecretArea: ComputedRef<boolean>;
+    showDynamicSecretArea: ComputedRef<boolean>;
     usingSavedCredential: ComputedRef<boolean>;
     keyReadError: Ref<boolean>;
     readKeyFile: (event: Event) => Promise<void>;
@@ -131,6 +132,43 @@ function fileEvent(text: () => Promise<string>) {
 }
 
 describe("personal credential selection", () => {
+  it.each(["@USER", "Account.DynamicUser(root)"])(
+    "only asks for credentials when %s has no cached login secret",
+    async (selected) => {
+      const { state, props, models, unmount } = mountFields(selected);
+      try {
+        expect(state.showDynamicSecretArea.value).toBe(true);
+        const dynamicAccount = props.accounts.find((item) => item.alias === "@USER")!;
+        dynamicAccount.has_secret = true;
+        await Vue.nextTick();
+        expect(state.showDynamicSecretArea.value).toBe(false);
+
+        props.personalCredentials = [{ id: "selected-key", username: "root", secret_type: "ssh_key", version: 1 }];
+        models.personalCredentialId = "selected-key";
+        await Vue.nextTick();
+        expect(state.showDynamicSecretArea.value).toBe(true);
+        expect(state.usingSavedCredential.value).toBe(true);
+        models.personalCredentialId = "";
+        await Vue.nextTick();
+        expect(state.showDynamicSecretArea.value).toBe(false);
+
+        models.account = "@INPUT";
+        await Vue.nextTick();
+        expect(state.canUsePersonalCredential.value).toBe(true);
+        models.account = selected;
+        await Vue.nextTick();
+        expect(state.showDynamicSecretArea.value).toBe(false);
+
+        dynamicAccount.has_secret = false;
+        await Vue.nextTick();
+        expect(state.showDynamicSecretArea.value).toBe(true);
+        expect(state.canUsePersonalCredential.value).toBe(true);
+      } finally {
+        unmount();
+      }
+    }
+  );
+
   it.each([
     ["ssh", "@INPUT"],
     ["sftp", "@INPUT"],
