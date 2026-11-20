@@ -541,7 +541,7 @@ function finishApprovedConnections(group: AclDialogGroup) {
     if (item.status === "approved" && item.token?.is_active) finish(item, item.token);
   }
 }
-function requestAcl(
+export function requestAcl(
   error: unknown,
   input: {
     body?: ConnectionBody;
