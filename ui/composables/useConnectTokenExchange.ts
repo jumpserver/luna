@@ -10,7 +10,7 @@ export class ConnectionChecksCancelledError extends Error {
 export async function exchangeConnectToken(tokenId: string): Promise<TokenResponse> {
   if (!tokenId) throw new Error("missing connection token");
   const token = await exchangeConnectionToken(tokenId, true);
-  const pending = useAclDialog().request(token, {
+  const pending = requestAcl(token, {
     orgId: token.org_id,
     assetName: token.asset_display || tokenId
   });

@@ -155,7 +155,7 @@ async function cancelExchange() {
   const { exchangeConnectToken } =
     await vi.importActual<typeof import("./useConnectTokenExchange")>("./useConnectTokenExchange");
   vi.stubGlobal("exchangeConnectionToken", vi.fn().mockResolvedValue({ id: "pending-token", is_active: false }));
-  vi.stubGlobal("useAclDialog", () => ({ request: () => Promise.resolve(null) }));
+  vi.stubGlobal("requestAcl", () => Promise.resolve(null));
   mocks.exchange.mockImplementation(exchangeConnectToken);
 }
 
