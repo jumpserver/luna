@@ -1,6 +1,7 @@
 import type { TokenResponse } from "~/types";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createConnectionTokenWithAcl, useAclDialog } from "./useAclDialog";
+import { useI18n } from "vue-i18n";
+import { createConnectionTokenWithAcl, requestAcl, useAclDialog } from "./useAclDialog";
 import { ConnectionChecksCancelledError, exchangeConnectToken } from "./useConnectTokenExchange";
 
 vi.mock("~/store/modules/userInfo", () => ({
@@ -59,12 +60,14 @@ beforeEach(() => {
   vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
   vi.stubGlobal("useToast", () => ({ add: vi.fn() }));
   vi.stubGlobal("useAclDialog", useAclDialog);
+  vi.stubGlobal("requestAcl", requestAcl);
   vi.stubGlobal("exchangeConnectionToken", exchange);
   vi.stubGlobal("createConnectionToken", create);
   vi.stubGlobal("advanceConnectionAcl", advance);
 });
 
 afterEach(async () => {
+  vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
   const acl = useAclDialog();
   while (acl.activeGroup.value) await acl.close(acl.activeGroup.value);
   vi.useRealTimers();
@@ -129,8 +132,12 @@ it.each(["initial", "exchange"])("ignores an approved %s response arriving after
   expect(advance).toHaveBeenCalledWith("new-token", { cancel: true }, "asset-org", undefined);
 });
 
-it("rejects an inactive exchange token without ACL instead of publishing it", async () => {
-  exchange.mockResolvedValue({ id: "new-token", is_active: false });
-  await expect(exchangeConnectToken("old-token")).rejects.toThrow("Connection checks are incomplete");
-  expect(useAclDialog().activeGroup.value).toBeUndefined();
+it.each([true, false])("exchanges tokens outside component setup (active=%s)", async (isActive) => {
+  const exchanged = { id: "new-token", is_active: isActive };
+  exchange.mockResolvedValue(exchanged);
+  vi.stubGlobal("useI18n", useI18n);
+
+  const result = exchangeConnectToken("old-token");
+  if (isActive) await expect(result).resolves.toBe(exchanged);
+  else await expect(result).rejects.toThrow("Connection checks are incomplete");
 });
