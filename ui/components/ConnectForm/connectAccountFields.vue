@@ -68,6 +68,9 @@ const selectedAccountEntry = computed(() => {
   if (showDynamicUserArea.value) return props.accounts.find((item) => item.alias === "@USER");
   return selectedHostedAccount.value;
 });
+const showDynamicSecretArea = computed(
+  () => showDynamicUserArea.value && (selectedAccountEntry.value?.has_secret !== true || !!personalCredentialId.value)
+);
 const autoPushAccount = computed(() => isAutoPushAccount(selectedAccountEntry.value, props.protocol));
 const canUsePersonalCredential = computed(
   () => !autoPushAccount.value && (showManualInputArea.value || supportsPersonalCredential(selectedAccountEntry.value))
@@ -482,7 +485,7 @@ onBeforeUnmount(() => {
     </UFormField>
 
     <p v-if="autoPushAccount" class="text-sm text-muted">{{ t("AccountProvisioning.FormHint") }}</p>
-    <template v-else-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
+    <template v-else-if="showManualInputArea || showDynamicSecretArea || showHostedSecretArea">
       <div class="credentials-fields">
         <UFormField
           :label="

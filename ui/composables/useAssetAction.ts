@@ -1025,6 +1025,10 @@ export const useAssetAction = () => {
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
+    const hasCachedLoginSecret =
+      accountForToken === "@USER" &&
+      !personalCredentialId &&
+      _accounts.find((account) => account.alias === "@USER")?.has_secret === true;
     const autoPushAccount =
       accountForToken === "@USER" &&
       isAutoPushAccount(
@@ -1033,6 +1037,7 @@ export const useAssetAction = () => {
       );
     const canUsePersonalCredential =
       !autoPushAccount &&
+      !hasCachedLoginSecret &&
       (isManual || accountForToken === "@USER" || (requiresHostedSecret && supportsPersonalCredential(matchedAccount)));
     const useSavedPersonalCredential = canUsePersonalCredential && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
@@ -1065,7 +1070,9 @@ export const useAssetAction = () => {
       asset: assetId,
       protocol,
       ...(isManual && !useSavedPersonalCredential ? { input_username } : {}),
-      ...(!autoPushAccount && !useSavedPersonalCredential && input_secret ? { input_secret } : {}),
+      ...(!autoPushAccount && !hasCachedLoginSecret && !useSavedPersonalCredential && input_secret
+        ? { input_secret }
+        : {}),
       ...(isManual && !useSavedPersonalCredential ? { input_secret_type: personalCredentialSecretType } : {}),
       ...(canUsePersonalCredential && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
       ...(canUsePersonalCredential && savePersonalCredential
@@ -1076,7 +1083,8 @@ export const useAssetAction = () => {
               : {})
           }
         : {}),
-      ...((requiresHostedSecret && !useSavedPersonalCredential) || (accountForToken === "@USER" && !autoPushAccount)
+      ...((requiresHostedSecret && !useSavedPersonalCredential) ||
+      (accountForToken === "@USER" && !autoPushAccount && !hasCachedLoginSecret)
         ? { input_secret_type: inputSecretType }
         : {}),
       account: accountForToken,
