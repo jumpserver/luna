@@ -167,7 +167,7 @@ async function startEncoder(executable, outputPath, width, height, power) {
     "-f",
     "rawvideo",
     "-pixel_format",
-    "bgra",
+    "rgba",
     "-video_size",
     `${width}x${height}`,
     "-framerate",
@@ -221,7 +221,8 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
-      offscreen: true,
+      // Match the player's compositor: offscreen paint can omit canvases after direct pixel reads.
+      offscreen: false,
       backgroundThrottling: false,
       additionalArguments: [`--replay-renderer-channel=${channel}`]
     }
@@ -237,6 +238,9 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
   let height = 0;
   let totalFrames = 0;
   let frameIndex = 0;
+  let cachedFrame: Buffer | undefined;
+  let writing = Promise.resolve();
+  let lastProgress = -1;
   let timer;
   let fail;
   const rendered = new Promise<void>((resolve, reject) => {
@@ -283,6 +287,14 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
         height = payload.height;
         expectedBytes = payload.width * payload.height * 4;
         window.setContentSize(width, height);
+        window.webContents.enableDeviceEmulation({
+          screenPosition: "desktop",
+          screenSize: { width, height },
+          viewPosition: { x: 0, y: 0 },
+          deviceScaleFactor: 1,
+          viewSize: { width, height },
+          scale: 1
+        });
         startingEncoder = startEncoder(executable, outputPath, payload.width, payload.height, power);
         encoder = await startingEncoder;
         job.encoder = encoder.child;
@@ -292,18 +304,55 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
         return;
       }
       if (command === "frame") {
-        if (!encoder || payload?.index !== frameIndex || frameIndex >= totalFrames)
+        // Keep at most one encoding batch in flight while the renderer prepares the next frame.
+        await writing;
+        if (
+          !encoder ||
+          payload?.index !== frameIndex ||
+          !Number.isSafeInteger(payload.count) ||
+          payload.count < 1 ||
+          payload.count > totalFrames - frameIndex
+        )
           throw new Error("Invalid replay frame");
-        // Allow capturePage to activate the compositor; stayHidden can return an unpainted first surface.
-        const image = await window.webContents.capturePage({ x: 0, y: 0, width, height });
-        const pixels = image.resize({ width, height }).toBitmap({ scaleFactor: 1 });
-        if (pixels.length !== expectedBytes) throw new Error("Invalid replay capture size");
-        await writeFrame(encoder.child.stdin, pixels);
-        frameIndex++;
-        onProgress(10 + (frameIndex / totalFrames) * 85);
+        if (payload.pixels !== undefined) {
+          if (!(payload.pixels instanceof Uint8ClampedArray) || payload.pixels.byteLength !== expectedBytes) {
+            throw new Error("Invalid replay pixel buffer");
+          }
+          cachedFrame = Buffer.from(payload.pixels.buffer, payload.pixels.byteOffset, payload.pixels.byteLength);
+        } else if (payload.capture) {
+          // Capture CSS layer effects with the player's compositor and normalize pixel density.
+          const image = await window.webContents.capturePage({ x: 0, y: 0, width, height });
+          cachedFrame = image.resize({ width, height }).toBitmap({ scaleFactor: 1 });
+          if (cachedFrame.length !== expectedBytes) throw new Error("Invalid replay capture size");
+          // Electron screenshots are BGRA; canvas ImageData and FFmpeg input are RGBA.
+          for (let offset = 0; offset < cachedFrame.length; offset += 4) {
+            const blue = cachedFrame[offset];
+            cachedFrame[offset] = cachedFrame[offset + 2];
+            cachedFrame[offset + 2] = blue;
+          }
+        }
+        if (!cachedFrame) throw new Error("Replay frame has not been captured");
+        const pixels = cachedFrame;
+        writing = (async () => {
+          for (let repeat = 0; repeat < payload.count; repeat++) {
+            if (job.cancelled || job.skipCurrent) throw new Error("transcoding cancelled");
+            await writeFrame(encoder.child.stdin, pixels);
+            frameIndex++;
+            heartbeat();
+            const progress = 10 + (frameIndex / totalFrames) * 85;
+            if (Math.floor(progress * 10) !== lastProgress) {
+              lastProgress = Math.floor(progress * 10);
+              onProgress(progress);
+            }
+          }
+        })();
+        void writing.catch(reject);
         return;
       }
-      if (command === "done" && encoder && frameIndex === totalFrames) return resolve();
+      if (command === "done") {
+        await writing;
+        if (encoder && frameIndex === totalFrames) return resolve();
+      }
       if (command === "error") return reject(new Error(String(payload)));
       throw new Error("Invalid replay renderer command");
     });

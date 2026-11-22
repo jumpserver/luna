@@ -46,6 +46,14 @@ export async function runTranscodeChecks() {
       instruction("cfill", 14, 0, 220, 20, 30, 255),
       instruction("rect", 0, 22, 6, 8, 8),
       instruction("cfill", 14, 0, 255, 255, 0, 255),
+      instruction("size", -1, 8, 8),
+      instruction("img", 0, 12, -1, "image/png", 0, 0),
+      instruction("blob", 0, cursorPng),
+      instruction("end", 0),
+      instruction("cursor", 2, 3, -1, 0, 0, 8, 8),
+      instruction("sync", 1000),
+      instruction("mouse", 12, 14),
+      instruction("sync", 1200),
       instruction("size", 1, 6, 6),
       instruction("rect", 1, 0, 0, 6, 6),
       instruction("cfill", 14, 1, 20, 30, 220, 255),
@@ -56,17 +64,12 @@ export async function runTranscodeChecks() {
       instruction("rect", 2, 0, 0, 8, 8),
       instruction("cfill", 14, 2, 220, 0, 220, 255),
       instruction("move", 2, 1, 4, 4, 1),
-      instruction("size", -1, 8, 8),
-      instruction("img", 0, 12, -1, "image/png", 0, 0),
-      instruction("blob", 0, cursorPng),
-      instruction("end", 0),
-      instruction("cursor", 2, 3, -1, 0, 0, 8, 8),
-      instruction("sync", 1000),
-      instruction("mouse", 12, 14),
-      instruction("sync", 1200),
       instruction("mouse", 34, 24),
       instruction("sync", 1400),
-      instruction("sync", 1500)
+      instruction("sync", 1500),
+      instruction("dispose", 1),
+      instruction("mouse", 1, 1),
+      instruction("sync", 1600)
     ].join("");
     const archive = createTarPack();
     const writing = finished(archive.pipe(createWriteStream(archivePath)));
@@ -129,7 +132,7 @@ export async function runTranscodeChecks() {
       ],
       { timeout: 10_000, maxBuffer: 1024 * 1024 }
     );
-    assert.equal(pixels.length, 6 * 64 * 48 * 4, "keep the original size and sample through the last sync");
+    assert.equal(pixels.length, 7 * 64 * 48 * 4, "keep the original size and sample through the last sync");
     const pixel = (frame: number, x: number, y: number) => {
       const offset = (frame * 64 * 48 + y * 64 + x) * 4;
       return [...pixels.subarray(offset, offset + 3)];
@@ -148,7 +151,51 @@ export async function runTranscodeChecks() {
     color(pixel(5, 47, 28), [95, 26, 149], "preserve Guacamole child-layer positions, CSS transforms and opacity");
     color(pixel(5, 53, 34), [220, 20, 30], "clip children to their parent layer");
     color(pixel(5, 25, 9), [255, 255, 0], "respect the fill path");
+    color(pixel(6, 1, 1), [0, 255, 0], "clip a partly offscreen cursor on the memory path");
+    color(pixel(6, 47, 28), [220, 20, 30], "return to memory frames after disposing a child layer");
+    color(pixel(6, 35, 24), [220, 20, 30], "do not leave the old cursor behind when switching capture paths");
     assert.equal(BrowserWindow.getAllWindows().length, 0, "release hidden renderers after each file");
+
+    const scaledReplay = replay
+      .replace(instruction("size", 0, 64, 48), instruction("size", 0, 80, 400))
+      .replace(instruction("rect", 0, 0, 0, 64, 48), instruction("rect", 0, 0, 0, 80, 400));
+    const scaledArchivePath = path.join(temporaryRoot, "scaled.tar");
+    const scaledArchive = createTarPack();
+    const scaledWriting = finished(scaledArchive.pipe(createWriteStream(scaledArchivePath)));
+    scaledArchive.entry({ name: "scaled.0.part.gz" }, gzipSync(scaledReplay));
+    scaledArchive.finalize();
+    await scaledWriting;
+    const [scaledResult] = await transcoder.transcode(
+      { tarPaths: [scaledArchivePath], outputDir, outputResolution: "p360", transcodePower: "low" },
+      "scaled"
+    );
+    assert.equal(scaledResult.success, true, scaledResult.error);
+    const scaledPixels = execFileSync(
+      executable,
+      [
+        "-v",
+        "error",
+        "-threads",
+        "1",
+        "-i",
+        scaledResult.output,
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgba",
+        "-threads",
+        "1",
+        "-"
+      ],
+      { timeout: 10_000, maxBuffer: 1024 * 1024 }
+    );
+    assert.equal(scaledPixels.length, 7 * 72 * 360 * 4, "downscale both memory and compositor frames");
+    const cursorOffset = (2 * 72 * 360 + 12 * 72 + 11) * 4;
+    color(
+      [...scaledPixels.subarray(cursorOffset, cursorOffset + 3)],
+      [0, 255, 0],
+      "scale the cursor with its background"
+    );
 
     // Compare the MP4 with Chromium's actual player display, including its separate cursor DOM layer.
     const player = new BrowserWindow({
@@ -158,26 +205,43 @@ export async function runTranscodeChecks() {
     try {
       await player.loadURL("data:text/html,<body style='margin:0;background:black'>");
       const guacamole = await readFile(new URL("../../packages/guacamole/dist/guacamole.js", import.meta.url), "utf8");
-      await player.webContents.executeJavaScript(`${guacamole.replace("export default Guacamole;", "")}
+      for (const scene of [
+        { source: replay, decoded: pixels, width: 64, height: 48, scale: 1 },
+        { source: scaledReplay, decoded: scaledPixels, width: 72, height: 360, scale: 0.9 }
+      ]) {
+        for (const frame of [2, 4, 6]) {
+          await player.webContents.executeJavaScript(`${guacamole.replace("export default Guacamole;", "")}
         new Promise((resolve, reject) => {
-          const recording = new Guacamole.SessionRecording(new Blob([${JSON.stringify(replay)}]));
-          document.body.appendChild(recording.getDisplay().getElement());
+          const recording = new Guacamole.SessionRecording(new Blob([${JSON.stringify(scene.source)}]));
+          const element = recording.getDisplay().getElement();
+          element.style.transformOrigin = "0 0";
+          element.style.transform = "scale(${scene.scale})";
+          document.body.replaceChildren(element);
           recording.onerror = reject;
-          recording.onload = () => recording.seek(400, () => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          recording.onload = () => recording.seek(${frame * 100}, () => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         });`);
-      const screenshot = await player.webContents.capturePage({ x: 0, y: 0, width: 64, height: 48 });
-      const bitmap = screenshot.resize({ width: 64, height: 48 }).toBitmap();
-      assert.equal(bitmap.length, 64 * 48 * 4);
-      let difference = 0;
-      for (let offset = 0; offset < bitmap.length; offset += 4) {
-        for (let channel = 0; channel < 3; channel++) {
-          difference += Math.abs(bitmap[offset + 2 - channel] - pixels[4 * 64 * 48 * 4 + offset + channel]);
+          const screenshot = await player.webContents.capturePage({
+            x: 0,
+            y: 0,
+            width: scene.width,
+            height: scene.height
+          });
+          const bitmap = screenshot.resize({ width: scene.width, height: scene.height }).toBitmap();
+          assert.equal(bitmap.length, scene.width * scene.height * 4);
+          let difference = 0;
+          for (let offset = 0; offset < bitmap.length; offset += 4) {
+            for (let channel = 0; channel < 3; channel++) {
+              difference += Math.abs(
+                bitmap[offset + 2 - channel] - scene.decoded[frame * scene.width * scene.height * 4 + offset + channel]
+              );
+            }
+          }
+          assert.ok(
+            difference / (scene.width * scene.height * 3) < 6,
+            `export ${scene.width}x${scene.height} frame ${frame} must match the player display within H.264 compression error: mean=${difference / (scene.width * scene.height * 3)}, first=${[...bitmap.subarray(0, 4)]}`
+          );
         }
       }
-      assert.ok(
-        difference / (64 * 48 * 3) < 6,
-        `export must match the player display within H.264 compression error: mean=${difference / (64 * 48 * 3)}, first=${[...bitmap.subarray(0, 4)]}`
-      );
     } finally {
       player.destroy();
     }

@@ -6,99 +6,145 @@ const channel = process.argv.find((arg) => arg.startsWith("--replay-renderer-cha
 const FRAME_INTERVAL_MS = 100;
 const BLOCK_SIZE = 256 * 1024;
 
+type Instruction = { opcode: string; args: string[] };
+
+async function* instructions(size: number): AsyncGenerator<Instruction> {
+  const parser = new Guacamole.Parser();
+  const pending: Instruction[] = [];
+  parser.oninstruction = (opcode, args) => pending.push({ opcode, args });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  for (let start = 0; start < size; start += BLOCK_SIZE) {
+    const bytes = await ipcRenderer.invoke(channel, "read", { start, end: Math.min(start + BLOCK_SIZE, size) });
+    parser.receive(decoder.decode(bytes, { stream: true }));
+    for (const instruction of pending) yield instruction;
+    pending.length = 0;
+  }
+  parser.receive(decoder.decode());
+  for (const instruction of pending) yield instruction;
+}
+
 async function render() {
   const { size, resolution } = await ipcRenderer.invoke(channel, "bootstrap");
   let width = 0;
   let height = 0;
-  const parser = new Guacamole.Parser();
-  parser.oninstruction = (opcode, args) => {
-    if (opcode !== "size" || args[0] !== "0") return;
-    const w = Number(args[1]);
-    const h = Number(args[2]);
-    if (![w, h].every((value) => Number.isInteger(value) && value > 0 && value <= 8192)) {
-      throw new Error("Invalid replay dimensions");
-    }
-    width = Math.max(width, w);
-    height = Math.max(height, h);
-  };
-  let closed = false;
-  const read = async (start: number, end: number): Promise<Uint8Array<ArrayBuffer>> => {
-    if (closed) throw new DOMException("Recording closed", "AbortError");
-    return ipcRenderer.invoke(channel, "read", { start, end });
-  };
-  // Read protocol bytes on demand without copying the full recording into the renderer.
-  const source: Guacamole.SessionRecording.Source = {
-    async *stream(signal) {
-      const decoder = new TextDecoder("utf-8", { fatal: true });
-      for (let start = 0; start < size; start += BLOCK_SIZE) {
-        if (signal?.aborted) throw new DOMException("Recording closed", "AbortError");
-        const bytes = await read(start, Math.min(start + BLOCK_SIZE, size));
-        parser.receive(decoder.decode(bytes, { stream: true }));
-        yield bytes;
+  let firstTimestamp: number | undefined;
+  let lastTimestamp = 0;
+  for await (const { opcode, args } of instructions(size)) {
+    if (opcode === "size" && args[0] === "0") {
+      const w = Number(args[1]);
+      const h = Number(args[2]);
+      if (![w, h].every((value) => Number.isInteger(value) && value > 0 && value <= 8192)) {
+        throw new Error("Invalid replay dimensions");
       }
-      parser.receive(decoder.decode());
-    },
-    async read(start, end) {
-      const parts: Uint8Array<ArrayBuffer>[] = [];
-      for (let offset = start; offset < end; offset += BLOCK_SIZE) {
-        parts.push(await read(offset, Math.min(offset + BLOCK_SIZE, end)));
-      }
-      return new Blob(parts);
-    },
-    close() {
-      closed = true;
+      width = Math.max(width, w);
+      height = Math.max(height, h);
+    } else if (opcode === "sync") {
+      const timestamp = Number(args[0]);
+      if (!Number.isFinite(timestamp) || timestamp < lastTimestamp) throw new Error("Invalid replay timeline");
+      firstTimestamp ??= timestamp;
+      lastTimestamp = timestamp;
     }
-  };
-  // Use the same recording and display implementation as GuacamolePlayer.
-  const recording = new Guacamole.SessionRecording(source);
-  const display = recording.getDisplay();
+  }
+  if (!width || !height) throw new Error("Replay has no display size");
+  if (firstTimestamp === undefined) throw new Error("Replay has no frames");
+  const duration = lastTimestamp - firstTimestamp;
+  const totalFrames = Math.ceil(duration / FRAME_INTERVAL_MS) + 1;
+  const dimensions = computeTargetDimensions(width, height, resolution);
+  const tunnel = new Guacamole.Tunnel();
+  tunnel.connect = tunnel.disconnect = tunnel.sendMessage = () => {};
+  // Use the player's rendering engine without interactive seek/snapshot caching.
+  const client = new Guacamole.Client(tunnel);
+  const display = client.getDisplay();
   const element = display.getElement();
+  display.showCursor(false);
   document.body.style.cssText = "margin:0;background:black;overflow:hidden";
   document.body.appendChild(element);
-  let rejectRender: (error: Error) => void;
-  const timestamps: number[] = [];
-  try {
-    await new Promise<void>((resolve, reject) => {
-      rejectRender = reject;
-      recording.onerror = (message) => rejectRender(new Error(message));
-      recording.onprogress = (timestamp) => {
-        if (!Number.isFinite(timestamp) || timestamp < 0 || timestamp < (timestamps.at(-1) ?? 0)) {
-          rejectRender(new Error("Invalid replay timeline"));
-          return;
-        }
-        timestamps.push(timestamp);
-      };
-      recording.onload = resolve;
-    });
-    if (!width || !height) throw new Error("Replay has no display size");
-    if (!timestamps.length) throw new Error("Replay has no frames");
-    const duration = recording.getDuration();
-    const totalFrames = Math.ceil(duration / FRAME_INTERVAL_MS) + 1;
-    const dimensions = computeTargetDimensions(width, height, resolution);
-    await ipcRenderer.invoke(channel, "ready", { ...dimensions, totalFrames });
-    let sourceIndex = 0;
-    let renderedIndex = -1;
-    for (let index = 0; index < totalFrames; index++) {
-      const timestamp = Math.min(index * FRAME_INTERVAL_MS, duration);
-      while (sourceIndex + 1 < timestamps.length && timestamps[sourceIndex + 1] <= timestamp) sourceIndex++;
-      if (sourceIndex !== renderedIndex) {
-        await new Promise<void>((resolve, reject) => {
-          rejectRender = reject;
-          recording.seek(timestamps[sourceIndex], resolve);
-        });
-        renderedIndex = sourceIndex;
-      }
-      // Capture the actual display, including cursor, CSS layer transforms, clipping and group opacity.
-      // Use the player's display scaling and wait for Chromium to commit it before capturePage().
+  client.connect();
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true })!;
+  const memoryFrame = () => {
+    const layer = display.getDefaultLayer();
+    // CSS layer composition remains Chromium's job. Read flat displays directly from
+    // the player's canvases, including its separate software cursor, without a paint wait.
+    if (
+      Object.keys(layer.children).length ||
+      layer.alpha !== 255 ||
+      layer.x ||
+      layer.y ||
+      layer.matrix.some((value, index) => value !== [1, 0, 0, 1, 0, 0][index])
+    )
+      return;
+    if (canvas.width !== dimensions.width || canvas.height !== dimensions.height) {
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
+    }
+    context.fillStyle = "black";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.save();
+    context.scale(canvas.width / display.getWidth(), canvas.height / display.getHeight());
+    context.drawImage(layer.getCanvas(), 0, 0, layer.width, layer.height, 0, 0, layer.width, layer.height);
+    const cursor = display.getCursorLayer();
+    if (cursor.getElement().parentNode && cursor.width && cursor.height) {
+      context.drawImage(
+        cursor.getCanvas(),
+        0,
+        0,
+        cursor.width,
+        cursor.height,
+        cursor.x,
+        cursor.y,
+        cursor.width,
+        cursor.height
+      );
+    }
+    context.restore();
+    return context.getImageData(0, 0, canvas.width, canvas.height).data;
+  };
+  let frameIndex = 0;
+  let changed = false;
+  const emitFrames = async (end: number) => {
+    if (frameIndex >= end) return;
+    let pixels: Uint8ClampedArray | undefined;
+    if (changed) {
+      await new Promise<void>((resolve) => display.flush(resolve));
+      pixels = memoryFrame();
       element.style.transformOrigin = "0 0";
       element.style.transform = `scale(${dimensions.width / display.getWidth()}, ${dimensions.height / display.getHeight()})`;
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-      // Await capture and the encoder write so only one unencoded frame exists at a time.
-      await ipcRenderer.invoke(channel, "frame", { index });
+      if (!pixels) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      }
     }
+    await ipcRenderer.invoke(channel, "frame", {
+      index: frameIndex,
+      count: end - frameIndex,
+      capture: changed && !pixels,
+      pixels
+    });
+    frameIndex = end;
+    changed = false;
+  };
+  try {
+    await ipcRenderer.invoke(channel, "ready", { ...dimensions, totalFrames });
+    const frame: Instruction[] = [];
+    for await (const instruction of instructions(size)) {
+      if (instruction.opcode !== "sync") {
+        frame.push(instruction);
+        continue;
+      }
+      // Empty heartbeat frames do not change the image; encode the entire idle span in one batch.
+      if (!frame.length) continue;
+      const timestamp = Number(instruction.args[0]) - firstTimestamp;
+      await emitFrames(Math.min(totalFrames, Math.ceil(timestamp / FRAME_INTERVAL_MS)));
+      for (const { opcode, args } of frame) tunnel.oninstruction!(opcode, args);
+      tunnel.oninstruction!(instruction.opcode, instruction.args);
+      frame.length = 0;
+      changed = true;
+    }
+    await emitFrames(totalFrames);
     await ipcRenderer.invoke(channel, "done");
   } finally {
-    recording.dispose();
+    client.disconnect();
+    display.cancel();
   }
 }
 
