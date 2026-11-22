@@ -33,7 +33,7 @@
     "test:web": "vitest run --config vitest.config.ts --browser.enabled=false --exclude \"ui/koko/tests/**\" --passWithNoTests",
     "test:guacamole": "vitest run --config vitest.config.ts --browser.enabled=true --maxWorkers=1 --no-file-parallelism packages/online-player/app/utils/guacamole ui/utils/browserRecordingArchive.test.ts ui/utils/offlineMedia.test.ts ui/composables/useVideoPlayerParser.test.ts",
     "test:electron": "pnpm --dir electron test",
-    "test:electron:transcode": "pnpm --dir electron exec electron tests/fixtures/replay-transcoder-app",
+    "test:electron:transcode": "pnpm build:guacamole && pnpm --dir electron exec electron tests/fixtures/replay-transcoder-app",
     "test:browser": "vitest run --config vitest.config.ts",
     "test:e2e:sftp": "playwright test --config ui/koko/playwright.config.ts",
     "test:e2e:replay": "playwright test --config packages/online-player/playwright.config.ts",

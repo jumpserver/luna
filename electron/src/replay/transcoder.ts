@@ -1,14 +1,14 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createReadStream } from "node:fs";
 import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { nativeImage } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import { extract as createTarExtractor } from "tar-stream";
 import { electronLog } from "../shared/debug-log";
-import { buildTimeline, computeTargetDimensions, GuacamoleParser, ReplayRenderer } from "./codec";
 
 const FPS = 10;
 const MAX_METADATA_BYTES = 4 * 1024 * 1024;
@@ -145,45 +145,6 @@ export function extractReplayArchive(archivePath) {
   });
 }
 
-function rgbaFromBitmap(bitmap, width, height) {
-  const rgba = Buffer.allocUnsafe(width * height * 4);
-  for (let offset = 0; offset < rgba.length; offset += 4) {
-    rgba[offset] = bitmap[offset + 2];
-    rgba[offset + 1] = bitmap[offset + 1];
-    rgba[offset + 2] = bitmap[offset];
-    rgba[offset + 3] = bitmap[offset + 3];
-  }
-  return rgba;
-}
-
-function bitmapFromRgba(rgba) {
-  const bitmap = Buffer.allocUnsafe(rgba.length);
-  for (let offset = 0; offset < rgba.length; offset += 4) {
-    bitmap[offset] = rgba[offset + 2];
-    bitmap[offset + 1] = rgba[offset + 1];
-    bitmap[offset + 2] = rgba[offset];
-    bitmap[offset + 3] = rgba[offset + 3];
-  }
-  return bitmap;
-}
-
-function decodeImage(_mime, data) {
-  const image = nativeImage.createFromBuffer(data);
-  if (image.isEmpty()) return null;
-  const { width, height } = image.getSize();
-  return { width, height, pixels: rgbaFromBitmap(image.toBitmap(), width, height) };
-}
-
-function resizeFrame(frame, width, height) {
-  if (frame.width === width && frame.height === height) return frame.pixels;
-  const image = nativeImage.createFromBitmap(bitmapFromRgba(frame.pixels), {
-    width: frame.width,
-    height: frame.height
-  });
-  const resized = image.resize({ width, height, quality: "good" });
-  return rgbaFromBitmap(resized.toBitmap(), width, height);
-}
-
 function threadCount(power) {
   const fractions = { auto: 1, full: 1, fast: 0.75, medium: 0.5, low: 0.25 };
   return Math.max(1, Math.round(availableParallelism() * (fractions[power] || 1)));
@@ -206,7 +167,7 @@ async function startEncoder(executable, outputPath, width, height, power) {
     "-f",
     "rawvideo",
     "-pixel_format",
-    "rgba",
+    "bgra",
     "-video_size",
     `${width}x${height}`,
     "-framerate",
@@ -248,43 +209,135 @@ async function writeFrame(stream, frame) {
   if (!stream.write(frame)) await once(stream, "drain");
 }
 
-async function encodeGuacamole(data, executable, outputPath, resolution, power, onProgress, onEncoder) {
-  const timeline = buildTimeline(data);
-  if (timeline.frames.length < 2) throw new Error("not enough frames to encode");
-  const dimensions = computeTargetDimensions(timeline.maxWidth, timeline.maxHeight, resolution);
-  const parser = new GuacamoleParser(data);
-  const renderer = new ReplayRenderer(decodeImage);
-  const encoder = await startEncoder(executable, outputPath, dimensions.width, dimensions.height, power);
-  onEncoder?.(encoder.child);
+async function encodeGuacamole(data, executable, outputPath, resolution, power, onProgress, job, preload) {
+  const channel = `jms:replay-renderer:${randomUUID()}`;
+  const window = new BrowserWindow({
+    show: false,
+    skipTaskbar: true,
+    enableLargerThanScreen: true,
+    useContentSize: true,
+    webPreferences: {
+      preload,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      offscreen: true,
+      backgroundThrottling: false,
+      additionalArguments: [`--replay-renderer-channel=${channel}`]
+    }
+  });
+  job.renderer = window;
+  window.webContents.setAudioMuted(true);
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
+  let encoder;
+  let startingEncoder;
+  let expectedBytes = 0;
+  let width = 0;
+  let height = 0;
+  let totalFrames = 0;
   let frameIndex = 0;
-  let instruction = parser.nextInstruction();
+  let timer;
+  let fail;
+  const rendered = new Promise<void>((resolve, reject) => {
+    fail = reject;
+    const heartbeat = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => reject(new Error("Replay renderer timed out")), 60_000);
+    };
+    heartbeat();
+    window.webContents.once("preload-error", (_event, _path, error) => reject(error));
+    window.webContents.once("render-process-gone", () => reject(new Error("Replay renderer exited")));
+    window.on("closed", () => reject(new Error("Replay renderer closed")));
+    ipcMain.handle(channel, async (event, command, payload) => {
+      if (event.sender !== window.webContents || event.senderFrame !== event.sender.mainFrame) {
+        throw new Error("Invalid replay renderer sender");
+      }
+      if (job.cancelled || job.skipCurrent) throw new Error("transcoding cancelled");
+      heartbeat();
+      if (command === "bootstrap") return { size: data.length, resolution };
+      if (command === "read") {
+        const { start, end } = payload || {};
+        if (
+          ![start, end].every(Number.isSafeInteger) ||
+          start < 0 ||
+          end <= start ||
+          end > data.length ||
+          end - start > 256 * 1024
+        ) {
+          throw new Error("Invalid replay byte range");
+        }
+        return data.subarray(start, end);
+      }
+      if (command === "ready") {
+        if (
+          encoder ||
+          ![payload.width, payload.height].every((value) => Number.isInteger(value) && value > 0 && value <= 8192) ||
+          !Number.isSafeInteger(payload.totalFrames) ||
+          payload.totalFrames < 1
+        ) {
+          throw new Error("Invalid replay renderer dimensions or frame count");
+        }
+        totalFrames = payload.totalFrames;
+        width = payload.width;
+        height = payload.height;
+        expectedBytes = payload.width * payload.height * 4;
+        window.setContentSize(width, height);
+        startingEncoder = startEncoder(executable, outputPath, payload.width, payload.height, power);
+        encoder = await startingEncoder;
+        job.encoder = encoder.child;
+        encoder.child.stdin.on("error", reject);
+        void encoder.completion.catch(reject);
+        if (job.cancelled || job.skipCurrent) encoder.child.kill();
+        return;
+      }
+      if (command === "frame") {
+        if (!encoder || payload?.index !== frameIndex || frameIndex >= totalFrames)
+          throw new Error("Invalid replay frame");
+        // Allow capturePage to activate the compositor; stayHidden can return an unpainted first surface.
+        const image = await window.webContents.capturePage({ x: 0, y: 0, width, height });
+        const pixels = image.resize({ width, height }).toBitmap({ scaleFactor: 1 });
+        if (pixels.length !== expectedBytes) throw new Error("Invalid replay capture size");
+        await writeFrame(encoder.child.stdin, pixels);
+        frameIndex++;
+        onProgress(10 + (frameIndex / totalFrames) * 85);
+        return;
+      }
+      if (command === "done" && encoder && frameIndex === totalFrames) return resolve();
+      if (command === "error") return reject(new Error(String(payload)));
+      throw new Error("Invalid replay renderer command");
+    });
+  });
   try {
     onProgress(5);
-    while (instruction !== null) {
-      if (instruction.opcode === "sync") {
-        const timestamp = Number(instruction.args[0]);
-        while (frameIndex < timeline.frames.length && timeline.frames[frameIndex] <= timestamp) {
-          await writeFrame(encoder.child.stdin, resizeFrame(renderer.composite(), dimensions.width, dimensions.height));
-          frameIndex += 1;
-          onProgress(10 + (frameIndex / timeline.frames.length) * 85);
-        }
-      } else {
-        renderer.handle(instruction);
-      }
-      instruction = parser.nextInstruction();
+    if (!window.isDestroyed()) {
+      void window
+        .loadURL(
+          "data:text/html,<!doctype html><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'\"><body>"
+        )
+        .catch(fail);
     }
+    await rendered;
     encoder.child.stdin.end();
     await encoder.completion;
     await rename(encoder.temporaryPath, outputPath);
     onProgress(100);
   } catch (error) {
-    encoder.child.stdin.destroy();
-    encoder.child.kill();
-    await encoder.completion.catch(() => undefined);
-    await rm(encoder.temporaryPath, { force: true });
+    // Cancellation may arrive while the encoder's executable is being checked.
+    if (!encoder && startingEncoder) encoder = await startingEncoder.catch(() => undefined);
+    if (encoder) {
+      encoder.child.stdin.destroy();
+      encoder.child.kill();
+      await encoder.completion.catch(() => undefined);
+      await rm(encoder.temporaryPath, { force: true });
+    }
     throw error;
   } finally {
-    onEncoder?.();
+    clearTimeout(timer);
+    ipcMain.removeHandler(channel);
+    if (!window.isDestroyed()) window.destroy();
+    job.encoder = undefined;
+    job.renderer = undefined;
   }
 }
 
@@ -292,7 +345,8 @@ export class ReplayTranscoder {
   // ponytail: migration keeps replay job payloads dynamic; replace with explicit job types when strict mode is enabled.
   [key: string]: any;
 
-  constructor(_projectRoot, emitProgress, ffmpegPlugin) {
+  constructor(rendererPreload, emitProgress, ffmpegPlugin) {
+    this.rendererPreload = rendererPreload;
     this.emitProgress = emitProgress;
     this.ffmpegPlugin = ffmpegPlugin;
     this.activeTranscodes = 0;
@@ -307,6 +361,7 @@ export class ReplayTranscoder {
     for (const job of this.activeJobs) {
       job.cancelled = true;
       job.encoder?.kill();
+      if (job.renderer && !job.renderer.isDestroyed()) job.renderer.destroy();
     }
   }
 
@@ -315,6 +370,7 @@ export class ReplayTranscoder {
     if (!job) return false;
     job.skipCurrent = true;
     job.encoder?.kill();
+    if (job.renderer && !job.renderer.isDestroyed()) job.renderer.destroy();
     return true;
   }
 
@@ -323,7 +379,7 @@ export class ReplayTranscoder {
   }
 
   async transcode(request, targetLabel) {
-    const job = { cancelled: false, skipCurrent: false, encoder: undefined, targetLabel };
+    const job = { cancelled: false, skipCurrent: false, encoder: undefined, renderer: undefined, targetLabel };
     this.activeTranscodes += 1;
     this.activeJobs.add(job);
     try {
@@ -372,10 +428,8 @@ export class ReplayTranscoder {
           request.transcodePower || "full",
           (progress) =>
             this.emit(metadata.id, index, tarPaths.length, progress, `encoding: ${Math.round(progress)}%`, targetLabel),
-          (encoder) => {
-            job.encoder = encoder;
-            if (job.cancelled || job.skipCurrent) encoder?.kill();
-          }
+          job,
+          this.rendererPreload
         );
         const duration = (performance.now() - started) / 1000;
         this.emit(metadata.id, index, tarPaths.length, 100, "done", targetLabel, {

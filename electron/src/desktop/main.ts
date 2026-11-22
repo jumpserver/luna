@@ -2223,7 +2223,7 @@ app.whenReady().then(async () => {
     fetch: (url, options) => net.fetch(url, options)
   });
   replayTranscoder = new ReplayTranscoder(
-    projectRoot,
+    path.join(electronDir, "replay-renderer-preload.js"),
     (payload, label) => emitDesktopEvent("transcode-progress", payload, label),
     ffmpegPlugin
   );
