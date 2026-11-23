@@ -1,0 +1,17 @@
+{
+  "id": "macos.mysql-workbench",
+  "name": "mysql_workbench",
+  "display_name": "MySQL Workbench",
+  "version": "1.0.0",
+  "min_client_version": "5.2.0",
+  "author": "JumpServer",
+  "homepage": "https://www.mysql.com/products/workbench/",
+  "download_url": "https://dev.mysql.com/downloads/workbench/",
+  "category": "databases",
+  "protocols": ["mysql", "mariadb"],
+  "builtin": true,
+  "comment": {
+    "zh": "使用 MySQL Workbench 连接 MySQL 和 MariaDB。请在 macOS「隐私与安全性 → 辅助功能」中允许 JumpServer。",
+    "en": "Connect to MySQL and MariaDB with MySQL Workbench. Allow JumpServer under macOS Privacy & Security → Accessibility."
+  }
+}

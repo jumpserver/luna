@@ -37,6 +37,11 @@
       "category": "databases"
     },
     {
+      "id": "macos.mysql-workbench",
+      "name": "mysql_workbench",
+      "category": "databases"
+    },
+    {
       "id": "macos.mstsc",
       "name": "mstsc",
       "category": "remotedesktop"
