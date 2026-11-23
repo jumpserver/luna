@@ -50,6 +50,8 @@ JMS_TEST_DBX_EXECUTABLE=/Applications/DBX.app/Contents/MacOS/dbx pnpm --dir elec
 该检查通过完整插件启动链路发送一次性测试连接，使用临时配置和本地 TCP 监听器确认 DBX
 确实发起连接，不需要 Magnus。它不验证代理鉴权或真实数据库查询。
 
+详见 [MySQL Workbench（macOS）](macos/macos.mysql-workbench/README.md) 的设置说明和实测版本。
+
 ## 文档
 
 - [架构设计](../docs/plugins/DESIGN.md)
