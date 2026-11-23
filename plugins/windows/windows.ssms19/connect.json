@@ -1,0 +1,22 @@
+{
+  "platform": "windows",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "",
+    "required": true
+  },
+  "launch": {
+    "type": "script",
+    "script": "scripts/launch.mjs",
+    "interpreter": "node",
+    "input": "stdin",
+    "exit_messages": {
+      "1": "SSMS 19 login failed. See %TEMP%\\jms-ssms-login.log."
+    }
+  },
+  "display_name": "SQL Server Management Studio 19"
+}
