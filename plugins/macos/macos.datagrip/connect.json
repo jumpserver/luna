@@ -1,0 +1,27 @@
+{
+  "platform": "macos",
+  "is_default": false,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "/Applications/DataGrip.app",
+    "required": true
+  },
+  "launch": {
+    "type": "script",
+    "script": "scripts/launch.mjs",
+    "interpreter": "node",
+    "input": "stdin",
+    "serialize": true,
+    "exit_messages": {
+      "1": "DataGrip could not open or fill the connection window. Close any open connection dialogs and retry.",
+      "2": "Enable JumpServer in macOS Privacy & Security → Accessibility, then retry.",
+      "3": "Invalid database connection or unsupported DataGrip application bundle.",
+      "4": "Complete the initial setup in DataGrip or install the database driver if prompted, then retry.",
+      "6": "DataGrip's ClickHouse driver requires the Magnus HTTP route. Select DBeaver for a native ClickHouse connection.",
+      "7": "Another database autofill is in progress. Retry after it finishes."
+    }
+  },
+  "display_name": "DataGrip"
+}
