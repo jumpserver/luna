@@ -31,6 +31,8 @@ Electron 自带的 Node 运行时，不再维护应用启动配置的副本。
 
 ## 数据库客户端
 
+详见 [DataGrip（macOS）](macos/macos.datagrip/README.md) 的设置说明和实测版本。
+
 新安装默认选择 DBX，DBeaver Community 继续作为可选插件提供。已有用户保存的客户端选择、
 禁用状态和可执行文件路径保持不变。使用 DBX 前请先安装桌面端，并在设置中确认其可执行文件路径；
 便携版或自定义安装目录需要手动选择路径，Oracle、达梦需在 DBX 中安装对应驱动。

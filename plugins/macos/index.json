@@ -12,6 +12,11 @@
       "category": "databases"
     },
     {
+      "id": "macos.datagrip",
+      "name": "datagrip",
+      "category": "databases"
+    },
+    {
       "id": "macos.dbeaver",
       "name": "dbeaver",
       "category": "databases"

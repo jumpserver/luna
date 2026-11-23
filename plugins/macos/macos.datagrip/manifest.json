@@ -1,0 +1,17 @@
+{
+  "id": "macos.datagrip",
+  "name": "datagrip",
+  "display_name": "DataGrip",
+  "version": "1.0.0",
+  "min_client_version": "5.2.0",
+  "author": "Nickyang00",
+  "homepage": "https://www.jetbrains.com/datagrip/",
+  "download_url": "https://www.jetbrains.com/datagrip/download/",
+  "category": "databases",
+  "protocols": ["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "mongodb", "redis", "db2", "clickhouse"],
+  "builtin": true,
+  "comment": {
+    "zh": "使用 DataGrip 2023/2024/2025/2026 连接 MySQL、MariaDB、PostgreSQL、SQL Server、Oracle、MongoDB、Redis、Db2 和 ClickHouse。请在 macOS「隐私与安全性 → 辅助功能」中允许 JumpServer。首次连接可能需要下载 JDBC 驱动。",
+    "en": "Connect to MySQL, MariaDB, PostgreSQL, SQL Server, Oracle, MongoDB, Redis, Db2 and ClickHouse with DataGrip. Allow JumpServer under macOS Privacy & Security → Accessibility. DataGrip may need to download its JDBC driver on first use."
+  }
+}
