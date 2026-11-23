@@ -42,4 +42,4 @@ mkdir -p "$(dirname "$DEST")" && cp -R "$PLUGIN_DIR" "$DEST"
 2. 保留 `script`，在脚本内调用真实可执行文件；或
 3. 使用 `url` 类型对接 URL Scheme（如 Navicat）
 
-详细说明见 [开发者指南](../../docs/plugins/DEVELOPER.md)。
+详细说明见 [开发者指南](../../../docs/plugins/DEVELOPER.md)。
