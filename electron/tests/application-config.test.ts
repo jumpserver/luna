@@ -90,7 +90,7 @@ test("Windows Navicat launch behavior comes entirely from its plugin configurati
   }
 });
 
-test("SQL Server applications other than the bundled Navicat plugin retain their argument launch", async () => {
+test("legacy SQL Server argument plugins retain their launch behavior", async () => {
   for (const [name, pluginId] of [
     ["dbeaver", "windows.dbeaver"],
     ["ssms17", "windows.ssms17"],
@@ -129,6 +129,271 @@ test("SQL Server applications other than the bundled Navicat plugin retain their
     );
     assert.equal(args, "selector|test-secret|application");
   }
+});
+
+test("SSMS 19 is independently selectable alongside SSMS 17", async (context) => {
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms-ssms-config-"));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const service = new ApplicationConfigService({ getPath: () => appData }, projectRoot);
+  service.builtInDir = async () => path.join(projectRoot, "plugins/windows");
+  await service.initialize();
+  const initial = await service.getConfig();
+  const ssms19 = initial.databases.find((item) => item.name === "ssms19");
+  assert.equal(ssms19.display_name, "SQL Server Management Studio 19");
+  assert.equal(ssms19.is_set, false);
+  assert.equal(ssms19.path_exists, false);
+  assert.equal(ssms19.launch_type, "script");
+  assert.equal(ssms19.script_interpreter, "node");
+  assert.equal(ssms19.script_input, "stdin");
+  assert.ok(ssms19.icon_path);
+  assert.equal(initial.databases.find((item) => item.name === "ssms17").launch_type, "args");
+  assert.equal(initial.databases.find((item) => item.match_first.includes("sqlserver")).name, "dbx");
+  await assert.rejects(
+    service.updateSelection({ category: "databases", protocol: "sqlserver", name: "ssms19" }),
+    /executable not found/
+  );
+  for (const name of ["ssms17", "ssms19"]) {
+    await service.updateSelection({ category: "databases", protocol: "sqlserver", name, path: process.execPath });
+    await service.updateSelection({ category: "databases", protocol: "sqlserver", name, makeDefault: true });
+  }
+  const launcher = new LocalApplicationLauncher({}, projectRoot, service, null);
+  assert.equal((await launcher.resolveApplication({ protocol: "sqlserver" })).name, "ssms19");
+  assert.equal((await launcher.resolveApplication({ protocol: "sqlserver", client: "ssms17" })).name, "ssms17");
+  for (const platform of ["macos", "linux"]) {
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    assert.ok(!(await service.builtInEntries()).some((entry) => entry.id === "windows.ssms19"));
+  }
+});
+
+test("SSMS 19 forwards literal connection JSON to PowerShell and reports script failure", async (context) => {
+  if (process.platform === "win32") return context.skip("POSIX mock executable; does not automate SSMS");
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms SSMS 中文 "));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const bin = path.join(appData, "bin");
+  await mkdir(bin);
+  // Stand in for PowerShell at the OS boundary, capturing argv and stdin without opening SSMS.
+  await writeFile(
+    path.join(bin, "powershell.exe"),
+    `#!/usr/bin/env node
+const fs = require("node:fs");
+fs.writeFileSync(process.env.JMS_TEST_CAPTURE, JSON.stringify({
+  args: process.argv.slice(2),
+  input: JSON.parse(fs.readFileSync(0, "utf8")),
+  environmentContext: process.env.JMS_CONNECT_JSON
+}));
+process.exit(Number(process.env.JMS_TEST_EXIT || 0));
+`,
+    { mode: 0o700 }
+  );
+  const executable = path.join(appData, "Ssms.exe");
+  await writeFile(executable, "test executable");
+  const service = new ApplicationConfigService({ getPath: () => appData }, projectRoot);
+  const application = await service.buildItem(
+    {
+      id: "windows.ssms19",
+      category: "databases",
+      builtin: true,
+      pluginDir: path.join(projectRoot, "plugins/windows/windows.ssms19")
+    },
+    { selections: { "databases:sqlserver": "windows.ssms19" }, plugins: { "windows.ssms19": { path: executable } } }
+  );
+  const capturePath = path.join(appData, "capture.json");
+  application.env = {
+    PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+    JMS_TEST_CAPTURE: capturePath,
+    JMS_TEST_EXIT: "0"
+  };
+  const launcher = new LocalApplicationLauncher(
+    {},
+    projectRoot,
+    { getConfig: async () => ({ databases: [application] }) },
+    null
+  );
+  const payload = {
+    protocol: "sqlserver",
+    client: "ssms19",
+    name: "SSMS 测试",
+    endpoint: { host: "gateway.example.test", port: 5525 },
+    token: { id: "selector-token", value: "secret * ' \" \\ $() `; & 中文\r\nsecond line" },
+    asset: { info: { db_name: "application 中文" } }
+  };
+  const url = `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+  await launcher.launch(url);
+  const captured = JSON.parse(await readFile(capturePath, "utf8"));
+  assert.deepEqual(captured.args.slice(0, -1), [
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command"
+  ]);
+  assert.match(captured.args.at(-1), /^& \{[\s\S]+function Find-ConnectDialog[\s\S]+\}\nexit 0$/);
+  assert.ok(!captured.args.some((arg) => arg.includes(payload.token.value)));
+  assert.equal(captured.environmentContext, undefined);
+  assert.equal(captured.input.executable, executable);
+  assert.equal(captured.input.host, payload.endpoint.host);
+  assert.equal(captured.input.port, payload.endpoint.port);
+  assert.equal(captured.input.username, payload.token.id);
+  assert.equal(captured.input.value, payload.token.value);
+  assert.equal(captured.input.dbname, payload.asset.info.db_name);
+  application.env.JMS_TEST_EXIT = "1";
+  await assert.rejects(launcher.launch(url), /SSMS 19 login failed\. See %TEMP%\\jms-ssms-login\.log\./);
+  application.path = path.join(appData, "missing.exe");
+  await assert.rejects(launcher.launch(url), /not found/);
+});
+
+test("SSMS 19 inline PowerShell validates input and waits for usable controls", async (context) => {
+  // Capture the real launch command without starting PowerShell or importing a second script file.
+  const capture = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `
+import childProcess from "node:child_process";
+import { EventEmitter } from "node:events";
+import { syncBuiltinESMExports } from "node:module";
+import { pathToFileURL } from "node:url";
+childProcess.spawn = (_executable, args, options) => {
+  process.stdout.write(JSON.stringify({ args, options }));
+  return new EventEmitter();
+};
+syncBuiltinESMExports();
+await import(pathToFileURL(process.argv[1]).href);
+`,
+      path.join(projectRoot, "plugins/windows/windows.ssms19/scripts/launch.mjs")
+    ],
+    { encoding: "utf8" }
+  );
+  assert.ifError(capture.error);
+  assert.equal(capture.status, 0, capture.stderr);
+  const { args, options: launchOptions } = JSON.parse(capture.stdout) as {
+    args: string[];
+    options: { timeout: number };
+  };
+  assert.equal(launchOptions.timeout, 180_000);
+  // Overestimate quoting overhead, including every backslash, spaces and the terminating NUL.
+  const commandLength = ["powershell.exe", ...args].reduce(
+    (size, arg) => size + arg.length + (arg.match(/["\\]/g)?.length || 0) + 3,
+    1
+  );
+  assert.ok(commandLength < 32767, "embedded script exceeds the Windows command line limit");
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms-ssms-powershell-"));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const executable = path.join(appData, "missing SSMS 中文.exe");
+  const options = {
+    env: { ...process.env, TMP: appData, TEMP: appData, TMPDIR: appData },
+    timeout: 15_000,
+    encoding: "utf8" as const
+  };
+  const powershell = process.platform === "win32" ? "powershell.exe" : "pwsh";
+  const result = spawnSync(powershell, args, {
+    ...options,
+    input: JSON.stringify({ protocol: "sqlserver", executable, value: "test-secret" })
+  });
+  if ((result.error as NodeJS.ErrnoException)?.code === "ENOENT") return context.skip("PowerShell is not installed");
+  assert.ifError(result.error);
+  assert.equal(result.status, 1, result.stderr);
+  const logPath = path.join(appData, "jms-ssms-login.log");
+  assert.ok((await readFile(logPath, "utf8")).includes(`SSMS program not found: ${executable}`));
+  const invalid = spawnSync(powershell, args, { ...options, input: '{"value":"test-secret", invalid JSON' });
+  assert.ifError(invalid.error);
+  assert.equal(invalid.status, 1, invalid.stderr);
+  const log = await readFile(logPath, "utf8");
+  assert.ok(log.includes("invalid connection JSON"));
+  assert.ok(!log.includes("test-secret"));
+  const connection = {
+    protocol: "sqlserver",
+    executable: process.execPath,
+    host: "gateway.example.test",
+    port: 5525,
+    username: "selector-token",
+    value: "test-secret"
+  };
+  for (const invalidPort of ["", "0", "65536", "99999", "1;exit", "-1"]) {
+    const result = spawnSync(powershell, args, {
+      ...options,
+      input: JSON.stringify({ ...connection, port: invalidPort })
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1, result.stderr);
+    assert.ok((await readFile(logPath, "utf8")).includes("the port must be between 1 and 65535"));
+    await rm(logPath);
+  }
+  for (const value of ["", "test-secret\0suffix"]) {
+    const result = spawnSync(powershell, args, { ...options, input: JSON.stringify({ ...connection, value }) });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1, result.stderr);
+    const log = await readFile(logPath, "utf8");
+    assert.ok(log.includes("the password is empty or contains a null character"));
+    assert.ok(!log.includes("test-secret"));
+    await rm(logPath);
+  }
+  // Run the real wait function against deterministic controls, without Windows UI Automation.
+  const controls = spawnSync(
+    powershell,
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      String.raw`
+$ErrorActionPreference = 'Stop'
+$reader = [System.IO.StreamReader]::new([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
+$source = $reader.ReadToEnd()
+$reader.Dispose()
+$tokens = $null
+$parseErrors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors)
+if ($parseErrors.Count) { throw 'embedded script did not parse' }
+$wait = $ast.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Wait-Control' }, $true)
+. ([scriptblock]::Create($wait.Extent.Text))
+Add-Type @'
+namespace System.Windows.Automation {
+    public static class AutomationElement { public static string ControlTypeProperty = "type"; }
+    public static class ControlType { public static string Button = "button"; }
+}
+'@
+function Find-ById { $script:byId }
+function Find-Elements { $script:buttons }
+function Test-Shown($Element) { $Element.Shown }
+function Start-Sleep {
+    $script:sleeps++
+    if ($script:enableAfterSleep) { $script:byId[0].Current.IsEnabled = $true }
+}
+function Expect-Failure([scriptblock]$Action, [string]$Message) {
+    $actual = ''
+    try { & $Action } catch { $actual = $_.Exception.Message }
+    if ($actual -ne $Message) { throw "expected '$Message', got '$actual'" }
+}
+$ready = [pscustomobject]@{ Shown = $true; Current = [pscustomobject]@{ IsEnabled = $true; Name = 'Connect' } }
+$script:byId = @($ready)
+if ((Wait-Control $null 'password') -ne $ready) { throw 'enabled control was not returned' }
+$script:byId = @($ready, $ready)
+Expect-Failure { Wait-Control $null 'password' } "more than one 'password' control is shown"
+$script:byId = @($ready)
+$ready.Current.IsEnabled = $false
+$script:sleeps = 0
+Expect-Failure { Wait-Control $null 'password' } "the 'password' control is disabled"
+if ($script:sleeps -ne 20) { throw 'disabled control wait did not stop' }
+$script:enableAfterSleep = $true
+$script:sleeps = 0
+if ((Wait-Control $null 'password') -ne $ready -or $script:sleeps -ne 1) { throw 'control was not rechecked after becoming enabled' }
+$script:byId = @()
+$hidden = [pscustomobject]@{ Shown = $false; Current = [pscustomobject]@{ IsEnabled = $true; Name = 'Connect' } }
+$cancel = [pscustomobject]@{ Shown = $true; Current = [pscustomobject]@{ IsEnabled = $true; Name = 'Cancel' } }
+foreach ($caption in @('Connect', ([string][char]0x8FDE + [char]0x63A5))) {
+    $ready.Current.Name = $caption
+    $script:buttons = @($hidden, $cancel, $ready)
+    if ((Wait-Control $null 'connect') -ne $ready) { throw 'visible Connect button was not found by caption' }
+}
+$script:buttons = @($ready, $ready)
+Expect-Failure { Wait-Control $null 'connect' } "more than one 'connect' control is shown"
+`
+    ],
+    { ...options, input: args.at(-1) }
+  );
+  assert.ifError(controls.error);
+  assert.equal(controls.status, 0, controls.stderr);
 });
 
 test("RESP receives a private connection config through its settings directory", async (context) => {

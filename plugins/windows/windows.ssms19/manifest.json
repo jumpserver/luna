@@ -1,0 +1,18 @@
+{
+  "id": "windows.ssms19",
+  "name": "ssms19",
+  "display_name": "SQL Server Management Studio 19",
+  "version": "1.0.0",
+  "min_client_version": "5.2.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://learn.microsoft.com/en-us/ssms/release-history#fixed-version-installers",
+  "category": "databases",
+  "protocols": ["sqlserver"],
+  "builtin": true,
+  "comment": {
+    "zh": "选择 SSMS 19 的 Ssms.exe，自动填写连接窗口并连接。请保留启动时显示连接窗口的设置；当前不自动填写数据库名。",
+    "en": "Select SSMS 19's Ssms.exe to fill the connection dialog and connect. Keep the connection dialog enabled at startup; the database name is not filled automatically."
+  },
+  "permissions": ["exec"]
+}

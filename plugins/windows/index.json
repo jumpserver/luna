@@ -67,6 +67,11 @@
       "category": "databases"
     },
     {
+      "id": "windows.ssms19",
+      "name": "ssms19",
+      "category": "databases"
+    },
+    {
       "id": "windows.tigervnc",
       "name": "tigervnc",
       "category": "remotedesktop"
