@@ -138,6 +138,7 @@ test("macOS activation waits for desktop services before opening a window", asyn
     FfmpegPluginManager: Service,
     FaceEngineManager: Service,
     ReplayTranscoder: Service,
+    electronDir: "/app/electron/.vite/build",
     projectRoot: "/app",
     productName: "JumpServer",
     isDevelopment: false,
