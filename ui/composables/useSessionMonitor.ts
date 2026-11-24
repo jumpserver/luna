@@ -40,7 +40,8 @@ export function useSessionMonitor(sessionId: string, ticketId = "", orgId?: stri
   let disposed = false;
 
   const supportedLock = computed(
-    () => session.value?.type.value === "normal" && ["koko", "lion", "chen"].includes(session.value.terminal.type)
+    () =>
+      session.value?.type.value === "normal" && ["koko", "lion", "chen", "razor"].includes(session.value.terminal.type)
   );
 
   async function load() {

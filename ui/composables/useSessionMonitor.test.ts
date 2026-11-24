@@ -87,27 +87,38 @@ it("does not connect finished sessions", async () => {
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
 
-it.each(["", "ticket-id"])(
-  "uses the matching lock API for ticket %s and only updates accepted tasks",
-  async (ticketId) => {
-    const state = useSessionMonitor("session", ticketId);
-    await mocks.mounted.mock.calls[0]![0]();
-    mocks.request.mockResolvedValue({ ok: ["session"] });
+it.each([
+  ["koko", ""],
+  ["koko", "ticket-id"],
+  ["razor", ""],
+  ["razor", "ticket-id"]
+])("uses the matching lock API for %s and ticket %s and only updates accepted tasks", async (component, ticketId) => {
+  const state = useSessionMonitor("session", ticketId);
+  await mocks.mounted.mock.calls[0]![0]();
+  state.session.value = { ...state.session.value!, terminal: { type: component } };
+  expect(state.supportedLock.value).toBe(true);
+  mocks.request.mockResolvedValue({ ok: ["session"] });
+  await state.togglePause();
+  expect(mocks.request).toHaveBeenLastCalledWith({
+    method: "POST",
+    path: `/api/v1/terminal/tasks/toggle-lock-session${ticketId ? "-for-ticket" : ""}/`,
+    orgId: "org",
+    body: { session_id: "session", task_name: "lock_session" }
+  });
+  mocks.request.mockResolvedValue({ ok: ["session"] });
+  await state.togglePause();
+  expect(mocks.request).toHaveBeenLastCalledWith(
+    expect.objectContaining({ body: { session_id: "session", task_name: "unlock_session" } })
+  );
+  expect(state.session.value?.is_locked).toBe(false);
+  await state.togglePause();
+  if (!ticketId) {
+    mocks.request.mockResolvedValue({ ok: [] });
     await state.togglePause();
-    expect(mocks.request).toHaveBeenLastCalledWith({
-      method: "POST",
-      path: `/api/v1/terminal/tasks/toggle-lock-session${ticketId ? "-for-ticket" : ""}/`,
-      orgId: "org",
-      body: { session_id: "session", task_name: "lock_session" }
-    });
-    if (!ticketId) {
-      mocks.request.mockResolvedValue({ ok: [] });
-      await state.togglePause();
-      expect(mocks.toast).toHaveBeenLastCalledWith({ title: "Monitor.Unavailable", color: "error" });
-    }
-    expect(state.session.value?.is_locked).toBe(true);
+    expect(mocks.toast).toHaveBeenLastCalledWith({ title: "Monitor.Unavailable", color: "error" });
   }
-);
+  expect(state.session.value?.is_locked).toBe(true);
+});
 
 it("resolves HTTP ports and unbracketed IPv6 hosts", () => {
   expect(monitorEndpointUrl({ host: "remote.example", http_port: 8080 }, "http://web.example:3000")).toBe(
