@@ -10,10 +10,10 @@ pnpm install --frozen-lockfile
 pnpm generate:chen
 
 # Serve the generated UI with Koko and a private backend configuration.
-koko chen single --backends /path/to/standalone_backends.yml --web-dir .output/public
+koko --selector local-mysql --selector local-pg --backends /path/to/standalone_backends.yml --web-dir .output/public
 ```
 
-Open `http://127.0.0.1:8082/luna/chen/?selector=local-mysql` or another selector configured on the Go service.
+Open `http://127.0.0.1:8082/luna/chen/?selector=local-mysql` or another selector enabled at startup.
 The root URL `http://127.0.0.1:8082/?selector=local-mysql` redirects to that same route. Static output
 is `.output/public`; `generate:chen` fixes the app base to `/luna/`, including when the general
 `NUXT_APP_BASE_URL` environment variable has another value. Node.js and a development proxy are only build
