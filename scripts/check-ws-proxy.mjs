@@ -51,20 +51,24 @@ delete globalThis.defineNuxtConfig;
 const proxy = config.vite.server.proxy;
 const configuredRoutes = collectWsRoutes(proxy);
 for (const [path, prefix] of [
-  ["/koko/ws/terminal/", "/koko/"],
-  ["/koko/ws/sftp/", "/koko/"],
-  ["/koko/ws/monitor/", "/koko/"],
+  ["/koko/ws/terminal/", "/koko/ws/"],
+  ["/koko/ws/sftp/", "/koko/ws/"],
+  ["/koko/ws/monitor/", "/koko/ws/"],
   ["/koko/lion/ws/connect/", "/koko/lion/"]
 ]) {
   assert.equal(configuredRoutes.find((route) => path.startsWith(route.prefix))?.prefix, prefix);
   assert.equal(configuredRoutes.find((route) => route.prefix === prefix)?.target.origin, proxy[prefix].target);
 }
 
+const chenEvents = "/koko/chen/api/v1/sessions/id/events";
 assert.equal(
-  configuredRoutes.find((route) => "/chen/api/v1/sessions".startsWith(route.prefix)),
+  Object.keys(proxy).find((prefix) => chenEvents.startsWith(prefix)),
+  "/koko/"
+);
+assert.equal(
+  configuredRoutes.find((route) => chenEvents.startsWith(route.prefix)),
   undefined
 );
-assert.equal(proxy["/chen/api/v1"].ws, undefined);
 
 const handlers = [];
 proxy["/api/"].configure({

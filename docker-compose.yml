@@ -10,7 +10,6 @@ services:
     environment:
       JMS_DEV_CORE: ${JMS_DEV_CORE:-host.docker.internal:8080}
       JMS_DEV_KOKO: ${JMS_DEV_KOKO:-host.docker.internal:5050}
-      JMS_DEV_CHEN: ${JMS_DEV_CHEN:-host.docker.internal:8082}
       JMS_DEV_LUNA: ${JMS_DEV_LUNA:-host.docker.internal:3000}
       JMS_DEV_UI: ${JMS_DEV_UI:-host.docker.internal:9528}
       JMS_DEV_KAEL: ${JMS_DEV_KAEL:-host.docker.internal:8083}
