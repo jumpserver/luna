@@ -64,10 +64,6 @@ To start the desktop app:
 pnpm electron:dev
 ```
 
-## Links
-
-Report problems in [Issues](https://github.com/jumpserver/luna/issues). For usage and deployment, see the [JumpServer documentation](https://docs.jumpserver.org/).
-
 ## License
 
 This project is licensed under the GNU General Public License version 3 (GPLv3), consistent with the [JumpServer main repository](https://github.com/jumpserver/jumpserver). See [LICENSE](LICENSE) for the full license text.
