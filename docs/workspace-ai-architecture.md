@@ -414,8 +414,8 @@ AI Gateway 不需要知道 Koko/Chen 原始协议。每个 Workspace adapter 负
 - Workspace AI session 类型：[useWorkspaceAiSessions.ts](../ui/composables/useWorkspaceAiSessions.ts)
 - 统一右侧 AI 面板：[aiPanel.vue](../ui/components/RightPanel/aiPanel.vue)
 - AI domain adapter：[registry.ts](../ui/components/RightPanel/ai/domains/registry.ts)
-- Terminal AI session：[useTerminalAiSessions.ts](../packages/koko/app/composables/terminal/useTerminalAiSessions.ts)
-- File AI session：[useFileAiSessions.ts](../packages/koko/app/composables/sftp/useFileAiSessions.ts)
+- Terminal AI session：[useTerminalAiSessions.ts](../ui/koko/composables/terminal/useTerminalAiSessions.ts)
+- File AI session：[useFileAiSessions.ts](../ui/koko/composables/sftp/useFileAiSessions.ts)
 - SQL AI session：[useChenSqlAiSessions.ts](../ui/chen/composables/useChenSqlAiSessions.ts)
 
 后续不需要推倒现有 UI。建议逐步将各 domain 重复的 Chat Transport 和运行状态收敛为：
