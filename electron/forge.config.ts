@@ -235,6 +235,7 @@ const config: ForgeConfig = {
       options: {
         bin: executableName,
         categories: ["Development"],
+        mimeType: [`x-scheme-handler/${CLIENT_PROTOCOL}`],
         icon: path.join(iconsRoot, "icon.png")
       }
     }),
@@ -242,6 +243,7 @@ const config: ForgeConfig = {
       options: {
         bin: executableName,
         categories: ["Development"],
+        mimeType: [`x-scheme-handler/${CLIENT_PROTOCOL}`],
         icon: path.join(iconsRoot, "icon.png")
       }
     })
