@@ -2,26 +2,19 @@
 
 ## Single mode
 
-Generate the ordinary Luna static assets and serve them directly from the Go executable. With Chen
-and Luna checked out in adjacent directories:
+Generate the ordinary Luna static assets and serve them directly from the Go executable. With Koko installed and the Luna source checked out:
 
 ```sh
 # Luna
 pnpm install --frozen-lockfile
 pnpm generate:chen
 
-# Chen
-cd ../chen
-mkdir -p data/bin
-GOTOOLCHAIN=go1.26.3 go build -o data/bin/chen-go ./cmd/chen-go
-cp conf/standalone_backends_example.yaml data/standalone_backends.yml
-chmod 600 data/standalone_backends.yml
-# Fill in the local database connection details in that private server-side file.
-data/bin/chen-go single --backends data/standalone_backends.yml --web-dir ../luna/.output/public
+# Serve the generated UI with Koko and a private backend configuration.
+koko --selector local-mysql --selector local-pg --backends /path/to/standalone_backends.yml --web-dir .output/public
 ```
 
-Open `http://127.0.0.1:8083/luna/chen/?selector=local-mysql` or another selector configured on the Go service.
-The root URL `http://127.0.0.1:8083/?selector=local-mysql` redirects to that same route. Static output
+Open `http://127.0.0.1:8082/luna/chen/?selector=local-mysql` or another selector enabled at startup.
+The root URL `http://127.0.0.1:8082/?selector=local-mysql` redirects to that same route. Static output
 is `.output/public`; `generate:chen` fixes the app base to `/luna/`, including when the general
 `NUXT_APP_BASE_URL` environment variable has another value. Node.js and a development proxy are only build
 dependencies. Runtime configuration flags and a protocol in the URL are unnecessary.
@@ -30,7 +23,7 @@ Only `/chen` and `/chen/` inside the Nuxt router use the independent app shell. 
 app implementation remains intact in `ui/components/ManagedApp.vue`; normal routes retain its auth,
 Core language synchronization, workspace features and desktop behavior. The independent shell shares
 local theme settings, Nuxt UI and translations without mounting those managed lifecycle components.
-The direct route first verifies `/chen/api/v1/capabilities` reports `mode: single`, then creates a session
+The direct route first verifies `/koko/chen/api/v1/capabilities` reports `mode: single`, then creates a session
 using only `{selector, request_id}`. The returned session determines the SQL dialect. Database passwords
 remain in the Go configuration. Single requests omit ambient cookies and Core headers; session tokens
 remain in the workspace closure. Separate tabs use separate request IDs and independent sessions;
@@ -90,9 +83,8 @@ remain cancelable because they have not started database execution.
 
 ## Managed connection boundary
 
-Route `/chen/api/v1/` to the Go service as HTTP with SSE streaming enabled.
-Development uses `JMS_CHEN_DEV_URL`, with `JMS_CHEN_GO_DEV_URL` as an optional override;
-both select the Go HTTP/SSE API. The retired `/chen/ws/` proxy is no longer configured.
+Route `/koko/chen/api/v1/` to Koko as HTTP with SSE streaming enabled.
+The development proxy uses `JMS_KOKO_DEV_URL` (default `http://localhost:5050`).
 Use `pnpm web:dev --host 0.0.0.0 --port 3000` for the full browser workspace at `/luna/`; `pnpm dev`
 starts Electron as well. Core login, asset permissions, ACL checks and one-use connection tokens remain
 on their ordinary Luna paths. The `/luna/chen/?selector=...` route is only the standalone mode. All endpoint building uses the existing `chenPath`

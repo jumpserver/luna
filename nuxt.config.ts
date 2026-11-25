@@ -8,8 +8,6 @@ const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080"
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
-const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
-const chenGoTarget = process.env.JMS_CHEN_GO_DEV_URL || chenTarget;
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
@@ -200,10 +198,16 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: configureHttpProxy("lion", lionTarget)
         },
-        "/koko/": {
+        "/koko/ws/": {
           target: kokoTarget,
           secure: false,
           ws: true,
+          changeOrigin: true,
+          configure: configureHttpProxy("koko", kokoTarget)
+        },
+        "/koko/": {
+          target: kokoTarget,
+          secure: false,
           changeOrigin: true,
           configure: configureHttpProxy("koko", kokoTarget)
         },
@@ -236,12 +240,6 @@ export default defineNuxtConfig({
           secure: false,
           changeOrigin: true,
           configure: rewriteProxyOrigin(jumpServerTarget)
-        },
-        "/chen/api/v1": {
-          target: chenGoTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: configureHttpProxy("chen-go", chenGoTarget)
         },
         "/kael": {
           target: kaelTarget,

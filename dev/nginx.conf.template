@@ -24,9 +24,6 @@ server {
     location /koko/ {
         proxy_pass http://${JMS_DEV_KOKO};
     }
-    location /chen/ {
-        proxy_pass http://${JMS_DEV_CHEN};
-    }
     location /luna/ {
         proxy_pass http://${JMS_DEV_LUNA};
     }

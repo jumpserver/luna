@@ -7,7 +7,7 @@ import { readableFromWebBody } from "../shared/bytes";
 
 export function chenExportTarget(value: string, origins: Set<string>) {
   const url = new URL(value);
-  if (url.protocol !== "jms-app:" || url.host !== "app" || url.pathname !== "/chen/api/v1/downloads" || url.hash)
+  if (url.protocol !== "jms-app:" || url.host !== "app" || url.pathname !== "/koko/chen/api/v1/downloads" || url.hash)
     throw new Error("Invalid Chen download route");
   const origin = url.searchParams.get("__jms_chen_endpoint") || "";
   const endpoint = new URL(origin);

@@ -408,8 +408,6 @@ export const useAssetAction = () => {
     }
 
     switch (component) {
-      case "chen":
-        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/chen/connect?${params.toString()}`));
       case "tinker":
       case "lion":
       case "panda":

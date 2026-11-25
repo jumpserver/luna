@@ -577,7 +577,7 @@ export function createChenGoApi(
     async exportDownloadTicket(exportId: string) {
       const value = await request<GoDownloadTicket>(`/exports/${id(exportId)}/download-ticket`, "POST");
       // Only the connector's fixed download route may receive this one-use credential.
-      if (value.method !== "POST" || value.download_url !== "/chen/api/v1/downloads" || !value.fields?.ticket)
+      if (value.method !== "POST" || value.download_url !== "/koko/chen/api/v1/downloads" || !value.fields?.ticket)
         throw new ChenGoError("invalid_download_ticket", "Invalid export download response", 502);
       return { ...value, download_url: chenPath("/api/v1/downloads", endpointUrl) };
     },

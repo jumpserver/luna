@@ -1948,7 +1948,7 @@ async function handleInvoke(event, request) {
 async function serveAppRequest(request) {
   const url = parseUrl(request.url);
   const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-  if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
+  if (relative.startsWith("koko/chen/api/v1/")) return proxyChenRequest(request, url);
   const root = path.join(projectRoot, "dist");
   let candidate = path.resolve(root, relative || "index.html");
   if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== root)
