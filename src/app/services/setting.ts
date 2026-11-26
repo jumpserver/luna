@@ -1,5 +1,6 @@
 import { Injectable } from "@angular/core";
 import { GlobalSetting, Setting } from "@app/model";
+import { resolutionsChoices } from "@app/globals";
 import { LocalStorageService } from "./share";
 import { I18nService } from "@app/services/i18n";
 import { HttpService } from "@app/services/http";
@@ -42,7 +43,6 @@ export class SettingService {
     this.setLogo();
     this.setTitle();
     this.setFavicon();
-    this.setRDPResolution();
     return new Promise((resolve) => {
       resolve(true);
     });
@@ -54,6 +54,7 @@ export class SettingService {
       const serverSetting = await this._http.get<any>(url).toPromise();
       const localSetting = this._localStorage.get(this.settingKey);
       this.setting = Object.assign(this.setting, localSetting, serverSetting);
+      this.setRDPResolution();
       this._localStorage.set(this.settingKey, this.setting);
       this.setAppletConnectMethod();
       this.setKeyboardLayout();
@@ -87,11 +88,11 @@ export class SettingService {
   }
 
   setRDPResolution() {
-    const value = this._localStorage.get(this.settingKey);
-    if (!value || (value.graphics && !value.graphics.rdp_resolution)) {
-      this.setting.graphics.rdp_resolution =
-        this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
-    }
+    const value = this.setting.graphics.rdp_resolution;
+    const resolution = typeof value === "string" ? value.trim().toLowerCase() : "auto";
+    this.setting.graphics.rdp_resolution = resolutionsChoices.some(
+      choice => choice.toLowerCase() === resolution
+    ) ? resolution : "auto";
   }
 
   setPrimaryColor() {
