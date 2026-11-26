@@ -238,13 +238,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       .forEach(i => {
         const options = i.options || [];
         const values = new Set(options.map(opt => opt.value));
+        if (i.field === 'resolution' && typeof this.connectOption[i.field] === 'string') {
+          this.connectOption[i.field] = this.connectOption[i.field].trim().toLowerCase();
+        }
         const current = this.getOptionValue(i);
 
         if (!values.has(current)) {
           let fallback: any = 'web';
 
           if (!values.has(fallback)) {
-            fallback = i.value !== undefined ? i.value : options[0] ? options[0].value : undefined;
+            fallback = values.has(i.value) ? i.value : options[0]?.value;
           }
           if (fallback !== undefined) {
             this.connectOption[i.field] = fallback;

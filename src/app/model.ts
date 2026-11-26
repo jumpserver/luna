@@ -317,7 +317,7 @@ export class Setting {
       themes: 'default'
     };
     this.graphics = {
-      rdp_resolution: 'Auto',
+      rdp_resolution: 'auto',
       keyboard_layout: 'en-us-qwerty',
       rdp_client_option: [],
       applet_connection_method: 'web',
