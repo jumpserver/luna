@@ -1,7 +1,33 @@
-import type { GoProgramAction, GoProgramIdentity, GoProgramIntent, GoProgramKind } from "./api";
+import type {
+  GoProgramAction,
+  GoProgramDefinition,
+  GoProgramDetail,
+  GoProgramIdentity,
+  GoProgramIntent,
+  GoProgramKind
+} from "./api";
 
 export function isProgramKind(kind?: string): kind is GoProgramKind {
   return kind === "procedure" || kind === "function" || kind === "trigger" || kind === "event";
+}
+
+export function definitionStatusMessage(status: Exclude<GoProgramDefinition["status"], "complete">) {
+  if (status === "unsupported") return "Chen.ProgramUnsupported";
+  if (status === "truncated") return "Chen.GoOverviewDDLTruncated";
+  return "Chen.ProgramDefinitionUnavailable";
+}
+
+export function needsRecordColumns(detail?: GoProgramDetail) {
+  if (detail?.ref.kind !== "function") return false;
+  const type = detail.properties.return_type_ref;
+  return (
+    typeof type === "object" &&
+    type !== null &&
+    !Array.isArray(type) &&
+    type.schema === "pg_catalog" &&
+    type.name === "record" &&
+    !detail.parameters?.some((p) => ["OUT", "TABLE", "INOUT"].includes(p.mode))
+  );
 }
 
 const icons: Record<GoProgramAction, string> = {

@@ -15,6 +15,7 @@ import type { QueryContext, QueryWorkspaceTab } from "./workspace";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 import { ChenGoError, programParameterType } from "./api";
 import GoEventSchedule from "./GoEventSchedule.vue";
+import { definitionStatusMessage, needsRecordColumns } from "./programActions";
 import { quoteIdentifier, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{
@@ -57,13 +58,7 @@ const original = ref<GoProgramDefinition>();
 const args = ref<GoProgramArgument[]>([]);
 const allowTriggerReorder = ref(false);
 const resultColumns = ref<NonNullable<GoProgramRequest["result_columns"]>>([]);
-const anonymousRecord = computed(
-  () =>
-    props.session.dialect === "postgresql" &&
-    target.kind === "function" &&
-    detail.value?.properties.return_type === "record" &&
-    !detail.value.parameters?.some((p) => ["OUT", "TABLE", "INOUT"].includes(p.mode))
-);
+const anonymousRecord = computed(() => props.session.dialect === "postgresql" && needsRecordColumns(detail.value));
 const inputs = computed(() =>
   (detail.value?.parameters || []).filter((p) => ["IN", "INOUT", "VARIADIC"].includes(p.mode))
 );
@@ -103,7 +98,7 @@ const busy = ref(false);
 const loading = ref(false);
 const error = ref("");
 const preview = ref<GoProgramPlan>();
-const dirty = ref(!!props.restored);
+const dirty = ref(!!props.restored?.definition);
 const discard = ref(false);
 const confirmCommit = ref(false);
 const ready = computed(
@@ -268,7 +263,7 @@ watch(
         resolvedOid.value = result.oid;
         original.value = result;
         if (result.status === "complete" && !dirty.value) definition.value = result.text || "";
-        else if (result.status !== "complete") error.value = t("Chen.ProgramDefinitionUnavailable");
+        else if (result.status !== "complete") error.value = t(definitionStatusMessage(result.status));
       }
     } catch (cause) {
       if (!cancel.signal.aborted) {
@@ -512,8 +507,7 @@ defineExpose({ dirty });
         </p>
         <template v-if="action === 'invoke'">
           <p v-if="target.kind === 'function' && detail?.properties.return_type">
-            {{ t("Chen.ProgramProperty.return_type") }} · {{ detail.properties.returns_set ? "SETOF " : ""
-            }}{{ detail.properties.return_type }}
+            {{ t("Chen.ProgramProperty.return_type") }} · {{ detail.properties.return_type }}
           </p>
           <ul v-if="outputs.length" :aria-label="t('Chen.ProgramResult.output_parameters')" class="space-y-1">
             <li v-for="p in outputs" :key="p.position">

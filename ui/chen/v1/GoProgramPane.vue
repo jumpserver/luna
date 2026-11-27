@@ -15,7 +15,7 @@ import { chenErrorText } from "~/chen/utils/errorMessages";
 
 import { ChenGoError, programParameterType } from "./api";
 import { objectKey } from "./catalogIdentity";
-import { isProgramKind, programActions } from "./programActions";
+import { definitionStatusMessage, isProgramKind, programActions } from "./programActions";
 import GoTriggerList from "./GoTriggerList.vue";
 
 const props = defineProps<{
@@ -322,7 +322,7 @@ watch(
         <p v-else-if="!definition && ready" role="status" class="text-muted">{{ t("Chen.GoV1Loading") }}</p>
         <template v-else-if="definition">
           <p v-if="definition.status === 'restricted' || definition.status === 'unsupported'" class="text-muted">
-            {{ t("Chen.ProgramDefinitionUnavailable") }}
+            {{ t(definitionStatusMessage(definition.status)) }}
           </p>
           <template v-else>
             <template v-if="definition.status === 'truncated'">
