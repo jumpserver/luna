@@ -81,6 +81,7 @@ import { goSqlExecutionError, prepareGoSqlProposal } from "./sqlAi";
 import { usePaneResize } from "./usePaneResize";
 import {
   acceptQueryExecution,
+  appendResultRows,
   closeQueryPlan,
   closeQuerySession,
   closeWarnings,
@@ -98,6 +99,7 @@ import {
   objectWorkspaceKey,
   openQueryPlan,
   reconcileExport,
+  recoverableObjectDraft,
   resultLoadingLocked,
   reviewSubmission,
   tabContext,
@@ -547,6 +549,7 @@ async function loadRows(
   try {
     const settings = query.pendingLoading || query.loadingSettings;
     const limit = settings.batchSize;
+    const transactionRevision = query.console?.transaction?.revision;
     let page = await api.rows(id, offset, limit);
     const replacesSource =
       execution.id === query.execution?.id &&
@@ -599,11 +602,11 @@ async function loadRows(
           page_size: page.browse.page_size
         };
       }
+      if (page.cursor_source && query.console?.transaction?.revision !== transactionRevision) delete page.cursor_source;
       if (append) {
-        const previous = query.rows;
-        if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset)
-          return;
-        query.rows = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+        const merged = appendResultRows(query.rows, page);
+        if (!merged) return;
+        query.rows = merged;
       } else query.rows = page;
       if (query.pendingLoading) {
         query.loadingSettings = { ...query.pendingLoading };
@@ -1337,9 +1340,13 @@ watch(
 const programEditor = useTemplateRef<InstanceType<typeof GoObjectActionDialog>>("programEditor");
 const restoredProgram = shallowRef<GoProgramDraft>();
 async function restoreProgram(query: QueryWorkspaceTab) {
-  const draft = query.objectDraft;
+  const draft = recoverableObjectDraft(query);
   if (!draft || !sessionReady.value || !query.console || programIntent.value) return;
-  let recovery = draft;
+  if (draft.submissionRejected) {
+    reopenProgram(draft);
+    return;
+  }
+  let recovery: GoProgramDraft = draft;
   const execution = query.execution;
   if (
     draft.requiresRecovery &&
@@ -1356,7 +1363,9 @@ async function restoreProgram(query: QueryWorkspaceTab) {
         connection !== scope ||
         !isCurrent(query) ||
         query.console?.id !== consoleId ||
-        query.execution?.id !== execution.id
+        query.execution?.id !== execution.id ||
+        query.objectDraft !== draft ||
+        programIntent.value
       )
         return;
       recovery = {
@@ -1389,7 +1398,7 @@ function applyObjectPlan(query: QueryWorkspaceTab, plan: GoProgramPlan, consoleI
   )
     return false;
   activeId.value = query.id;
-  query.objectDraft = draft;
+  query.objectDraft = draft && { ...draft, planId: plan.plan_id };
   query.pending = {
     sql: plan.sql,
     version: 1,
@@ -1787,10 +1796,18 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     await syncExecution(query);
   } catch (cause) {
     if (!isCurrent(query)) return;
-    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) {
+    // A denied retry cannot establish what happened to an earlier request whose response was lost.
+    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500 && !pending.submissionUnknown) {
+      if (
+        query.pending &&
+        query.objectDraft &&
+        query.objectDraft.planId === pending.objectPlanId &&
+        query.execution?.object_plan?.plan_id !== pending.objectPlanId
+      )
+        query.objectDraft.submissionRejected = true;
       query.pending = null;
       query.pendingLoading = null;
-    }
+    } else if (query.pending && pending.objectPlanId) pending.submissionUnknown = true;
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
     if (pending.refresh) recordSavedRefreshError(query, query.error);
     if (run && !run.executionId) {

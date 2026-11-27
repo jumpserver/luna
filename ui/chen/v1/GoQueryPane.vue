@@ -40,7 +40,7 @@ import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { queryResultTitle } from "./resultPresentation";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
-import { hasMoreResultRows, loadQueryPlan, resultLoadingLocked } from "./workspace";
+import { hasMoreResultRows, loadQueryPlan, recoverableObjectDraft, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -1076,8 +1076,8 @@ defineExpose({
           · {{ t("Chen.ProgramStep." + step.status) }}
           <span
             v-if="
-              query.executionObjectPlan === query.execution.object_plan.plan_id &&
-              query.objectDraft?.stepCommands?.[index]
+              query.objectDraft?.planId === query.execution.object_plan.plan_id &&
+              query.objectDraft.stepCommands?.[index]
             "
           >
             · {{ query.objectDraft.stepCommands[index] }}
@@ -1085,22 +1085,19 @@ defineExpose({
           <span v-if="step.durability">· {{ t("Chen.ProgramOutcome." + step.durability) }}</span>
         </li>
       </ol>
-      <UButton
-        v-if="
-          query.objectDraft &&
-          query.executionObjectPlan === query.execution.object_plan.plan_id &&
-          ['failed', 'unknown', 'canceled'].includes(query.execution.status)
-        "
-        variant="ghost"
-        size="xs"
-        :label="t('Chen.ProgramRestore')"
-        @click="emit('restoreProgram')"
-      />
       <p v-if="query.execution.object_plan.side_effects_possible" class="text-warning">
         {{ t("Chen.ProgramSideEffects") }}
       </p>
       <span v-if="query.execution.object_plan.results_truncated">{{ t("Chen.ProgramTruncated") }}</span>
     </div>
+    <UButton
+      v-if="recoverableObjectDraft(query)"
+      class="self-start"
+      variant="ghost"
+      size="xs"
+      :label="t('Chen.ProgramRestore')"
+      @click="emit('restoreProgram')"
+    />
     <div v-if="cursorOptions.length" class="flex shrink-0 items-center gap-2 px-3 py-1">
       <USelect v-model="cursorKey" :items="cursorOptions" :aria-label="t('Chen.ProgramCursorCell')" size="xs" />
       <UButton size="xs" variant="soft" :label="t('Chen.ProgramAction.fetchCursor')" @click="fetchCursor" />

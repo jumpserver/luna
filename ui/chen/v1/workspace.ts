@@ -76,7 +76,7 @@ export interface QueryWorkspaceTab {
   edit: GoEditDraft;
   executionEditPlan?: string;
   executionObjectPlan?: string;
-  objectDraft?: GoProgramDraft;
+  objectDraft?: GoProgramDraft & { planId: string; submissionRejected?: boolean };
   executionRefresh?: {
     viewId: string;
     offset: number;
@@ -119,6 +119,7 @@ export interface QueryWorkspaceTab {
     exportFormat?: GoExportFormat;
     editPlanId?: string;
     objectPlanId?: string;
+    submissionUnknown?: boolean;
     browse?: GoBrowseRequest;
     queryPage?: GoQueryPageRequest;
     refresh?: boolean;
@@ -325,6 +326,34 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   query.loadingRows = false;
   interruptQueryPlans(query);
 }
+export function recoverableObjectDraft(query: QueryWorkspaceTab) {
+  const draft = query.objectDraft;
+  if (
+    !draft ||
+    draft.consoleId !== query.console?.id ||
+    query.busy ||
+    query.pending ||
+    executionActive(query.execution)
+  )
+    return;
+  if (draft.submissionRejected) return draft;
+  const execution = query.execution;
+  if (execution?.object_plan?.plan_id === draft.planId && ["failed", "unknown", "canceled"].includes(execution.status))
+    return draft;
+}
+
+export function appendResultRows(previous: GoRows | null, page: GoRows) {
+  if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset) return;
+  const merged = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+  // Koko returns cursor cells only for the requested slice, using absolute row indexes.
+  if (previous.cursor_source)
+    merged.cursor_source = {
+      ...previous.cursor_source,
+      cells: [...previous.cursor_source.cells, ...(page.cursor_source?.cells || [])]
+    };
+  return merged;
+}
+
 export function finishResultTransaction(
   query: QueryWorkspaceTab,
   outcome: "committed" | "rolled_back" | "implicit_commit" | "unknown"
