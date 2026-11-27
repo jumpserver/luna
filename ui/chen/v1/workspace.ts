@@ -6,8 +6,11 @@ import type {
   GoBrowseRequest,
   GoQueryPageRequest,
   GoPlan,
-  GoCatalogObject,
+  GoCatalogRelation,
+  GoCatalogEntry,
+  GoProgramSummary,
   GoConsole,
+  GoProgramDraft,
   GoTransactionRequest,
   GoExecution,
   GoExport,
@@ -20,6 +23,9 @@ import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
 import { newChenRequestId } from "./requestId";
+import { objectKey } from "./catalogIdentity";
+
+export { objectKey };
 
 // Share the established workspace display preferences with both SQL and object pages.
 export { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
@@ -60,7 +66,7 @@ export interface QueryWorkspaceTab {
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
-  browseObject?: GoCatalogObject;
+  browseObject?: GoCatalogRelation;
   readOnly?: boolean;
   loadingSettings: GoResultLoadingSettings;
   pendingLoading: GoResultLoadingSettings | null;
@@ -69,6 +75,8 @@ export interface QueryWorkspaceTab {
   browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
+  executionObjectPlan?: string;
+  objectDraft?: GoProgramDraft & { planId: string; submissionRejected?: boolean };
   executionRefresh?: {
     viewId: string;
     offset: number;
@@ -110,6 +118,8 @@ export interface QueryWorkspaceTab {
     planNumber?: number;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
+    objectPlanId?: string;
+    submissionUnknown?: boolean;
     browse?: GoBrowseRequest;
     queryPage?: GoQueryPageRequest;
     refresh?: boolean;
@@ -139,15 +149,22 @@ export type ObjectWorkspaceSection =
   | "primary_key"
   | "defaults"
   | "ddl"
-  | "diagram";
+  | "diagram"
+  | "triggers";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
   title: string;
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   sessionId: string;
   section: ObjectWorkspaceSection;
   data: QueryWorkspaceTab | null;
+}
+export interface ProgramWorkspaceTab {
+  id: string;
+  kind: "program";
+  title: string;
+  object: GoProgramSummary;
 }
 export interface OverviewWorkspaceTab {
   id: string;
@@ -156,7 +173,7 @@ export interface OverviewWorkspaceTab {
   title: string;
   context: QueryContext;
 }
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab | ProgramWorkspaceTab;
 export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
   return tab.kind === "query" || tab.kind === "preview" || tab.kind === "console";
 }
@@ -171,10 +188,8 @@ export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] 
     return query ? [query, ...query.pinnedResults] : [];
   });
 }
-export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
-  // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
-  // client-side folding would conflate distinct objects on case-sensitive databases.
-  return JSON.stringify([sessionId, object.database, object.schema, object.kind, object.name]);
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogEntry) {
+  return objectKey(object, sessionId);
 }
 export function createQueryTab(
   title: string,
@@ -225,22 +240,19 @@ export function createQueryTab(
     closed: false
   };
 }
-export function objectKey(object: GoCatalogObject) {
-  return JSON.stringify([object.database, object.schema, object.kind, object.name]);
-}
 export function quoteIdentifier(value: string, dialect: string) {
   const quote = chenSqlDialect(dialect).quote;
   const close = quote === "[" ? "]" : quote;
   return `${quote}${value.replaceAll(close, close + close)}${close}`;
 }
-export function qualifiedObjectName(object: GoCatalogObject, dialect: string) {
+export function qualifiedObjectName(object: Pick<GoCatalogRelation, "database" | "schema" | "name">, dialect: string) {
   const namespace = chenSqlDialect(dialect).databaseNamespace ? object.schema || object.database : object.schema;
   return [namespace, object.name]
     .filter(Boolean)
     .map((part) => quoteIdentifier(part, dialect))
     .join(".");
 }
-export function objectSelect(object: GoCatalogObject, dialect: string, preview = false) {
+export function objectSelect(object: GoCatalogRelation, dialect: string, preview = false) {
   const name = qualifiedObjectName(object, dialect);
   if (!preview) return `SELECT * FROM ${name};`;
   switch (chenSqlDialect(dialect).preview) {
@@ -261,6 +273,7 @@ export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab,
 ): QueryContext {
   if (!tab) return { ...fallback };
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
+  if (tab.kind === "program") return { database: tab.object.ref.database, schema: tab.object.ref.schema };
   return { ...tab.context };
 }
 export function queryDirty(query: QueryWorkspaceTab): boolean {
@@ -278,6 +291,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     submitReview: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
+    ...(query.executionObjectPlan ? { objectPlanId: query.executionObjectPlan } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
@@ -297,6 +311,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     confirmWarnings: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
+    ...(query.executionObjectPlan ? { objectPlanId: query.executionObjectPlan } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
@@ -311,6 +326,48 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   query.loadingRows = false;
   interruptQueryPlans(query);
 }
+export function recoverableObjectDraft(query: QueryWorkspaceTab) {
+  const draft = query.objectDraft;
+  if (
+    !draft ||
+    draft.consoleId !== query.console?.id ||
+    query.busy ||
+    query.pending ||
+    executionActive(query.execution)
+  )
+    return;
+  if (draft.submissionRejected) return draft;
+  const execution = query.execution;
+  if (execution?.object_plan?.plan_id === draft.planId && ["failed", "unknown", "canceled"].includes(execution.status))
+    return draft;
+}
+
+export function appendResultRows(previous: GoRows | null, page: GoRows) {
+  if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset) return;
+  const merged = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+  // Koko returns cursor cells only for the requested slice, using absolute row indexes.
+  if (previous.cursor_source)
+    merged.cursor_source = {
+      ...previous.cursor_source,
+      cells: [...previous.cursor_source.cells, ...(page.cursor_source?.cells || [])]
+    };
+  return merged;
+}
+
+export function finishResultTransaction(
+  query: QueryWorkspaceTab,
+  outcome: "committed" | "rolled_back" | "implicit_commit" | "unknown"
+) {
+  if (!query.rows) return;
+  if (query.resultExecution?.object_plan) {
+    // Cached routine rows remain readable after the transaction, but their cursor handles expire.
+    delete query.rows.cursor_source;
+    return;
+  }
+  query.edit.refreshRequired = true;
+  query.edit.transactionStale = true;
+  if (query.edit.status === "staged") query.edit.status = outcome === "implicit_commit" ? "committed" : outcome;
+}
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (query.closed || value.console_id !== query.console?.id) return false;
   if (
@@ -319,11 +376,7 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
     value.transaction.revision > (query.resultTransactionRevision ?? -1) &&
     ["committed", "rolled_back", "implicit_commit", "unknown"].includes(value.transaction.outcome)
   ) {
-    query.edit.refreshRequired = true;
-    query.edit.transactionStale = true;
-    if (query.edit.status === "staged") {
-      query.edit.status = value.transaction.outcome === "implicit_commit" ? "committed" : value.transaction.outcome;
-    }
+    finishResultTransaction(query, value.transaction.outcome);
   }
   if (query.console && value.transaction && value.transaction.revision >= (query.console.transaction?.revision || 0))
     query.console.transaction = value.transaction;
@@ -335,7 +388,7 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
   query.execution = reconcileExecution(query.execution, value);
   return true;
 }
-export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogObject }>(
+export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogEntry }>(
   previous: T[],
   incoming: T[],
   append: boolean

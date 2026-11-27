@@ -4,6 +4,7 @@ import type {
   GoBrowseRequest,
   GoEditPlan,
   GoExecution,
+  GoProgramIntent,
   GoExportFormat,
   GoQueryPageRequest,
   GoSession,
@@ -39,7 +40,7 @@ import MonacoSqlEditor from "./MonacoSqlEditor.client.vue";
 import { queryResultTitle } from "./resultPresentation";
 import { reviewTicketUrl } from "./review";
 import { usePaneResize } from "./usePaneResize";
-import { hasMoreResultRows, loadQueryPlan, resultLoadingLocked } from "./workspace";
+import { hasMoreResultRows, loadQueryPlan, recoverableObjectDraft, resultLoadingLocked } from "./workspace";
 
 const props = defineProps<{
   query: QueryWorkspaceTab;
@@ -61,6 +62,8 @@ const emit = defineEmits<{
   browse: [request: GoBrowseRequest, target?: QueryWorkspaceTab];
   queryPage: [request: GoQueryPageRequest, target?: QueryWorkspaceTab];
   cachedResult: [target?: QueryWorkspaceTab];
+  restoreProgram: [];
+  cursor: [intent: GoProgramIntent];
   loadingSettings: [settings: GoResultLoadingSettings, target?: QueryWorkspaceTab];
   loadMore: [automatic: boolean, target?: QueryWorkspaceTab];
   run: [sql: string, version: number];
@@ -253,6 +256,39 @@ const loadedResultSql = computed(
       ?.source_sql ||
     props.query.resultSql
 );
+const cursorOptions = computed(() => {
+  const rows = props.query.rows;
+  const tx = props.query.console?.transaction;
+  if (!rows?.cursor_source || !tx?.manual || tx.state !== "active") return [];
+  return rows.cursor_source.cells
+    .filter((c) => c.row >= rows.offset && c.row < rows.offset + rows.rows.length)
+    .map((c) => ({
+      value: `${c.row}/${c.column}`,
+      label: `${c.row + 1} · ${rows.columns[c.column]?.name || ""}`,
+      row: c.row,
+      column: c.column
+    }));
+});
+const cursorKey = ref("");
+watch(
+  cursorOptions,
+  (items) => {
+    if (!items.some((c) => c.value === cursorKey.value)) cursorKey.value = items[0]?.value || "";
+  },
+  { immediate: true }
+);
+function fetchCursor() {
+  const cell = cursorOptions.value.find((c) => c.value === cursorKey.value);
+  const rows = props.query.rows;
+  if (!cell || !rows?.cursor_source || !props.query.console) return;
+  emit("cursor", {
+    action: "fetchCursor",
+    ref: rows.cursor_source.ref,
+    oid: rows.cursor_source.oid,
+    consoleId: props.query.console.id,
+    cursor: { result_id: rows.id, row: cell.row, column: cell.column, limit: 100 }
+  });
+}
 function pinResult() {
   if (!props.query.rows || editDirty(props.query.edit) || props.query.edit.busy || props.query.loadingRows) return;
   emit("pin", loadedResultSql.value, queryResultTitle(loadedResultSql.value), writePanel.value?.snapshotView());
@@ -525,7 +561,13 @@ function resultSql(id: string) {
   );
 }
 const resultNames = computed(
-  () => new Map(props.query.resultTabs.map((result) => [result.id, queryResultTitle(result.sql)]))
+  () =>
+    new Map(
+      props.query.resultTabs.map((result) => {
+        const role = result.execution.statement_results.find((s) => s.result_id === result.id)?.result_role;
+        return [result.id, role ? t(`Chen.ProgramResult.${role}`) : queryResultTitle(result.sql)];
+      })
+    )
 );
 function selectResult(id: string) {
   if (editDirty(props.query.edit) || props.query.edit.busy) return;
@@ -1020,6 +1062,45 @@ defineExpose({
       />
       <span>{{ transactionNotice }}</span>
       <span v-if="query.execution?.transaction?.prior_committed">{{ t("Chen.Transaction.PriorCommitted") }}</span>
+    </div>
+    <div v-if="query.execution?.object_plan" role="status" class="shrink-0 border-b border-default px-3 py-2 text-xs">
+      <strong>{{ query.execution.object_plan.ref.name }}</strong>
+      · {{ t("Chen.ProgramOutcome." + query.execution.object_plan.outcome) }}
+      <ol class="mt-1 list-decimal pl-4">
+        <li v-for="(step, index) in query.execution.object_plan.steps" :key="index">
+          {{
+            step.result_role
+              ? t("Chen.ProgramResult." + step.result_role)
+              : t("Chen.ProgramAction." + query.execution.object_plan.action)
+          }}
+          · {{ t("Chen.ProgramStep." + step.status) }}
+          <span
+            v-if="
+              query.objectDraft?.planId === query.execution.object_plan.plan_id &&
+              query.objectDraft.stepCommands?.[index]
+            "
+          >
+            · {{ query.objectDraft.stepCommands[index] }}
+          </span>
+          <span v-if="step.durability">· {{ t("Chen.ProgramOutcome." + step.durability) }}</span>
+        </li>
+      </ol>
+      <p v-if="query.execution.object_plan.side_effects_possible" class="text-warning">
+        {{ t("Chen.ProgramSideEffects") }}
+      </p>
+      <span v-if="query.execution.object_plan.results_truncated">{{ t("Chen.ProgramTruncated") }}</span>
+    </div>
+    <UButton
+      v-if="recoverableObjectDraft(query)"
+      class="self-start"
+      variant="ghost"
+      size="xs"
+      :label="t('Chen.ProgramRestore')"
+      @click="emit('restoreProgram')"
+    />
+    <div v-if="cursorOptions.length" class="flex shrink-0 items-center gap-2 px-3 py-1">
+      <USelect v-model="cursorKey" :items="cursorOptions" :aria-label="t('Chen.ProgramCursorCell')" size="xs" />
+      <UButton size="xs" variant="soft" :label="t('Chen.ProgramAction.fetchCursor')" @click="fetchCursor" />
     </div>
     <SqlSnippetSaveDialog
       v-if="saveSnippetOpen"
@@ -1638,6 +1719,7 @@ defineExpose({
               @refresh-data="(target) => emit('refreshData', target || pinnedQuery)"
               @browse="(request, target) => emit('browse', request, target || pinnedQuery)"
               @query-page="(request, target) => emit('queryPage', request, target || pinnedQuery)"
+              @cursor="(intent) => emit('cursor', intent)"
               @cached-result="(target) => emit('cachedResult', target || pinnedQuery)"
               @loading-settings="(settings, target) => emit('loadingSettings', settings, target || pinnedQuery)"
               @load-more="(automatic, target) => emit('loadMore', automatic, target || pinnedQuery)"

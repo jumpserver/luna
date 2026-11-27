@@ -79,6 +79,7 @@ export function chenErrorText(cause: unknown, t: Translate, fallback = "unexpect
       ? (cause as { code?: unknown; message?: unknown; reason?: unknown; status?: unknown })
       : {};
   const code = typeof value.code === "string" ? value.code : "";
+  if (code === "catalog_operation_unsupported" || code === "catalog_unsupported") return t("Chen.ProgramUnsupported");
   const raw = typeof cause === "string" ? cause : (value.message ?? value.reason);
   const message = typeof raw === "string" ? raw.trim() : "";
   const translate = (key: string, values?: Record<string, string | number>) => t(`Chen.Errors.${key}`, values);

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type {
   GoBrowseRequest,
-  GoCatalogObject,
+  GoCatalogRelation,
+  GoCatalogEntry,
+  GoCatalogCapabilities,
+  GoProgramSummary,
+  GoProgramIntent,
+  GoProgramDraft,
+  GoProgramPlan,
   GoConsole,
   GoEditPlan,
   GoEvent,
@@ -64,21 +70,25 @@ import { acceptEditExecution, createEditDraft, editDirty } from "./dataEditing";
 import { readChenEvents } from "./events";
 import { downloadGoExportFile } from "./exportDownload";
 import GoCatalogTree from "./GoCatalogTree.vue";
+import GoProgramPane from "./GoProgramPane.vue";
 import GoObjectPane from "./GoObjectPane.vue";
 import GoOverviewPane from "./GoOverviewPane.vue";
 import GoQueryPane from "./GoQueryPane.vue";
+import GoObjectActionDialog from "./GoObjectActionDialog.vue";
 import GoSchemaEditor from "./GoSchemaEditor.vue";
 import { newChenRequestId } from "./requestId";
 import { goSqlExecutionError, prepareGoSqlProposal } from "./sqlAi";
 import { usePaneResize } from "./usePaneResize";
 import {
   acceptQueryExecution,
+  appendResultRows,
   closeQueryPlan,
   closeQuerySession,
   closeWarnings,
   createQueryTab,
   exportActive,
   exportNeedsSync,
+  finishResultTransaction,
   hasMoreResultRows,
   interruptQueryPlans,
   isQueryWorkspaceTab,
@@ -89,6 +99,7 @@ import {
   objectWorkspaceKey,
   openQueryPlan,
   reconcileExport,
+  recoverableObjectDraft,
   resultLoadingLocked,
   reviewSubmission,
   tabContext,
@@ -105,7 +116,13 @@ const toast = useToast();
 const loadingPreferences = useResultLoadingPreferences();
 const workspacePreferences = useChenWorkspacePreferences();
 // Session-scoped metadata and logs never persist credentials, SQL, or object names to disk.
-const recentObjects = ref<GoCatalogObject[]>([]);
+const recentObjects = ref<GoCatalogEntry[]>([]);
+const programIntent = ref<GoProgramIntent | null>(null);
+const programRevision = ref(0);
+const catalogCapabilities = ref(new Map<string, GoCatalogCapabilities>());
+function supportsTriggers(database: string) {
+  return catalogCapabilities.value.get(database)?.collections.trigger?.actions.includes("inspect") ?? false;
+}
 const logs = ref<ChenLogConsoleEntry[]>([]);
 const logsOpen = ref(false);
 const unreadLogErrors = ref(0);
@@ -230,11 +247,13 @@ const tabDefinitions = computed(() =>
     icon:
       tab.kind === "overview"
         ? "i-lucide-list-tree"
-        : tab.kind === "object"
-          ? "i-lucide-table-properties"
-          : tab.kind === "console"
-            ? "i-lucide-square-terminal"
-            : "i-lucide-terminal-square",
+        : tab.kind === "program"
+          ? "i-lucide-braces"
+          : tab.kind === "object"
+            ? "i-lucide-table-properties"
+            : tab.kind === "console"
+              ? "i-lucide-square-terminal"
+              : "i-lucide-terminal-square",
     title: objectTitle(tab)
   }))
 );
@@ -274,7 +293,7 @@ let aiGeneration = 0;
 function sqlAiContext(): ChenSqlEditorContext | null {
   const active = activeTab.value;
   if (!props.tab || !sessionReady.value || !session.value) return null;
-  if (active?.kind === "preview") return null;
+  if (active?.kind === "preview" || active?.kind === "program") return null;
   const query = active ? workspaceQuery(active) : null;
   const editor = active && (active.kind === "query" || active.kind === "console");
   const catalogTable = active?.kind === "object" && getChenSqlAiSession(props.tab.id)?.supportsSelectedTable;
@@ -530,6 +549,7 @@ async function loadRows(
   try {
     const settings = query.pendingLoading || query.loadingSettings;
     const limit = settings.batchSize;
+    const transactionRevision = query.console?.transaction?.revision;
     let page = await api.rows(id, offset, limit);
     const replacesSource =
       execution.id === query.execution?.id &&
@@ -582,11 +602,11 @@ async function loadRows(
           page_size: page.browse.page_size
         };
       }
+      if (page.cursor_source && query.console?.transaction?.revision !== transactionRevision) delete page.cursor_source;
       if (append) {
-        const previous = query.rows;
-        if (!previous || previous.id !== page.id || previous.offset !== 0 || previous.rows.length !== page.offset)
-          return;
-        query.rows = { ...page, offset: 0, rows: [...previous.rows, ...page.rows] };
+        const merged = appendResultRows(query.rows, page);
+        if (!merged) return;
+        query.rows = merged;
       } else query.rows = page;
       if (query.pendingLoading) {
         query.loadingSettings = { ...query.pendingLoading };
@@ -768,6 +788,12 @@ function acceptExecution(query: QueryWorkspaceTab, value: GoExecution) {
     }
   }
   const logState = `${value.status}:${value.audit_status}`;
+  if (
+    loggedExecutions.get(value.id) !== logState &&
+    !executionActive(value) &&
+    (value.object_plan || value.transaction?.outcome)
+  )
+    programRevision.value++;
   const notExecuted = value.error?.code === "implicit_commit_confirmation_required";
   if (loggedExecutions.get(value.id) !== logState) {
     loggedExecutions.set(value.id, logState);
@@ -906,9 +932,7 @@ function acceptConsole(query: QueryWorkspaceTab, value: GoConsole) {
     value.transaction?.notice &&
     value.transaction.notice.id !== query.console?.transaction?.notice?.id
   ) {
-    query.edit.refreshRequired = true;
-    query.edit.transactionStale = true;
-    if (query.edit.status === "staged") query.edit.status = value.transaction.notice.outcome;
+    finishResultTransaction(query, value.transaction.notice.outcome);
   }
   query.console = value;
   query.context = { database: value.database, schema: value.schema };
@@ -1054,7 +1078,7 @@ async function connectQuery(query: QueryWorkspaceTab) {
 }
 async function newQuery(
   context = tabContext(activeTab.value, defaultContext.value),
-  object?: GoCatalogObject,
+  object?: GoCatalogRelation,
   preview = false,
   browse = false,
   kind: "query" | "console" = "query"
@@ -1083,6 +1107,7 @@ async function newQuery(
   if (!isCurrent(query)) return;
   if (browse && object && query.console) await browseTable(query);
   else if (preview && query.console) await submit(query, sql, 1);
+  return query;
 }
 async function browseTable(query: QueryWorkspaceTab, request?: GoBrowseRequest, refresh = false): Promise<void> {
   if (
@@ -1233,6 +1258,10 @@ async function refreshData(query: QueryWorkspaceTab, targetOffset?: number, afte
     afterSave = true;
   }
   if (!isCurrent(query) || !sessionReady.value || resultLoadingLocked(query, true) || !query.rows) return;
+  if (query.resultExecution?.object_plan) {
+    await loadRows(query, query.rows.id, targetOffset ?? query.rows.offset, query.resultExecution, query.resultSql);
+    return;
+  }
   if (query.browseObject)
     await browseTable(
       query,
@@ -1308,11 +1337,85 @@ watch(
   }
 );
 
+const programEditor = useTemplateRef<InstanceType<typeof GoObjectActionDialog>>("programEditor");
+const restoredProgram = shallowRef<GoProgramDraft>();
+async function restoreProgram(query: QueryWorkspaceTab) {
+  const draft = recoverableObjectDraft(query);
+  if (!draft || !sessionReady.value || !query.console || programIntent.value) return;
+  if (draft.submissionRejected) {
+    reopenProgram(draft);
+    return;
+  }
+  let recovery: GoProgramDraft = draft;
+  const execution = query.execution;
+  if (
+    draft.requiresRecovery &&
+    execution?.object_plan &&
+    execution.object_plan.plan_id === query.executionObjectPlan &&
+    ["failed", "unknown", "canceled"].includes(execution.status)
+  ) {
+    const scope = connection;
+    const consoleId = query.console.id;
+    try {
+      const recoveryExecutionId = draft.recoveryExecutionId || execution.id;
+      const saved = await api.objectRecovery(consoleId, recoveryExecutionId);
+      if (
+        connection !== scope ||
+        !isCurrent(query) ||
+        query.console?.id !== consoleId ||
+        query.execution?.id !== execution.id ||
+        query.objectDraft !== draft ||
+        programIntent.value
+      )
+        return;
+      recovery = {
+        ...draft,
+        recoveryExecutionId,
+        original: { status: "complete", ref: saved.ref, source: "SHOW CREATE", text: saved.definition },
+        environment: saved.environment,
+        currentStatus: saved.current_status
+      };
+    } catch (cause) {
+      if (connection === scope && isCurrent(query) && query.console?.id === consoleId) query.error = failureText(cause);
+      return;
+    }
+  }
+  if (draft.requiresRecovery && !recovery.currentStatus) return;
+  restoredProgram.value = recovery;
+  programIntent.value = recovery.intent;
+}
+function reopenProgram(draft: GoProgramDraft) {
+  restoredProgram.value = draft;
+  programIntent.value = draft.intent;
+}
+function applyObjectPlan(query: QueryWorkspaceTab, plan: GoProgramPlan, consoleId: string, draft?: GoProgramDraft) {
+  if (
+    !sessionReady.value ||
+    !queries.value.includes(query) ||
+    query.console?.id !== consoleId ||
+    query.console.database !== plan.ref.database ||
+    resultLoadingLocked(query)
+  )
+    return false;
+  activeId.value = query.id;
+  query.objectDraft = draft && { ...draft, planId: plan.plan_id };
+  query.pending = {
+    sql: plan.sql,
+    version: 1,
+    id: newChenRequestId(),
+    objectPlanId: plan.plan_id,
+    ...(plan.requires_implicit_commit
+      ? { transaction: { confirmImplicit: true, revision: plan.transaction_revision } }
+      : {})
+  };
+  void recoverSubmission(query);
+  return true;
+}
 interface SchemaEdit {
   id: string;
   sessionId: string;
   context: QueryContext;
-  object?: GoCatalogObject;
+  object?: GoCatalogRelation;
   mode: "create" | "alter" | "index";
   transferSql: (sql: string, execute: boolean) => boolean;
   close: () => void;
@@ -1330,7 +1433,7 @@ function confirmSessionLeave(options?: Pick<CloseOptions, "preserveSqlDrafts" | 
 }
 async function openSchemaEditor(
   mode: "create" | "alter" | "index",
-  object?: GoCatalogObject,
+  object?: GoCatalogRelation,
   context = tabContext(activeTab.value, defaultContext.value)
 ) {
   const sessionId = session.value?.id;
@@ -1402,12 +1505,7 @@ function queryVisible(query: QueryWorkspaceTab) {
 }
 async function enterObjectData(tab: ObjectWorkspaceTab) {
   if (!sessionReady.value || tab.section !== "data") return;
-  recentObjects.value = [
-    { ...tab.object },
-    ...recentObjects.value.filter(
-      (item) => objectWorkspaceKey(session.value!.id, item) !== objectWorkspaceKey(session.value!.id, tab.object)
-    )
-  ].slice(0, 10);
+  rememberObject(tab.object);
   if (!tab.data) {
     const query = newQueryTab(
       tab.title,
@@ -1431,7 +1529,39 @@ function objectSection(tab: ObjectWorkspaceTab, section: ObjectWorkspaceSection)
   tab.section = section;
   if (section === "data") void enterObjectData(tab);
 }
-function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "data") {
+function rememberObject(object: GoCatalogEntry) {
+  const sessionId = session.value?.id;
+  if (!sessionId) return;
+  const key = objectWorkspaceKey(sessionId, object);
+  recentObjects.value = [
+    object,
+    ...recentObjects.value.filter((item) => objectWorkspaceKey(sessionId, item) !== key)
+  ].slice(0, 10);
+}
+function openProgram(object: GoProgramSummary) {
+  if (!sessionReady.value || !session.value) return;
+  const id = `program:${objectWorkspaceKey(session.value.id, object)}`;
+  let tab = tabs.value.find(
+    (item) =>
+      item.kind === "program" &&
+      objectWorkspaceKey(session.value!.id, item.object) === objectWorkspaceKey(session.value!.id, object)
+  );
+  if (!tab) {
+    tab = {
+      id,
+      kind: "program",
+      title: object.signature || [object.ref.table, object.label].filter(Boolean).join(" · "),
+      object
+    };
+    tabs.value.push(tab);
+  } else if (tab.kind === "program" && object.oid && object.oid !== tab.object.oid) {
+    tab.object = object;
+  }
+  rememberObject(object);
+  activeId.value = tab.id;
+  drawer.value = false;
+}
+function openRelation(object: GoCatalogRelation, section: ObjectWorkspaceSection = "data") {
   if (!session.value) return;
   const key = objectWorkspaceKey(session.value.id, object);
   let tab = tabs.value.find(
@@ -1543,6 +1673,7 @@ async function confirmImplicitCommit(query: QueryWorkspaceTab, executionId: stri
     version: query.executionVersion,
     id: newChenRequestId(),
     transaction: { confirmImplicit: true, revision },
+    objectPlanId: query.executionObjectPlan,
     submitReview: query.executionSubmitReview,
     confirmWarnings: query.executionConfirmWarnings
   };
@@ -1567,53 +1698,62 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
   query.error = "";
   query.edit.refreshError = undefined;
   try {
-    const value = pending.queryPage
-      ? await api.queryPage(
+    const value = pending.objectPlanId
+      ? await api.applyProgram(
           query.console.id,
-          pending.queryPage,
+          pending.objectPlanId,
           pending.id,
           pending.submitReview,
-          pending.confirmWarnings
+          pending.confirmWarnings,
+          pending.transaction
         )
-      : pending.editPlanId
-        ? await api.applyEdits(
+      : pending.queryPage
+        ? await api.queryPage(
             query.console.id,
-            pending.editPlanId,
+            pending.queryPage,
             pending.id,
             pending.submitReview,
             pending.confirmWarnings
           )
-        : pending.browse
-          ? await api.browse(
+        : pending.editPlanId
+          ? await api.applyEdits(
               query.console.id,
-              pending.browse.schema || "",
-              pending.browse.table || "",
+              pending.editPlanId,
               pending.id,
               pending.submitReview,
-              pending.confirmWarnings,
-              pending.browse
+              pending.confirmWarnings
             )
-          : pending.exportFormat
-            ? await api.exportQuery(
+          : pending.browse
+            ? await api.browse(
                 query.console.id,
-                pending.sql,
-                pending.version,
-                pending.id,
-                pending.exportFormat,
-                pending.submitReview,
-                pending.confirmWarnings
-              )
-            : await api.execute(
-                query.console.id,
-                pending.sql,
-                pending.version,
+                pending.browse.schema || "",
+                pending.browse.table || "",
                 pending.id,
                 pending.submitReview,
                 pending.confirmWarnings,
-                !!pending.planNumber,
-                pending.transaction,
-                query.kind === "console" && !pending.planNumber && !pending.transaction?.action
-              );
+                pending.browse
+              )
+            : pending.exportFormat
+              ? await api.exportQuery(
+                  query.console.id,
+                  pending.sql,
+                  pending.version,
+                  pending.id,
+                  pending.exportFormat,
+                  pending.submitReview,
+                  pending.confirmWarnings
+                )
+              : await api.execute(
+                  query.console.id,
+                  pending.sql,
+                  pending.version,
+                  pending.id,
+                  pending.submitReview,
+                  pending.confirmWarnings,
+                  !!pending.planNumber,
+                  pending.transaction,
+                  query.kind === "console" && !pending.planNumber && !pending.transaction?.action
+                );
     if (!isCurrent(query)) return;
     query.pending = null;
     query.execution = value;
@@ -1631,6 +1771,7 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     query.executionSubmitReview = !!pending.submitReview;
     query.executionExportFormat = pending.exportFormat;
     query.executionEditPlan = pending.editPlanId;
+    query.executionObjectPlan = pending.objectPlanId;
     query.executionRefresh =
       pending.refresh && query.rows
         ? {
@@ -1655,10 +1796,18 @@ async function recoverSubmission(query: QueryWorkspaceTab) {
     await syncExecution(query);
   } catch (cause) {
     if (!isCurrent(query)) return;
-    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500) {
+    // A denied retry cannot establish what happened to an earlier request whose response was lost.
+    if (cause instanceof ChenGoError && cause.status >= 400 && cause.status < 500 && !pending.submissionUnknown) {
+      if (
+        query.pending &&
+        query.objectDraft &&
+        query.objectDraft.planId === pending.objectPlanId &&
+        query.execution?.object_plan?.plan_id !== pending.objectPlanId
+      )
+        query.objectDraft.submissionRejected = true;
       query.pending = null;
       query.pendingLoading = null;
-    }
+    } else if (query.pending && pending.objectPlanId) pending.submissionUnknown = true;
     query.error = query.pending ? `${t("Chen.GoV1SubmissionUnknown")} ${failureText(cause)}` : failureText(cause);
     if (pending.refresh) recordSavedRefreshError(query, query.error);
     if (run && !run.executionId) {
@@ -1687,7 +1836,7 @@ async function startExport(
   )
     return;
   if (mode === "query") {
-    if (query.pendingCachedExport) return;
+    if (query.pendingCachedExport || query.resultExecution?.object_plan) return;
     if (query.console?.state !== "ready" || executionActive(query.execution) || !snapshot.sql.trim()) return;
     if (query.browseObject && !query.rows?.browse?.supported) return;
     query.pending = {
@@ -1920,13 +2069,13 @@ async function reviewClose(list: QueryWorkspaceTab[], options: CloseOptions = {}
     );
   const before = signature();
   const schema = options.includeSchema ? schemaEdit.value : null;
-  const dirtySchema = !!(schema && schemaEditor.value?.dirty);
+  const draftDirty = () => !!(options.includeSchema && (schemaEditor.value?.dirty || programEditor.value?.dirty));
+  const dirtySchema = draftDirty();
   const current = () =>
     !disposed &&
     scope === connection &&
     before === signature() &&
-    (!options.includeSchema ||
-      (schema === schemaEdit.value && dirtySchema === !!(schema && schemaEditor.value?.dirty)));
+    (!options.includeSchema || (schema === schemaEdit.value && dirtySchema === draftDirty()));
   const states = new Map<string, string>();
   if (!options.keepConnection) {
     const ids = new Set(list.filter(needsCloseTransactionCheck).map((query) => query.console!.id));
@@ -2139,6 +2288,7 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   tabs.value = tabs.value
     .filter((tab) => tab.kind !== "overview")
     .map((tab) => {
+      if (tab.kind === "program") return { ...tab, object: { ...tab.object, oid: undefined } };
       const query = workspaceQuery(tab);
       if (!query) return { ...tab };
       query.closed = true;
@@ -2158,6 +2308,9 @@ async function replaceConnection(nextEndpoint: string, nextCredential: string) {
   if (!tabs.value.some((tab) => tab.id === activeId.value)) activeId.value = tabs.value[0]?.id || "";
   session.value = null;
   recentObjects.value = [];
+  programIntent.value = null;
+  restoredProgram.value = undefined;
+  catalogCapabilities.value.clear();
   logs.value = [];
   unreadLogErrors.value = 0;
   loggedExecutions.clear();
@@ -2231,7 +2384,11 @@ async function closeSession() {
   }
 }
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (schemaEditor.value?.dirty || Object.values(closeWarnings(queries.value)).some(Boolean)) {
+  if (
+    programEditor.value?.dirty ||
+    schemaEditor.value?.dirty ||
+    Object.values(closeWarnings(queries.value)).some(Boolean)
+  ) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -2346,7 +2503,11 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           :can-copy="session.permissions.can_copy"
           :can-insert="!!insertTarget"
           :recent-objects="recentObjects"
-          :active-object="activeTab?.kind === 'object' ? activeTab.object : undefined"
+          :revision="programRevision"
+          @capabilities="(database, caps) => catalogCapabilities.set(database, caps)"
+          @program="openProgram"
+          @object-action="programIntent = $event"
+          :active-object="activeTab?.kind === 'object' || activeTab?.kind === 'program' ? activeTab.object : undefined"
           :active-scope="activeTab ? tabContext(activeTab, defaultContext) : undefined"
           @default-context="defaultContext = $event"
           @remove-recent="
@@ -2357,12 +2518,10 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           "
           @clear-recent="recentObjects = []"
           @insert="insertName"
-          @object="(object, section) => openObject(object, section)"
-          @browse="(object) => openObject(object)"
+          @object="openRelation"
           @overview="openOverview"
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
-          @preview="(object) => openObject(object)"
         />
       </aside>
       <div
@@ -2500,13 +2659,33 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :visible="activeId === item.id"
             :can-copy="session.permissions.can_copy"
             @section="item.section = $event"
-            @object="openObject"
-            @diagram-object="openObject($event, 'diagram')"
+            @object="openRelation"
+            @diagram-object="openRelation($event, 'diagram')"
+          />
+          <GoProgramPane
+            v-else-if="item.kind === 'program' && activeId === item.id"
+            :object="item.object"
+            :api="api"
+            :session-id="session.id"
+            :ready="sessionReady && eventConnected && !authenticationUnknown"
+            :revision="programRevision"
+            :can-copy="session.permissions.can_copy"
+            :trigger-catalog="supportsTriggers(item.object.ref.database)"
+            @relation="openRelation($event, 'basic')"
+            @program="openProgram"
+            @object-action="programIntent = $event"
           />
           <GoObjectPane
             v-else-if="item.kind === 'object'"
             :object="item.object"
             :section="item.section"
+            :trigger-catalog="supportsTriggers(item.object.database)"
+            :revision="programRevision"
+            :create-trigger="
+              catalogCapabilities.get(item.object.database)?.collections.trigger?.actions.includes('create')
+            "
+            @program="openProgram"
+            @object-action="programIntent = $event"
             :diagram-ready="eventConnected && !authenticationUnknown"
             :active="activeId === item.id"
             :dialect="session.dialect"
@@ -2515,7 +2694,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :ready="sessionReady"
             :can-copy="session.permissions.can_copy"
             :can-paste="session.permissions.can_paste"
-            @object="openObject($event, 'diagram')"
+            @object="openRelation($event, 'diagram')"
             @section="objectSection(item, $event)"
             @query="newQuery({ database: item.object.database, schema: item.object.schema }, item.object)"
             @schema-edit="openSchemaEditor($event, item.object)"
@@ -2559,6 +2738,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
               @reconnect="(target) => reconnect(target || query)"
               @rows="(id, offset, target) => loadRows(target || query, id, offset)"
               @retry-rows="(target) => retryRows(target || query)"
+              @cursor="programIntent = $event"
+              @restore-program="restoreProgram(query)"
               @close-plan="(number, target) => closeQueryPlan(target || query, number)"
               @pane="(pane, target) => ((target || query).resultPane = pane)"
               @close-pinned="(target) => closePinned(query, target)"
@@ -2578,6 +2759,23 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
         />
       </div>
     </div>
+    <GoObjectActionDialog
+      v-if="programIntent && session"
+      :key="JSON.stringify([session.id, programIntent])"
+      ref="programEditor"
+      :intent="programIntent"
+      :restored="restoredProgram"
+      :session="session"
+      :api="api"
+      :queries="queries"
+      :create-console="(context) => newQuery(context)"
+      :apply-plan="applyObjectPlan"
+      @reopen="reopenProgram"
+      @close="
+        programIntent = null;
+        restoredProgram = undefined;
+      "
+    />
     <GoSchemaEditor
       v-if="schemaEdit && session"
       :key="schemaEdit.id"

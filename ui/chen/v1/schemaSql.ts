@@ -1,10 +1,10 @@
-import type { GoCatalogColumn, GoCatalogInspect, GoCatalogObject } from "./api";
+import type { GoCatalogColumn, GoCatalogInspect, GoCatalogRelation } from "./api";
 import type { ChenCreateTableColumn } from "~/chen/types";
 import { buildChenCreateTableSql, chenCreateTableTypes } from "~/chen/utils/createTableSql";
 import { canonicalChenDialect } from "~/chen/utils/sqlDialect";
 import { qualifiedObjectName, quoteIdentifier } from "./workspace";
 
-export function createTableSql(object: GoCatalogObject, columns: ChenCreateTableColumn[], dialect: string) {
+export function createTableSql(object: GoCatalogRelation, columns: ChenCreateTableColumn[], dialect: string) {
   const sql = buildChenCreateTableSql(object.name, columns, dialect);
   // The legacy builder quotes ClickHouse with ANSI quotes; normalize only its table identifier.
   const end = sql.indexOf(" (\n");
@@ -16,7 +16,7 @@ export function needsNativeColumnDefinition(dialect: string) {
   return ["mysql", "mariadb", "oceanbase-mysql"].includes(canonicalChenDialect(dialect) || dialect);
 }
 export function columnChangeSql(
-  object: GoCatalogObject,
+  object: GoCatalogRelation,
   dialect: string,
   action: GoColumnAction,
   original: GoCatalogColumn | undefined,

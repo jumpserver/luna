@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createChenGoApi } from "./api";
+import { createChenGoApi, type GoCatalogRelation } from "./api";
+import { objectKey } from "./catalogIdentity";
+import { diagramObjectId } from "./diagram";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -31,4 +33,39 @@ it("keeps download tickets on the selected KoKo endpoint in the browser and Elec
     );
     await expect(api.exportDownloadTicket("export-1")).rejects.toMatchObject({ code: "invalid_download_ticket" });
   }
+});
+
+it("lists relations using the original objects wire contract", async () => {
+  vi.stubGlobal("isElectronRuntime", () => false);
+  vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+  const view: GoCatalogRelation = {
+    database: "db",
+    schema: "s",
+    name: "m",
+    kind: "view",
+    object_type: "materialized_view"
+  };
+  const page = { items: [view], has_more: false };
+  const fetchPage = vi.fn<typeof fetch>().mockResolvedValue(Response.json(page));
+  const api = createChenGoApi("", fetchPage, { mode: "single" });
+  await expect(api.catalogRelations("sid", { schema: "s", q: "%", cursor: "next" })).resolves.toEqual(page);
+  const url = new URL(String(fetchPage.mock.calls[0]![0]), "http://localhost");
+  expect(url.pathname).toBe("/koko/chen/api/v1/sessions/sid/catalog/objects");
+  expect(Object.fromEntries(url.searchParams)).toEqual({ schema: "s", q: "%", cursor: "next", limit: "100" });
+});
+
+it("uses one scoped identity across catalog and diagram views", () => {
+  const view: GoCatalogRelation = { database: "db", schema: "a.b", kind: "view", name: "C" };
+  const key = objectKey(view, "s1");
+  expect(diagramObjectId("s1", view)).toBe(key);
+  expect(objectKey({ ...view, comment: "updated" }, "s1")).toBe(key);
+  expect(
+    new Set([
+      key,
+      objectKey(view, "s2"),
+      objectKey({ ...view, schema: "a", name: "b.C" }, "s1"),
+      objectKey({ ...view, name: "c" }, "s1"),
+      objectKey({ ...view, kind: "table" }, "s1")
+    ]).size
+  ).toBe(5);
 });

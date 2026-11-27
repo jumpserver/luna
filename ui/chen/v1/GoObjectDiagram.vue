@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogObject } from "./api";
+import type { ChenGoApi, GoCatalogRelation } from "./api";
 import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -9,7 +9,7 @@ import { diagramObjectId, inspectDiagram } from "./diagram";
 const props = defineProps<{
   api: ChenGoApi;
   sessionId: string;
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   dialect: string;
   ready: boolean;
   active: boolean;

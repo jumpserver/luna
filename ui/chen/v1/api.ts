@@ -61,7 +61,43 @@ export interface GoPlan extends ChenExecutionPlan {
   context: GoPlanIdentity;
   limits: { maxBytes: number; maxNodes: number; maxDepth: number };
 }
+export interface GoProgramArgument {
+  actual_type?: { schema: string; name: string };
+  mode: "value" | "null" | "default";
+  value?: string;
+}
+export interface GoProgramRequest extends GoProgramIntent {
+  confirm_trigger_reorder?: boolean;
+  result_columns?: { name: string; type: { schema: string; name: string } }[];
+  arguments?: GoProgramArgument[];
+  definition?: string;
+  baseline?: string;
+  state?: string;
+  new_name?: string;
+}
+export interface GoProgramPlan {
+  execution_user?: string;
+  plan_id: string;
+  action: GoProgramAction;
+  ref: GoProgramRef;
+  sql: string;
+  steps: { sql: string }[];
+  recovery?: { definition: string; environment?: Record<string, string> } | null;
+  expires_at: string;
+  transaction_revision: number;
+  requires_implicit_commit?: boolean;
+  manual: boolean;
+}
 export interface GoExecution {
+  object_plan?: {
+    plan_id: string;
+    action: GoProgramAction;
+    ref: GoProgramRef;
+    steps: { status: string; result_role?: string; durability?: string }[];
+    side_effects_possible?: boolean;
+    outcome: string;
+    results_truncated?: boolean;
+  };
   transaction?: GoTransaction & {
     action?: GoTransactionRequest["action"];
     outcome?: "committed" | "rolled_back" | "implicit_commit" | "unknown";
@@ -108,7 +144,7 @@ export interface GoExecution {
     error_code?: string;
   };
   result_ids: string[];
-  statement_results: { result_id?: string; source_sql?: string; rows_affected?: string }[];
+  statement_results: { result_role?: string; result_id?: string; source_sql?: string; rows_affected?: string }[];
   error?: { code: string; message: string };
   audit_status: "pending" | "recorded" | "failed";
   started_at?: string;
@@ -209,6 +245,7 @@ export interface GoQueryPage {
   read_only_reason?: string;
 }
 export interface GoRows {
+  cursor_source?: GoProgramIdentity & { cells: { row: number; column: number }[] };
   source_sql?: string;
   query_page?: GoQueryPage;
   browse?: GoBrowsePage;
@@ -239,6 +276,7 @@ export interface GoEditColumn {
   primary_key: boolean;
   generated: boolean;
   has_default?: boolean;
+  default?: string;
   default_value?: string;
   reason?: string;
 }
@@ -298,7 +336,7 @@ export interface GoRelation {
   name: string;
   kind: string;
 }
-export interface GoCatalogObject {
+export interface GoCatalogRelation {
   object_type?: string;
   database: string;
   schema: string;
@@ -306,6 +344,88 @@ export interface GoCatalogObject {
   kind: "table" | "view";
   comment?: string;
 }
+export type GoProgramKind = "procedure" | "function" | "trigger" | "event";
+export type GoProgramAction =
+  | "create"
+  | "edit"
+  | "drop"
+  | "invoke"
+  | "setState"
+  | "rename"
+  | "readDefinition"
+  | "fetchCursor";
+export interface GoProgramRef {
+  database: string;
+  schema: string;
+  name: string;
+  kind: GoProgramKind;
+  input_types?: { schema: string; name: string }[];
+  table?: string;
+}
+export interface GoProgramIdentity {
+  ref: GoProgramRef;
+  oid?: number;
+}
+export interface GoProgramSummary extends GoProgramIdentity {
+  label: string;
+  signature?: string;
+}
+export interface GoProgramIntent extends GoProgramIdentity {
+  consoleId?: string;
+  cursor?: { result_id: string; row: number; column: number; limit: number };
+  action: GoProgramAction;
+}
+export interface GoProgramDraft {
+  intent: GoProgramIntent;
+  consoleId: string;
+  definition: string;
+  original?: GoProgramDefinition;
+  stepCommands?: string[];
+  requiresRecovery?: boolean;
+  recoveryExecutionId?: string;
+  environment?: Record<string, string>;
+  currentStatus?: "visible" | "absent_or_hidden";
+}
+export type GoCatalogEntry = GoCatalogRelation | GoProgramSummary;
+export type GoCatalogObject = GoCatalogRelation;
+export interface GoCatalogCapabilities {
+  version: number;
+  collections: Record<string, { kinds: string[]; actions: string[] }>;
+}
+export interface GoProgramParameter {
+  character_set?: string;
+  collation?: string;
+  position: number;
+  name?: string;
+  mode: string;
+  type?: { schema: string; name: string };
+  data_type: string;
+  has_default?: boolean;
+  default?: string;
+  type_kind?: string;
+}
+export function programParameterType(parameter: GoProgramParameter) {
+  const type = [parameter.data_type];
+  if (parameter.character_set) type.push("CHARACTER SET", parameter.character_set);
+  if (parameter.collation) type.push("COLLATE", parameter.collation);
+  return type.join(" ");
+}
+export interface GoProgramDetail extends GoProgramIdentity {
+  properties: Record<string, string | number | boolean | string[] | { schema: string; name: string } | null>;
+  parameters?: GoProgramParameter[];
+  related?: { ref: GoProgramRef | GoCatalogRelation; oid?: number; label: string; signature?: string }[];
+  actions: string[];
+}
+export interface GoProgramDefinition extends GoProgramIdentity {
+  status: "complete" | "restricted" | "truncated" | "unsupported";
+  source: string;
+  default_positions?: number[];
+  next_offset?: number;
+  environment?: Record<string, string>;
+  version?: string;
+  text?: string;
+}
+
 export interface GoCatalogColumn {
   name: string;
   data_type: string;
@@ -353,7 +473,8 @@ export class ChenGoError extends Error {
   constructor(
     public readonly code: string,
     message: string,
-    public readonly status: number
+    public readonly status: number,
+    public readonly conflictRef?: GoProgramRef
   ) {
     super(message);
   }
@@ -375,16 +496,17 @@ export function createChenGoApi(
   }
   async function check(response: Response) {
     if (response.ok) return;
-    let error: { code?: string; message?: string } = {};
+    let payload: { error?: { code?: string; message?: string }; conflict_ref?: GoProgramRef } = {};
     try {
-      error = (await response.json()).error || {};
+      payload = (await response.json()) || {};
     } catch {
       /* Do not expose upstream HTML or secrets. */
     }
     throw new ChenGoError(
-      error.code || "http_error",
-      error.message || `Chen request failed (${response.status})`,
-      response.status
+      payload.error?.code || "http_error",
+      payload.error?.message || `Chen request failed (${response.status})`,
+      response.status,
+      payload.conflict_ref
     );
   }
   async function request<T>(
@@ -534,6 +656,28 @@ export function createChenGoApi(
         changes,
         source
       }),
+    consoleObjectDetail: (consoleId: string, { ref, oid }: GoProgramIdentity, signal?: AbortSignal) =>
+      request<GoProgramDetail>(`/consoles/${id(consoleId)}/object-detail`, "POST", { ref, oid }, signal),
+    consoleObjectDefinition: (consoleId: string, { ref, oid }: GoProgramIdentity, signal?: AbortSignal) =>
+      request<GoProgramDefinition>(`/consoles/${id(consoleId)}/object-definition`, "POST", { ref, oid }, signal),
+    previewProgram: (consoleId: string, body: GoProgramRequest, signal?: AbortSignal) =>
+      request<GoProgramPlan>(`/consoles/${id(consoleId)}/object-plans/preview`, "POST", body, signal),
+    applyProgram: (
+      consoleId: string,
+      planId: string,
+      requestId: string,
+      submitReview = false,
+      confirmWarnings = false,
+      transaction?: GoTransactionRequest
+    ) =>
+      request<GoExecution>(`/consoles/${id(consoleId)}/object-plans/${id(planId)}/apply`, "POST", {
+        request_id: requestId,
+        submit_review: submitReview,
+        confirm_warnings: confirmWarnings,
+        ...(transaction?.confirmImplicit
+          ? { confirm_implicit_commit: true, transaction_revision: transaction.revision }
+          : {})
+      }),
     applyEdits: (consoleId: string, planId: string, requestId: string, submitReview = false, confirmWarnings = false) =>
       request<GoExecution>(`/consoles/${id(consoleId)}/edits/${id(planId)}/apply`, "POST", {
         request_id: requestId,
@@ -581,6 +725,13 @@ export function createChenGoApi(
         throw new ChenGoError("invalid_download_ticket", "Invalid export download response", 502);
       return { ...value, download_url: chenPath("/api/v1/downloads", endpointUrl) };
     },
+    objectRecovery: (consoleId: string, executionId: string) =>
+      request<{
+        ref: GoProgramRef;
+        definition: string;
+        environment?: Record<string, string>;
+        current_status: "visible" | "absent_or_hidden";
+      }>(`/consoles/${id(consoleId)}/executions/${id(executionId)}/object-recovery`, "POST"),
     execution: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}`),
     cancel: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}/cancel`, "POST"),
     releaseResult: (resultId: string) => request<void>(`/results/${id(resultId)}`, "DELETE"),
@@ -642,12 +793,86 @@ export function createChenGoApi(
         undefined,
         signal
       ),
-    catalogObjects: (
+    catalogCapabilities: (sessionId: string, database: string, signal?: AbortSignal) =>
+      request<GoCatalogCapabilities>(
+        `/sessions/${id(sessionId)}/catalog/capabilities?${catalogQuery({ database })}`,
+        "GET",
+        undefined,
+        signal
+      ),
+    catalogSearch: async (
       sessionId: string,
-      options: { database?: string; schema?: string; kind?: string; q?: string; cursor?: string } = {},
+      options: { database: string; q: string; cursor?: string },
+      signal?: AbortSignal
+    ) => {
+      const page = await request<
+        GoCatalogPage<{
+          ref: GoProgramRef | GoCatalogRelation;
+          label: string;
+          signature?: string;
+          oid?: number;
+          object_type?: string;
+        }>
+      >(
+        `/sessions/${id(sessionId)}/catalog/objects?${catalogQuery({ ...options, collection: "all", limit: 100 })}`,
+        "GET",
+        undefined,
+        signal
+      );
+      const items: GoCatalogEntry[] = page.items.map((item) => {
+        const ref = item.ref;
+        if (ref.kind === "table" || ref.kind === "view") return { ...ref, object_type: item.object_type };
+        return { ...item, ref: { ...ref, kind: ref.kind } };
+      });
+      return { ...page, items };
+    },
+    catalogPrograms: (
+      sessionId: string,
+      options: {
+        database: string;
+        schema?: string;
+        collection: string;
+        kind?: GoProgramKind;
+        q?: string;
+        cursor?: string;
+        table?: string;
+        function_oid?: number;
+      },
       signal?: AbortSignal
     ) =>
-      request<GoCatalogPage<GoCatalogObject>>(
+      request<GoCatalogPage<GoProgramSummary>>(
+        `/sessions/${id(sessionId)}/catalog/objects?${catalogQuery({ ...options, limit: 100 })}`,
+        "GET",
+        undefined,
+        signal
+      ),
+    catalogObjectDetail: (sessionId: string, { ref, oid }: GoProgramIdentity, signal?: AbortSignal) =>
+      request<GoProgramDetail>(`/sessions/${id(sessionId)}/catalog/object-detail`, "POST", { ref, oid }, signal),
+    catalogObjectDefinition: (
+      sessionId: string,
+      { ref, oid }: GoProgramIdentity,
+      signal?: AbortSignal,
+      page?: { offset: number; version: string }
+    ) =>
+      request<GoProgramDefinition>(
+        `/sessions/${id(sessionId)}/catalog/object-definition`,
+        "POST",
+        { ref, oid, ...page },
+        signal
+      ),
+    catalogRelations: (
+      sessionId: string,
+      options: {
+        database?: string;
+        schema?: string;
+        kind?: GoCatalogRelation["kind"];
+        q?: string;
+        cursor?: string;
+      } = {},
+      signal?: AbortSignal
+    ) =>
+      request<GoCatalogPage<GoCatalogRelation>>(
+        // The original objects route is the relation collection on every supported Koko version.
         `/sessions/${id(sessionId)}/catalog/objects?${catalogQuery({ ...options, limit: 100 })}`,
         "GET",
         undefined,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
+import type { ChenGoApi, GoCatalogInspect, GoCatalogRelation, GoCatalogSection } from "./api";
 import type { OverviewRow } from "./overview";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -10,7 +10,7 @@ import { overviewNumber } from "./overview";
 const props = defineProps<{
   api: ChenGoApi;
   sessionId: string;
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   ready: boolean;
   visible?: boolean;
   canCopy: boolean;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogInspect, GoCatalogObject, GoSession } from "./api";
+import type { ChenGoApi, GoCatalogInspect, GoCatalogRelation, GoSession } from "./api";
 import type { GoColumnAction } from "./schemaSql";
 import type { QueryContext } from "./workspace";
 import type { ChenCreateTableColumn } from "~/chen/types";
@@ -23,7 +23,7 @@ const props = defineProps<{
   session: GoSession;
   api: ChenGoApi;
   context: QueryContext;
-  object?: GoCatalogObject;
+  object?: GoCatalogRelation;
   mode: "create" | "alter" | "index";
   transferSql: (sql: string, execute: boolean) => boolean;
 }>();

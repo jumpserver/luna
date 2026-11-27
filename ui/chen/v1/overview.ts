@@ -1,4 +1,5 @@
-import type { GoCatalogObject } from "./api";
+import type { GoCatalogRelation } from "./api";
+import { objectKey } from "./catalogIdentity";
 
 export type OverviewSection = "tables" | "views" | "statistics" | "indexes" | "properties";
 export type OverviewViewSection = OverviewSection | "basic" | "ddl" | "diagram";
@@ -16,7 +17,7 @@ export interface OverviewValue {
   source?: string;
 }
 export interface OverviewRow {
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   name: string;
   ordinal?: number;
   fields: Record<string, OverviewValue>;
@@ -120,12 +121,16 @@ export function overviewBytes(value: string, locale: string) {
   return `${overviewNumber((tenths / 10n).toString(), locale)}${tenths % 10n ? `${decimal}${tenths % 10n}` : ""} ${units[unit]}`;
 }
 
+export function overviewRowKey(row: OverviewRow) {
+  return JSON.stringify([objectKey(row.object), row.name]);
+}
+
 // Catalog providers may return one row per index part. Keep the logical index
 // identity scoped to its table and preserve the catalog's column order.
 export function overviewIndexRows(rows: OverviewRow[], hasMore = false): OverviewRow[] {
   const groups = new Map<string, OverviewRow[]>();
   for (const row of rows) {
-    const key = JSON.stringify([row.object.database, row.object.schema, row.object.name, row.name]);
+    const key = overviewRowKey(row);
     const parts = groups.get(key) || [];
     parts.push(row);
     groups.set(key, parts);
