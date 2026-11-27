@@ -2,13 +2,9 @@
 import Guacamole from "@jumpserver/guacamole";
 import { useWindowSize } from "@vueuse/core";
 import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import dedeqwertz from "@/lion/assets/layouts/de-de-qwertz.json";
-import enusqwerty from "@/lion/assets/layouts/en-us-qwerty.json";
-import esesqwerty from "@/lion/assets/layouts/es-es-qwerty.json";
-import frfrazerty from "@/lion/assets/layouts/fr-fr-azerty.json";
-import ititqwertz from "@/lion/assets/layouts/it-it-qwerty.json";
 import nlnlqwertz from "@/lion/assets/layouts/nl-nl-qwerty.json";
 import ruruqwertz from "@/lion/assets/layouts/ru-ru-qwerty.json";
+import { getOnScreenKeyboardLayout } from "@/lion/utils/keyboard";
 
 const props = defineProps<{
   keyboard?: string;
@@ -19,12 +15,7 @@ const emit = defineEmits<{
 }>();
 const { t } = useI18n();
 
-const keyboardLayouts: Record<string, ConstructorParameters<typeof Guacamole.OnScreenKeyboard>[0]> = {
-  "de-de-qwertz": dedeqwertz,
-  "en-us-qwerty": enusqwerty,
-  "es-es-qwerty": esesqwerty,
-  "fr-fr-azerty": frfrazerty,
-  "it-it-qwerty": ititqwertz,
+const additionalKeyboardLayouts: Record<string, ConstructorParameters<typeof Guacamole.OnScreenKeyboard>[0]> = {
   "nl-nl-qwerty": nlnlqwertz,
   "ru-ru-qwerty": ruruqwertz
 };
@@ -97,7 +88,11 @@ const setLayout = (layoutName?: string) => {
   if (!container) return;
   removeKeyboardElement();
 
-  const keyboard = new Guacamole.OnScreenKeyboard(keyboardLayouts[layoutName || ""] || enusqwerty);
+  const layout =
+    layoutName && Object.hasOwn(additionalKeyboardLayouts, layoutName)
+      ? additionalKeyboardLayouts[layoutName]!
+      : getOnScreenKeyboardLayout(layoutName);
+  const keyboard = new Guacamole.OnScreenKeyboard(layout);
   container.prepend(keyboard.getElement());
   keyboard.resize(keyboardWidth());
   keyboard.onkeydown = (keysym: number) => emit("keyboardChange", "keydown", keysym);
@@ -116,7 +111,7 @@ watch([width, height], () => {
 });
 
 onMounted(async () => {
-  setLayout(props.keyboard || "en-us-qwerty");
+  setLayout(props.keyboard);
   await nextTick();
   const rect = keyboardRef.value?.getBoundingClientRect();
   keyboardPosition.value = clampPosition(

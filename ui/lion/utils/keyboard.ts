@@ -2,6 +2,7 @@ import type Guacamole from "@jumpserver/guacamole";
 import german from "@/lion/assets/layouts/de-de-qwertz.json";
 import english from "@/lion/assets/layouts/en-us-qwerty.json";
 import spanish from "@/lion/assets/layouts/es-es-qwerty.json";
+import belgianFrench from "@/lion/assets/layouts/fr-be-azerty.json";
 import french from "@/lion/assets/layouts/fr-fr-azerty.json";
 import italian from "@/lion/assets/layouts/it-it-qwerty.json";
 
@@ -11,6 +12,7 @@ export const keyboardLayoutOptions = [
   { label: "KeyboardUsEnglishQwerty", value: "en-us-qwerty" },
   { label: "KeyboardSpanishQwerty", value: "es-es-qwerty" },
   { label: "KeyboardFrenchAzerty", value: "fr-fr-azerty" },
+  { label: "KeyboardBelgianFrenchAzerty", value: "fr-be-azerty" },
   { label: "KeyboardItalianQwerty", value: "it-it-qwerty" }
 ] as const;
 
@@ -18,6 +20,7 @@ const layouts: Record<string, Guacamole.OnScreenKeyboard.LayoutTemplate> = {
   "de-de-qwertz": german,
   "en-us-qwerty": english,
   "es-es-qwerty": spanish,
+  "fr-be-azerty": belgianFrench,
   "fr-fr-azerty": french,
   "it-it-qwerty": italian
 };
@@ -26,8 +29,8 @@ export function resolveKeyboardLayout(name?: string) {
   return name || "en-us-qwerty";
 }
 
-function getLayout(name: string) {
-  return layouts[Object.hasOwn(layouts, name) ? name : "en-us-qwerty"]!;
+export function getOnScreenKeyboardLayout(name = "en-us-qwerty"): Guacamole.OnScreenKeyboard.LayoutTemplate {
+  return Object.hasOwn(layouts, name) ? layouts[name]! : english;
 }
 
 export function getKeyboardCharacterRows(name: string): string[] {
@@ -41,11 +44,11 @@ export function getKeyboardCharacterRows(name: string): string[] {
     }
     return Object.values(node).flatMap((child) => (child === undefined ? [] : findRows(child)));
   };
-  return findRows(getLayout(name).layout);
+  return findRows(getOnScreenKeyboardLayout(name).layout);
 }
 
 export function getKeyboardCharacter(name: string, value: string, modifiers: Record<string, boolean>) {
-  const definitions = getLayout(name).keys[value];
+  const definitions = getOnScreenKeyboardLayout(name).keys[value];
   if (!Array.isArray(definitions)) return;
   const key = definitions.reduce<Guacamole.OnScreenKeyboard.KeyTemplate | undefined>((active, candidate) => {
     const required = candidate.requires || [];

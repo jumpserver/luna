@@ -7,7 +7,7 @@ import source from "./virtualKeyboardPopover.vue?raw";
 const cleanups: Array<() => void> = [];
 afterEach(() => cleanups.splice(0).forEach((cleanup) => cleanup()));
 
-function setup(protocol = "ssh") {
+function setup(protocol = "ssh", keyboardLayout = "en-us-qwerty") {
   const sendKokoTerminalData = vi.fn(() => true);
   const sendCombinationKeys = vi.fn();
   const sendKeyEvent = vi.fn();
@@ -35,7 +35,7 @@ function setup(protocol = "ssh") {
       getLionWorkspaceSession: (id: string) => ({
         sendCombinationKeys,
         isRemoteApp,
-        keyboardLayout: ref("en-us-qwerty"),
+        keyboardLayout: ref(keyboardLayout),
         sendKeyEvent: id === "session" ? sendKeyEvent : otherSessionKeyEvent
       }),
       useEventListener: (...args: any[]) => {
@@ -257,6 +257,52 @@ it.each(["ssh", "rdp", "vnc"])("supports CapsLock with Shift inversion in %s", (
   expect(keyboard.modifiers.caps).toBe(true);
   keyboard.toggleModifier("caps");
   expect(keyboard.keyLabel(key("a"))).toBe("A");
+});
+
+it("renders the Belgian French RDP layout and sends the displayed characters", () => {
+  const keyboard = setup("rdp", "fr-be-azerty");
+  const rows = keyboard.keyboardRows.value as Array<Array<{ value: string }>>;
+  expect(
+    rows[1]!
+      .slice(0, -1)
+      .map((key) => key.value)
+      .join("")
+  ).toBe(`²&é"'(§è!çà)-`);
+  expect(
+    rows[2]!
+      .slice(1)
+      .map((key) => key.value)
+      .join("")
+  ).toBe("azertyuiop^$µ");
+
+  const expectKey = (value: string, label: string, keysym = label.charCodeAt(0)) => {
+    expect(keyboard.keyLabel(key(value))).toBe(label);
+    keyboard.send(value);
+    expect(keyboard.sendKeyEvent.mock.calls.slice(-2)).toEqual([
+      [1, keysym],
+      [0, keysym]
+    ]);
+  };
+
+  expectKey("§", "§");
+  expectKey("^", "^", 0xfe52);
+  keyboard.toggleModifier("shift");
+  expectKey("§", "6");
+  expectKey("$", "*");
+  expectKey("^", "¨", 0xfe57);
+  keyboard.toggleModifier("shift");
+  keyboard.toggleModifier("caps");
+  expectKey("é", "2");
+  keyboard.toggleModifier("altgr");
+  expect(keyboard.sendKeyEvent).toHaveBeenLastCalledWith(1, 65027);
+  expectKey("é", "@");
+  expectKey("<", "\\");
+  expectKey("e", "€", 0x010020ac);
+  expectKey("=", "~", 0xfe53);
+  keyboard.toggleModifier("shift");
+  expectKey("=", "~", 0xfe53);
+  keyboard.toggleModifier("altgr");
+  expect(keyboard.sendKeyEvent).toHaveBeenLastCalledWith(0, 65027);
 });
 
 it.each(["rdp", "vnc"])("holds remote modifiers across repeated keys in %s", (protocol) => {
