@@ -231,7 +231,7 @@ export function quoteIdentifier(value: string, dialect: string) {
   const close = quote === "[" ? "]" : quote;
   return `${quote}${value.replaceAll(close, close + close)}${close}`;
 }
-export function qualifiedObjectName(object: GoCatalogRelation, dialect: string) {
+export function qualifiedObjectName(object: Pick<GoCatalogRelation, "database" | "schema" | "name">, dialect: string) {
   const namespace = chenSqlDialect(dialect).databaseNamespace ? object.schema || object.database : object.schema;
   return [namespace, object.name]
     .filter(Boolean)

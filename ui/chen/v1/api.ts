@@ -67,6 +67,7 @@ export interface GoProgramArgument {
   value?: string;
 }
 export interface GoProgramRequest extends GoProgramIntent {
+  confirm_trigger_append?: boolean;
   result_columns?: { name: string; type: { schema: string; name: string } }[];
   arguments?: GoProgramArgument[];
   definition?: string;
@@ -75,11 +76,13 @@ export interface GoProgramRequest extends GoProgramIntent {
   new_name?: string;
 }
 export interface GoProgramPlan {
+  execution_user?: string;
   plan_id: string;
   action: GoProgramAction;
   ref: GoProgramRef;
   sql: string;
   steps: { sql: string }[];
+  recovery?: { definition: string; environment?: Record<string, string> } | null;
   expires_at: string;
   transaction_revision: number;
   requires_implicit_commit?: boolean;
@@ -90,7 +93,8 @@ export interface GoExecution {
     plan_id: string;
     action: GoProgramAction;
     ref: GoProgramRef;
-    steps: { status: string; result_role?: string }[];
+    steps: { status: string; result_role?: string; durability?: string }[];
+    side_effects_possible?: boolean;
     outcome: string;
     results_truncated?: boolean;
   };
@@ -341,7 +345,15 @@ export interface GoCatalogRelation {
   comment?: string;
 }
 export type GoProgramKind = "procedure" | "function" | "trigger" | "event";
-export type GoProgramAction = "create" | "edit" | "drop" | "invoke" | "setState" | "rename" | "readDefinition" | "fetchCursor";
+export type GoProgramAction =
+  | "create"
+  | "edit"
+  | "drop"
+  | "invoke"
+  | "setState"
+  | "rename"
+  | "readDefinition"
+  | "fetchCursor";
 export interface GoProgramRef {
   database: string;
   schema: string;
@@ -368,7 +380,9 @@ export interface GoProgramDraft {
   consoleId: string;
   definition: string;
   original?: GoProgramDefinition;
-  steps?: string[];
+  stepCommands?: string[];
+  requiresRecovery?: boolean;
+  recoveryExecutionId?: string;
   environment?: Record<string, string>;
   currentStatus?: "visible" | "absent_or_hidden";
 }
@@ -397,6 +411,8 @@ export interface GoProgramDetail extends GoProgramIdentity {
 export interface GoProgramDefinition extends GoProgramIdentity {
   status: "complete" | "restricted" | "truncated" | "unsupported";
   source: string;
+  default_positions?: number[];
+  next_offset?: number;
   environment?: Record<string, string>;
   version?: string;
   text?: string;
@@ -449,7 +465,8 @@ export class ChenGoError extends Error {
   constructor(
     public readonly code: string,
     message: string,
-    public readonly status: number
+    public readonly status: number,
+    public readonly conflictRef?: GoProgramRef
   ) {
     super(message);
   }
@@ -471,16 +488,17 @@ export function createChenGoApi(
   }
   async function check(response: Response) {
     if (response.ok) return;
-    let error: { code?: string; message?: string } = {};
+    let payload: { error?: { code?: string; message?: string }; conflict_ref?: GoProgramRef } = {};
     try {
-      error = (await response.json()).error || {};
+      payload = (await response.json()) || {};
     } catch {
       /* Do not expose upstream HTML or secrets. */
     }
     throw new ChenGoError(
-      error.code || "http_error",
-      error.message || `Chen request failed (${response.status})`,
-      response.status
+      payload.error?.code || "http_error",
+      payload.error?.message || `Chen request failed (${response.status})`,
+      response.status,
+      payload.conflict_ref
     );
   }
   async function request<T>(
@@ -700,9 +718,12 @@ export function createChenGoApi(
       return { ...value, download_url: chenPath("/api/v1/downloads", endpointUrl) };
     },
     objectRecovery: (consoleId: string, executionId: string) =>
-      request<{ ref: GoProgramRef; definition: string; environment?: Record<string, string>; current_status: "visible" | "absent_or_hidden" }>(
-        `/consoles/${id(consoleId)}/executions/${id(executionId)}/object-recovery`, "POST"
-      ),
+      request<{
+        ref: GoProgramRef;
+        definition: string;
+        environment?: Record<string, string>;
+        current_status: "visible" | "absent_or_hidden";
+      }>(`/consoles/${id(consoleId)}/executions/${id(executionId)}/object-recovery`, "POST"),
     execution: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}`),
     cancel: (executionId: string) => request<GoExecution>(`/executions/${id(executionId)}/cancel`, "POST"),
     releaseResult: (resultId: string) => request<void>(`/results/${id(resultId)}`, "DELETE"),
@@ -819,11 +840,16 @@ export function createChenGoApi(
       ),
     catalogObjectDetail: (sessionId: string, { ref, oid }: GoProgramIdentity, signal?: AbortSignal) =>
       request<GoProgramDetail>(`/sessions/${id(sessionId)}/catalog/object-detail`, "POST", { ref, oid }, signal),
-    catalogObjectDefinition: (sessionId: string, { ref, oid }: GoProgramIdentity, signal?: AbortSignal) =>
+    catalogObjectDefinition: (
+      sessionId: string,
+      { ref, oid }: GoProgramIdentity,
+      signal?: AbortSignal,
+      page?: { offset: number; version: string }
+    ) =>
       request<GoProgramDefinition>(
         `/sessions/${id(sessionId)}/catalog/object-definition`,
         "POST",
-        { ref, oid },
+        { ref, oid, ...page },
         signal
       ),
     catalogRelations: (
