@@ -1,4 +1,4 @@
-import type { GoCatalogObject } from "./api";
+import type { GoCatalogRelation } from "./api";
 import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
 import { diagramObjectId } from "./diagram";
 
@@ -13,8 +13,8 @@ export interface DiagramOptions {
 }
 export interface DiagramEdge {
   name: string;
-  source: GoCatalogObject;
-  target: GoCatalogObject | null;
+  source: GoCatalogRelation;
+  target: GoCatalogRelation | null;
   target_openable: boolean;
   state: "complete" | "partial" | "restricted";
   pairs: { ordinal: number; source: string | null; target: string | null }[];
@@ -31,15 +31,15 @@ export interface DiagramPage {
   visibility: "authorized_catalog";
   snapshot: false;
   sampled_at: string;
-  items: { object?: GoCatalogObject; edge?: DiagramEdge }[];
+  items: { object?: GoCatalogRelation; edge?: DiagramEdge }[];
   has_more: boolean;
   next_cursor?: string;
 }
 export const diagramBudget = { nodes: 500, edges: 500, pairs: 8192, bytes: 4 * 1024 * 1024 };
 const name = (v: unknown): v is string => typeof v === "string" && v.length > 0 && v.length <= 256;
-function object(v: unknown): v is GoCatalogObject {
+function object(v: unknown): v is GoCatalogRelation {
   if (!v || typeof v !== "object") return false;
-  const o = v as GoCatalogObject;
+  const o = v as GoCatalogRelation;
   return name(o.database) && name(o.schema) && name(o.name) && o.kind === "table";
 }
 export function parseDiagram(value: unknown, options: DiagramOptions): DiagramPage {
@@ -103,11 +103,11 @@ export function diagramEdgeId(session: string, edge: DiagramEdge) {
 }
 export function catalogDiagramTables(
   session: string,
-  objects: GoCatalogObject[],
+  objects: GoCatalogRelation[],
   edges: DiagramEdge[]
 ): ChenSchemaDiagramTable[] {
   const tables = new Map<string, ChenSchemaDiagramTable>();
-  function ensure(o: GoCatalogObject, openable: boolean) {
+  function ensure(o: GoCatalogRelation, openable: boolean) {
     const id = diagramObjectId(session, o);
     let table = tables.get(id);
     if (!table) {

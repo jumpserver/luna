@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogObject } from "./api";
+import type { ChenGoApi, GoCatalogRelation } from "./api";
 import type { GoOverview, OverviewRow, OverviewSection, OverviewValue, OverviewViewSection } from "./overview";
 import type { QueryContext } from "./workspace";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
@@ -8,7 +8,7 @@ import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { writeClipboardText } from "~/utils/clipboard";
 import { ChenGoError } from "./api";
 import GoCatalogDiagram from "./GoCatalogDiagram.vue";
-import { overviewBytes, overviewIndexRows, overviewNumber } from "./overview";
+import { overviewBytes, overviewIndexRows, overviewNumber, overviewRowKey } from "./overview";
 
 const props = defineProps<{
   section?: OverviewViewSection;
@@ -21,8 +21,8 @@ const props = defineProps<{
   canCopy: boolean;
 }>();
 const emit = defineEmits<{
-  diagramObject: [object: GoCatalogObject];
-  object: [object: GoCatalogObject];
+  diagramObject: [object: GoCatalogRelation];
+  object: [object: GoCatalogRelation];
   section: [section: OverviewViewSection];
 }>();
 const { t, locale } = useI18n();
@@ -251,7 +251,7 @@ async function load(append = false) {
 function refresh() {
   void load();
 }
-function open(object: GoCatalogObject) {
+function open(object: GoCatalogRelation) {
   if (props.ready && props.visible && !stale.value) emit("object", { ...object });
 }
 watch(section, (value) => {
@@ -432,7 +432,7 @@ onBeforeUnmount(stop);
             <tbody>
               <tr
                 v-for="row in catalogRows"
-                :key="JSON.stringify([row.object.database, row.object.schema, row.object.name, row.name])"
+                :key="overviewRowKey(row)"
                 class="border-t border-default"
               >
                 <td

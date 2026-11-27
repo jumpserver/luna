@@ -1,5 +1,6 @@
 import type { ChenSchemaDiagramForeignKey, ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
-import type { GoCatalogInspect, GoCatalogObject, GoCatalogSection } from "./api";
+import type { GoCatalogInspect, GoCatalogRelation, GoCatalogSection } from "./api";
+import { objectKey } from "./catalogIdentity";
 
 export type DiagramStatus = "Complete" | "Partial" | "Unknown" | "Restricted" | "Unsupported";
 type Row = NonNullable<GoCatalogSection["items"]>[number];
@@ -8,8 +9,8 @@ function ordinal(value: unknown): number | null {
   const number = typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value)) ? Number(value) : NaN;
   return Number.isSafeInteger(number) && number > 0 ? number : null;
 }
-export function diagramObjectId(session: string, object: GoCatalogObject): string {
-  return JSON.stringify([session, object.database, object.schema, object.name, object.kind]);
+export function diagramObjectId(session: string, object: GoCatalogRelation): string {
+  return objectKey(object, session);
 }
 function sectionStatus(section?: GoCatalogSection): DiagramStatus {
   if (section?.source === "restricted") return "Restricted";
@@ -47,7 +48,7 @@ function completeKey(rows: Row[], columns: Set<string>): boolean {
 }
 
 /** One authorized inspect only; no target probes or recursive catalog traversal. */
-export function inspectDiagram(session: string, object: GoCatalogObject, dialect: string, info: GoCatalogInspect) {
+export function inspectDiagram(session: string, object: GoCatalogRelation, dialect: string, info: GoCatalogInspect) {
   if (info.database !== object.database || info.schema !== object.schema || info.table !== object.name) {
     throw new Error("catalog_scope_changed");
   }

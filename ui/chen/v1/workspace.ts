@@ -6,7 +6,7 @@ import type {
   GoBrowseRequest,
   GoQueryPageRequest,
   GoPlan,
-  GoCatalogObject,
+  GoCatalogRelation,
   GoConsole,
   GoTransactionRequest,
   GoExecution,
@@ -20,6 +20,9 @@ import { chenSqlDialect } from "~/chen/utils/sqlDialect";
 import { executionActive, reconcileExecution } from "./api";
 import { createEditDraft, editDirty } from "./dataEditing";
 import { newChenRequestId } from "./requestId";
+import { objectKey } from "./catalogIdentity";
+
+export { objectKey };
 
 // Share the established workspace display preferences with both SQL and object pages.
 export { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
@@ -60,7 +63,7 @@ export interface QueryWorkspaceTab {
   executionConfirmWarnings: boolean;
   executionSubmitReview: boolean;
   executionExportFormat?: GoExportFormat;
-  browseObject?: GoCatalogObject;
+  browseObject?: GoCatalogRelation;
   readOnly?: boolean;
   loadingSettings: GoResultLoadingSettings;
   pendingLoading: GoResultLoadingSettings | null;
@@ -144,7 +147,7 @@ export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
   title: string;
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   sessionId: string;
   section: ObjectWorkspaceSection;
   data: QueryWorkspaceTab | null;
@@ -171,10 +174,8 @@ export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] 
     return query ? [query, ...query.pinnedResults] : [];
   });
 }
-export function objectWorkspaceKey(sessionId: string, object: GoCatalogObject) {
-  // Catalog names are the server's canonical identifiers. Preserve quoted case and dots;
-  // client-side folding would conflate distinct objects on case-sensitive databases.
-  return JSON.stringify([sessionId, object.database, object.schema, object.kind, object.name]);
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogRelation) {
+  return objectKey(object, sessionId);
 }
 export function createQueryTab(
   title: string,
@@ -225,22 +226,19 @@ export function createQueryTab(
     closed: false
   };
 }
-export function objectKey(object: GoCatalogObject) {
-  return JSON.stringify([object.database, object.schema, object.kind, object.name]);
-}
 export function quoteIdentifier(value: string, dialect: string) {
   const quote = chenSqlDialect(dialect).quote;
   const close = quote === "[" ? "]" : quote;
   return `${quote}${value.replaceAll(close, close + close)}${close}`;
 }
-export function qualifiedObjectName(object: GoCatalogObject, dialect: string) {
+export function qualifiedObjectName(object: GoCatalogRelation, dialect: string) {
   const namespace = chenSqlDialect(dialect).databaseNamespace ? object.schema || object.database : object.schema;
   return [namespace, object.name]
     .filter(Boolean)
     .map((part) => quoteIdentifier(part, dialect))
     .join(".");
 }
-export function objectSelect(object: GoCatalogObject, dialect: string, preview = false) {
+export function objectSelect(object: GoCatalogRelation, dialect: string, preview = false) {
   const name = qualifiedObjectName(object, dialect);
   if (!preview) return `SELECT * FROM ${name};`;
   switch (chenSqlDialect(dialect).preview) {
@@ -335,7 +333,7 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
   query.execution = reconcileExecution(query.execution, value);
   return true;
 }
-export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogObject }>(
+export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogRelation }>(
   previous: T[],
   incoming: T[],
   append: boolean

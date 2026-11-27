@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type {
   GoBrowseRequest,
-  GoCatalogObject,
+  GoCatalogRelation,
   GoConsole,
   GoEditPlan,
   GoEvent,
@@ -105,7 +105,7 @@ const toast = useToast();
 const loadingPreferences = useResultLoadingPreferences();
 const workspacePreferences = useChenWorkspacePreferences();
 // Session-scoped metadata and logs never persist credentials, SQL, or object names to disk.
-const recentObjects = ref<GoCatalogObject[]>([]);
+const recentObjects = ref<GoCatalogRelation[]>([]);
 const logs = ref<ChenLogConsoleEntry[]>([]);
 const logsOpen = ref(false);
 const unreadLogErrors = ref(0);
@@ -1054,7 +1054,7 @@ async function connectQuery(query: QueryWorkspaceTab) {
 }
 async function newQuery(
   context = tabContext(activeTab.value, defaultContext.value),
-  object?: GoCatalogObject,
+  object?: GoCatalogRelation,
   preview = false,
   browse = false,
   kind: "query" | "console" = "query"
@@ -1312,7 +1312,7 @@ interface SchemaEdit {
   id: string;
   sessionId: string;
   context: QueryContext;
-  object?: GoCatalogObject;
+  object?: GoCatalogRelation;
   mode: "create" | "alter" | "index";
   transferSql: (sql: string, execute: boolean) => boolean;
   close: () => void;
@@ -1330,7 +1330,7 @@ function confirmSessionLeave(options?: Pick<CloseOptions, "preserveSqlDrafts" | 
 }
 async function openSchemaEditor(
   mode: "create" | "alter" | "index",
-  object?: GoCatalogObject,
+  object?: GoCatalogRelation,
   context = tabContext(activeTab.value, defaultContext.value)
 ) {
   const sessionId = session.value?.id;
@@ -1431,7 +1431,7 @@ function objectSection(tab: ObjectWorkspaceTab, section: ObjectWorkspaceSection)
   tab.section = section;
   if (section === "data") void enterObjectData(tab);
 }
-function openObject(object: GoCatalogObject, section: ObjectWorkspaceSection = "data") {
+function openRelation(object: GoCatalogRelation, section: ObjectWorkspaceSection = "data") {
   if (!session.value) return;
   const key = objectWorkspaceKey(session.value.id, object);
   let tab = tabs.value.find(
@@ -2357,12 +2357,10 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
           "
           @clear-recent="recentObjects = []"
           @insert="insertName"
-          @object="(object, section) => openObject(object, section)"
-          @browse="(object) => openObject(object)"
+          @object="openRelation"
           @overview="openOverview"
           @create-table="(context) => openSchemaEditor('create', undefined, context)"
           @query="(context, object) => newQuery(context, object)"
-          @preview="(object) => openObject(object)"
         />
       </aside>
       <div
@@ -2500,8 +2498,8 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :visible="activeId === item.id"
             :can-copy="session.permissions.can_copy"
             @section="item.section = $event"
-            @object="openObject"
-            @diagram-object="openObject($event, 'diagram')"
+            @object="openRelation"
+            @diagram-object="openRelation($event, 'diagram')"
           />
           <GoObjectPane
             v-else-if="item.kind === 'object'"
@@ -2515,7 +2513,7 @@ defineExpose({ focus: () => queryPanes.get(activeId.value)?.focus() });
             :ready="sessionReady"
             :can-copy="session.permissions.can_copy"
             :can-paste="session.permissions.can_paste"
-            @object="openObject($event, 'diagram')"
+            @object="openRelation($event, 'diagram')"
             @section="objectSection(item, $event)"
             @query="newQuery({ database: item.object.database, schema: item.object.schema }, item.object)"
             @schema-edit="openSchemaEditor($event, item.object)"

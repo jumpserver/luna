@@ -28,9 +28,7 @@ const emit = defineEmits<{
   object: [object: GoCatalogRelation, section?: ObjectWorkspaceSection];
   overview: [context: QueryContext, section?: "diagram"];
   query: [context: QueryContext, object?: GoCatalogRelation];
-  preview: [object: GoCatalogRelation];
   insert: [text: string];
-  browse: [object: GoCatalogRelation];
   createTable: [context: QueryContext];
   clearRecent: [];
   removeRecent: [object: GoCatalogRelation];
@@ -89,7 +87,7 @@ watch(
   (objects) => {
     recent.value.children = (objects || []).map((object) => ({
       ...relation(object),
-      id: `recent:${objectKey(object)}`,
+      id: `recent:${objectKey(object, props.sessionId)}`,
       loaded: true
     }));
   },
@@ -149,7 +147,11 @@ function syncSelection() {
   const { database, schema } = scope;
   let match: Node | undefined;
   function visit(current: Node) {
-    if (props.activeObject && current.object && objectKey(current.object) === objectKey(props.activeObject))
+    if (
+      props.activeObject &&
+      current.object &&
+      objectKey(current.object, props.sessionId) === objectKey(props.activeObject, props.sessionId)
+    )
       match = current;
     else if (
       !props.activeObject &&
@@ -202,7 +204,7 @@ function databaseNode(database: string) {
 }
 function relation(object: GoCatalogRelation): Node {
   return node("object", object.name, object.schema, {
-    id: objectKey(object),
+    id: objectKey(object, props.sessionId),
     database: object.database,
     object,
     kind: object.kind,
@@ -462,7 +464,7 @@ function menu(current: Node) {
             label: t("Chen.GoTableWorkspaceData"),
             icon: "i-lucide-table",
             disabled: !props.ready,
-            onSelect: () => emit("preview", current.object!)
+            onSelect: () => emit("object", current.object!, "data")
           },
           {
             label: t("Chen.GoV1GenerateSelect"),

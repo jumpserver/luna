@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogObject } from "./api";
+import type { ChenGoApi, GoCatalogRelation } from "./api";
 import type { DiagramEdge, DiagramOptions, DiagramPage } from "./catalogDiagram";
 import type { QueryContext } from "./workspace";
 import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
@@ -15,14 +15,14 @@ const props = defineProps<{
   sessionId: string;
   scope: QueryContext;
   dialect: string;
-  target?: GoCatalogObject;
+  target?: GoCatalogRelation;
   ready: boolean;
   active: boolean;
   canCopy: boolean;
 }>();
-const emit = defineEmits<{ object: [object: GoCatalogObject] }>();
+const emit = defineEmits<{ object: [object: GoCatalogRelation] }>();
 const { t } = useI18n();
-const objects = ref<GoCatalogObject[]>([]);
+const objects = ref<GoCatalogRelation[]>([]);
 const edges = ref<DiagramEdge[]>([]);
 const pages = ref<Partial<Record<"nodes" | "edges", DiagramPage>>>({});
 const busy = ref(false);
@@ -194,7 +194,7 @@ watch(
   { immediate: true }
 );
 onBeforeUnmount(stop);
-function open(object: GoCatalogObject) {
+function open(object: GoCatalogRelation) {
   if (props.ready && props.active && !stale.value && object.database === props.scope.database) emit("object", object);
 }
 function copy(event: ClipboardEvent) {

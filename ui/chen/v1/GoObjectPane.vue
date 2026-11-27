@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogColumn, GoCatalogObject } from "./api";
+import type { ChenGoApi, GoCatalogColumn, GoCatalogRelation } from "./api";
 import type { ObjectWorkspaceSection } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -10,7 +10,7 @@ import GoCatalogDiagram from "./GoCatalogDiagram.vue";
 import GoObjectDetails from "./GoObjectDetails.vue";
 import GoObjectDiagram from "./GoObjectDiagram.vue";
 const props = defineProps<{
-  object: GoCatalogObject;
+  object: GoCatalogRelation;
   section?: ObjectWorkspaceSection;
   active?: boolean;
   dialect: string;
@@ -22,7 +22,7 @@ const props = defineProps<{
   canPaste: boolean;
 }>();
 const emit = defineEmits<{
-  object: [object: GoCatalogObject];
+  object: [object: GoCatalogRelation];
   query: [];
   section: [section: ObjectWorkspaceSection];
   schemaEdit: [mode: "alter" | "index"];
