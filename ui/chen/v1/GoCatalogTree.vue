@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogObject, GoCatalogPage } from "./api";
+import type { ChenGoApi, GoCatalogRelation, GoCatalogPage } from "./api";
 import type { ObjectWorkspaceSection, QueryContext } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -20,20 +20,20 @@ const props = defineProps<{
   canPaste: boolean;
   canCopy: boolean;
   canInsert: boolean;
-  recentObjects?: GoCatalogObject[];
-  activeObject?: GoCatalogObject;
+  recentObjects?: GoCatalogRelation[];
+  activeObject?: GoCatalogRelation;
   activeScope?: QueryContext;
 }>();
 const emit = defineEmits<{
-  object: [object: GoCatalogObject, section?: ObjectWorkspaceSection];
+  object: [object: GoCatalogRelation, section?: ObjectWorkspaceSection];
   overview: [context: QueryContext, section?: "diagram"];
-  query: [context: QueryContext, object?: GoCatalogObject];
-  preview: [object: GoCatalogObject];
+  query: [context: QueryContext, object?: GoCatalogRelation];
+  preview: [object: GoCatalogRelation];
   insert: [text: string];
-  browse: [object: GoCatalogObject];
+  browse: [object: GoCatalogRelation];
   createTable: [context: QueryContext];
   clearRecent: [];
-  removeRecent: [object: GoCatalogObject];
+  removeRecent: [object: GoCatalogRelation];
   defaultContext: [context: QueryContext];
 }>();
 const { t } = useI18n();
@@ -47,8 +47,8 @@ interface Node {
   type: "connection" | "database" | "schema" | "group" | "object" | "recent";
   schema: string;
   database: string;
-  kind?: "table" | "view";
-  object?: GoCatalogObject;
+  kind?: GoCatalogRelation["kind"];
+  object?: GoCatalogRelation;
   detail?: string;
   children: Node[];
   expanded: boolean;
@@ -200,7 +200,7 @@ function databaseNode(database: string) {
     ...(databaseNamespace.value ? { children: groups(database, database), loaded: true } : {})
   });
 }
-function relation(object: GoCatalogObject): Node {
+function relation(object: GoCatalogRelation): Node {
   return node("object", object.name, object.schema, {
     id: objectKey(object),
     database: object.database,
@@ -251,7 +251,7 @@ async function load(current: Node, append = false) {
         })
       );
     } else {
-      const objects = await props.api.catalogObjects(
+      const objects = await props.api.catalogRelations(
         props.sessionId,
         {
           database: current.database,
@@ -567,7 +567,7 @@ async function runSearch(append = false) {
     current.more = false;
   }
   try {
-    const page = await props.api.catalogObjects(
+    const page = await props.api.catalogRelations(
       props.sessionId,
       {
         database: searchScope.value.database,

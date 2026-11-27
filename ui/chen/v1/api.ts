@@ -298,7 +298,7 @@ export interface GoRelation {
   name: string;
   kind: string;
 }
-export interface GoCatalogObject {
+export interface GoCatalogRelation {
   object_type?: string;
   database: string;
   schema: string;
@@ -306,6 +306,8 @@ export interface GoCatalogObject {
   kind: "table" | "view";
   comment?: string;
 }
+export type GoCatalogObject = GoCatalogRelation;
+
 export interface GoCatalogColumn {
   name: string;
   data_type: string;
@@ -642,12 +644,19 @@ export function createChenGoApi(
         undefined,
         signal
       ),
-    catalogObjects: (
+    catalogRelations: (
       sessionId: string,
-      options: { database?: string; schema?: string; kind?: string; q?: string; cursor?: string } = {},
+      options: {
+        database?: string;
+        schema?: string;
+        kind?: GoCatalogRelation["kind"];
+        q?: string;
+        cursor?: string;
+      } = {},
       signal?: AbortSignal
     ) =>
-      request<GoCatalogPage<GoCatalogObject>>(
+      request<GoCatalogPage<GoCatalogRelation>>(
+        // The original objects route is the relation collection on every supported Koko version.
         `/sessions/${id(sessionId)}/catalog/objects?${catalogQuery({ ...options, limit: 100 })}`,
         "GET",
         undefined,
