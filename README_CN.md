@@ -47,7 +47,7 @@ Web 镜像继续使用 `v<version>` tag 发布。
 
 ## 本地启动
 
-需要 Node.js 24 和 pnpm 11.4.0。运行桌面端还需 Go 1.25 及以上版本和对应平台的原生编译工具。
+需要 Node.js 24 和 pnpm 11.4.0。运行桌面端还需 Go 1.26.11 及以上版本和对应平台的原生编译工具。
 
 ```bash
 git clone https://github.com/jumpserver/luna.git

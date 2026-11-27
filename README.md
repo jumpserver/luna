@@ -47,7 +47,7 @@ Browsers can open the client through `jms2://` links. Desktop OAuth uses `jms2:/
 
 ## Running locally
 
-Requires Node.js 24 and pnpm 11.4.0. The desktop app also requires Go 1.25 or later and native build tools for your platform.
+Requires Node.js 24 and pnpm 11.4.0. The desktop app also requires Go 1.26.11 or later and native build tools for your platform.
 
 ```bash
 git clone https://github.com/jumpserver/luna.git
