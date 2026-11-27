@@ -325,6 +325,20 @@ export function closeQuerySession(query: QueryWorkspaceTab) {
   query.loadingRows = false;
   interruptQueryPlans(query);
 }
+export function finishResultTransaction(
+  query: QueryWorkspaceTab,
+  outcome: "committed" | "rolled_back" | "implicit_commit" | "unknown"
+) {
+  if (!query.rows) return;
+  if (query.resultExecution?.object_plan) {
+    // Cached routine rows remain readable after the transaction, but their cursor handles expire.
+    delete query.rows.cursor_source;
+    return;
+  }
+  query.edit.refreshRequired = true;
+  query.edit.transactionStale = true;
+  if (query.edit.status === "staged") query.edit.status = outcome === "implicit_commit" ? "committed" : outcome;
+}
 export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecution) {
   if (query.closed || value.console_id !== query.console?.id) return false;
   if (
@@ -333,11 +347,7 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
     value.transaction.revision > (query.resultTransactionRevision ?? -1) &&
     ["committed", "rolled_back", "implicit_commit", "unknown"].includes(value.transaction.outcome)
   ) {
-    query.edit.refreshRequired = true;
-    query.edit.transactionStale = true;
-    if (query.edit.status === "staged") {
-      query.edit.status = value.transaction.outcome === "implicit_commit" ? "committed" : value.transaction.outcome;
-    }
+    finishResultTransaction(query, value.transaction.outcome);
   }
   if (query.console && value.transaction && value.transaction.revision >= (query.console.transaction?.revision || 0))
     query.console.transaction = value.transaction;

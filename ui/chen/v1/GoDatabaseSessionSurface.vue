@@ -87,6 +87,7 @@ import {
   createQueryTab,
   exportActive,
   exportNeedsSync,
+  finishResultTransaction,
   hasMoreResultRows,
   interruptQueryPlans,
   isQueryWorkspaceTab,
@@ -928,9 +929,7 @@ function acceptConsole(query: QueryWorkspaceTab, value: GoConsole) {
     value.transaction?.notice &&
     value.transaction.notice.id !== query.console?.transaction?.notice?.id
   ) {
-    query.edit.refreshRequired = true;
-    query.edit.transactionStale = true;
-    if (query.edit.status === "staged") query.edit.status = value.transaction.notice.outcome;
+    finishResultTransaction(query, value.transaction.notice.outcome);
   }
   query.console = value;
   query.context = { database: value.database, schema: value.schema };
