@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "현재 정의를 다시 읽어 초안과 비교",
     "ProgramEditExisting": "기존 객체 {object} 편집",
     "ProgramTriggerOrder": "이 트리거의 일부 이벤트가 다른 트리거와 겹칩니다. SQL에 FOLLOWS 또는 PRECEDES를 지정해 실행 순서를 정하세요.",
-    "ProgramTriggerAppend": "선택한 각 이벤트에서 이 트리거를 마지막으로 실행",
+    "ProgramTriggerReorder": "데이터베이스 기본 순서를 사용합니다. 이벤트별 트리거 실행 순서가 변경될 수 있습니다.",
+    "ProgramChooseConsole": "콘솔 선택",
     "ProgramAction": {
       "fetchCursor": "커서의 다음 100개 행 가져오기",
       "readDefinition": "콘솔에서 정의 요청",

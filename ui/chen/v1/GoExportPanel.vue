@@ -46,7 +46,8 @@ const canStart = computed(
     !props.query.pending &&
     (mode.value === "cached"
       ? !!snapshot.value.resultId
-      : (!props.query.browseObject || props.query.rows?.browse?.supported) &&
+      : !props.query.resultExecution?.object_plan &&
+        (!props.query.browseObject || props.query.rows?.browse?.supported) &&
         !!snapshot.value.sql &&
         !["queued", "running", "waiting_review", "cancel_requested"].includes(props.query.execution?.status || ""))
 );
@@ -149,6 +150,7 @@ function size(bytes: number) {
                       : 'Chen.GoV1ExportFull'
                 )
               "
+              v-if="!query.resultExecution?.object_plan"
               :aria-pressed="mode === 'query'"
               :variant="mode === 'query' ? 'soft' : 'ghost'"
               color="neutral"

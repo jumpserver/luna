@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "重新讀取目前定義並與草稿比較",
     "ProgramEditExisting": "編輯現有物件 {object}",
     "ProgramTriggerOrder": "此觸發程序與其他觸發程序的事件部分重疊。可在 SQL 中使用 FOLLOWS 或 PRECEDES 指定執行順序。",
-    "ProgramTriggerAppend": "將此觸發程序移到每個所選事件的最後",
+    "ProgramTriggerReorder": "接受資料庫預設排序。各事件中的觸發順序可能改變。",
+    "ProgramChooseConsole": "選擇 Console",
     "ProgramAction": {
       "fetchCursor": "讀取游標後續 100 行",
       "readDefinition": "在 Console 中申請讀取定義",

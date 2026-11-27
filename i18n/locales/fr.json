@@ -2494,7 +2494,8 @@
     "ProgramReloadDraft": "Relire la définition actuelle et la comparer au brouillon",
     "ProgramEditExisting": "Modifier l’objet existant {object}",
     "ProgramTriggerOrder": "Ce déclencheur partage certains événements avec d’autres déclencheurs. Indiquez FOLLOWS ou PRECEDES dans le SQL pour définir son ordre.",
-    "ProgramTriggerAppend": "Placer ce déclencheur en dernier pour chaque événement sélectionné",
+    "ProgramTriggerReorder": "Accepter l’ordre par défaut de la base de données. L’ordre des déclencheurs peut changer pour chaque événement.",
+    "ProgramChooseConsole": "Sélectionner une console",
     "ProgramAction": {
       "fetchCursor": "Lire les 100 prochaines lignes du curseur",
       "readDefinition": "Demander la définition dans la console",

@@ -13,7 +13,7 @@ import type {
 } from "./api";
 import type { QueryContext, QueryWorkspaceTab } from "./workspace";
 import { chenErrorText } from "~/chen/utils/errorMessages";
-import { ChenGoError } from "./api";
+import { ChenGoError, programParameterType } from "./api";
 import GoEventSchedule from "./GoEventSchedule.vue";
 import { quoteIdentifier, resultLoadingLocked } from "./workspace";
 
@@ -55,7 +55,7 @@ const definition = ref(props.restored?.definition || "");
 const detail = ref<GoProgramDetail>();
 const original = ref<GoProgramDefinition>();
 const args = ref<GoProgramArgument[]>([]);
-const appendTrigger = ref(false);
+const allowTriggerReorder = ref(false);
 const resultColumns = ref<NonNullable<GoProgramRequest["result_columns"]>>([]);
 const anonymousRecord = computed(
   () =>
@@ -67,6 +67,7 @@ const anonymousRecord = computed(
 const inputs = computed(() =>
   (detail.value?.parameters || []).filter((p) => ["IN", "INOUT", "VARIADIC"].includes(p.mode))
 );
+const outputs = computed(() => (detail.value?.parameters || []).filter((p) => ["OUT", "TABLE"].includes(p.mode)));
 const currentRef = computed(() =>
   action === "create"
     ? {
@@ -93,11 +94,8 @@ const candidates = computed(() =>
       disabled: resultLoadingLocked(q)
     }))
 );
-const selected = ref(
-  props.queries.find((q) => q.console?.id === props.restored?.consoleId && props.restored)?.id ||
-    candidates.value.find((c) => !c.disabled)?.value ||
-    ""
-);
+const availableConsoles = candidates.value.filter((item) => !item.disabled);
+const selected = ref(availableConsoles.length === 1 ? availableConsoles[0]!.value : "");
 const query = computed(() =>
   props.queries.find((q) => q.id === selected.value && candidates.value.some((item) => item.value === q.id))
 );
@@ -121,8 +119,8 @@ const request = computed<GoProgramRequest>(() => ({
   ...(anonymousRecord.value && resultColumns.value.length ? { result_columns: resultColumns.value } : {}),
   ...(action === "create" || action === "edit" ? { definition: definition.value } : {}),
   ...(action === "edit" ? { baseline: original.value?.version } : {}),
-  ...(action === "edit" && detail.value?.properties.trigger_order_requires_choice && appendTrigger.value
-    ? { confirm_trigger_append: true }
+  ...(action === "edit" && detail.value?.properties.trigger_order_requires_choice && allowTriggerReorder.value
+    ? { confirm_trigger_reorder: true }
     : {}),
   ...(action === "invoke"
     ? {
@@ -222,7 +220,7 @@ watch(
     detail.value = undefined;
     original.value = undefined;
     baselineChanged.value = false;
-    appendTrigger.value = false;
+    allowTriggerReorder.value = false;
     const identity = { ref: target, oid: reload ? undefined : props.intent.oid };
     resolvedOid.value = identity.oid;
     error.value = "";
@@ -233,7 +231,7 @@ watch(
       if (
         action === "invoke" ||
         (mysqlFamily && target.kind === "event") ||
-        (action === "edit" && props.session.dialect === "mariadb" && target.kind === "trigger")
+        (action === "edit" && mysqlFamily && target.kind === "trigger")
       ) {
         const result = await props.api.consoleObjectDetail(consoleId, identity, cancel.signal);
         if (cancel.signal.aborted) return;
@@ -420,7 +418,13 @@ defineExpose({ dirty });
         </p>
         <UFormField :label="t('Chen.Console')">
           <div class="flex gap-2">
-            <USelect v-model="selected" class="min-w-0 flex-1" :items="candidates" :disabled="busy" />
+            <USelect
+              v-model="selected"
+              class="min-w-0 flex-1"
+              :items="candidates"
+              :placeholder="t('Chen.ProgramChooseConsole')"
+              :disabled="busy"
+            />
             <UButton
               v-if="!boundConsole"
               icon="i-lucide-plus"
@@ -461,8 +465,8 @@ defineExpose({ dirty });
         <div v-if="action === 'edit' && detail?.properties.trigger_order_requires_choice" class="space-y-1">
           <p class="text-warning">{{ t("Chen.ProgramTriggerOrder") }}</p>
           <UCheckbox
-            v-model="appendTrigger"
-            :label="t('Chen.ProgramTriggerAppend')"
+            v-model="allowTriggerReorder"
+            :label="t('Chen.ProgramTriggerReorder')"
             @update:model-value="dirty = true"
           />
         </div>
@@ -507,10 +511,19 @@ defineExpose({ dirty });
           {{ t("Chen.ProgramDelimiter") }}
         </p>
         <template v-if="action === 'invoke'">
+          <p v-if="target.kind === 'function' && detail?.properties.return_type">
+            {{ t("Chen.ProgramProperty.return_type") }} · {{ detail.properties.returns_set ? "SETOF " : ""
+            }}{{ detail.properties.return_type }}
+          </p>
+          <ul v-if="outputs.length" :aria-label="t('Chen.ProgramResult.output_parameters')" class="space-y-1">
+            <li v-for="p in outputs" :key="p.position">
+              {{ p.name || "$" + p.position }} · {{ p.mode }} · {{ programParameterType(p) }}
+            </li>
+          </ul>
           <UFormField
             v-for="(p, i) in inputs"
             :key="p.position"
-            :label="(p.name || '$' + p.position) + ' · ' + p.mode + ' · ' + p.data_type"
+            :label="(p.name || '$' + p.position) + ' · ' + p.mode + ' · ' + programParameterType(p)"
           >
             <div v-if="args[i]" class="flex gap-2">
               <USelect

@@ -2488,7 +2488,8 @@
     "ProgramReloadDraft": "重新读取当前定义并与草稿比较",
     "ProgramEditExisting": "编辑已有对象 {object}",
     "ProgramTriggerOrder": "此触发器与其他触发器的事件部分重叠。可在 SQL 中通过 FOLLOWS 或 PRECEDES 明确执行顺序。",
-    "ProgramTriggerAppend": "将此触发器移到各所选事件的末尾",
+    "ProgramTriggerReorder": "接受数据库默认排序。各事件中的触发顺序可能改变。",
+    "ProgramChooseConsole": "选择 Console",
     "ProgramAction": {
       "fetchCursor": "读取游标后续 100 行",
       "readDefinition": "在 Console 中申请读取定义",

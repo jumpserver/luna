@@ -2494,7 +2494,8 @@
     "ProgramReloadDraft": "Reload the current definition and compare with this draft",
     "ProgramEditExisting": "Edit existing object {object}",
     "ProgramTriggerOrder": "This trigger shares some events with other triggers. Specify FOLLOWS or PRECEDES in the SQL to select its order.",
-    "ProgramTriggerAppend": "Move this trigger to the end for every selected event",
+    "ProgramTriggerReorder": "Accept the database’s default order. Trigger order may change for each event.",
+    "ProgramChooseConsole": "Select a console",
     "ProgramAction": {
       "fetchCursor": "Fetch next 100 cursor rows",
       "readDefinition": "Request definition in console",

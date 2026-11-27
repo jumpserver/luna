@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "Đọc lại định nghĩa hiện tại và so sánh với bản nháp",
     "ProgramEditExisting": "Chỉnh sửa đối tượng hiện có {object}",
     "ProgramTriggerOrder": "Trình kích hoạt này dùng chung một số sự kiện với các trình kích hoạt khác. Hãy chỉ định FOLLOWS hoặc PRECEDES trong SQL để chọn thứ tự.",
-    "ProgramTriggerAppend": "Chuyển trình kích hoạt này xuống cuối cho mỗi sự kiện đã chọn",
+    "ProgramTriggerReorder": "Chấp nhận thứ tự mặc định của cơ sở dữ liệu. Thứ tự các trình kích hoạt có thể thay đổi theo từng sự kiện.",
+    "ProgramChooseConsole": "Chọn một bảng điều khiển",
     "ProgramAction": {
       "fetchCursor": "Lấy 100 dòng tiếp theo từ con trỏ",
       "readDefinition": "Yêu cầu định nghĩa trong console",

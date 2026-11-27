@@ -67,7 +67,7 @@ export interface GoProgramArgument {
   value?: string;
 }
 export interface GoProgramRequest extends GoProgramIntent {
-  confirm_trigger_append?: boolean;
+  confirm_trigger_reorder?: boolean;
   result_columns?: { name: string; type: { schema: string; name: string } }[];
   arguments?: GoProgramArgument[];
   definition?: string;
@@ -393,6 +393,8 @@ export interface GoCatalogCapabilities {
   collections: Record<string, { kinds: string[]; actions: string[] }>;
 }
 export interface GoProgramParameter {
+  character_set?: string;
+  collation?: string;
   position: number;
   name?: string;
   mode: string;
@@ -401,6 +403,12 @@ export interface GoProgramParameter {
   has_default?: boolean;
   default?: string;
   type_kind?: string;
+}
+export function programParameterType(parameter: GoProgramParameter) {
+  const type = [parameter.data_type];
+  if (parameter.character_set) type.push("CHARACTER SET", parameter.character_set);
+  if (parameter.collation) type.push("COLLATE", parameter.collation);
+  return type.join(" ");
 }
 export interface GoProgramDetail extends GoProgramIdentity {
   properties: Record<string, string | number | boolean | string[] | { schema: string; name: string } | null>;

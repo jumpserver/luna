@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogColumn, GoCatalogRelation } from "./api";
+import type { ChenGoApi, GoCatalogColumn, GoCatalogRelation, GoProgramSummary, GoProgramIntent } from "./api";
 import type { ObjectWorkspaceSection } from "./workspace";
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -7,6 +7,7 @@ import { chenErrorText } from "~/chen/utils/errorMessages";
 import { workspaceButtonClass } from "~/shared/theme/workspaceButton";
 import { diagramObjectId } from "./diagram";
 import GoCatalogDiagram from "./GoCatalogDiagram.vue";
+import GoTriggerList from "./GoTriggerList.vue";
 import GoObjectDetails from "./GoObjectDetails.vue";
 import GoObjectDiagram from "./GoObjectDiagram.vue";
 const props = defineProps<{
@@ -18,12 +19,17 @@ const props = defineProps<{
   sessionId: string;
   ready: boolean;
   diagramReady?: boolean;
+  triggerCatalog?: boolean;
+  createTrigger?: boolean;
+  revision?: number;
   canCopy: boolean;
   canPaste: boolean;
 }>();
 const emit = defineEmits<{
   object: [object: GoCatalogRelation];
   query: [];
+  program: [object: GoProgramSummary];
+  objectAction: [intent: GoProgramIntent];
   section: [section: ObjectWorkspaceSection];
   schemaEdit: [mode: "alter" | "index"];
 }>();
@@ -48,6 +54,9 @@ const tabs = computed(() => [
   { key: "foreign_keys", label: t("Chen.ForeignKeys") },
   { key: "constraints", label: t("Chen.Constraints") },
   { key: "ddl", label: "DDL" },
+  ...(props.object.kind === "table" && props.triggerCatalog
+    ? [{ key: "triggers", label: t("Chen.ProgramKind.trigger") }]
+    : []),
   ...(props.object.kind === "table" ? [{ key: "diagram", label: t("Chen.GoDiagramTitle") }] : [])
 ]);
 const diagramVisited = ref(false);
@@ -262,6 +271,34 @@ function preventCopy(event: ClipboardEvent) {
           <span v-else aria-hidden="true" :class="ui.itemLeadingIcon()" />
         </template>
       </UDropdownMenu>
+    </div>
+    <div v-if="section === 'triggers' && triggerCatalog && active" class="min-h-0 flex-1 overflow-auto">
+      <UButton
+        v-if="createTrigger"
+        size="xs"
+        class="m-2"
+        variant="ghost"
+        color="neutral"
+        icon="i-lucide-plus"
+        :disabled="!ready"
+        :label="t('Chen.ProgramAction.create')"
+        @click="
+          emit('objectAction', {
+            action: 'create',
+            ref: { database: object.database, schema: object.schema, table: object.name, kind: 'trigger', name: '' }
+          })
+        "
+      />
+      <GoTriggerList
+        :api="api"
+        :session-id="sessionId"
+        :database="object.database"
+        :schema="object.schema"
+        :table="object.name"
+        :ready="ready"
+        :revision="revision"
+        @program="emit('program', $event)"
+      />
     </div>
     <nav
       v-if="

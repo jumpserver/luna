@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "現在の定義を再読み込みして下書きと比較",
     "ProgramEditExisting": "既存のオブジェクト {object} を編集",
     "ProgramTriggerOrder": "このトリガーは、一部のイベントを他のトリガーと共有しています。SQL に FOLLOWS または PRECEDES を指定して実行順序を選んでください。",
-    "ProgramTriggerAppend": "選択した各イベントでこのトリガーを最後に実行する",
+    "ProgramTriggerReorder": "データベースの既定の順序を使用する。イベントごとにトリガーの実行順序が変わる可能性があります。",
+    "ProgramChooseConsole": "コンソールを選択",
     "ProgramAction": {
       "fetchCursor": "カーソルから次の 100 行を取得",
       "readDefinition": "コンソールで定義の取得を申請",

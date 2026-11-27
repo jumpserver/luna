@@ -5,14 +5,15 @@ import type {
   GoProgramSummary,
   GoProgramIntent,
   GoProgramDetail,
-  GoProgramDefinition
+  GoProgramDefinition,
+  GoProgramParameter
 } from "./api";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { writeClipboardText } from "~/utils/clipboard";
 import { chenErrorText } from "~/chen/utils/errorMessages";
 
-import { ChenGoError } from "./api";
+import { ChenGoError, programParameterType } from "./api";
 import { objectKey } from "./catalogIdentity";
 import { isProgramKind, programActions } from "./programActions";
 import GoTriggerList from "./GoTriggerList.vue";
@@ -70,7 +71,7 @@ async function copyDefinition() {
   }
 }
 function reportDefinitionError(cause: unknown) {
-  const changed = cause instanceof ChenGoError && cause.status === 409;
+  const changed = cause instanceof ChenGoError && cause.code === "catalog_object_changed";
   definitionError.value = changed ? t("Chen.ProgramDefinitionChanged") : chenErrorText(cause, t);
   approvalRequired.value =
     cause instanceof ChenGoError &&
@@ -116,6 +117,14 @@ function openRelated(related: NonNullable<GoProgramDetail["related"]>[number]) {
       signature: related.signature
     });
   }
+}
+function parameterDefault(parameter: GoProgramParameter) {
+  if (parameter.default !== undefined) return parameter.default;
+  if (parameter.has_default || definition.value?.default_positions?.includes(parameter.position))
+    return t("Chen.GoV1Yes");
+  if (detail.value?.properties.defaults_from_definition && definition.value?.status !== "complete")
+    return t("Chen.GoQueryPageUnknown");
+  return t("Chen.GoV1No");
 }
 function propertyValue(value: GoProgramDetail["properties"][string]) {
   if (value === null) return "—";
@@ -243,16 +252,9 @@ watch(
             <tr v-for="parameter in detail.parameters" :key="parameter.position" class="border-b border-default">
               <td class="px-2 py-1">{{ parameter.name || "#" + parameter.position }}</td>
               <td class="px-2 py-1">{{ parameter.mode }}</td>
-              <td class="px-2 py-1">{{ parameter.data_type }}</td>
+              <td class="px-2 py-1">{{ programParameterType(parameter) }}</td>
               <td class="px-2 py-1">
-                {{
-                  parameter.default ??
-                  t(
-                    parameter.has_default || definition?.default_positions?.includes(parameter.position)
-                      ? "Chen.GoV1Yes"
-                      : "Chen.GoV1No"
-                  )
-                }}
+                {{ parameterDefault(parameter) }}
               </td>
             </tr>
           </tbody>

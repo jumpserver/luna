@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "Recarregar a definição atual e comparar com o rascunho",
     "ProgramEditExisting": "Editar o objeto existente {object}",
     "ProgramTriggerOrder": "Este gatilho compartilha alguns eventos com outros gatilhos. Especifique FOLLOWS ou PRECEDES no SQL para definir a ordem.",
-    "ProgramTriggerAppend": "Mover este gatilho para o fim de cada evento selecionado",
+    "ProgramTriggerReorder": "Aceitar a ordem padrão do banco de dados. A ordem dos gatilhos pode mudar para cada evento.",
+    "ProgramChooseConsole": "Selecione um console",
     "ProgramAction": {
       "fetchCursor": "Buscar as próximas 100 linhas do cursor",
       "readDefinition": "Solicitar definição no console",

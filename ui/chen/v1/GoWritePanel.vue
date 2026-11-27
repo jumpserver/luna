@@ -70,7 +70,9 @@ const locked = computed(
     draft.value.refreshRequired ||
     policyPending.value
 );
-const supported = computed(() => !props.query.readOnly && draft.value.metadata?.supported === true);
+const supported = computed(
+  () => !props.query.readOnly && !props.query.resultExecution?.object_plan && draft.value.metadata?.supported === true
+);
 const canChange = computed(() => supported.value && !locked.value && !metadataBusy.value);
 const canInsert = computed(
   () =>
@@ -136,6 +138,11 @@ let controller: AbortController | undefined;
 async function loadMetadata() {
   if (!props.query.console || !props.query.rows || dirty.value || props.session.state !== "ready") return;
   controller?.abort();
+  if (props.query.resultExecution?.object_plan) {
+    draft.value.metadata = null;
+    metadataBusy.value = false;
+    return;
+  }
   const metadata = draft.value.metadata;
   if (
     metadata?.supported &&
@@ -209,6 +216,7 @@ async function loadMetadata() {
 watch(
   () => [
     props.query.rows?.id,
+    props.query.resultExecution?.object_plan?.plan_id,
     props.query.rows?.offset,
     props.query.rows?.rows.length,
     props.query.console?.id,
@@ -222,7 +230,14 @@ onBeforeUnmount(() => {
   controller?.abort();
   copyController?.abort();
 });
-const sqlCopyDisabled = computed(() => metadataBusy.value || locked.value || dirty.value || props.visible === false);
+const sqlCopyDisabled = computed(
+  () =>
+    !!props.query.resultExecution?.object_plan ||
+    metadataBusy.value ||
+    locked.value ||
+    dirty.value ||
+    props.visible === false
+);
 watch(
   () => [sqlCopyDisabled.value, props.query.rows, props.query.console?.id],
   () => copyController?.abort(),

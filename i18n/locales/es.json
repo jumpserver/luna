@@ -2311,7 +2311,8 @@
     "ProgramReloadDraft": "Volver a leer la definición actual y compararla con el borrador",
     "ProgramEditExisting": "Editar el objeto existente {object}",
     "ProgramTriggerOrder": "Este disparador comparte algunos eventos con otros disparadores. Indique FOLLOWS o PRECEDES en el SQL para definir su orden.",
-    "ProgramTriggerAppend": "Mover este disparador al final de cada evento seleccionado",
+    "ProgramTriggerReorder": "Aceptar el orden predeterminado de la base de datos. El orden de los disparadores puede cambiar para cada evento.",
+    "ProgramChooseConsole": "Seleccione una consola",
     "ProgramAction": {
       "fetchCursor": "Leer las siguientes 100 filas del cursor",
       "readDefinition": "Solicitar la definición en la consola",

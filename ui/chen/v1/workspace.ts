@@ -7,7 +7,10 @@ import type {
   GoQueryPageRequest,
   GoPlan,
   GoCatalogRelation,
+  GoCatalogEntry,
+  GoProgramSummary,
   GoConsole,
+  GoProgramDraft,
   GoTransactionRequest,
   GoExecution,
   GoExport,
@@ -72,6 +75,8 @@ export interface QueryWorkspaceTab {
   browseCount: { source_result_id: string; total: string } | null;
   edit: GoEditDraft;
   executionEditPlan?: string;
+  executionObjectPlan?: string;
+  objectDraft?: GoProgramDraft;
   executionRefresh?: {
     viewId: string;
     offset: number;
@@ -113,6 +118,7 @@ export interface QueryWorkspaceTab {
     planNumber?: number;
     exportFormat?: GoExportFormat;
     editPlanId?: string;
+    objectPlanId?: string;
     browse?: GoBrowseRequest;
     queryPage?: GoQueryPageRequest;
     refresh?: boolean;
@@ -142,7 +148,8 @@ export type ObjectWorkspaceSection =
   | "primary_key"
   | "defaults"
   | "ddl"
-  | "diagram";
+  | "diagram"
+  | "triggers";
 export interface ObjectWorkspaceTab {
   id: string;
   kind: "object";
@@ -152,6 +159,12 @@ export interface ObjectWorkspaceTab {
   section: ObjectWorkspaceSection;
   data: QueryWorkspaceTab | null;
 }
+export interface ProgramWorkspaceTab {
+  id: string;
+  kind: "program";
+  title: string;
+  object: GoProgramSummary;
+}
 export interface OverviewWorkspaceTab {
   id: string;
   kind: "overview";
@@ -159,7 +172,7 @@ export interface OverviewWorkspaceTab {
   title: string;
   context: QueryContext;
 }
-export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab;
+export type ChenWorkspaceTab = QueryWorkspaceTab | ObjectWorkspaceTab | OverviewWorkspaceTab | ProgramWorkspaceTab;
 export function isQueryWorkspaceTab(tab: ChenWorkspaceTab): tab is QueryWorkspaceTab {
   return tab.kind === "query" || tab.kind === "preview" || tab.kind === "console";
 }
@@ -174,7 +187,7 @@ export function workspaceQueries(tabs: ChenWorkspaceTab[]): QueryWorkspaceTab[] 
     return query ? [query, ...query.pinnedResults] : [];
   });
 }
-export function objectWorkspaceKey(sessionId: string, object: GoCatalogRelation) {
+export function objectWorkspaceKey(sessionId: string, object: GoCatalogEntry) {
   return objectKey(object, sessionId);
 }
 export function createQueryTab(
@@ -259,6 +272,7 @@ export function tabContext<T extends ChenWorkspaceTab | Pick<ObjectWorkspaceTab,
 ): QueryContext {
   if (!tab) return { ...fallback };
   if (tab.kind === "object") return { database: tab.object.database, schema: tab.object.schema };
+  if (tab.kind === "program") return { database: tab.object.ref.database, schema: tab.object.ref.schema };
   return { ...tab.context };
 }
 export function queryDirty(query: QueryWorkspaceTab): boolean {
@@ -276,6 +290,7 @@ export function reviewSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["p
     submitReview: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
+    ...(query.executionObjectPlan ? { objectPlanId: query.executionObjectPlan } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
@@ -295,6 +310,7 @@ export function warningSubmission(query: QueryWorkspaceTab): QueryWorkspaceTab["
     confirmWarnings: true,
     ...(query.executionBrowse ? { browse: query.executionBrowse } : {}),
     ...(query.executionQueryPage ? { queryPage: query.executionQueryPage } : {}),
+    ...(query.executionObjectPlan ? { objectPlanId: query.executionObjectPlan } : {}),
     ...(query.executionEditPlan ? { editPlanId: query.executionEditPlan } : {}),
     ...(query.executionExportFormat ? { exportFormat: query.executionExportFormat } : {}),
     ...(query.executionTransaction ? { transaction: query.executionTransaction } : {}),
@@ -333,7 +349,7 @@ export function acceptQueryExecution(query: QueryWorkspaceTab, value: GoExecutio
   query.execution = reconcileExecution(query.execution, value);
   return true;
 }
-export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogRelation }>(
+export function mergeCatalogNodes<T extends { id: string; label: string; detail?: string; object?: GoCatalogEntry }>(
   previous: T[],
   incoming: T[],
   append: boolean

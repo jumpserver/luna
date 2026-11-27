@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import type { ChenGoApi, GoCatalogRelation, GoCatalogPage } from "./api";
+import type {
+  ChenGoApi,
+  GoCatalogRelation,
+  GoCatalogPage,
+  GoCatalogCapabilities,
+  GoCatalogEntry,
+  GoProgramSummary,
+  GoProgramIntent,
+  GoProgramKind
+} from "./api";
 import type { ObjectWorkspaceSection, QueryContext } from "./workspace";
+import { ChenGoError } from "./api";
+import { catalogRef, isProgram } from "./catalogIdentity";
+import { programActions, isProgramKind } from "./programActions";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
@@ -20,8 +32,9 @@ const props = defineProps<{
   canPaste: boolean;
   canCopy: boolean;
   canInsert: boolean;
-  recentObjects?: GoCatalogRelation[];
-  activeObject?: GoCatalogRelation;
+  revision?: number;
+  recentObjects?: GoCatalogEntry[];
+  activeObject?: GoCatalogEntry;
   activeScope?: QueryContext;
 }>();
 const emit = defineEmits<{
@@ -30,8 +43,11 @@ const emit = defineEmits<{
   query: [context: QueryContext, object?: GoCatalogRelation];
   insert: [text: string];
   createTable: [context: QueryContext];
+  program: [object: GoProgramSummary];
+  objectAction: [intent: GoProgramIntent];
+  capabilities: [database: string, capabilities: GoCatalogCapabilities];
   clearRecent: [];
-  removeRecent: [object: GoCatalogRelation];
+  removeRecent: [object: GoCatalogEntry];
   defaultContext: [context: QueryContext];
 }>();
 const { t } = useI18n();
@@ -45,8 +61,9 @@ interface Node {
   type: "connection" | "database" | "schema" | "group" | "object" | "recent";
   schema: string;
   database: string;
-  kind?: GoCatalogRelation["kind"];
-  object?: GoCatalogRelation;
+  kind?: GoCatalogRelation["kind"] | GoProgramKind;
+  collection?: string;
+  object?: GoCatalogEntry;
   detail?: string;
   children: Node[];
   expanded: boolean;
@@ -82,21 +99,32 @@ function node(type: Node["type"], label: string, schema = "", extra: Partial<Nod
 }
 const root = ref<Node>(node("connection", props.asset));
 const recent = ref<Node>(node("recent", "recent", "", { loaded: true, expanded: true }));
+// Inserting a recent item above a clicked row can put the second click of a
+// double click on its neighbour. Keep the visible rows steady while pointing.
+let holdingRecent = false;
+function syncRecent() {
+  recent.value.children = (props.recentObjects || []).map((object) => ({
+    ...entry(object),
+    id: `recent:${objectKey(object, props.sessionId)}`
+  }));
+}
 watch(
   () => props.recentObjects,
-  (objects) => {
-    recent.value.children = (objects || []).map((object) => ({
-      ...relation(object),
-      id: `recent:${objectKey(object, props.sessionId)}`,
-      loaded: true
-    }));
+  (items, previous) => {
+    if (!holdingRecent || (items?.length || 0) < (previous?.length || 0)) syncRecent();
   },
   { immediate: true }
 );
+function releaseRecent() {
+  if (!holdingRecent) return;
+  holdingRecent = false;
+  syncRecent();
+}
 const selected = ref("");
 const tree = ref<HTMLElement>();
 const searchOpen = ref(false);
 const search = ref("");
+const searchKind = ref("all");
 const searchButton = useTemplateRef("searchButton");
 const searchInput = useTemplateRef("searchInput");
 const searchNode = ref<Node>(node("group", "search"));
@@ -128,6 +156,7 @@ async function toggleSearch() {
       : props.activeScope?.database
         ? { ...props.activeScope }
         : { ...connectionContext.value };
+    searchKind.value = "all";
     browsingSelection = selected.value;
     browsingScroll = tree.value?.scrollTop || 0;
     searchOpen.value = true;
@@ -188,8 +217,40 @@ const rows = computed(() => {
   return result;
 });
 const focusable = computed(() => rows.value.filter((row) => row.type === "node"));
+const capabilities = ref(new Map<string, GoCatalogCapabilities>());
+const searchKinds = computed(() =>
+  groups("", searchScope.value.database).map((group) => ({
+    label: label(group),
+    value: group.kind!
+  }))
+);
+async function negotiate(database: string, signal: AbortSignal) {
+  if (!["postgresql", "mysql", "mariadb", "oceanbase-mysql"].includes(props.dialect)) return;
+  let result: GoCatalogCapabilities;
+  try {
+    result = await props.api.catalogCapabilities(props.sessionId, database, signal);
+  } catch (error) {
+    // Older servers expose only the relation catalog.
+    if (!(error instanceof ChenGoError && [404, 405].includes(error.status))) throw error;
+    result = { version: 1, collections: {} };
+  }
+  if (signal.aborted) return;
+  capabilities.value.set(database, result);
+  emit("capabilities", database, result);
+}
 function groups(schema: string, database: string) {
-  return (["table", "view"] as const).map((kind) => node("group", kind, schema, { kind, database }));
+  const groups = (["table", "view"] as const).map((kind) => node("group", kind, schema, { kind, database }));
+  const caps = capabilities.value.get(database);
+  if (caps?.version === 2) {
+    for (const [collection, descriptor] of Object.entries(caps.collections)) {
+      if (collection === "all" || !descriptor.actions.includes("list") || !descriptor.actions.includes("inspect"))
+        continue;
+      for (const kind of descriptor.kinds.filter(isProgramKind)) {
+        groups.push(node("group", kind, schema, { kind, database, collection }));
+      }
+    }
+  }
+  return groups;
 }
 function context(current: Node): QueryContext {
   if (current.type === "connection") return { ...connectionContext.value };
@@ -198,24 +259,24 @@ function context(current: Node): QueryContext {
 function databaseNode(database: string) {
   return node("database", database, databaseNamespace.value ? database : "", {
     database,
-    expanded: database === connectionContext.value.database,
-    ...(databaseNamespace.value ? { children: groups(database, database), loaded: true } : {})
+    expanded: database === connectionContext.value.database
   });
 }
-function relation(object: GoCatalogRelation): Node {
-  return node("object", object.name, object.schema, {
+function entry(object: GoCatalogEntry): Node {
+  const ref = catalogRef(object);
+  return node("object", ref.name, ref.schema, {
     id: objectKey(object, props.sessionId),
-    database: object.database,
+    database: ref.database,
     object,
-    kind: object.kind,
+    kind: ref.kind,
     loaded: true,
-    detail: object.comment
+    detail: isProgram(object) ? object.signature || object.ref.table : object.comment
   });
 }
 async function load(current: Node, append = false) {
   if (!props.ready || current.loading || !expandable(current)) return;
   if (current.type === "schema") return;
-  if (current.type === "database" && databaseNamespace.value) return;
+
   const generation = ++current.generation;
   const controller = new AbortController();
   controllers.add(controller);
@@ -236,35 +297,56 @@ async function load(current: Node, append = false) {
       emit("defaultContext", { ...connectionContext.value });
       items = databases.items.map((database) => databaseNode(database.name));
     } else if (current.type === "database") {
-      const schemas = await props.api.catalogSchemas(
-        props.sessionId,
-        append ? current.cursor : undefined,
-        controller.signal,
-        current.database
-      );
-      page = schemas;
-      items = schemas.items.map((schema) =>
-        node("schema", schema.name, schema.name, {
-          database: current.database,
-          expanded:
-            current.database === connectionContext.value.database && schema.name === connectionContext.value.schema,
-          loaded: true,
-          children: groups(schema.name, current.database)
-        })
-      );
-    } else {
-      const objects = await props.api.catalogRelations(
+      if (!append) await negotiate(current.database, controller.signal);
+      if (controller.signal.aborted) return;
+      if (databaseNamespace.value) {
+        items = groups(current.database, current.database);
+        page = { items: [], has_more: false };
+      } else {
+        const schemas = await props.api.catalogSchemas(
+          props.sessionId,
+          append ? current.cursor : undefined,
+          controller.signal,
+          current.database
+        );
+        page = schemas;
+        items = schemas.items.map((schema) =>
+          node("schema", schema.name, schema.name, {
+            database: current.database,
+            expanded:
+              current.database === connectionContext.value.database && schema.name === connectionContext.value.schema,
+            loaded: true,
+            children: groups(schema.name, current.database)
+          })
+        );
+      }
+    } else if (current.collection) {
+      const objects = await props.api.catalogPrograms(
         props.sessionId,
         {
           database: current.database,
-          schema: current.schema,
-          kind: current.kind,
+          schema: current.schema || undefined,
+          collection: current.collection,
+          kind: isProgramKind(current.kind) ? current.kind : undefined,
           cursor: append ? current.cursor : undefined
         },
         controller.signal
       );
       page = objects;
-      items = objects.items.map(relation);
+      items = objects.items.map(entry);
+    } else {
+      const objects = await props.api.catalogRelations(
+        props.sessionId,
+        {
+          database: current.database,
+          schema: current.schema || undefined,
+          kind: current.kind === "table" || current.kind === "view" ? current.kind : undefined,
+          cursor: append ? current.cursor : undefined
+        },
+        controller.signal
+      );
+      page = objects;
+      items = objects.items.map(entry);
     }
     if (generation !== current.generation || controller.signal.aborted) return;
     const defaultDatabase = connectionContext.value.database;
@@ -273,6 +355,10 @@ async function load(current: Node, append = false) {
         current.children.find((item) => item.database === defaultDatabase) || databaseNode(defaultDatabase)
       );
     current.children = mergeCatalogNodes(current.children, items, append);
+    if (current.type === "database" && !databaseNamespace.value) {
+      for (const schema of current.children)
+        schema.children = mergeCatalogNodes(schema.children, groups(schema.schema, current.database), false);
+    }
     current.cursor = page.next_cursor;
     current.more = page.has_more;
     current.loaded = true;
@@ -297,10 +383,15 @@ function select(current: Node, event: MouseEvent) {
   selected.value = current.id;
   if (searchOpen.value && !searchScope.value.database && current.database) searchScope.value = context(current);
   // A native double click produces two clicks. Expand once, never run a query here.
+  if (event.detail <= 1 && current.object && isProgram(current.object)) {
+    holdingRecent = true;
+    emit("program", current.object);
+  }
   if (event.detail <= 1 && expandable(current)) void toggle(current);
 }
 function activate(current: Node) {
-  if (current.object) emit("object", current.object, "data");
+  if (current.object && isProgram(current.object)) emit("program", current.object);
+  else if (current.object) emit("object", current.object, "data");
   else if (current.type === "schema") emit("overview", context(current));
 }
 function icon(current: Node) {
@@ -310,18 +401,29 @@ function icon(current: Node) {
     database: "i-lucide-database",
     schema: "i-lucide-library-big",
     group: current.expanded ? "i-lucide-folder-open" : "i-lucide-folder",
-    object: current.kind === "view" ? "i-lucide-eye" : "i-lucide-table-properties"
+    object:
+      current.kind === "view"
+        ? "i-lucide-eye"
+        : current.kind === "trigger"
+          ? "i-lucide-zap"
+          : current.kind === "event"
+            ? "i-lucide-clock"
+            : isProgramKind(current.kind)
+              ? "i-lucide-braces"
+              : "i-lucide-table-properties"
   }[current.type];
 }
 function label(current: Node) {
-  if (current.type === "recent") return t("Chen.RecentlyTables");
+  if (current.type === "recent") return t("Chen.ProgramRecent");
+  if (current.type === "group" && isProgramKind(current.kind)) return t(`Chen.ProgramKind.${current.kind}`);
+  if (current.object && isProgram(current.object)) return current.object.signature || current.object.label;
   return current.type === "group" ? t(current.kind === "view" ? "Chen.GoV1Views" : "Chen.GoV1Tables") : current.label;
 }
 function sqlName(current: Node, qualified = false) {
   if (current.object && qualified) {
-    return qualifiedObjectName(current.object, props.dialect);
+    return qualifiedObjectName(catalogRef(current.object), props.dialect);
   }
-  return quoteIdentifier(current.label, props.dialect);
+  return quoteIdentifier(current.object ? catalogRef(current.object).name : current.label, props.dialect);
 }
 async function copyName(current: Node, qualified = false) {
   if (!props.canCopy) return;
@@ -333,7 +435,7 @@ async function copyName(current: Node, qualified = false) {
   }
 }
 function invalidate(current: Node) {
-  if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) current.loaded = false;
+  if (current.type !== "schema") current.loaded = false;
   for (const child of current.children) if (expandable(child)) invalidate(child);
 }
 async function resumeExpanded(current: Node) {
@@ -351,14 +453,14 @@ async function refresh(current = root.value) {
     else if (parent) await refresh(parent.node);
     return;
   }
-  if (current.type !== "schema" && !(current.type === "database" && databaseNamespace.value)) {
+  if (current.type !== "schema") {
     current.expanded = true;
     await load(current);
     if (current.error) return;
   }
   for (const child of current.children) {
     if (!expandable(child)) continue;
-    if (child.expanded || (child.type === "database" && databaseNamespace.value)) await refresh(child);
+    if (child.expanded) await refresh(child);
     else invalidate(child);
   }
 }
@@ -366,6 +468,46 @@ function clearRecent() {
   emit("clearRecent");
   void focusNode(0);
 }
+const menuActions = ref<string[]>([]);
+let contextController: AbortController | undefined;
+async function contextMenu(current: Node) {
+  selected.value = current.id;
+  contextController?.abort();
+  menuActions.value = [];
+  if (!current.object || !isProgram(current.object) || !props.ready) return;
+  const controller = new AbortController();
+  contextController = controller;
+  try {
+    const detail = await props.api.catalogObjectDetail(props.sessionId, current.object, controller.signal);
+    if (!controller.signal.aborted) menuActions.value = detail.actions;
+  } catch (cause) {
+    if (!controller.signal.aborted) toast.add({ title: chenErrorText(cause, t), color: "error" });
+  }
+}
+function createActions(current: Node) {
+  if (current.type !== "group" || !current.collection || !isProgramKind(current.kind)) return [];
+  const actions = capabilities.value.get(current.database)?.collections[current.collection]?.actions || [];
+  if (!actions.includes("create"))
+    return [
+      {
+        label: t("Chen.ProgramAction.create"),
+        icon: "i-lucide-plus",
+        disabled: !props.ready,
+        onSelect: () => toast.add({ title: t("Chen.ProgramUnsupported"), color: "neutral" })
+      }
+    ];
+  return programActions(
+    { ref: { ...context(current), kind: current.kind, name: "" } },
+    actions.filter((action) => action === "create"),
+    props.ready,
+    t,
+    (intent) => emit("objectAction", intent)
+  );
+}
+const selectedGroupActions = computed(() => {
+  const current = focusable.value.find(({ node }) => node.id === selected.value)?.node;
+  return current ? createActions(current) : [];
+});
 function menu(current: Node) {
   if (current.type === "recent")
     return [
@@ -377,7 +519,21 @@ function menu(current: Node) {
       }
     ];
   const scope = context(current);
+  const relation = current.object && !isProgram(current.object) ? current.object : undefined;
   return [
+    ...createActions(current),
+    ...(current.object && isProgram(current.object)
+      ? [
+          { label: t("Chen.BasicInfo"), icon: "i-lucide-braces", onSelect: () => activate(current) },
+          ...programActions(
+            current.object,
+            selected.value === current.id ? menuActions.value : [],
+            props.ready,
+            t,
+            (intent) => emit("objectAction", intent)
+          )
+        ]
+      : []),
     ...(current.id.startsWith("recent:") && current.object
       ? [
           {
@@ -453,35 +609,35 @@ function menu(current: Node) {
           }
         ]
       : []),
-    ...(current.object
+    ...(relation
       ? [
           {
             label: t("Chen.GoV1Structure"),
             icon: "i-lucide-panel-top",
-            onSelect: () => emit("object", current.object!, "structure")
+            onSelect: () => emit("object", relation, "structure")
           },
           {
             label: t("Chen.GoTableWorkspaceData"),
             icon: "i-lucide-table",
             disabled: !props.ready,
-            onSelect: () => emit("object", current.object!, "data")
+            onSelect: () => emit("object", relation, "data")
           },
           {
             label: t("Chen.GoV1GenerateSelect"),
             icon: "i-lucide-file-code-2",
             disabled: !props.ready || !props.canPaste,
-            onSelect: () => emit("query", scope, current.object!)
+            onSelect: () => emit("query", scope, relation)
           }
         ]
       : []),
-    ...(current.object
+    ...(relation
       ? [
-          { label: "DDL", icon: "i-lucide-file-code-2", onSelect: () => emit("object", current.object!, "ddl") },
+          { label: "DDL", icon: "i-lucide-file-code-2", onSelect: () => emit("object", relation, "ddl") },
           {
             label: t("Chen.GoDiagramTitle"),
             icon: "i-lucide-git-fork",
-            disabled: current.object.kind !== "table",
-            onSelect: () => emit("object", current.object!, "diagram")
+            disabled: relation.kind !== "table",
+            onSelect: () => emit("object", relation, "diagram")
           }
         ]
       : []),
@@ -518,6 +674,7 @@ function focusSearchResults(event: KeyboardEvent) {
   void focusNode(0);
 }
 async function keydown(event: KeyboardEvent, current: Node) {
+  releaseRecent();
   if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -569,18 +726,34 @@ async function runSearch(append = false) {
     current.more = false;
   }
   try {
-    const page = await props.api.catalogRelations(
-      props.sessionId,
-      {
-        database: searchScope.value.database,
-        schema: searchScope.value.schema || undefined,
-        q: search.value.trim(),
-        cursor: append ? current.cursor : undefined
-      },
-      controller.signal
-    );
+    const database = searchScope.value.database;
+    if (!capabilities.value.has(database)) await negotiate(database, controller.signal);
     if (controller.signal.aborted) return;
-    current.children = append ? [...current.children, ...page.items.map(relation)] : page.items.map(relation);
+    const options = { database, q: search.value.trim(), cursor: append ? current.cursor : undefined };
+    const kind = searchKind.value;
+    const group = groups("", database).find((group) => group.kind === kind);
+    let page: GoCatalogPage<GoCatalogEntry>;
+    if (kind === "all" && capabilities.value.get(database)?.collections.all?.actions.includes("list")) {
+      page = await props.api.catalogSearch(props.sessionId, options, controller.signal);
+    } else if (isProgramKind(kind) && group?.collection) {
+      page = await props.api.catalogPrograms(
+        props.sessionId,
+        { ...options, kind, collection: group.collection },
+        controller.signal
+      );
+    } else {
+      page = await props.api.catalogRelations(
+        props.sessionId,
+        {
+          ...options,
+          schema: searchKinds.value.length > 2 ? undefined : searchScope.value.schema || undefined,
+          kind: kind === "table" || kind === "view" ? kind : undefined
+        },
+        controller.signal
+      );
+    }
+    if (controller.signal.aborted) return;
+    current.children = mergeCatalogNodes(current.children, page.items.map(entry), append);
     current.cursor = page.next_cursor;
     current.more = page.has_more;
     current.loaded = true;
@@ -590,7 +763,7 @@ async function runSearch(append = false) {
     if (!controller.signal.aborted) current.loading = false;
   }
 }
-watch(search, () => {
+watch([search, searchKind], () => {
   clearTimeout(searchTimer);
   searchController?.abort();
   searchNode.value.children = [];
@@ -649,7 +822,17 @@ watch(
     else void resumeExpanded(root.value);
   }
 );
+watch(
+  () => props.revision,
+  () => {
+    if (props.ready) {
+      void refresh();
+      if (searching.value) void runSearch();
+    }
+  }
+);
 onBeforeUnmount(() => {
+  contextController?.abort();
   clearTimeout(searchTimer);
   searchController?.abort();
   for (const controller of controllers) controller.abort();
@@ -671,6 +854,19 @@ onBeforeUnmount(() => {
     <div class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 border-b border-default px-2.5">
       <span class="flex-1 text-xs font-medium text-muted">{{ t("Chen.GoV1Objects") }}</span>
       <UButton
+        v-for="item in selectedGroupActions"
+        :key="item.label"
+        :icon="item.icon"
+        :aria-label="item.label"
+        :title="item.label"
+        :disabled="item.disabled"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        class="sidebar-icon-button"
+        @click="item.onSelect"
+      />
+      <UButton
         icon="i-lucide-refresh-cw"
         :ui="{ leadingIcon: 'size-3.5' }"
         :aria-label="t('Chen.GoV1Refresh')"
@@ -682,12 +878,12 @@ onBeforeUnmount(() => {
         :disabled="!ready"
         @click="searching ? runSearch() : refresh()"
       />
-      <UTooltip :text="t('Chen.GoV1FindTable')" :delay-duration="150">
+      <UTooltip :text="t('Chen.ProgramFind')" :delay-duration="150">
         <UButton
           ref="searchButton"
           icon="i-lucide-search"
           :ui="{ leadingIcon: 'size-3.5' }"
-          :aria-label="t('Chen.GoV1FindTable')"
+          :aria-label="t('Chen.ProgramFind')"
           :aria-pressed="searchOpen"
           size="xs"
           color="neutral"
@@ -743,10 +939,18 @@ onBeforeUnmount(() => {
       {{ t("Chen.GoV1CatalogStale") }}
     </p>
     <div v-if="searchOpen" class="shrink-0 border-b border-default px-2.5 py-1.5">
+      <USelect
+        v-if="searchKinds.length > 2"
+        v-model="searchKind"
+        class="mb-1 w-full"
+        size="xs"
+        :aria-label="t('Chen.Type')"
+        :items="[{ label: t('Chen.ProgramAllKinds'), value: 'all' }, ...searchKinds]"
+      />
       <SideBarSearchInput
         ref="searchInput"
         v-model="search"
-        :placeholder="t('Chen.GoV1FindTable')"
+        :placeholder="t('Chen.ProgramFind')"
         :clear-label="t('Chen.GoV1ClearSearch')"
         :disabled="!searchScope.database"
         @keydown.down="focusSearchResults"
@@ -759,12 +963,13 @@ onBeforeUnmount(() => {
       v-if="searchOpen && !searching && searchScope.database"
       class="grid min-h-0 flex-1 place-items-center px-4 text-center text-xs text-muted"
     >
-      {{ t("Chen.GoV1FindTableHint") }}
+      {{ t("Chen.ProgramFind") }}
     </p>
     <div
       v-else
       ref="tree"
       role="tree"
+      @pointerleave="releaseRecent"
       :aria-label="t('Chen.GoV1Objects')"
       class="app-tree min-h-0 flex-1 overflow-auto px-2 py-1 text-xs"
     >
@@ -789,15 +994,16 @@ onBeforeUnmount(() => {
             :style="{ paddingLeft: `${row.depth * 12 + 6}px` }"
             :title="
               [
-                row.node.object ? qualifiedObjectName(row.node.object, dialect) : '',
+                row.node.object ? qualifiedObjectName(catalogRef(row.node.object), dialect) : '',
                 row.node.object ? '' : label(row.node),
                 row.node.detail
               ]
                 .filter(Boolean)
                 .join(' · ')
             "
+            @pointerenter="row.node.type === 'recent' && releaseRecent()"
             @click="select(row.node, $event)"
-            @contextmenu="selected = row.node.id"
+            @contextmenu="contextMenu(row.node)"
             @dblclick="activate(row.node)"
             @keydown.self="keydown($event, row.node)"
           >
@@ -830,8 +1036,14 @@ onBeforeUnmount(() => {
             />
             <span class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
               <span class="max-w-full shrink-0 truncate">{{ label(row.node) }}</span>
+              <span
+                v-if="row.node.object && isProgram(row.node.object) && row.node.object.ref.table"
+                class="min-w-0 truncate text-muted"
+              >
+                {{ row.node.object.ref.table }}
+              </span>
               <span v-if="searching && row.node.object" class="min-w-0 truncate text-muted">
-                {{ row.node.object.schema }}
+                {{ catalogRef(row.node.object).schema }}
               </span>
             </span>
             <UButton
@@ -852,7 +1064,7 @@ onBeforeUnmount(() => {
         <div v-else :style="{ paddingLeft: `${row.depth * 12 + 14}px` }" class="pr-2 py-1.5 text-[11px] text-muted">
           <span v-if="row.type === 'loading'" role="status">{{ t("Chen.GoV1Loading") }}</span>
           <span v-else-if="row.type === 'empty'">
-            {{ t(searching ? "Chen.GoV1NoRelations" : "Chen.GoV1EmptyCatalog") }}
+            {{ t("Chen.GoV1EmptyCatalog") }}
           </span>
           <div v-else-if="row.type === 'error'" role="alert" class="space-y-1">
             <p class="break-words text-error">{{ row.node.error }}</p>
@@ -862,7 +1074,7 @@ onBeforeUnmount(() => {
               variant="ghost"
               size="xs"
               :disabled="!ready"
-              @click="searching ? runSearch() : load(row.node)"
+              @click="row.node === searchNode ? runSearch() : load(row.node)"
             />
           </div>
           <UButton
@@ -872,7 +1084,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="xs"
             :disabled="!ready"
-            @click="searching ? runSearch(true) : load(row.node, true)"
+            @click="row.node === searchNode ? runSearch(true) : load(row.node, true)"
           />
         </div>
       </template>
